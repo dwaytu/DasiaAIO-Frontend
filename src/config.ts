@@ -21,17 +21,19 @@ function getDefaultAPIURL(): string {
 
     const hostname = window.location.hostname
     const protocol = window.location.protocol
-    const port = window.location.port
     
     // If running on localhost or 127.0.0.1, use port 5000 for backend
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
       return `${protocol}//${hostname}:5000`
     }
     
-    // For remote IPs (mobile/tablet on local network), use port 5000
-    // For Railway/deployed apps on typical domains, assume backend is on same host:
-    // Try the same host with default backend port first
-    return `${protocol}//${hostname}:5000`
+    // For Railway deployed frontend, use the deployed backend URL
+    if (hostname.includes('.up.railway.app')) {
+      return 'https://dasiaaio-backend-production.up.railway.app'
+    }
+    
+    // For other remote deployments, don't append a port (assume standard HTTPS)
+    return `${protocol}//${hostname}`
   }
 
   // Fallback

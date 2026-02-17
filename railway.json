@@ -5,7 +5,7 @@
       "buildCommand": "npm install && npm run build",
       "startCommand": "npm run preview",
       "variables": {
-        "VITE_API_URL": "${{ env.BACKEND_URL }}"
+        "VITE_API_URL": "https://dasiaaio-backend-production.up.railway.app"
       }
     }
   }

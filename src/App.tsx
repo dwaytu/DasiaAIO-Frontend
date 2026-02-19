@@ -52,35 +52,35 @@ function App() {
         <LoginPage onLogin={handleLogin} />
       ) : user?.role === 'admin' ? (
         activeView === 'performance' ? (
-          <PerformanceDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} />
+          <PerformanceDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
         ) : activeView === 'firearms' ? (
-          <FirearmInventory user={user} onLogout={handleLogout} onViewChange={setActiveView} />
+          <FirearmInventory user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
         ) : activeView === 'allocation' ? (
-          <FirearmAllocation user={user} onLogout={handleLogout} onViewChange={setActiveView} />
+          <FirearmAllocation user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
         ) : activeView === 'permits' ? (
-          <GuardFirearmPermits user={user} onLogout={handleLogout} onViewChange={setActiveView} />
+          <GuardFirearmPermits user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
         ) : activeView === 'maintenance' ? (
-          <FirearmMaintenance user={user} onLogout={handleLogout} onViewChange={setActiveView} />
+          <FirearmMaintenance user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
         ) : activeView === 'armored-cars' ? (
-          <ArmoredCarDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} />
+          <ArmoredCarDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
         ) : (
-          <SuperadminDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} />
+          <SuperadminDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
         )
       ) : user?.role === 'superadmin' ? (
         activeView === 'performance' ? (
-          <PerformanceDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} />
+          <PerformanceDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
         ) : activeView === 'firearms' ? (
-          <FirearmInventory user={user} onLogout={handleLogout} onViewChange={setActiveView} />
+          <FirearmInventory user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
         ) : activeView === 'allocation' ? (
-          <FirearmAllocation user={user} onLogout={handleLogout} onViewChange={setActiveView} />
+          <FirearmAllocation user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
         ) : activeView === 'permits' ? (
-          <GuardFirearmPermits user={user} onLogout={handleLogout} onViewChange={setActiveView} />
+          <GuardFirearmPermits user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
         ) : activeView === 'maintenance' ? (
-          <FirearmMaintenance user={user} onLogout={handleLogout} onViewChange={setActiveView} />
+          <FirearmMaintenance user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
         ) : activeView === 'armored-cars' ? (
-          <ArmoredCarDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} />
+          <ArmoredCarDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
         ) : (
-          <SuperadminDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} />
+          <SuperadminDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
         )
       ) : user ? (
         <UserDashboard user={user} onLogout={handleLogout} />

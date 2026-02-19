@@ -1,6 +1,7 @@
 import { useState, useEffect, FC } from 'react'
-import Logo from './Logo'
 import { API_BASE_URL } from '../config'
+import Sidebar from './Sidebar'
+import Header from './Header'
 
 interface Maintenance {
   id: string
@@ -17,11 +18,26 @@ interface Props {
   user: any
   onLogout: () => void
   onViewChange?: (view: string) => void
+  activeView?: string
 }
 
-const FirearmMaintenance: FC<Props> = ({ onLogout, onViewChange }) => {
+const FirearmMaintenance: FC<Props> = ({ onLogout, onViewChange, activeView }) => {
   const [maintenances, setMaintenances] = useState<Maintenance[]>([])
   const [loading, setLoading] = useState<boolean>(true)
+  const currentView = activeView || 'maintenance'
+  const navItems = [
+    { view: 'users', label: 'Dashboard' },
+    { view: 'analytics', label: 'Analytics' },
+    { view: 'trips', label: 'Trip Management' },
+    { view: 'schedule', label: 'Schedule' },
+    { view: 'missions', label: 'Missions' },
+    { view: 'performance', label: 'Performance' },
+    { view: 'firearms', label: 'Firearms' },
+    { view: 'allocation', label: 'Allocation' },
+    { view: 'permits', label: 'Permits' },
+    { view: 'maintenance', label: 'Maintenance' },
+    { view: 'armored-cars', label: 'Armored Cars' }
+  ]
 
   useEffect(() => {
     fetchMaintenances()
@@ -64,58 +80,22 @@ const FirearmMaintenance: FC<Props> = ({ onLogout, onViewChange }) => {
 
   return (
     <div className="flex min-h-screen w-screen bg-gray-100 font-sans">
-      <aside className="w-64 bg-gradient-to-b from-indigo-600 to-purple-900 text-white p-8 flex flex-col shadow-lg">
-        <div className="pb-6 border-b border-white/20 mb-8">
-          <Logo />
-        </div>
-        <nav className="flex-1 flex flex-col gap-2">
-          {[
-            { view: 'users', label: 'Dashboard' },
-            { view: 'performance', label: 'Performance' },
-            { view: 'firearms', label: 'Firearms' },
-            { view: 'allocation', label: 'Allocation' },
-            { view: 'permits', label: 'Permits' },
-            { view: 'maintenance', label: 'Maintenance' },
-            { view: 'armored-cars', label: 'Armored Cars' }
-          ].map(({ view, label }) => (
-            <button
-              key={view}
-              className={`text-white px-4 py-3 rounded-lg text-left font-medium transition-all duration-300 hover:translate-x-1 ${
-                view === 'maintenance' 
-                  ? 'bg-white/30 border-l-4 border-yellow-400 pl-3' 
-                  : 'bg-white/10 hover:bg-white/20'
-              }`}
-              onClick={() => handleNavigate(view)}
-            >
-              {label}
-            </button>
-          ))}
-        </nav>
-        <button 
-          onClick={onLogout} 
-          className="bg-red-500/30 hover:bg-red-500/50 border border-red-400/50 text-white px-4 py-3 rounded-lg font-semibold mt-6 transition-colors"
-        >
-          Logout
-        </button>
-      </aside>
+      <Sidebar
+        items={navItems}
+        activeView={currentView}
+        onNavigate={handleNavigate}
+        onLogout={onLogout}
+      />
 
       <main className="flex-1 flex flex-col overflow-hidden w-full">
-        <header className="bg-white px-8 py-6 flex justify-between items-center shadow-sm border-b border-gray-200">
-          <h1 className="text-3xl font-bold text-gray-900 m-0">Firearm Maintenance</h1>
-          <button 
-            onClick={onLogout} 
-            className="bg-gradient-to-r from-red-500 to-red-600 hover:shadow-lg text-white px-6 py-2 rounded-lg font-semibold transition-all duration-200 transform hover:-translate-y-0.5"
-          >
-            Logout
-          </button>
-        </header>
+        <Header title="Firearm Maintenance" badgeLabel="Maintenance" onLogout={onLogout} />
 
         {loading ? (
           <div className="flex-1 flex items-center justify-center text-center">
             <div className="text-indigo-600 text-lg font-medium">Loading maintenance records...</div>
           </div>
         ) : (
-          <div className="flex-1 p-8 overflow-y-auto w-full">
+          <div className="flex-1 p-8 overflow-y-auto w-full animate-fade-in">
             <section className="bg-white p-8 rounded-xl shadow-sm w-full">
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Maintenance Records ({maintenances.length})</h2>
               {maintenances.length > 0 ? (

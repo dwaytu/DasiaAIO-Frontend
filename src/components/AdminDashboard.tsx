@@ -1,7 +1,9 @@
 import { useState, useEffect, FC } from 'react'
-import Logo from './Logo'
 import EditUserModal from './EditUserModal'
+import EditScheduleModal from './EditScheduleModal'
 import { API_BASE_URL } from '../config'
+import Sidebar from './Sidebar'
+import Header from './Header'
 
 interface User {
   id: string
@@ -25,9 +27,14 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ onLogout }) => {
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string>('')
   const [editingUser, setEditingUser] = useState<User | null>(null)
+  const [editingShift, setEditingShift] = useState<any | null>(null)
   const [activeSection, setActiveSection] = useState<'users' | 'schedule'>('users')
   const [shifts, setShifts] = useState<any[]>([])
   const [shiftsLoading, setShiftsLoading] = useState<boolean>(false)
+  const navItems = [
+    { view: 'users', label: 'Dashboard' },
+    { view: 'schedule', label: 'Schedule' }
+  ]
 
   useEffect(() => {
     fetchUsers()
@@ -72,6 +79,14 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ onLogout }) => {
 
   const handleLogout = () => {
     onLogout()
+  }
+
+  const handleRefresh = () => {
+    if (activeSection === 'users') {
+      fetchUsers()
+    } else {
+      fetchShifts()
+    }
   }
 
   const handleEditUser = (user: User) => {
@@ -127,57 +142,29 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ onLogout }) => {
 
   return (
     <div className="flex min-h-screen w-screen bg-gray-100 font-sans">
-      <aside className="w-64 bg-gradient-to-b from-indigo-600 to-purple-900 text-white p-8 flex flex-col shadow-lg">
-        <div className="pb-6 border-b border-white/20 mb-8">
-          <Logo />
-        </div>
-        <nav className="flex-1 flex flex-col gap-2">
-          <button 
-            onClick={() => setActiveSection('users')}
-            className={`text-white px-4 py-3 rounded-lg text-left font-medium transition-all duration-300 hover:translate-x-1 ${
-              activeSection === 'users'
-                ? 'bg-white/30 border-l-4 border-yellow-400 pl-3'
-                : 'bg-white/10 hover:bg-white/20'
-            }`}
-          >
-            Users
-          </button>
-          <button 
-            onClick={() => setActiveSection('schedule')}
-            className={`text-white px-4 py-3 rounded-lg text-left font-medium transition-all duration-300 hover:translate-x-1 ${
-              activeSection === 'schedule'
-                ? 'bg-white/30 border-l-4 border-yellow-400 pl-3'
-                : 'bg-white/10 hover:bg-white/20'
-            }`}
-          >
-            Schedule
-          </button>
-        </nav>
-        <button 
-          onClick={handleLogout} 
-          className="bg-red-500/30 hover:bg-red-500/50 border border-red-400/50 text-white px-4 py-3 rounded-lg font-semibold mt-6 transition-colors"
-        >
-          Logout
-        </button>
-      </aside>
+      <Sidebar
+        items={navItems}
+        activeView={activeSection}
+        onNavigate={(view) => setActiveSection(view as 'users' | 'schedule')}
+        onLogout={handleLogout}
+      />
 
       <main className="flex-1 flex flex-col overflow-hidden w-full">
-        <header className="bg-white px-8 py-6 flex justify-between items-center shadow-sm border-b border-gray-200">
-          <div className="flex items-center gap-6">
-            <Logo />
-            <h1 className="text-2xl font-bold text-gray-800">
-              {activeSection === 'users' ? 'User Management' : 'Guard Schedules'}
-            </h1>
-          </div>
-          <button
-            onClick={handleLogout}
-            className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors font-semibold"
-          >
-            Logout
-          </button>
-        </header>
+        <Header
+          title={activeSection === 'users' ? 'User Management' : 'Guard Schedules'}
+          badgeLabel={activeSection === 'users' ? 'Users' : 'Schedule'}
+          onLogout={handleLogout}
+          rightSlot={
+            <button
+              onClick={handleRefresh}
+              className="px-3 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Refresh
+            </button>
+          }
+        />
 
-        <div className="flex-1 p-8 overflow-y-auto w-full">
+        <div className="flex-1 p-8 overflow-y-auto w-full animate-fade-in">
           {error && (
             <div className="mb-6 p-4 bg-red-50 border border-red-300 rounded-lg text-red-800 font-medium">
               {error}
@@ -267,6 +254,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ onLogout }) => {
                             <th className="text-left px-6 py-3 text-sm font-semibold text-gray-700 uppercase tracking-wider">Start Time</th>
                             <th className="text-left px-6 py-3 text-sm font-semibold text-gray-700 uppercase tracking-wider">End Time</th>
                             <th className="text-left px-6 py-3 text-sm font-semibold text-gray-700 uppercase tracking-wider">Status</th>
+                            <th className="text-left px-6 py-3 text-sm font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -290,6 +278,15 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ onLogout }) => {
                                   {shift.status}
                                 </span>
                               </td>
+                              <td className="px-6 py-3">
+                                <button
+                                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded text-sm font-medium transition-colors"
+                                  onClick={() => setEditingShift(shift)}
+                                  title="Edit shift"
+                                >
+                                  Edit
+                                </button>
+                              </td>
                             </tr>
                           ))}
                         </tbody>
@@ -308,6 +305,15 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ onLogout }) => {
               user={editingUser}
               onClose={() => setEditingUser(null)}
               onSave={handleSaveUser}
+            />
+          )}
+
+          {editingShift && (
+            <EditScheduleModal
+              shift={editingShift}
+              onClose={() => setEditingShift(null)}
+              onSave={fetchShifts}
+              onDelete={fetchShifts}
             />
           )}
         </div>

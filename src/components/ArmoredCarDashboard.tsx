@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import Logo from './Logo'
 import { User } from '../App'
 import { API_BASE_URL } from '../config'
+import Sidebar from './Sidebar'
+import Header from './Header'
 
 interface ArmoredCar {
   id: string
@@ -77,9 +78,10 @@ interface ArmoredCarDashboardProps {
   user: User
   onLogout: () => void
   onViewChange: (view: string) => void
+  activeView?: string
 }
 
-const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogout, onViewChange }) => {
+const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogout, onViewChange, activeView }) => {
   const [activeTab, setActiveTab] = useState<string>('inventory')
   const [cars, setCars] = useState<ArmoredCar[]>([])
   const [allocations, setAllocations] = useState<CarAllocation[]>([])
@@ -237,6 +239,20 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
     return `status-${status.toLowerCase()}`
   }
 
+  const currentView = activeView || 'armored-cars'
+  const navItems = [
+    { view: 'users', label: 'Dashboard' },
+    { view: 'analytics', label: 'Analytics' },
+    { view: 'trips', label: 'Trip Management' },
+    { view: 'schedule', label: 'Schedule' },
+    { view: 'missions', label: 'Missions' },
+    { view: 'performance', label: 'Performance' },
+    { view: 'firearms', label: 'Firearms' },
+    { view: 'allocation', label: 'Allocation' },
+    { view: 'permits', label: 'Permits' },
+    { view: 'maintenance', label: 'Maintenance' },
+    { view: 'armored-cars', label: 'Armored Cars' }
+  ]
   const availableCars = cars.filter((c) => c.status === 'available').length
   const allocatedCars = cars.filter((c) => c.status === 'allocated').length
   const maintenanceCars = cars.filter((c) => c.status === 'maintenance').length
@@ -244,51 +260,15 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
 
   return (
     <div className="flex min-h-screen w-screen bg-gray-100 font-sans">
-      <aside className="w-64 bg-gradient-to-b from-indigo-600 to-purple-900 text-white p-8 flex flex-col shadow-lg">
-        <div className="pb-6 border-b border-white/20 mb-8">
-          <Logo />
-        </div>
-        <nav className="flex-1 flex flex-col gap-2">
-          {[
-            { view: 'users', label: 'Dashboard' },
-            { view: 'performance', label: 'Performance' },
-            { view: 'firearms', label: 'Firearms' },
-            { view: 'allocation', label: 'Allocation' },
-            { view: 'permits', label: 'Permits' },
-            { view: 'maintenance', label: 'Maintenance' },
-            { view: 'armored-cars', label: 'Armored Cars' }
-          ].map(({ view, label }) => (
-            <button
-              key={view}
-              className={`text-white px-4 py-3 rounded-lg text-left font-medium transition-all duration-300 hover:translate-x-1 ${
-                view === 'armored-cars' 
-                  ? 'bg-white/30 border-l-4 border-yellow-400 pl-3' 
-                  : 'bg-white/10 hover:bg-white/20'
-              }`}
-              onClick={() => onViewChange(view)}
-            >
-              {label}
-            </button>
-          ))}
-        </nav>
-        <button 
-          onClick={onLogout} 
-          className="bg-red-500/30 hover:bg-red-500/50 border border-red-400/50 text-white px-4 py-3 rounded-lg font-semibold mt-6 transition-colors"
-        >
-          Logout
-        </button>
-      </aside>
+      <Sidebar
+        items={navItems}
+        activeView={currentView}
+        onNavigate={onViewChange}
+        onLogout={onLogout}
+      />
 
       <main className="flex-1 flex flex-col overflow-hidden w-full">
-        <header className="bg-white px-8 py-6 flex justify-between items-center shadow-sm border-b border-gray-200">
-          <h1 className="text-3xl font-bold text-gray-900 m-0">Armored Car Management</h1>
-          <button 
-            onClick={onLogout} 
-            className="bg-gradient-to-r from-red-500 to-red-600 hover:shadow-lg text-white px-6 py-2 rounded-lg font-semibold transition-all duration-200 transform hover:-translate-y-0.5"
-          >
-            Logout
-          </button>
-        </header>
+        <Header title="Armored Car Management" badgeLabel="Armored Cars" onLogout={onLogout} />
 
         {error && (
           <div className="bg-red-50 text-red-900 px-8 py-3 border border-red-200 rounded mx-8 my-4 font-medium flex items-center justify-between">
@@ -313,7 +293,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
           </div>
         )}
 
-        <div className="flex-1 p-8 overflow-y-auto w-full">
+        <div className="flex-1 p-8 overflow-y-auto w-full animate-fade-in">
           {/* Stats Grid */}
           <div className="grid grid-cols-5 gap-4 mb-8">
             <div className="bg-white rounded-xl shadow-sm border-t-4 border-indigo-600 hover:shadow-md hover:-translate-y-1 transition-all duration-300 p-6">

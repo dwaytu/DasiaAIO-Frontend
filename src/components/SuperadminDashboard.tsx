@@ -231,10 +231,15 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ onLogout, onViewCha
   }
 
   const handleNavigate = (view: string) => {
+    console.log('handleNavigate called with view:', view);
     if (view === 'schedule' || view === 'dashboard' || view === 'missions' || view === 'analytics' || view === 'trips') {
+      console.log('Setting activeSection to:', view);
       setActiveSection(view as 'dashboard' | 'schedule' | 'missions' | 'analytics' | 'trips')
     } else if (onViewChange) {
+      console.log('Calling onViewChange with view:', view);
       onViewChange(view)
+    } else {
+      console.log('No handler for view:', view);
     }
   }
 

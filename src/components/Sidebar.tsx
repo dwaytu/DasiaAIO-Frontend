@@ -28,7 +28,10 @@ const Sidebar: FC<SidebarProps> = ({ items, activeView, onNavigate, onLogout }) 
                 ? 'bg-white/30 border-l-4 border-yellow-400 pl-3'
                 : 'bg-white/10 hover:bg-white/20'
             }`}
-            onClick={() => onNavigate(view)}
+            onClick={(e) => {
+              console.log('Sidebar button clicked:', view, label);
+              onNavigate(view)
+            }}
             type="button"
           >
             {label}

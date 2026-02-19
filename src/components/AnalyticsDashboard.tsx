@@ -72,11 +72,30 @@ const AnalyticsDashboard: FC = () => {
   }
 
   if (error) {
-    return <div className="text-center py-12 text-red-600">{error}</div>
+    return (
+      <div className="space-y-4">
+        <div className="bg-red-50 border border-red-300 text-red-800 rounded-lg p-4 text-sm">
+          <p className="font-semibold">Failed to load analytics data</p>
+          <p className="text-xs mt-1">{error}</p>
+          <p className="text-xs mt-2 text-red-700">Make sure the backend server is running on port 5000</p>
+        </div>
+        <button 
+          onClick={() => fetchAnalytics()}
+          className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+        >
+          Retry
+        </button>
+      </div>
+    )
   }
 
   if (!analytics) {
-    return <div className="text-center py-12 text-gray-600">No analytics data available</div>
+    return (
+      <div className="bg-gray-50 border border-gray-300 text-gray-700 rounded-lg p-4 text-center">
+        <p className="font-medium">No analytics data available</p>
+        <p className="text-xs mt-2">Backend is not returning data. Please check server connection.</p>
+      </div>
+    )
   }
 
   return (

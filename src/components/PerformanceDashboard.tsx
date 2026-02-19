@@ -21,7 +21,7 @@ interface Performance {
   [key: string]: any
 }
 
-const PerformanceDashboard: FC<Props> = ({ user, onLogout, onViewChange }) => {
+const PerformanceDashboard: FC<Props> = ({ onLogout, onViewChange }) => {
   const [performance, setPerformance] = useState<Performance[]>([])
   const [loading, setLoading] = useState<boolean>(true)
 

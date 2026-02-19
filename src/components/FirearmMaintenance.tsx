@@ -19,7 +19,7 @@ interface Props {
   onViewChange?: (view: string) => void
 }
 
-const FirearmMaintenance: FC<Props> = ({ user, onLogout, onViewChange }) => {
+const FirearmMaintenance: FC<Props> = ({ onLogout, onViewChange }) => {
   const [maintenances, setMaintenances] = useState<Maintenance[]>([])
   const [loading, setLoading] = useState<boolean>(true)
 

@@ -18,7 +18,7 @@ interface Props {
   onViewChange?: (view: string) => void
 }
 
-const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange }) => {
+const FirearmInventory: FC<Props> = ({ onLogout, onViewChange }) => {
   const [firearms, setFirearms] = useState<Firearm[]>([])
   const [loading, setLoading] = useState<boolean>(true)
 

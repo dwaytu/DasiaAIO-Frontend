@@ -7,7 +7,7 @@ import FirearmInventory from './components/FirearmInventory'
 import FirearmAllocation from './components/FirearmAllocation'
 import GuardFirearmPermits from './components/GuardFirearmPermits'
 import FirearmMaintenance from './components/FirearmMaintenance'
-import './App.css'
+import ArmoredCarDashboard from './components/ArmoredCarDashboard'
 
 export interface User {
   id: string
@@ -61,6 +61,8 @@ function App() {
           <GuardFirearmPermits user={user} onLogout={handleLogout} onViewChange={setActiveView} />
         ) : activeView === 'maintenance' ? (
           <FirearmMaintenance user={user} onLogout={handleLogout} onViewChange={setActiveView} />
+        ) : activeView === 'armored-cars' ? (
+          <ArmoredCarDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} />
         ) : (
           <SuperadminDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} />
         )
@@ -75,6 +77,8 @@ function App() {
           <GuardFirearmPermits user={user} onLogout={handleLogout} onViewChange={setActiveView} />
         ) : activeView === 'maintenance' ? (
           <FirearmMaintenance user={user} onLogout={handleLogout} onViewChange={setActiveView} />
+        ) : activeView === 'armored-cars' ? (
+          <ArmoredCarDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} />
         ) : (
           <SuperadminDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} />
         )

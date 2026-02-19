@@ -2,7 +2,6 @@ import { useState, FC, FormEvent, ChangeEvent } from 'react'
 import Logo from './Logo'
 import { User } from '../App'
 import { API_BASE_URL } from '../config'
-import './LoginPage.css'
 
 interface LoginPageProps {
   onLogin: (user: User) => void
@@ -247,104 +246,110 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
   }
 
   return (
-    <div className="login-container">
-      <div className="page-header" style={{ display: isRegistering ? 'none' : 'flex' }}>
-        <Logo onClick={() => {}} />
-      </div>
-      <div className="login-wrapper">
-        <div className="login-left">
-          <div className="login-content">
-            {!requiresVerification && !isRegistering && (
-              <div className="welcome-section">
-                <h1>Welcome Back!</h1>
-                <p>Please enter your details</p>
+    <div className="min-h-screen flex w-screen bg-white overflow-hidden">
+      {!isRegistering && (
+        <div className="absolute top-8 left-8 z-10">
+          <Logo onClick={() => {}} />
+        </div>
+      )}
+      
+      {/* Left Section - Form */}
+      <div className="flex-1 lg:flex-1 flex items-center justify-center p-4 md:p-8 overflow-y-auto max-h-screen">
+        <div className="w-full max-w-md">
+          {!requiresVerification && !isRegistering && (
+            <div className="mb-8">
+              <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">Welcome Back!</h1>
+              <p className="text-base md:text-lg text-gray-600">Please enter your details</p>
+            </div>
+          )}
+          
+          {requiresVerification ? (
+            <>
+              <div className="mb-8">
+                <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">Verify Your Email</h1>
+                <p className="text-gray-600 text-sm md:text-base">Enter the 6-digit code sent to {verificationEmail}</p>
               </div>
-            )}
-            {requiresVerification ? (
-              <>
-                <div className="verify-header">
-                  <h1>Verify Your Email</h1>
-                  <p className="verification-subtitle">Enter the 6-digit code sent to {verificationEmail}</p>
+              
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div>
+                  <label htmlFor="code" className="block text-sm font-semibold text-gray-700 mb-2">Confirmation Code</label>
+                  <input
+                    id="code"
+                    type="text"
+                    value={verificationCode}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => setVerificationCode(e.target.value.slice(0, 6))}
+                    placeholder="000000"
+                    disabled={isLoading}
+                    maxLength={6}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100 text-center text-2xl tracking-widest"
+                  />
                 </div>
-                <form onSubmit={handleSubmit} className="login-form">
-                  <div className="form-group">
-                    <label htmlFor="code">Confirmation Code</label>
-                    <input
-                      id="code"
-                      type="text"
-                      value={verificationCode}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) => setVerificationCode(e.target.value.slice(0, 6))}
-                      placeholder="000000"
-                      disabled={isLoading}
-                      maxLength={6}
-                      className="verification-input"
-                    />
-                  </div>
 
-                  {error && (
-                    <div className={`message ${error.includes('verified successfully') ? 'success-message' : 'error-message'}`}>
-                      {error}
-                    </div>
-                  )}
-
-                  <button type="submit" disabled={isLoading} className="login-button">
-                    {isLoading ? 'Verifying...' : 'Verify'}
-                  </button>
-
-                  <div className="footer">
-                    <button
-                      type="button"
-                      className="resend-btn"
-                      onClick={async () => {
-                        setIsLoading(true)
-                        try {
-                          const response = await fetch(`${API_BASE_URL}/api/resend-code`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ email: verificationEmail })
-                          })
-                          const data = await response.json()
-                          setError(data.message || 'Code resent!')
-                        } catch (err) {
-                          setError('Error: ' + (err instanceof Error ? err.message : String(err)))
-                        } finally {
-                          setIsLoading(false)
-                        }
-                      }}
-                      disabled={isLoading}
-                    >
-                      Resend Code
-                    </button>
-                    <button
-                      type="button"
-                      className="toggle-btn"
-                      onClick={() => {
-                        setRequiresVerification(false)
-                        setVerificationCode('')
-                        setVerificationEmail('')
-                        setError('')
-                        setIsRegistering(false)
-                        setIdentifier('')
-                      }}
-                      disabled={isLoading}
-                    >
-                      Back to Login
-                    </button>
-                  </div>
-                </form>
-              </>
-            ) : (
-              <>
-                {isRegistering && (
-                  <div className="register-header">
-                    <h1>Create Account</h1>
-                    <p>Fill in your details to get started</p>
+                {error && (
+                  <div className={`p-4 rounded-lg text-sm md:text-base ${error.includes('verified successfully') ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
+                    {error}
                   </div>
                 )}
-                <form onSubmit={handleSubmit} className="login-form">
-                  {isRegistering && (
-                    <div className="form-group">
-                      <label htmlFor="username">Username</label>
+
+                <button type="submit" disabled={isLoading} className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-bold py-3 rounded-lg transition-colors text-sm md:text-base">
+                  {isLoading ? 'Verifying...' : 'Verify'}
+                </button>
+
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    className="flex-1 px-4 py-2 border border-indigo-600 text-indigo-600 font-semibold rounded-lg hover:bg-indigo-50 transition-colors disabled:bg-gray-100 disabled:text-gray-400 disabled:border-gray-300 text-xs md:text-sm"
+                    onClick={async () => {
+                      setIsLoading(true)
+                      try {
+                        const response = await fetch(`${API_BASE_URL}/api/resend-code`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ email: verificationEmail })
+                        })
+                        const data = await response.json()
+                        setError(data.message || 'Code resent!')
+                      } catch (err) {
+                        setError('Error: ' + (err instanceof Error ? err.message : String(err)))
+                      } finally {
+                        setIsLoading(false)
+                      }
+                    }}
+                    disabled={isLoading}
+                  >
+                    Resend Code
+                  </button>
+                  <button
+                    type="button"
+                    className="flex-1 px-4 py-2 text-gray-700 font-semibold border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:bg-gray-100 disabled:text-gray-400 text-xs md:text-sm"
+                    onClick={() => {
+                      setRequiresVerification(false)
+                      setVerificationCode('')
+                      setVerificationEmail('')
+                      setError('')
+                      setIsRegistering(false)
+                      setIdentifier('')
+                    }}
+                    disabled={isLoading}
+                  >
+                    Back to Login
+                  </button>
+                </div>
+              </form>
+            </>
+          ) : (
+            <>
+              {isRegistering && (
+                <div className="mb-8">
+                  <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">Create Account</h1>
+                  <p className="text-base md:text-lg text-gray-600">Fill in your details to get started</p>
+                </div>
+              )}
+              
+              <form onSubmit={handleSubmit} className="space-y-5">
+                {isRegistering && (
+                  <div>
+                      <label htmlFor="username" className="block text-sm font-semibold text-gray-700 mb-2">Username</label>
                       <input
                         id="username"
                         type="text"
@@ -352,13 +357,14 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
                         onChange={(e: ChangeEvent<HTMLInputElement>) => setUsername(e.target.value)}
                         placeholder="Enter your username"
                         disabled={isLoading}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
                       />
                     </div>
                   )}
 
                   {isRegistering && (
-                    <div className="form-group">
-                      <label htmlFor="fullName">Full Name</label>
+                    <div>
+                      <label htmlFor="fullName" className="block text-sm font-semibold text-gray-700 mb-2">Full Name</label>
                       <input
                         id="fullName"
                         type="text"
@@ -366,13 +372,14 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
                         onChange={(e: ChangeEvent<HTMLInputElement>) => setFullName(e.target.value)}
                         placeholder="Enter your full name"
                         disabled={isLoading}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
                       />
                     </div>
                   )}
 
                   {isRegistering && (
-                    <div className="form-group">
-                      <label htmlFor="phoneNumber">Phone Number</label>
+                    <div>
+                      <label htmlFor="phoneNumber" className="block text-sm font-semibold text-gray-700 mb-2">Phone Number</label>
                       <input
                         id="phoneNumber"
                         type="text"
@@ -380,13 +387,14 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
                         onChange={(e: ChangeEvent<HTMLInputElement>) => setPhoneNumber(formatPhoneNumber(e.target.value))}
                         placeholder="+63-###-###-####"
                         disabled={isLoading}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
                       />
                     </div>
                   )}
 
                   {isRegistering && role !== 'admin' && (
-                    <div className="form-group">
-                      <label htmlFor="licenseNumber">License Number</label>
+                    <div>
+                      <label htmlFor="licenseNumber" className="block text-sm font-semibold text-gray-700 mb-2">License Number</label>
                       <input
                         id="licenseNumber"
                         type="text"
@@ -394,26 +402,28 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
                         onChange={(e: ChangeEvent<HTMLInputElement>) => setLicenseNumber(e.target.value)}
                         placeholder="Enter your license number"
                         disabled={isLoading}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
                       />
                     </div>
                   )}
 
                   {isRegistering && role !== 'admin' && (
-                    <div className="form-group">
-                      <label htmlFor="licenseExpiryDate">License Expiry Date</label>
+                    <div>
+                      <label htmlFor="licenseExpiryDate" className="block text-sm font-semibold text-gray-700 mb-2">License Expiry Date</label>
                       <input
                         id="licenseExpiryDate"
                         type="date"
                         value={licenseExpiryDate}
                         onChange={(e: ChangeEvent<HTMLInputElement>) => setLicenseExpiryDate(e.target.value)}
                         disabled={isLoading}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
                       />
                     </div>
                   )}
 
                   {isRegistering && (
-                    <div className="form-group">
-                      <label htmlFor="email">Email</label>
+                    <div>
+                      <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">Email</label>
                       <input
                         id="email"
                         type="email"
@@ -421,13 +431,14 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
                         onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
                         placeholder="Enter your email"
                         disabled={isLoading}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
                       />
                     </div>
                   )}
 
                   {!isRegistering && (
-                    <div className="form-group">
-                      <label htmlFor="identifier">Email, Username, or Phone Number</label>
+                    <div>
+                      <label htmlFor="identifier" className="block text-sm font-semibold text-gray-700 mb-2">Email, Username, or Phone Number</label>
                       <input
                         id="identifier"
                         type="text"
@@ -435,12 +446,13 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
                         onChange={(e: ChangeEvent<HTMLInputElement>) => setIdentifier(e.target.value)}
                         placeholder="Enter your email, username, or phone number"
                         disabled={isLoading}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
                       />
                     </div>
                   )}
 
-                  <div className="form-group">
-                    <label htmlFor="password">Password</label>
+                  <div>
+                    <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-2">Password</label>
                     <input
                       id="password"
                       type="password"
@@ -448,18 +460,19 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
                       onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
                       placeholder="Enter your password"
                       disabled={isLoading}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
                     />
                   </div>
 
                   {isRegistering && (
-                    <div className="form-group">
-                      <label htmlFor="role">Account Type</label>
+                    <div>
+                      <label htmlFor="role" className="block text-sm font-semibold text-gray-700 mb-2">Account Type</label>
                       <select
                         id="role"
                         value={role}
                         onChange={(e: ChangeEvent<HTMLSelectElement>) => setRole(e.target.value)}
                         disabled={isLoading}
-                        className="role-select"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100 bg-white"
                       >
                         <option value="user">User</option>
                         <option value="admin">Admin</option>
@@ -468,8 +481,8 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
                   )}
 
                   {isRegistering && role === 'admin' && (
-                    <div className="form-group">
-                      <label htmlFor="adminCode">Admin Code</label>
+                    <div>
+                      <label htmlFor="adminCode" className="block text-sm font-semibold text-gray-700 mb-2">Admin Code</label>
                       <input
                         id="adminCode"
                         type="password"
@@ -477,25 +490,26 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
                         onChange={(e: ChangeEvent<HTMLInputElement>) => setAdminCode(e.target.value)}
                         placeholder="Enter admin code"
                         disabled={isLoading}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
                       />
                     </div>
                   )}
 
                   {error && (
-                    <div className={`message ${isRegistering && !error.includes('successful') ? 'error-message' : error.includes('successful') ? 'success-message' : 'error-message'}`}>
+                    <div className={`p-4 rounded-lg ${isRegistering && !error.includes('successful') ? 'bg-red-50 text-red-800 border border-red-200' : error.includes('successful') ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
                       {error}
                     </div>
                   )}
 
-                  <button type="submit" disabled={isLoading} className="login-button">
+                  <button type="submit" disabled={isLoading} className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-bold py-3 rounded-lg transition-colors text-sm md:text-base">
                     {isLoading ? 'Processing...' : isRegistering ? 'Create Account' : 'Login'}
                   </button>
                 </form>
 
-                <div className="footer">
+                <div className="mt-6 text-center">
                   <button
                     type="button"
-                    className="toggle-btn"
+                    className="text-indigo-600 hover:text-indigo-700 font-semibold transition-colors disabled:text-gray-400"
                     onClick={() => {
                       setIsRegistering(!isRegistering)
                       setError('')
@@ -513,8 +527,41 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
           </div>
         </div>
 
-        <div className="login-right">
-          <img src="/images/security-bg.png" alt="Security" className="security-illustration" />
+      {/* Right Section - Design */}
+      <div className="hidden lg:flex flex-1 bg-gradient-to-br from-indigo-600 to-purple-700 items-center justify-center overflow-hidden max-h-screen flex-col gap-8 p-12">
+        <div className="text-center space-y-4">
+          <div className="w-24 h-24 mx-auto bg-white/10 rounded-full flex items-center justify-center">
+            <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
+              <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" className="w-10 h-10">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              </svg>
+            </div>
+          </div>
+          <h2 className="text-3xl font-bold text-white">Secure Access</h2>
+          <p className="text-indigo-100 text-lg">Guard & Firearm Management System</p>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-6 w-full max-w-md">
+          <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-4 text-center">
+            <div className="text-2xl font-bold text-white mb-2">24/7</div>
+            <p className="text-sm text-indigo-100">Security</p>
+          </div>
+          <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-4 text-center">
+            <div className="text-2xl font-bold text-white mb-2">100%</div>
+            <p className="text-sm text-indigo-100">Encrypted</p>
+          </div>
+          <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-4 text-center">
+            <div className="text-2xl font-bold text-white mb-2">∞</div>
+            <p className="text-sm text-indigo-100">Scalable</p>
+          </div>
+          <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-4 text-center">
+            <div className="text-2xl font-bold text-white mb-2">✓</div>
+            <p className="text-sm text-indigo-100">Verified</p>
+          </div>
+        </div>
+        
+        <div className="text-center">
+          <p className="text-indigo-100 text-sm">Davao Security & Investigation Agency</p>
         </div>
       </div>
     </div>

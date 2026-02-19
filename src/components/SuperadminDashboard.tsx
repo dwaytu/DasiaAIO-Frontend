@@ -2,7 +2,6 @@ import { useState, useEffect, FC } from 'react'
 import Logo from './Logo'
 import EditUserModal from './EditUserModal'
 import { API_BASE_URL } from '../config'
-import './SuperadminDashboard.css'
 
 interface User {
   id: string
@@ -118,114 +117,120 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ onLogout, onViewCha
   }
 
   return (
-    <div className="superadmin-dashboard">
-      <aside className="sidebar">
-        <div className="sidebar-header">
+    <div className="flex min-h-screen w-screen bg-gray-100 font-sans">
+      <aside className="w-64 bg-gradient-to-b from-indigo-600 to-purple-900 text-white p-8 flex flex-col shadow-lg">
+        <div className="pb-6 border-b border-white/20 mb-8">
           <Logo />
         </div>
-        <nav className="sidebar-menu">
-          <button 
-            className="nav-btn active" 
-            onClick={() => handleNavigate('users')}
-          >
-            Dashboard
-          </button>
-          <button 
-            className="nav-btn" 
-            onClick={() => handleNavigate('performance')}
-          >
-            Performance
-          </button>
-          <button 
-            className="nav-btn" 
-            onClick={() => handleNavigate('firearms')}
-          >
-            Firearms
-          </button>
-          <button 
-            className="nav-btn" 
-            onClick={() => handleNavigate('allocation')}
-          >
-            Allocation
-          </button>
-          <button 
-            className="nav-btn" 
-            onClick={() => handleNavigate('permits')}
-          >
-            Permits
-          </button>
-          <button 
-            className="nav-btn" 
-            onClick={() => handleNavigate('maintenance')}
-          >
-            Maintenance
-          </button>
+        <nav className="flex-1 flex flex-col gap-2">
+          {[
+            { view: 'users', label: 'Dashboard' },
+            { view: 'performance', label: 'Performance' },
+            { view: 'firearms', label: 'Firearms' },
+            { view: 'allocation', label: 'Allocation' },
+            { view: 'permits', label: 'Permits' },
+            { view: 'maintenance', label: 'Maintenance' },
+            { view: 'armored-cars', label: 'Armored Cars' }
+          ].map(({ view, label }) => (
+            <button
+              key={view}
+              className={`text-white px-4 py-3 rounded-lg text-left font-medium transition-all duration-300 hover:translate-x-1 ${
+                view === 'users' 
+                  ? 'bg-white/30 border-l-4 border-yellow-400 pl-3' 
+                  : 'bg-white/10 hover:bg-white/20'
+              }`}
+              onClick={() => handleNavigate(view)}
+            >
+              {label}
+            </button>
+          ))}
         </nav>
-        <button onClick={onLogout} className="logout-btn-sidebar">Logout</button>
+        <button 
+          onClick={onLogout} 
+          className="bg-red-500/30 hover:bg-red-500/50 border border-red-400/50 text-white px-4 py-3 rounded-lg font-semibold mt-6 transition-colors"
+        >
+          Logout
+        </button>
       </aside>
 
-      <main className="main-content">
-        <header className="content-header">
-          <h1>System Dashboard</h1>
-          <button onClick={onLogout} className="logout-btn">Logout</button>
+      <main className="flex-1 flex flex-col overflow-hidden w-full">
+        <header className="bg-white px-8 py-6 flex justify-between items-center shadow-sm border-b border-gray-200">
+          <h1 className="text-3xl font-bold text-gray-900 m-0">Dashboard</h1>
+          <button 
+            onClick={onLogout} 
+            className="bg-gradient-to-r from-red-500 to-red-600 hover:shadow-lg text-white px-6 py-2 rounded-lg font-semibold transition-all duration-200 transform hover:-translate-y-0.5"
+          >
+            Logout
+          </button>
         </header>
 
-        {error && <div className="error-message">{error}</div>}
+        {error && <div className="bg-red-50 text-red-900 px-8 py-3 border border-red-200 rounded mx-8 my-4 font-medium">{error}</div>}
 
         {loading ? (
-          <div className="loading">Loading system data...</div>
+          <div className="flex-1 flex items-center justify-center text-center">
+            <div className="text-indigo-600 text-lg font-medium">Loading system data...</div>
+          </div>
         ) : (
-          <div className="dashboard-content">
-            <section className="stats-grid">
-              <div className="stat-card">
-                <h3>Total Users</h3>
-                <p className="stat-value">{stats.totalUsers}</p>
+          <div className="flex-1 p-8 overflow-y-auto w-full">
+            <section className="w-full grid grid-cols-4 gap-6 mb-8">
+              <div className="bg-white p-6 rounded-xl shadow-sm border-t-4 border-indigo-600 hover:shadow-md hover:-translate-y-1 transition-all duration-300">
+                <h3 className="text-gray-600 text-sm font-semibold uppercase tracking-wider mb-2">Total Users</h3>
+                <p className="text-4xl font-bold text-indigo-600">{stats.totalUsers}</p>
               </div>
-              <div className="stat-card">
-                <h3>Administrators</h3>
-                <p className="stat-value">{stats.admins}</p>
+              <div className="bg-white p-6 rounded-xl shadow-sm border-t-4 border-indigo-600 hover:shadow-md hover:-translate-y-1 transition-all duration-300">
+                <h3 className="text-gray-600 text-sm font-semibold uppercase tracking-wider mb-2">Administrators</h3>
+                <p className="text-4xl font-bold text-indigo-600">{stats.admins}</p>
               </div>
-              <div className="stat-card">
-                <h3>Guards</h3>
-                <p className="stat-value">{stats.guards}</p>
+              <div className="bg-white p-6 rounded-xl shadow-sm border-t-4 border-indigo-600 hover:shadow-md hover:-translate-y-1 transition-all duration-300">
+                <h3 className="text-gray-600 text-sm font-semibold uppercase tracking-wider mb-2">Guards</h3>
+                <p className="text-4xl font-bold text-indigo-600">{stats.guards}</p>
               </div>
-              <div className="stat-card">
-                <h3>Regular Users</h3>
-                <p className="stat-value">{stats.regularUsers}</p>
+              <div className="bg-white p-6 rounded-xl shadow-sm border-t-4 border-indigo-600 hover:shadow-md hover:-translate-y-1 transition-all duration-300">
+                <h3 className="text-gray-600 text-sm font-semibold uppercase tracking-wider mb-2">Regular Users</h3>
+                <p className="text-4xl font-bold text-indigo-600">{stats.regularUsers}</p>
               </div>
             </section>
 
-            <section className="users-section">
-              <h2>All Users</h2>
+            <section className="w-full bg-white p-8 rounded-xl shadow-sm">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">All Users</h2>
               {users.length > 0 ? (
-                <div className="users-table">
-                  <table>
-                    <thead>
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse min-w-full">
+                    <thead className="bg-gray-50">
                       <tr>
-                        <th>Email</th>
-                        <th>Username</th>
-                        <th>Full Name</th>
-                        <th>Role</th>
-                        <th>Actions</th>
+                        <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-sm uppercase tracking-wider">Email</th>
+                        <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-sm uppercase tracking-wider">Username</th>
+                        <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-sm uppercase tracking-wider">Full Name</th>
+                        <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-sm uppercase tracking-wider">Role</th>
+                        <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-sm uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {users.map((u: User) => (
-                        <tr key={u.id}>
-                          <td>{u.email}</td>
-                          <td>{u.username}</td>
-                          <td>{u.full_name || '-'}</td>
-                          <td><span className={`role-badge ${u.role}`}>{u.role}</span></td>
-                          <td className="actions-cell">
+                        <tr key={u.id} className="border-b border-gray-200 hover:bg-gray-50">
+                          <td className="px-4 py-3 text-gray-700">{u.email}</td>
+                          <td className="px-4 py-3 text-gray-700">{u.username}</td>
+                          <td className="px-4 py-3 text-gray-700">{u.full_name || '-'}</td>
+                          <td className="px-4 py-3">
+                            <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
+                              u.role === 'admin' ? 'bg-red-100 text-red-800' :
+                              u.role === 'superadmin' ? 'bg-amber-100 text-amber-800' :
+                              u.role === 'guard' ? 'bg-green-100 text-green-800' :
+                              'bg-blue-100 text-blue-800'
+                            }`}>
+                              {u.role}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 flex gap-2">
                             <button 
-                              className="edit-btn" 
+                              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded font-semibold text-sm uppercase tracking-wider transition-all duration-200 transform hover:-translate-y-0.5 hover:shadow-md"
                               onClick={() => handleEditUser(u)}
                               title="Edit user details"
                             >
                               Edit
                             </button>
                             <button 
-                              className="delete-btn" 
+                              className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded font-semibold text-sm uppercase tracking-wider transition-all duration-200 transform hover:-translate-y-0.5 hover:shadow-md"
                               onClick={() => handleDeleteUser(u.id, u.email)}
                               title="Delete user"
                             >
@@ -238,7 +243,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ onLogout, onViewCha
                   </table>
                 </div>
               ) : (
-                <p className="empty-state">No users found</p>
+                <p className="text-center text-gray-400 py-8 italic text-sm md:text-base">No users found</p>
               )}
             </section>
           </div>

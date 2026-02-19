@@ -1,7 +1,6 @@
 import { useState, useEffect, FC } from 'react'
 import Logo from './Logo'
 import { API_BASE_URL } from '../config'
-import './PerformanceDashboard.css'
 
 interface User {
   [key: string]: any
@@ -61,74 +60,96 @@ const PerformanceDashboard: FC<Props> = ({ user, onLogout, onViewChange }) => {
   }
 
   return (
-    <div className="performance-dashboard">
-      <aside className="sidebar">
-        <div className="sidebar-header">
+    <div className="flex min-h-screen w-screen bg-gray-100 font-sans">
+      <aside className="w-64 bg-gradient-to-b from-indigo-600 to-purple-900 text-white p-8 flex flex-col shadow-lg">
+        <div className="pb-6 border-b border-white/20 mb-8">
           <Logo />
         </div>
-        <nav className="sidebar-menu">
-          <button className="nav-btn" onClick={() => handleNavigate('users')}>
-            Dashboard
-          </button>
-          <button className="nav-btn active" onClick={() => handleNavigate('performance')}>
-            Performance
-          </button>
-          <button className="nav-btn" onClick={() => handleNavigate('firearms')}>
-            Firearms
-          </button>
-          <button className="nav-btn" onClick={() => handleNavigate('allocation')}>
-            Allocation
-          </button>
-          <button className="nav-btn" onClick={() => handleNavigate('permits')}>
-            Permits
-          </button>
-          <button className="nav-btn" onClick={() => handleNavigate('maintenance')}>
-            Maintenance
-          </button>
+        <nav className="flex-1 flex flex-col gap-2">
+          {[
+            { view: 'users', label: 'Dashboard' },
+            { view: 'performance', label: 'Performance' },
+            { view: 'firearms', label: 'Firearms' },
+            { view: 'allocation', label: 'Allocation' },
+            { view: 'permits', label: 'Permits' },
+            { view: 'maintenance', label: 'Maintenance' },
+            { view: 'armored-cars', label: 'Armored Cars' }
+          ].map(({ view, label }) => (
+            <button
+              key={view}
+              className={`text-white px-4 py-3 rounded-lg text-left font-medium transition-all duration-300 hover:translate-x-1 ${
+                view === 'performance' 
+                  ? 'bg-white/30 border-l-4 border-yellow-400 pl-3' 
+                  : 'bg-white/10 hover:bg-white/20'
+              }`}
+              onClick={() => handleNavigate(view)}
+            >
+              {label}
+            </button>
+          ))}
         </nav>
-        <button onClick={onLogout} className="logout-btn-sidebar">Logout</button>
+        <button 
+          onClick={onLogout} 
+          className="bg-red-500/30 hover:bg-red-500/50 border border-red-400/50 text-white px-4 py-3 rounded-lg font-semibold mt-6 transition-colors"
+        >
+          Logout
+        </button>
       </aside>
 
-      <main className="main-content">
-        <header className="content-header">
-          <h1>Performance Dashboard</h1>
-          <button onClick={onLogout} className="logout-btn">Logout</button>
+      <main className="flex-1 flex flex-col overflow-hidden w-full">
+        <header className="bg-white px-8 py-6 flex justify-between items-center shadow-sm border-b border-gray-200">
+          <h1 className="text-3xl font-bold text-gray-900 m-0">Performance Dashboard</h1>
+          <button 
+            onClick={onLogout} 
+            className="bg-gradient-to-r from-red-500 to-red-600 hover:shadow-lg text-white px-6 py-2 rounded-lg font-semibold transition-all duration-200 transform hover:-translate-y-0.5"
+          >
+            Logout
+          </button>
         </header>
 
         {loading ? (
-          <div className="loading">Loading performance data...</div>
+          <div className="flex-1 flex items-center justify-center text-center">
+            <div className="text-indigo-600 text-lg font-medium">Loading performance data...</div>
+          </div>
         ) : (
-          <div className="dashboard-content">
-            <section className="performance-table-section">
-              <h2>Guard Performance</h2>
+          <div className="flex-1 p-8 overflow-y-auto w-full">
+            <section className="bg-white p-8 rounded-xl shadow-sm">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">Guard Performance</h2>
               {performance.length > 0 ? (
-                <table className="performance-table">
-                  <thead>
-                    <tr>
-                      <th>Guard Name</th>
-                      <th>Attendance Rate</th>
-                      <th>Allocations</th>
-                      <th>Maintenance Tasks</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {performance.map((p) => (
-                      <tr key={p.guardId}>
-                        <td>{p.guardName}</td>
-                        <td>
-                          <div className="progress-bar">
-                            <div className="progress-fill" style={{width: `${p.attendanceRate}%`}}></div>
-                            <span className="progress-text">{p.attendanceRate}%</span>
-                          </div>
-                        </td>
-                        <td><span className="badge-primary">{p.allocationsCompleted}</span></td>
-                        <td><span className="badge-secondary">{p.maintenanceCompleted}</span></td>
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-sm uppercase tracking-wider">Guard Name</th>
+                        <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-sm uppercase tracking-wider">Attendance Rate</th>
+                        <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-sm uppercase tracking-wider">Allocations</th>
+                        <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-sm uppercase tracking-wider">Maintenance Tasks</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {performance.map((p) => (
+                        <tr key={p.guardId} className="border-b border-gray-200 hover:bg-gray-50">
+                          <td className="px-4 py-3 text-gray-700">{p.guardName}</td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 bg-gray-200 rounded-full h-2 overflow-hidden">
+                                <div 
+                                  className="bg-indigo-600 h-full transition-all duration-300" 
+                                  style={{width: `${p.attendanceRate}%`}}
+                                ></div>
+                              </div>
+                              <span className="text-sm font-medium text-gray-700 min-w-12">{p.attendanceRate}%</span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3"><span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold">{p.allocationsCompleted}</span></td>
+                          <td className="px-4 py-3"><span className="inline-block bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-semibold">{p.maintenanceCompleted}</span></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               ) : (
-                <p className="empty-state">No performance data available</p>
+                <p className="text-center text-gray-400 py-8 italic">No performance data available</p>
               )}
             </section>
           </div>

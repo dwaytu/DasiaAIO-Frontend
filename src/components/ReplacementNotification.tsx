@@ -1,9 +1,8 @@
 import { FC } from 'react'
-import './ReplacementNotification.css'
 
 const ReplacementNotification: FC<any> = () => (
-  <div className="replacement-notification">
-    <h2>Replacement Notification</h2>
+  <div className="bg-white rounded-lg shadow-md p-6">
+    <h2 className="text-xl font-bold text-gray-800">Replacement Notification</h2>
   </div>
 )
 

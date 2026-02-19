@@ -1,9 +1,8 @@
 import { FC } from 'react'
-import './AlertsCenter.css'
 
 const AlertsCenter: FC<any> = () => (
-  <div className="alerts-center">
-    <h2>Alerts Center</h2>
+  <div className="bg-white rounded-lg shadow-md p-6">
+    <h2 className="text-xl font-bold text-gray-800">Alerts Center</h2>
   </div>
 )
 

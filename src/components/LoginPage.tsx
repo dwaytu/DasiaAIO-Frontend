@@ -226,11 +226,288 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
   }
 
   const renderForm = () => (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-6">
       {requiresVerification ? (
         <>
           <div>
-            <label htmlFor="code" className="block text-sm font-semibold text-gray-700 mb-2">Confirmation Code</label>
+            <label htmlFor="code" className="block text-[15px] lg:text-sm font-semibold text-slate-700 mb-2.5">Confirmation Code</label>
+            <input
+              id="code"
+              type="text"
+              value={verificationCode}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setVerificationCode(e.target.value.slice(0, 6))}
+              placeholder="000000"
+              disabled={isLoading}
+              maxLength={6}
+              className="w-full px-4 py-3 border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-400 text-center text-2xl tracking-widest transition-all"
+            />
+          </div>
+
+          {error && (
+            <div className={`p-4 rounded-lg text-sm font-medium ${error.includes('verified successfully') ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
+              {error}
+            </div>
+          )}
+
+          <button type="submit" disabled={isLoading} className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-400 text-white font-semibold py-3 rounded-lg transition-all shadow-md hover:shadow-lg">
+            {isLoading ? 'Verifying...' : 'Verify'}
+          </button>
+
+          <div className="flex gap-3">
+            <button
+              type="button"
+              className="flex-1 px-4 py-3 border-2 border-indigo-600 text-indigo-600 font-semibold rounded-lg hover:bg-indigo-50 transition-colors disabled:bg-slate-100 disabled:text-slate-400 disabled:border-slate-300 text-sm"
+              onClick={async () => {
+                setIsLoading(true)
+                try {
+                  const response = await fetch(`${API_BASE_URL}/api/resend-code`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: verificationEmail })
+                  })
+                  const data = await response.json()
+                  setError(data.message || 'Code resent!')
+                } catch (err) {
+                  setError('Error: ' + (err instanceof Error ? err.message : String(err)))
+                } finally {
+                  setIsLoading(false)
+                }
+              }}
+              disabled={isLoading}
+            >
+              Resend Code
+            </button>
+            <button
+              type="button"
+              className="flex-1 px-4 py-3 text-slate-700 font-semibold border-2 border-slate-300 rounded-lg hover:bg-slate-50 transition-colors disabled:bg-slate-100 disabled:text-slate-400 text-sm"
+              onClick={() => {
+                setRequiresVerification(false)
+                setVerificationCode('')
+                setVerificationEmail('')
+                setError('')
+                setIsRegistering(false)
+                setIdentifier('')
+              }}
+              disabled={isLoading}
+            >
+              Back to Login
+            </button>
+          </div>
+        </>
+      ) : isRegistering ? (
+        <>
+          <div>
+            <label htmlFor="username" className="block text-[15px] lg:text-sm font-semibold text-slate-700 mb-2.5">Username</label>
+            <input
+              id="username"
+              type="text"
+              value={username}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setUsername(e.target.value)}
+              placeholder="Choose a username"
+              disabled={isLoading}
+              className="w-full px-4 py-3 border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:bg-slate-50 transition-all"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="fullName" className="block text-[15px] lg:text-sm font-semibold text-slate-700 mb-2.5">Full Name</label>
+            <input
+              id="fullName"
+              type="text"
+              value={fullName}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setFullName(e.target.value)}
+              placeholder="Your full name"
+              disabled={isLoading}
+              className="w-full px-4 py-3 border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:bg-slate-50 transition-all"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="phoneNumber" className="block text-[15px] lg:text-sm font-semibold text-slate-700 mb-2.5">Phone Number</label>
+            <input
+              id="phoneNumber"
+              type="text"
+              value={phoneNumber}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setPhoneNumber(formatPhoneNumber(e.target.value))}
+              placeholder="+63-###-###-####"
+              disabled={isLoading}
+              className="w-full px-4 py-3 border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:bg-slate-50 transition-all"
+            />
+          </div>
+
+          {role !== 'admin' && (
+            <>
+              <div>
+                <label htmlFor="licenseNumber" className="block text-[15px] lg:text-sm font-semibold text-slate-700 mb-2.5">License Number</label>
+                <input
+                  id="licenseNumber"
+                  type="text"
+                  value={licenseNumber}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => setLicenseNumber(e.target.value)}
+                  placeholder="Your license number"
+                  disabled={isLoading}
+                  className="w-full px-4 py-3 border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:bg-slate-50 transition-all"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="licenseExpiryDate" className="block text-[15px] lg:text-sm font-semibold text-slate-700 mb-2.5">License Expiry Date</label>
+                <input
+                  id="licenseExpiryDate"
+                  type="date"
+                  value={licenseExpiryDate}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => setLicenseExpiryDate(e.target.value)}
+                  disabled={isLoading}
+                  className="w-full px-4 py-3 border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:bg-slate-50 transition-all"
+                />
+              </div>
+            </>
+          )}
+
+          <div>
+            <label htmlFor="email" className="block text-[15px] lg:text-sm font-semibold text-slate-700 mb-2.5">Email</label>
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+              placeholder="your@email.com"
+              disabled={isLoading}
+              className="w-full px-4 py-3 border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:bg-slate-50 transition-all"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="password" className="block text-[15px] lg:text-sm font-semibold text-slate-700 mb-2.5">Password</label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+              placeholder="Create a strong password"
+              disabled={isLoading}
+              className="w-full px-4 py-3 border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:bg-slate-50 transition-all"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="role" className="block text-[15px] lg:text-sm font-semibold text-slate-700 mb-2.5">Account Type</label>
+            <select
+              id="role"
+              value={role}
+              onChange={(e: ChangeEvent<HTMLSelectElement>) => setRole(e.target.value)}
+              disabled={isLoading}
+              className="w-full px-4 py-3 border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:bg-slate-50 transition-all"
+            >
+              <option value="user">Regular User</option>
+              <option value="admin">Administrator</option>
+            </select>
+          </div>
+
+          {role === 'admin' && (
+            <div>
+              <label htmlFor="adminCode" className="block text-[15px] lg:text-sm font-semibold text-slate-700 mb-2.5">Admin Code</label>
+              <input
+                id="adminCode"
+                type="password"
+                value={adminCode}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setAdminCode(e.target.value)}
+                placeholder="Enter admin code"
+                disabled={isLoading}
+                className="w-full px-4 py-3 border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:bg-slate-50 transition-all"
+              />
+            </div>
+          )}
+
+          {error && (
+            <div className={`p-4 rounded-lg text-sm font-medium ${isRegistering && !error.includes('successful') ? 'bg-red-50 text-red-800 border border-red-200' : error.includes('successful') ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
+              {error}
+            </div>
+          )}
+
+          <button type="submit" disabled={isLoading} className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-400 text-white font-semibold py-3 rounded-lg transition-all shadow-md hover:shadow-lg">
+            {isLoading ? 'Processing...' : 'Create Account'}
+          </button>
+
+          <div className="text-center pt-2">
+            <button
+              type="button"
+              className="text-indigo-600 hover:text-indigo-700 font-semibold transition-colors disabled:text-slate-400 text-sm"
+              onClick={() => {
+                setIsRegistering(false)
+                setError('')
+                setPassword('')
+                setAdminCode('')
+                setIdentifier('')
+              }}
+              disabled={isLoading}
+            >
+              Already have an account? Login
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          <div>
+            <label htmlFor="identifier" className="block text-[15px] lg:text-sm font-semibold text-slate-700 mb-2.5">Email, Username, or Phone</label>
+            <input
+              id="identifier"
+              type="text"
+              value={identifier}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setIdentifier(e.target.value)}
+              placeholder="Enter your credentials"
+              disabled={isLoading}
+              className="w-full px-4 py-3 border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:bg-slate-50 transition-all"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="password" className="block text-[15px] lg:text-sm font-semibold text-slate-700 mb-2.5">Password</label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+              placeholder="Enter your password"
+              disabled={isLoading}
+              className="w-full px-4 py-3 border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:bg-slate-50 transition-all"
+            />
+          </div>
+
+          {error && (
+            <div className="p-4 rounded-lg text-sm font-medium bg-red-50 text-red-800 border border-red-200">
+              {error}
+            </div>
+          )}
+
+          <button type="submit" disabled={isLoading} className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-400 text-white font-semibold py-3 rounded-lg transition-all shadow-md hover:shadow-lg">
+            {isLoading ? 'Signing in...' : 'Sign In'}
+          </button>
+
+          <div className="text-center pt-2">
+            <button
+              type="button"
+              className="text-indigo-600 hover:text-indigo-700 font-semibold transition-colors disabled:text-slate-400 text-sm"
+              onClick={() => {
+                setIsRegistering(true)
+                setError('')
+                setPassword('')
+                setAdminCode('')
+                setIdentifier('')
+              }}
+              disabled={isLoading}
+            >
+              Don't have an account? Sign up
+            </button>
+          </div>
+        </>
+      )}
+    </form>
+  )
+      {requiresVerification ? (
+        <>
+          <div>
+            <label htmlFor="code" className="block text-[15px] lg:text-sm font-semibold text-gray-700 mb-2">Confirmation Code</label>
             <input
               id="code"
               type="text"
@@ -297,7 +574,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
       ) : isRegistering ? (
         <>
           <div>
-            <label htmlFor="username" className="block text-sm font-semibold text-gray-700 mb-2">Username</label>
+            <label htmlFor="username" className="block text-[15px] lg:text-sm font-semibold text-gray-700 mb-2">Username</label>
             <input
               id="username"
               type="text"
@@ -310,7 +587,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
           </div>
 
           <div>
-            <label htmlFor="fullName" className="block text-sm font-semibold text-gray-700 mb-2">Full Name</label>
+            <label htmlFor="fullName" className="block text-[15px] lg:text-sm font-semibold text-gray-700 mb-2">Full Name</label>
             <input
               id="fullName"
               type="text"
@@ -323,7 +600,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
           </div>
 
           <div>
-            <label htmlFor="phoneNumber" className="block text-sm font-semibold text-gray-700 mb-2">Phone Number</label>
+            <label htmlFor="phoneNumber" className="block text-[15px] lg:text-sm font-semibold text-gray-700 mb-2">Phone Number</label>
             <input
               id="phoneNumber"
               type="text"
@@ -338,7 +615,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
           {role !== 'admin' && (
             <>
               <div>
-                <label htmlFor="licenseNumber" className="block text-sm font-semibold text-gray-700 mb-2">License Number</label>
+                <label htmlFor="licenseNumber" className="block text-[15px] lg:text-sm font-semibold text-gray-700 mb-2">License Number</label>
                 <input
                   id="licenseNumber"
                   type="text"
@@ -351,7 +628,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
               </div>
 
               <div>
-                <label htmlFor="licenseExpiryDate" className="block text-sm font-semibold text-gray-700 mb-2">License Expiry Date</label>
+                <label htmlFor="licenseExpiryDate" className="block text-[15px] lg:text-sm font-semibold text-gray-700 mb-2">License Expiry Date</label>
                 <input
                   id="licenseExpiryDate"
                   type="date"
@@ -365,7 +642,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
           )}
 
           <div>
-            <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">Email</label>
+            <label htmlFor="email" className="block text-[15px] lg:text-sm font-semibold text-gray-700 mb-2">Email</label>
             <input
               id="email"
               type="email"
@@ -378,7 +655,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-2">Password</label>
+            <label htmlFor="password" className="block text-[15px] lg:text-sm font-semibold text-gray-700 mb-2">Password</label>
             <input
               id="password"
               type="password"
@@ -391,7 +668,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
           </div>
 
           <div>
-            <label htmlFor="role" className="block text-sm font-semibold text-gray-700 mb-2">Account Type</label>
+            <label htmlFor="role" className="block text-[15px] lg:text-sm font-semibold text-gray-700 mb-2">Account Type</label>
             <select
               id="role"
               value={role}
@@ -406,7 +683,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
 
           {role === 'admin' && (
             <div>
-              <label htmlFor="adminCode" className="block text-sm font-semibold text-gray-700 mb-2">Admin Code</label>
+              <label htmlFor="adminCode" className="block text-[15px] lg:text-sm font-semibold text-gray-700 mb-2">Admin Code</label>
               <input
                 id="adminCode"
                 type="password"
@@ -449,7 +726,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
       ) : (
         <>
           <div>
-            <label htmlFor="identifier" className="block text-sm font-semibold text-gray-700 mb-2">Email, Username, or Phone Number</label>
+            <label htmlFor="identifier" className="block text-[15px] lg:text-sm font-semibold text-gray-700 mb-2">Email, Username, or Phone Number</label>
             <input
               id="identifier"
               type="text"
@@ -462,7 +739,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-2">Password</label>
+            <label htmlFor="password" className="block text-[15px] lg:text-sm font-semibold text-gray-700 mb-2">Password</label>
             <input
               id="password"
               type="password"
@@ -508,34 +785,34 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
   return (
     <>
       {/* MOBILE LAYOUT - Completely different design */}
-      <div className="lg:hidden min-h-screen w-screen bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-700 flex items-center justify-center p-4 overflow-x-hidden">
+      <div className="lg:hidden min-h-screen w-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4 overflow-x-hidden">
         <div className="w-full max-w-md">
           {/* Form Card */}
-          <div className="bg-white rounded-3xl shadow-2xl p-7 max-h-[85vh] overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-lg p-8 max-h-[85vh] overflow-y-auto border border-slate-100">
             {/* Logo */}
-            <div className="flex justify-center mb-4">
+            <div className="flex justify-center mb-8">
               <Logo onClick={() => {}} />
             </div>
 
             {/* Page Title */}
             {!requiresVerification && !isRegistering && (
-              <div className="mb-5 text-center">
-                <h1 className="text-2xl font-bold text-gray-900 mb-1">Welcome Back!</h1>
-                <p className="text-sm text-gray-600">Please enter your details</p>
+              <div className="mb-8 text-center">
+                <h1 className="text-[28px] font-bold text-slate-900 mb-2">Welcome Back!</h1>
+                <p className="text-[14px] text-slate-500">Enter your credentials to continue</p>
               </div>
             )}
 
             {requiresVerification && (
-              <div className="mb-5 text-center">
-                <h1 className="text-2xl font-bold text-gray-900 mb-1">Verify Your Email</h1>
-                <p className="text-gray-600 text-sm">Enter the 6-digit code sent to {verificationEmail}</p>
+              <div className="mb-8 text-center">
+                <h1 className="text-[28px] font-bold text-slate-900 mb-2">Verify Your Email</h1>
+                <p className="text-slate-500 text-[14px]">Check your inbox for the 6-digit code</p>
               </div>
             )}
 
             {isRegistering && !requiresVerification && (
-              <div className="mb-5 text-center">
-                <h1 className="text-2xl font-bold text-gray-900 mb-1">Create Account</h1>
-                <p className="text-sm text-gray-600">Fill in your details to get started</p>
+              <div className="mb-8 text-center">
+                <h1 className="text-[28px] font-bold text-slate-900 mb-2">Create Account</h1>
+                <p className="text-[14px] text-slate-500">Join us and get started today</p>
               </div>
             )}
 
@@ -546,34 +823,31 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
       </div>
 
       {/* DESKTOP LAYOUT - Original unchanged design */}
-      <div className="hidden lg:flex min-h-screen w-screen bg-white overflow-hidden">
-        {!isRegistering && (
-          <div className="absolute top-8 left-8 z-10">
-            <Logo onClick={() => {}} />
-          </div>
-        )}
-        
+      <div className="hidden lg:flex min-h-screen w-screen bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden">
+        <div className="absolute top-10 left-10 z-10">
+          <Logo onClick={() => {}} />
+        </div>
         {/* Left Section - Form */}
-        <div className="flex-1 flex items-center justify-center p-8">
+        <div className="flex-1 flex items-center justify-center p-12">
           <div className="w-full max-w-md">
             {!requiresVerification && !isRegistering && (
-              <div className="mb-8">
-                <h1 className="text-4xl font-bold text-gray-900 mb-2">Welcome Back!</h1>
-                <p className="text-lg text-gray-600">Please enter your details</p>
+              <div className="mb-10">
+                <h1 className="text-5xl font-bold text-slate-900 mb-3">Welcome Back!</h1>
+                <p className="text-lg text-slate-600">Sign in to your account</p>
               </div>
             )}
 
             {requiresVerification && (
-              <div className="mb-8">
-                <h1 className="text-4xl font-bold text-gray-900 mb-2">Verify Your Email</h1>
-                <p className="text-gray-600 text-base">Enter the 6-digit code sent to {verificationEmail}</p>
+              <div className="mb-10">
+                <h1 className="text-5xl font-bold text-slate-900 mb-3">Verify Your Email</h1>
+                <p className="text-slate-600 text-lg">Enter the code from your inbox</p>
               </div>
             )}
 
             {isRegistering && !requiresVerification && (
-              <div className="mb-8">
-                <h1 className="text-4xl font-bold text-gray-900 mb-2">Create Account</h1>
-                <p className="text-lg text-gray-600">Fill in your details to get started</p>
+              <div className="mb-10">
+                <h1 className="text-5xl font-bold text-slate-900 mb-3">Create Account</h1>
+                <p className="text-lg text-slate-600">Join our security team</p>
               </div>
             )}
 
@@ -582,55 +856,46 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
         </div>
 
         {/* Right Section - Design */}
-        <div className="flex-1 bg-gradient-to-br from-indigo-600 to-purple-700 flex items-center justify-center flex-col gap-8 p-12">
-          <style>{`
-            @keyframes shieldPulse {
-              0%, 100% {
-                transform: scale(1);
-                box-shadow: 0 0 0px rgba(255, 255, 255, 0);
-              }
-              50% {
-                transform: scale(1.05);
-                box-shadow: 0 0 30px rgba(255, 255, 255, 0.6), 0 0 60px rgba(99, 102, 241, 0.4);
-              }
-            }
-            .shield-pulse {
-              animation: shieldPulse 2s ease-in-out infinite;
-            }
-          `}</style>
-          <div className="text-center space-y-4">
-            <div className="w-24 h-24 mx-auto bg-white/10 rounded-full flex items-center justify-center shield-pulse">
-              <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
-                <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" className="w-10 h-10">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                </svg>
-              </div>
-            </div>
-            <h2 className="text-3xl font-bold text-white">Secure Access</h2>
-            <p className="text-indigo-100 text-lg">Guard & Firearm Management System</p>
+        <div className="flex-1 bg-gradient-to-br from-indigo-600 to-purple-700 flex items-center justify-center flex-col gap-8 p-12 relative overflow-hidden">
+          {/* Background pattern */}
+          <div className="absolute inset-0 opacity-10">
+            <div className="absolute top-20 right-20 w-72 h-72 bg-white rounded-full blur-3xl"></div>
+            <div className="absolute bottom-20 left-20 w-96 h-96 bg-indigo-300 rounded-full blur-3xl"></div>
           </div>
           
-          <div className="grid grid-cols-2 gap-6 w-full max-w-md">
-            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold text-white mb-2">24/7</div>
-              <p className="text-sm text-indigo-100">Security</p>
+          <div className="relative z-10 text-center space-y-6">
+            <div className="inline-flex items-center justify-center w-24 h-24 bg-white/10 backdrop-blur-md rounded-full">
+              <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" className="w-12 h-12">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              </svg>
             </div>
-            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold text-white mb-2">100%</div>
-              <p className="text-sm text-indigo-100">Encrypted</p>
-            </div>
-            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold text-white mb-2">∞</div>
-              <p className="text-sm text-indigo-100">Scalable</p>
-            </div>
-            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold text-white mb-2">✓</div>
-              <p className="text-sm text-indigo-100">Verified</p>
+            <div>
+              <h2 className="text-4xl font-bold text-white mb-2">Your Security Matters</h2>
+              <p className="text-indigo-100 text-lg">Enterprise-grade protection for your assets</p>
             </div>
           </div>
           
-          <div className="text-center">
-            <p className="text-indigo-100 text-sm">Davao Security & Investigation Agency</p>
+          <div className="grid grid-cols-2 gap-6 w-full max-w-md relative z-10">
+            <div className="bg-white/5 backdrop-blur-sm border border-white/20 rounded-2xl p-6 text-center hover:bg-white/10 transition-colors">
+              <div className="text-3xl font-bold text-white mb-2">24/7</div>
+              <p className="text-sm text-indigo-100 font-medium">Monitoring</p>
+            </div>
+            <div className="bg-white/5 backdrop-blur-sm border border-white/20 rounded-2xl p-6 text-center hover:bg-white/10 transition-colors">
+              <div className="text-3xl font-bold text-white mb-2">100%</div>
+              <p className="text-sm text-indigo-100 font-medium">Encrypted</p>
+            </div>
+            <div className="bg-white/5 backdrop-blur-sm border border-white/20 rounded-2xl p-6 text-center hover:bg-white/10 transition-colors">
+              <div className="text-3xl font-bold text-white mb-2">∞</div>
+              <p className="text-sm text-indigo-100 font-medium">Scalable</p>
+            </div>
+            <div className="bg-white/5 backdrop-blur-sm border border-white/20 rounded-2xl p-6 text-center hover:bg-white/10 transition-colors">
+              <div className="text-3xl font-bold text-white mb-2">✓</div>
+              <p className="text-sm text-indigo-100 font-medium">Verified</p>
+            </div>
+          </div>
+          
+          <div className="text-center relative z-10">
+            <p className="text-indigo-100 text-sm font-medium">Davao Security & Investigation Agency</p>
           </div>
         </div>
       </div>

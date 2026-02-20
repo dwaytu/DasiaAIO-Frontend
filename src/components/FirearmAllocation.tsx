@@ -22,6 +22,7 @@ interface Props {
 const FirearmAllocation: FC<Props> = ({ onLogout, onViewChange, activeView }) => {
   const [allocations, setAllocations] = useState<Allocation[]>([])
   const [loading, setLoading] = useState<boolean>(true)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false)
   const currentView = activeView || 'allocation'
   const navItems = [
     { view: 'users', label: 'Dashboard' },
@@ -79,10 +80,12 @@ const FirearmAllocation: FC<Props> = ({ onLogout, onViewChange, activeView }) =>
         onNavigate={handleNavigate}
         onLogoClick={() => onViewChange?.('users')}
         onLogout={onLogout}
+        isOpen={mobileMenuOpen}
+        onClose={() => setMobileMenuOpen(false)}
       />
 
       <main className="flex-1 flex flex-col overflow-hidden w-full">
-        <Header title="Firearm Allocation" badgeLabel="Allocation" onLogout={onLogout} />
+        <Header title="Firearm Allocation" badgeLabel="Allocation" onLogout={onLogout} onMenuClick={() => setMobileMenuOpen(true)} />
 
         {loading ? (
           <div className="flex-1 flex items-center justify-center text-center">

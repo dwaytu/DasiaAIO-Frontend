@@ -22,8 +22,16 @@ function getDefaultAPIURL(): string {
     const hostname = window.location.hostname
     const protocol = window.location.protocol
     
-    // If running on localhost or 127.0.0.1, use port 5000 for backend
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    // Check if it's a local network IP (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
+    const isLocalNetwork = 
+      hostname === 'localhost' || 
+      hostname === '127.0.0.1' ||
+      hostname.startsWith('192.168.') ||
+      hostname.startsWith('10.') ||
+      /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(hostname)
+    
+    // If running on local network, use port 5000 for backend
+    if (isLocalNetwork) {
       return `${protocol}//${hostname}:5000`
     }
     

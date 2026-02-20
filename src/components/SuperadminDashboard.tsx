@@ -39,6 +39,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ onLogout, onViewCha
   const [shiftsLoading, setShiftsLoading] = useState<boolean>(false)
   const [missions, setMissions] = useState<any[]>([])
   const [missionsLoading, setMissionsLoading] = useState<boolean>(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false)
   const [missionFormData, setMissionFormData] = useState({
     mission_name: '',
     guards_required: 2,
@@ -318,6 +319,8 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ onLogout, onViewCha
           onNavigate={handleNavigate}
           onLogoClick={() => setActiveSection('dashboard')}
           onLogout={onLogout}
+          isOpen={mobileMenuOpen}
+          onClose={() => setMobileMenuOpen(false)}
         />
 
       <main className="flex-1 flex flex-col overflow-hidden w-full">
@@ -325,10 +328,11 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ onLogout, onViewCha
           title={sectionTitle}
           badgeLabel={badgeLabel}
           onLogout={onLogout}
+          onMenuClick={() => setMobileMenuOpen(true)}
           rightSlot={
             <button
               onClick={handleRefresh}
-              className="px-3 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              className="px-3 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors hidden md:block\"
             >
               Refresh
             </button>
@@ -342,48 +346,48 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ onLogout, onViewCha
             <div className="text-indigo-600 text-lg font-medium">Loading system data...</div>
           </div>
         ) : activeSection === 'dashboard' ? (
-          <div className="flex-1 p-8 overflow-y-auto w-full animate-fade-in">
-            <section className="w-full grid grid-cols-4 gap-6 mb-8">
-              <div className="bg-white p-6 rounded-xl shadow-sm border-t-4 border-indigo-600 hover:shadow-md hover:-translate-y-1 transition-all duration-300">
-                <h3 className="text-gray-600 text-sm font-semibold uppercase tracking-wider mb-2">Total Users</h3>
-                <p className="text-4xl font-bold text-indigo-600">{stats.totalUsers}</p>
+          <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in">
+            <section className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
+              <div className="bg-white p-4 md:p-6 rounded-xl shadow-sm border-t-4 border-indigo-600 hover:shadow-md hover:-translate-y-1 transition-all duration-300">
+                <h3 className="text-gray-600 text-xs md:text-sm font-semibold uppercase tracking-wider mb-2">Total Users</h3>
+                <p className="text-3xl md:text-4xl font-bold text-indigo-600">{stats.totalUsers}</p>
               </div>
-              <div className="bg-white p-6 rounded-xl shadow-sm border-t-4 border-indigo-600 hover:shadow-md hover:-translate-y-1 transition-all duration-300">
-                <h3 className="text-gray-600 text-sm font-semibold uppercase tracking-wider mb-2">Administrators</h3>
-                <p className="text-4xl font-bold text-indigo-600">{stats.admins}</p>
+              <div className="bg-white p-4 md:p-6 rounded-xl shadow-sm border-t-4 border-indigo-600 hover:shadow-md hover:-translate-y-1 transition-all duration-300">
+                <h3 className="text-gray-600 text-xs md:text-sm font-semibold uppercase tracking-wider mb-2">Administrators</h3>
+                <p className="text-3xl md:text-4xl font-bold text-indigo-600">{stats.admins}</p>
               </div>
-              <div className="bg-white p-6 rounded-xl shadow-sm border-t-4 border-indigo-600 hover:shadow-md hover:-translate-y-1 transition-all duration-300">
-                <h3 className="text-gray-600 text-sm font-semibold uppercase tracking-wider mb-2">Guards</h3>
-                <p className="text-4xl font-bold text-indigo-600">{stats.guards}</p>
+              <div className="bg-white p-4 md:p-6 rounded-xl shadow-sm border-t-4 border-indigo-600 hover:shadow-md hover:-translate-y-1 transition-all duration-300">
+                <h3 className="text-gray-600 text-xs md:text-sm font-semibold uppercase tracking-wider mb-2">Guards</h3>
+                <p className="text-3xl md:text-4xl font-bold text-indigo-600">{stats.guards}</p>
               </div>
-              <div className="bg-white p-6 rounded-xl shadow-sm border-t-4 border-indigo-600 hover:shadow-md hover:-translate-y-1 transition-all duration-300">
-                <h3 className="text-gray-600 text-sm font-semibold uppercase tracking-wider mb-2">Regular Users</h3>
-                <p className="text-4xl font-bold text-indigo-600">{stats.regularUsers}</p>
+              <div className="bg-white p-4 md:p-6 rounded-xl shadow-sm border-t-4 border-indigo-600 hover:shadow-md hover:-translate-y-1 transition-all duration-300">
+                <h3 className="text-gray-600 text-xs md:text-sm font-semibold uppercase tracking-wider mb-2">Regular Users</h3>
+                <p className="text-3xl md:text-4xl font-bold text-indigo-600">{stats.regularUsers}</p>
               </div>
             </section>
 
-            <section className="w-full bg-white p-8 rounded-xl shadow-sm">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">All Users</h2>
+            <section className="w-full bg-white p-4 md:p-8 rounded-xl shadow-sm">
+              <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 md:mb-6">All Users</h2>
               {users.length > 0 ? (
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto -mx-4 md:mx-0">
                   <table className="w-full border-collapse min-w-full">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-sm uppercase tracking-wider">Email</th>
-                        <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-sm uppercase tracking-wider">Username</th>
-                        <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-sm uppercase tracking-wider">Full Name</th>
-                        <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-sm uppercase tracking-wider">Role</th>
-                        <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-sm uppercase tracking-wider">Actions</th>
+                        <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-xs md:text-sm uppercase tracking-wider">Email</th>
+                        <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-xs md:text-sm uppercase tracking-wider">Username</th>
+                        <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-xs md:text-sm uppercase tracking-wider hidden sm:table-cell">Full Name</th>
+                        <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-xs md:text-sm uppercase tracking-wider">Role</th>
+                        <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-xs md:text-sm uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {users.map((u: User) => (
                         <tr key={u.id} className="border-b border-gray-200 hover:bg-gray-50">
-                          <td className="px-4 py-3 text-gray-700">{u.email}</td>
-                          <td className="px-4 py-3 text-gray-700">{u.username}</td>
-                          <td className="px-4 py-3 text-gray-700">{u.full_name || '-'}</td>
-                          <td className="px-4 py-3">
-                            <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
+                          <td className="px-2 md:px-4 py-2 md:py-3 text-gray-700 text-xs md:text-base">{u.email}</td>
+                          <td className="px-2 md:px-4 py-2 md:py-3 text-gray-700 text-xs md:text-base">{u.username}</td>
+                          <td className="px-2 md:px-4 py-2 md:py-3 text-gray-700 text-xs md:text-base hidden sm:table-cell">{u.full_name || '-'}</td>
+                          <td className="px-2 md:px-4 py-2 md:py-3">
+                            <span className={`inline-block px-2 md:px-3 py-1 rounded-full text-xs font-semibold ${
                               u.role === 'admin' ? 'bg-red-100 text-red-800' :
                               u.role === 'superadmin' ? 'bg-amber-100 text-amber-800' :
                               u.role === 'guard' ? 'bg-green-100 text-green-800' :
@@ -392,16 +396,16 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ onLogout, onViewCha
                               {u.role}
                             </span>
                           </td>
-                          <td className="px-4 py-3 flex gap-2">
+                          <td className="px-2 md:px-4 py-2 md:py-3 flex gap-1 md:gap-2">
                             <button 
-                              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded font-semibold text-sm uppercase tracking-wider transition-all duration-200 transform hover:-translate-y-0.5 hover:shadow-md"
+                              className="bg-blue-500 hover:bg-blue-600 text-white px-2 md:px-4 py-1 md:py-2 rounded font-semibold text-xs md:text-sm uppercase tracking-wider transition-all duration-200 transform hover:-translate-y-0.5 hover:shadow-md"
                               onClick={() => handleEditUser(u)}
                               title="Edit user details"
                             >
                               Edit
                             </button>
                             <button 
-                              className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded font-semibold text-sm uppercase tracking-wider transition-all duration-200 transform hover:-translate-y-0.5 hover:shadow-md"
+                              className="bg-red-500 hover:bg-red-600 text-white px-2 md:px-4 py-1 md:py-2 rounded font-semibold text-xs md:text-sm uppercase tracking-wider transition-all duration-200 transform hover:-translate-y-0.5 hover:shadow-md"
                               onClick={() => handleDeleteUser(u.id, u.email)}
                               title="Delete user"
                             >

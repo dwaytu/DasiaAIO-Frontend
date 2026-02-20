@@ -31,6 +31,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ onLogout }) => {
   const [activeSection, setActiveSection] = useState<'users' | 'schedule'>('users')
   const [shifts, setShifts] = useState<any[]>([])
   const [shiftsLoading, setShiftsLoading] = useState<boolean>(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false)
   const navItems = [
     { view: 'users', label: 'Dashboard' },
     { view: 'schedule', label: 'Schedule' }
@@ -148,6 +149,8 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ onLogout }) => {
         onNavigate={(view) => setActiveSection(view as 'users' | 'schedule')}
         onLogoClick={() => setActiveSection('users')}
         onLogout={handleLogout}
+        isOpen={mobileMenuOpen}
+        onClose={() => setMobileMenuOpen(false)}
       />
 
       <main className="flex-1 flex flex-col overflow-hidden w-full">
@@ -155,10 +158,11 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ onLogout }) => {
           title={activeSection === 'users' ? 'User Management' : 'Guard Schedules'}
           badgeLabel={activeSection === 'users' ? 'Users' : 'Schedule'}
           onLogout={handleLogout}
+          onMenuClick={() => setMobileMenuOpen(true)}
           rightSlot={
             <button
               onClick={handleRefresh}
-              className="px-3 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              className="px-3 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors hidden md:block"
             >
               Refresh
             </button>

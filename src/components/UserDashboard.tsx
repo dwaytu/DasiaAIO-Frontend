@@ -68,6 +68,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout }) => {
   const [firearmItems, setFirearmItems] = useState<AllocationItem[]>([])
   const [permitItems, setPermitItems] = useState<PermitItem[]>([])
   const [ticketItems, setTicketItems] = useState<SupportTicketItem[]>([])
+  const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false)
   const [scheduleForm, setScheduleForm] = useState({
     clientSite: '',
     date: '',
@@ -317,6 +318,8 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout }) => {
         onNavigate={(view) => handleNavigate(view as typeof activeSection)}
         onLogoClick={() => handleNavigate('overview')}
         onLogout={onLogout}
+        isOpen={mobileMenuOpen}
+        onClose={() => setMobileMenuOpen(false)}
       />
 
       <main className="flex-1 flex flex-col overflow-hidden w-full">
@@ -330,6 +333,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout }) => {
           }
           badgeLabel={activeSection === 'overview' ? 'Overview' : activeSection.replace('-', ' ')}
           onLogout={onLogout}
+          onMenuClick={() => setMobileMenuOpen(true)}
           rightSlot={
             <button
               onClick={handleRefresh}

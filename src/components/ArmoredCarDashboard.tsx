@@ -90,6 +90,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
   const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<string>('')
   const [success, setSuccess] = useState<string>('')
+  const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false)
 
   // Form states
   const [newCar, setNewCar] = useState({
@@ -264,10 +265,12 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
         items={navItems}
         activeView={currentView}
         onNavigate={onViewChange}        onLogoClick={() => onViewChange?.('users')}        onLogout={onLogout}
+        isOpen={mobileMenuOpen}
+        onClose={() => setMobileMenuOpen(false)}
       />
 
       <main className="flex-1 flex flex-col overflow-hidden w-full">
-        <Header title="Armored Car Management" badgeLabel="Armored Cars" onLogout={onLogout} />
+        <Header title="Armored Car Management" badgeLabel="Armored Cars" onLogout={onLogout} onMenuClick={() => setMobileMenuOpen(true)} />
 
         {error && (
           <div className="bg-red-50 text-red-900 px-8 py-3 border border-red-200 rounded mx-8 my-4 font-medium flex items-center justify-between">

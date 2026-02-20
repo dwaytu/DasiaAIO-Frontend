@@ -24,6 +24,7 @@ interface Props {
 const FirearmMaintenance: FC<Props> = ({ onLogout, onViewChange, activeView }) => {
   const [maintenances, setMaintenances] = useState<Maintenance[]>([])
   const [loading, setLoading] = useState<boolean>(true)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false)
   const currentView = activeView || 'maintenance'
   const navItems = [
     { view: 'users', label: 'Dashboard' },
@@ -86,10 +87,12 @@ const FirearmMaintenance: FC<Props> = ({ onLogout, onViewChange, activeView }) =
         onNavigate={handleNavigate}
         onLogoClick={() => onViewChange?.('users')}
         onLogout={onLogout}
+        isOpen={mobileMenuOpen}
+        onClose={() => setMobileMenuOpen(false)}
       />
 
       <main className="flex-1 flex flex-col overflow-hidden w-full">
-        <Header title="Firearm Maintenance" badgeLabel="Maintenance" onLogout={onLogout} />
+        <Header title="Firearm Maintenance" badgeLabel="Maintenance" onLogout={onLogout} onMenuClick={() => setMobileMenuOpen(true)} />
 
         {loading ? (
           <div className="flex-1 flex items-center justify-center text-center">

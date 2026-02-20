@@ -26,6 +26,7 @@ interface Performance {
 const PerformanceDashboard: FC<Props> = ({ onLogout, onViewChange, activeView }) => {
   const [performance, setPerformance] = useState<Performance[]>([])
   const [loading, setLoading] = useState<boolean>(true)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false)
   const currentView = activeView || 'performance'
   const navItems = [
     { view: 'users', label: 'Dashboard' },
@@ -83,10 +84,12 @@ const PerformanceDashboard: FC<Props> = ({ onLogout, onViewChange, activeView })
         onNavigate={handleNavigate}
         onLogoClick={() => onViewChange?.('users')}
         onLogout={onLogout}
+        isOpen={mobileMenuOpen}
+        onClose={() => setMobileMenuOpen(false)}
       />
 
       <main className="flex-1 flex flex-col overflow-hidden w-full">
-        <Header title="Performance Dashboard" badgeLabel="Performance" onLogout={onLogout} />
+        <Header title="Performance Dashboard" badgeLabel="Performance" onLogout={onLogout} onMenuClick={() => setMobileMenuOpen(true)} />
 
         {loading ? (
           <div className="flex-1 flex items-center justify-center text-center">

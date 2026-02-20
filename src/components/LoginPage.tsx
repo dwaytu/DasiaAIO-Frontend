@@ -246,7 +246,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
   }
 
   return (
-    <div className="min-h-screen flex w-screen bg-gradient-to-br from-indigo-600 to-purple-700 lg:bg-white overflow-hidden">
+    <div className="min-h-screen flex w-screen bg-white overflow-hidden">
       {!isRegistering && (
         <div className="absolute top-8 left-8 z-10 hidden lg:block">
           <Logo onClick={() => {}} />
@@ -254,8 +254,8 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
       )}
       
       {/* Left Section - Form */}
-      <div className="flex-1 lg:flex-1 flex items-center justify-center p-4 md:p-8 overflow-y-auto max-h-screen">
-        <div className="w-full max-w-md bg-white lg:bg-transparent rounded-3xl lg:rounded-none shadow-2xl lg:shadow-none p-8 md:p-10 lg:p-0 backdrop-blur-sm border border-indigo-100/20 lg:border-0">
+      <div className="flex-1 lg:flex-1 flex items-center justify-center p-4 md:p-8 overflow-y-auto max-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 lg:bg-transparent">
+        <div className="w-full max-w-md bg-white rounded-3xl lg:rounded-none shadow-xl lg:shadow-none p-8 md:p-10 lg:p-0 my-8 lg:my-0">
           {/* Mobile Logo - Centered above form */}
           <div className="flex justify-center mb-8 lg:hidden">
             <Logo onClick={() => {}} />

@@ -62,7 +62,6 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
 
     try {
       if (requiresVerification) {
-        // Verify email code
         if (!verificationCode) {
           setError('Please enter the verification code')
           setIsLoading(false)
@@ -91,27 +90,19 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
       }
 
       if (isRegistering) {
-        // Register
-        console.log('Registration attempt:', { email, password, username, role, fullName, phoneNumber })
-        
         if (!email || !password || !username || !role) {
-          console.log('Missing basic fields:', { email: !email, password: !password, username: !username, role: !role })
           setError('All fields are required')
           setIsLoading(false)
           return
         }
 
-        // Validate required fields
         if (!fullName || !phoneNumber) {
-          console.log('Missing personal info:', { fullName: !fullName, phoneNumber: !phoneNumber })
           setError('Full name and phone number are required')
           setIsLoading(false)
           return
         }
 
-        // For regular users, license fields are required
         if (role !== 'admin' && (!licenseNumber || !licenseExpiryDate)) {
-          console.log('Missing license fields for user:', { licenseNumber: !licenseNumber, licenseExpiryDate: !licenseExpiryDate })
           setError('License number and expiry date are required for regular users')
           setIsLoading(false)
           return
@@ -141,7 +132,6 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
           return
         }
 
-        // Call backend register
         const requestBody: any = { 
           email, 
           password, 
@@ -152,13 +142,10 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
           phoneNumber
         }
         
-        // Only include license fields if not admin
         if (role !== 'admin') {
           requestBody.licenseNumber = licenseNumber
           requestBody.licenseExpiryDate = licenseExpiryDate
         }
-        
-        console.log('Registering with:', requestBody)
         
         const response = await fetch(`${API_BASE_URL}/api/register`, {
           method: 'POST',
@@ -197,27 +184,20 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
         setIsLoading(false)
         return
       } else {
-        // Login
         if (!identifier || !password) {
           setError('Email, username, phone number, and password are required')
           setIsLoading(false)
           return
         }
 
-        console.log('Attempting login with:', { identifier, password: '***' })
-
-        // Call backend login
         const response = await fetch(`${API_BASE_URL}/api/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ identifier, password })
         })
 
-        console.log('Login response status:', response.status)
-
         if (!response.ok) {
           const data = await response.json()
-          console.log('Login error data:', data)
           if (data.requiresVerification) {
             setRequiresVerification(true)
             setVerificationEmail(email)
@@ -245,356 +225,416 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
     }
   }
 
-  return (
-    <div className="min-h-screen flex w-screen bg-white overflow-hidden">
-      {!isRegistering && (
-        <div className="absolute top-8 left-8 z-10 hidden lg:block">
-          <Logo onClick={() => {}} />
-        </div>
-      )}
-      
-      {/* Left Section - Form */}
-      <div className="flex-1 lg:flex-1 flex items-center justify-center p-4 md:p-8 overflow-y-auto max-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 lg:bg-transparent">
-        <div className="w-full max-w-md bg-white rounded-3xl lg:rounded-none shadow-xl lg:shadow-none p-8 md:p-10 lg:p-0 my-8 lg:my-0">
-          {/* Mobile Logo - Centered above form */}
-          <div className="flex justify-center mb-8 lg:hidden">
-            <Logo onClick={() => {}} />
+  const renderForm = () => (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {requiresVerification ? (
+        <>
+          <div>
+            <label htmlFor="code" className="block text-sm font-semibold text-gray-700 mb-2">Confirmation Code</label>
+            <input
+              id="code"
+              type="text"
+              value={verificationCode}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setVerificationCode(e.target.value.slice(0, 6))}
+              placeholder="000000"
+              disabled={isLoading}
+              maxLength={6}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100 text-center text-2xl tracking-widest"
+            />
           </div>
-          
-          {!requiresVerification && !isRegistering && (
-            <div className="mb-8 text-center lg:text-left">
-              <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">Welcome Back!</h1>
-              <p className="text-base md:text-lg text-gray-600">Please enter your details</p>
+
+          {error && (
+            <div className={`p-3 rounded-lg text-sm ${error.includes('verified successfully') ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
+              {error}
             </div>
           )}
-          
-          {requiresVerification ? (
+
+          <button type="submit" disabled={isLoading} className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-bold py-3 rounded-lg transition-colors">
+            {isLoading ? 'Verifying...' : 'Verify'}
+          </button>
+
+          <div className="flex gap-2">
+            <button
+              type="button"
+              className="flex-1 px-3 py-2 border border-indigo-600 text-indigo-600 font-semibold rounded-lg hover:bg-indigo-50 transition-colors disabled:bg-gray-100 disabled:text-gray-400 disabled:border-gray-300 text-sm"
+              onClick={async () => {
+                setIsLoading(true)
+                try {
+                  const response = await fetch(`${API_BASE_URL}/api/resend-code`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: verificationEmail })
+                  })
+                  const data = await response.json()
+                  setError(data.message || 'Code resent!')
+                } catch (err) {
+                  setError('Error: ' + (err instanceof Error ? err.message : String(err)))
+                } finally {
+                  setIsLoading(false)
+                }
+              }}
+              disabled={isLoading}
+            >
+              Resend Code
+            </button>
+            <button
+              type="button"
+              className="flex-1 px-3 py-2 text-gray-700 font-semibold border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:bg-gray-100 disabled:text-gray-400 text-sm"
+              onClick={() => {
+                setRequiresVerification(false)
+                setVerificationCode('')
+                setVerificationEmail('')
+                setError('')
+                setIsRegistering(false)
+                setIdentifier('')
+              }}
+              disabled={isLoading}
+            >
+              Back to Login
+            </button>
+          </div>
+        </>
+      ) : isRegistering ? (
+        <>
+          <div>
+            <label htmlFor="username" className="block text-sm font-semibold text-gray-700 mb-2">Username</label>
+            <input
+              id="username"
+              type="text"
+              value={username}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setUsername(e.target.value)}
+              placeholder="Enter your username"
+              disabled={isLoading}
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="fullName" className="block text-sm font-semibold text-gray-700 mb-2">Full Name</label>
+            <input
+              id="fullName"
+              type="text"
+              value={fullName}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setFullName(e.target.value)}
+              placeholder="Enter your full name"
+              disabled={isLoading}
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="phoneNumber" className="block text-sm font-semibold text-gray-700 mb-2">Phone Number</label>
+            <input
+              id="phoneNumber"
+              type="text"
+              value={phoneNumber}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setPhoneNumber(formatPhoneNumber(e.target.value))}
+              placeholder="+63-###-###-####"
+              disabled={isLoading}
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
+            />
+          </div>
+
+          {role !== 'admin' && (
             <>
-              {/* Mobile Logo for verification page */}
-              <div className="flex justify-center mb-8 lg:hidden">
-                <Logo onClick={() => {}} />
+              <div>
+                <label htmlFor="licenseNumber" className="block text-sm font-semibold text-gray-700 mb-2">License Number</label>
+                <input
+                  id="licenseNumber"
+                  type="text"
+                  value={licenseNumber}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => setLicenseNumber(e.target.value)}
+                  placeholder="Enter your license number"
+                  disabled={isLoading}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
+                />
               </div>
-              
-              <div className="mb-8 text-center lg:text-left">
-                <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">Verify Your Email</h1>
-                <p className="text-gray-600 text-sm md:text-base">Enter the 6-digit code sent to {verificationEmail}</p>
+
+              <div>
+                <label htmlFor="licenseExpiryDate" className="block text-sm font-semibold text-gray-700 mb-2">License Expiry Date</label>
+                <input
+                  id="licenseExpiryDate"
+                  type="date"
+                  value={licenseExpiryDate}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => setLicenseExpiryDate(e.target.value)}
+                  disabled={isLoading}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
+                />
               </div>
-              
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div>
-                  <label htmlFor="code" className="block text-sm font-semibold text-gray-700 mb-2">Confirmation Code</label>
-                  <input
-                    id="code"
-                    type="text"
-                    value={verificationCode}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => setVerificationCode(e.target.value.slice(0, 6))}
-                    placeholder="000000"
-                    disabled={isLoading}
-                    maxLength={6}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100 text-center text-2xl tracking-widest"
-                  />
-                </div>
-
-                {error && (
-                  <div className={`p-4 rounded-lg text-sm md:text-base ${error.includes('verified successfully') ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
-                    {error}
-                  </div>
-                )}
-
-                <button type="submit" disabled={isLoading} className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-bold py-3 rounded-lg transition-colors text-sm md:text-base">
-                  {isLoading ? 'Verifying...' : 'Verify'}
-                </button>
-
-                <div className="flex gap-3">
-                  <button
-                    type="button"
-                    className="flex-1 px-4 py-2 border border-indigo-600 text-indigo-600 font-semibold rounded-lg hover:bg-indigo-50 transition-colors disabled:bg-gray-100 disabled:text-gray-400 disabled:border-gray-300 text-xs md:text-sm"
-                    onClick={async () => {
-                      setIsLoading(true)
-                      try {
-                        const response = await fetch(`${API_BASE_URL}/api/resend-code`, {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ email: verificationEmail })
-                        })
-                        const data = await response.json()
-                        setError(data.message || 'Code resent!')
-                      } catch (err) {
-                        setError('Error: ' + (err instanceof Error ? err.message : String(err)))
-                      } finally {
-                        setIsLoading(false)
-                      }
-                    }}
-                    disabled={isLoading}
-                  >
-                    Resend Code
-                  </button>
-                  <button
-                    type="button"
-                    className="flex-1 px-4 py-2 text-gray-700 font-semibold border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:bg-gray-100 disabled:text-gray-400 text-xs md:text-sm"
-                    onClick={() => {
-                      setRequiresVerification(false)
-                      setVerificationCode('')
-                      setVerificationEmail('')
-                      setError('')
-                      setIsRegistering(false)
-                      setIdentifier('')
-                    }}
-                    disabled={isLoading}
-                  >
-                    Back to Login
-                  </button>
-                </div>
-              </form>
             </>
-          ) : (
-            <>
-              {/* Mobile Logo for registration page */}
-              <div className="flex justify-center mb-8 lg:hidden">
-                <Logo onClick={() => {}} />
-              </div>
-              
-              {isRegistering && (
-                <div className="mb-8 text-center lg:text-left">
-                  <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">Create Account</h1>
-                  <p className="text-base md:text-lg text-gray-600">Fill in your details to get started</p>
-                </div>
-              )}
-              
-              <form onSubmit={handleSubmit} className="space-y-5">
-                {isRegistering && (
-                  <div>
-                      <label htmlFor="username" className="block text-sm font-semibold text-gray-700 mb-2">Username</label>
-                      <input
-                        id="username"
-                        type="text"
-                        value={username}
-                        onChange={(e: ChangeEvent<HTMLInputElement>) => setUsername(e.target.value)}
-                        placeholder="Enter your username"
-                        disabled={isLoading}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
-                      />
-                    </div>
-                  )}
+          )}
 
-                  {isRegistering && (
-                    <div>
-                      <label htmlFor="fullName" className="block text-sm font-semibold text-gray-700 mb-2">Full Name</label>
-                      <input
-                        id="fullName"
-                        type="text"
-                        value={fullName}
-                        onChange={(e: ChangeEvent<HTMLInputElement>) => setFullName(e.target.value)}
-                        placeholder="Enter your full name"
-                        disabled={isLoading}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
-                      />
-                    </div>
-                  )}
-
-                  {isRegistering && (
-                    <div>
-                      <label htmlFor="phoneNumber" className="block text-sm font-semibold text-gray-700 mb-2">Phone Number</label>
-                      <input
-                        id="phoneNumber"
-                        type="text"
-                        value={phoneNumber}
-                        onChange={(e: ChangeEvent<HTMLInputElement>) => setPhoneNumber(formatPhoneNumber(e.target.value))}
-                        placeholder="+63-###-###-####"
-                        disabled={isLoading}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
-                      />
-                    </div>
-                  )}
-
-                  {isRegistering && role !== 'admin' && (
-                    <div>
-                      <label htmlFor="licenseNumber" className="block text-sm font-semibold text-gray-700 mb-2">License Number</label>
-                      <input
-                        id="licenseNumber"
-                        type="text"
-                        value={licenseNumber}
-                        onChange={(e: ChangeEvent<HTMLInputElement>) => setLicenseNumber(e.target.value)}
-                        placeholder="Enter your license number"
-                        disabled={isLoading}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
-                      />
-                    </div>
-                  )}
-
-                  {isRegistering && role !== 'admin' && (
-                    <div>
-                      <label htmlFor="licenseExpiryDate" className="block text-sm font-semibold text-gray-700 mb-2">License Expiry Date</label>
-                      <input
-                        id="licenseExpiryDate"
-                        type="date"
-                        value={licenseExpiryDate}
-                        onChange={(e: ChangeEvent<HTMLInputElement>) => setLicenseExpiryDate(e.target.value)}
-                        disabled={isLoading}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
-                      />
-                    </div>
-                  )}
-
-                  {isRegistering && (
-                    <div>
-                      <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">Email</label>
-                      <input
-                        id="email"
-                        type="email"
-                        value={email}
-                        onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
-                        placeholder="Enter your email"
-                        disabled={isLoading}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
-                      />
-                    </div>
-                  )}
-
-                  {!isRegistering && (
-                    <div>
-                      <label htmlFor="identifier" className="block text-sm font-semibold text-gray-700 mb-2">Email, Username, or Phone Number</label>
-                      <input
-                        id="identifier"
-                        type="text"
-                        value={identifier}
-                        onChange={(e: ChangeEvent<HTMLInputElement>) => setIdentifier(e.target.value)}
-                        placeholder="Enter your email, username, or phone number"
-                        disabled={isLoading}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
-                      />
-                    </div>
-                  )}
-
-                  <div>
-                    <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-2">Password</label>
-                    <input
-                      id="password"
-                      type="password"
-                      value={password}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
-                      placeholder="Enter your password"
-                      disabled={isLoading}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
-                    />
-                  </div>
-
-                  {isRegistering && (
-                    <div>
-                      <label htmlFor="role" className="block text-sm font-semibold text-gray-700 mb-2">Account Type</label>
-                      <select
-                        id="role"
-                        value={role}
-                        onChange={(e: ChangeEvent<HTMLSelectElement>) => setRole(e.target.value)}
-                        disabled={isLoading}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100 bg-white"
-                      >
-                        <option value="user">User</option>
-                        <option value="admin">Admin</option>
-                      </select>
-                    </div>
-                  )}
-
-                  {isRegistering && role === 'admin' && (
-                    <div>
-                      <label htmlFor="adminCode" className="block text-sm font-semibold text-gray-700 mb-2">Admin Code</label>
-                      <input
-                        id="adminCode"
-                        type="password"
-                        value={adminCode}
-                        onChange={(e: ChangeEvent<HTMLInputElement>) => setAdminCode(e.target.value)}
-                        placeholder="Enter admin code"
-                        disabled={isLoading}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
-                      />
-                    </div>
-                  )}
-
-                  {error && (
-                    <div className={`p-4 rounded-lg ${isRegistering && !error.includes('successful') ? 'bg-red-50 text-red-800 border border-red-200' : error.includes('successful') ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
-                      {error}
-                    </div>
-                  )}
-
-                  <button type="submit" disabled={isLoading} className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-bold py-3 rounded-lg transition-colors text-sm md:text-base">
-                    {isLoading ? 'Processing...' : isRegistering ? 'Create Account' : 'Login'}
-                  </button>
-                </form>
-
-                <div className="mt-6 text-center">
-                  <button
-                    type="button"
-                    className="text-indigo-600 hover:text-indigo-700 font-semibold transition-colors disabled:text-gray-400"
-                    onClick={() => {
-                      setIsRegistering(!isRegistering)
-                      setError('')
-                      setPassword('')
-                      setAdminCode('')
-                      setIdentifier('')
-                    }}
-                    disabled={isLoading}
-                  >
-                    {isRegistering ? 'Already have an account? Login' : "Don't have an account? Register"}
-                  </button>
-                </div>
-              </>
-            )}
+          <div>
+            <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">Email</label>
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+              placeholder="Enter your email"
+              disabled={isLoading}
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
+            />
           </div>
-        </div>
 
-      {/* Right Section - Design */}
-      <div className="hidden lg:flex flex-1 bg-gradient-to-br from-indigo-600 to-purple-700 items-center justify-center overflow-hidden max-h-screen flex-col gap-8 p-12">
-        <style>{`
-          @keyframes shieldPulse {
-            0%, 100% {
-              transform: scale(1);
-              box-shadow: 0 0 0px rgba(255, 255, 255, 0);
-            }
-            50% {
-              transform: scale(1.05);
-              box-shadow: 0 0 30px rgba(255, 255, 255, 0.6), 0 0 60px rgba(99, 102, 241, 0.4);
-            }
-          }
-          .shield-pulse {
-            animation: shieldPulse 2s ease-in-out infinite;
-          }
-        `}</style>
-        <div className="text-center space-y-4">
-          <div className="w-24 h-24 mx-auto bg-white/10 rounded-full flex items-center justify-center shield-pulse">
-            <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
-              <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" className="w-10 h-10">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-              </svg>
+          <div>
+            <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-2">Password</label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+              placeholder="Enter your password"
+              disabled={isLoading}
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="role" className="block text-sm font-semibold text-gray-700 mb-2">Account Type</label>
+            <select
+              id="role"
+              value={role}
+              onChange={(e: ChangeEvent<HTMLSelectElement>) => setRole(e.target.value)}
+              disabled={isLoading}
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100 bg-white"
+            >
+              <option value="user">User</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+
+          {role === 'admin' && (
+            <div>
+              <label htmlFor="adminCode" className="block text-sm font-semibold text-gray-700 mb-2">Admin Code</label>
+              <input
+                id="adminCode"
+                type="password"
+                value={adminCode}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setAdminCode(e.target.value)}
+                placeholder="Enter admin code"
+                disabled={isLoading}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
+              />
             </div>
+          )}
+
+          {error && (
+            <div className={`p-3 rounded-lg text-sm ${isRegistering && !error.includes('successful') ? 'bg-red-50 text-red-800 border border-red-200' : error.includes('successful') ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
+              {error}
+            </div>
+          )}
+
+          <button type="submit" disabled={isLoading} className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-bold py-3 rounded-lg transition-colors">
+            {isLoading ? 'Processing...' : 'Create Account'}
+          </button>
+
+          <div className="text-center">
+            <button
+              type="button"
+              className="text-indigo-600 hover:text-indigo-700 font-semibold transition-colors disabled:text-gray-400"
+              onClick={() => {
+                setIsRegistering(false)
+                setError('')
+                setPassword('')
+                setAdminCode('')
+                setIdentifier('')
+              }}
+              disabled={isLoading}
+            >
+              Already have an account? Login
+            </button>
           </div>
-          <h2 className="text-3xl font-bold text-white">Secure Access</h2>
-          <p className="text-indigo-100 text-lg">Guard & Firearm Management System</p>
-        </div>
-        
-        <div className="grid grid-cols-2 gap-6 w-full max-w-md">
-          <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-4 text-center">
-            <div className="text-2xl font-bold text-white mb-2">24/7</div>
-            <p className="text-sm text-indigo-100">Security</p>
+        </>
+      ) : (
+        <>
+          <div>
+            <label htmlFor="identifier" className="block text-sm font-semibold text-gray-700 mb-2">Email, Username, or Phone Number</label>
+            <input
+              id="identifier"
+              type="text"
+              value={identifier}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setIdentifier(e.target.value)}
+              placeholder="Enter your email, username, or phone number"
+              disabled={isLoading}
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
+            />
           </div>
-          <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-4 text-center">
-            <div className="text-2xl font-bold text-white mb-2">100%</div>
-            <p className="text-sm text-indigo-100">Encrypted</p>
+
+          <div>
+            <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-2">Password</label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+              placeholder="Enter your password"
+              disabled={isLoading}
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
+            />
           </div>
-          <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-4 text-center">
-            <div className="text-2xl font-bold text-white mb-2">∞</div>
-            <p className="text-sm text-indigo-100">Scalable</p>
+
+          {error && (
+            <div className="p-3 rounded-lg text-sm bg-red-50 text-red-800 border border-red-200">
+              {error}
+            </div>
+          )}
+
+          <button type="submit" disabled={isLoading} className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-bold py-3 rounded-lg transition-colors">
+            {isLoading ? 'Processing...' : 'Login'}
+          </button>
+
+          <div className="text-center">
+            <button
+              type="button"
+              className="text-indigo-600 hover:text-indigo-700 font-semibold transition-colors disabled:text-gray-400"
+              onClick={() => {
+                setIsRegistering(true)
+                setError('')
+                setPassword('')
+                setAdminCode('')
+                setIdentifier('')
+              }}
+              disabled={isLoading}
+            >
+              Don't have an account? Register
+            </button>
           </div>
-          <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-4 text-center">
-            <div className="text-2xl font-bold text-white mb-2">✓</div>
-            <p className="text-sm text-indigo-100">Verified</p>
+        </>
+      )}
+    </form>
+  )
+
+  return (
+    <>
+      {/* MOBILE LAYOUT - Completely different design */}
+      <div className="lg:hidden min-h-screen w-screen bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-700 flex items-center justify-center p-4 overflow-x-hidden">
+        <div className="w-full max-w-md">
+          {/* Form Card */}
+          <div className="bg-white rounded-3xl shadow-2xl p-7 max-h-[85vh] overflow-y-auto">
+            {/* Logo */}
+            <div className="flex justify-center mb-4">
+              <Logo onClick={() => {}} />
+            </div>
+
+            {/* Page Title */}
+            {!requiresVerification && !isRegistering && (
+              <div className="mb-5 text-center">
+                <h1 className="text-2xl font-bold text-gray-900 mb-1">Welcome Back!</h1>
+                <p className="text-sm text-gray-600">Please enter your details</p>
+              </div>
+            )}
+
+            {requiresVerification && (
+              <div className="mb-5 text-center">
+                <h1 className="text-2xl font-bold text-gray-900 mb-1">Verify Your Email</h1>
+                <p className="text-gray-600 text-sm">Enter the 6-digit code sent to {verificationEmail}</p>
+              </div>
+            )}
+
+            {isRegistering && !requiresVerification && (
+              <div className="mb-5 text-center">
+                <h1 className="text-2xl font-bold text-gray-900 mb-1">Create Account</h1>
+                <p className="text-sm text-gray-600">Fill in your details to get started</p>
+              </div>
+            )}
+
+            {/* Form */}
+            {renderForm()}
           </div>
-        </div>
-        
-        <div className="text-center">
-          <p className="text-indigo-100 text-sm">Davao Security & Investigation Agency</p>
         </div>
       </div>
-    </div>
+
+      {/* DESKTOP LAYOUT - Original unchanged design */}
+      <div className="hidden lg:flex min-h-screen w-screen bg-white overflow-hidden">
+        {!isRegistering && (
+          <div className="absolute top-8 left-8 z-10">
+            <Logo onClick={() => {}} />
+          </div>
+        )}
+        
+        {/* Left Section - Form */}
+        <div className="flex-1 flex items-center justify-center p-8">
+          <div className="w-full max-w-md">
+            {!requiresVerification && !isRegistering && (
+              <div className="mb-8">
+                <h1 className="text-4xl font-bold text-gray-900 mb-2">Welcome Back!</h1>
+                <p className="text-lg text-gray-600">Please enter your details</p>
+              </div>
+            )}
+
+            {requiresVerification && (
+              <div className="mb-8">
+                <h1 className="text-4xl font-bold text-gray-900 mb-2">Verify Your Email</h1>
+                <p className="text-gray-600 text-base">Enter the 6-digit code sent to {verificationEmail}</p>
+              </div>
+            )}
+
+            {isRegistering && !requiresVerification && (
+              <div className="mb-8">
+                <h1 className="text-4xl font-bold text-gray-900 mb-2">Create Account</h1>
+                <p className="text-lg text-gray-600">Fill in your details to get started</p>
+              </div>
+            )}
+
+            {renderForm()}
+          </div>
+        </div>
+
+        {/* Right Section - Design */}
+        <div className="flex-1 bg-gradient-to-br from-indigo-600 to-purple-700 flex items-center justify-center flex-col gap-8 p-12">
+          <style>{`
+            @keyframes shieldPulse {
+              0%, 100% {
+                transform: scale(1);
+                box-shadow: 0 0 0px rgba(255, 255, 255, 0);
+              }
+              50% {
+                transform: scale(1.05);
+                box-shadow: 0 0 30px rgba(255, 255, 255, 0.6), 0 0 60px rgba(99, 102, 241, 0.4);
+              }
+            }
+            .shield-pulse {
+              animation: shieldPulse 2s ease-in-out infinite;
+            }
+          `}</style>
+          <div className="text-center space-y-4">
+            <div className="w-24 h-24 mx-auto bg-white/10 rounded-full flex items-center justify-center shield-pulse">
+              <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
+                <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" className="w-10 h-10">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                </svg>
+              </div>
+            </div>
+            <h2 className="text-3xl font-bold text-white">Secure Access</h2>
+            <p className="text-indigo-100 text-lg">Guard & Firearm Management System</p>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-6 w-full max-w-md">
+            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-4 text-center">
+              <div className="text-2xl font-bold text-white mb-2">24/7</div>
+              <p className="text-sm text-indigo-100">Security</p>
+            </div>
+            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-4 text-center">
+              <div className="text-2xl font-bold text-white mb-2">100%</div>
+              <p className="text-sm text-indigo-100">Encrypted</p>
+            </div>
+            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-4 text-center">
+              <div className="text-2xl font-bold text-white mb-2">∞</div>
+              <p className="text-sm text-indigo-100">Scalable</p>
+            </div>
+            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-4 text-center">
+              <div className="text-2xl font-bold text-white mb-2">✓</div>
+              <p className="text-sm text-indigo-100">Verified</p>
+            </div>
+          </div>
+          
+          <div className="text-center">
+            <p className="text-indigo-100 text-sm">Davao Security & Investigation Agency</p>
+          </div>
+        </div>
+      </div>
+    </>
   )
 }
 

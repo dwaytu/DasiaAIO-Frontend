@@ -12,7 +12,7 @@ const Logo: FC<LogoProps> = ({ onClick }) => {
       style={{ cursor: onClick ? 'pointer' : 'default' }}
     >
       {/* Mobile Logo - Shield with Text Below */}
-      <svg viewBox="0 0 200 280" width="90" height="auto" xmlns="http://www.w3.org/2000/svg" className="block md:hidden">
+      <svg viewBox="0 0 200 280" width="90" xmlns="http://www.w3.org/2000/svg" className="block md:hidden">
         <defs>
           <linearGradient id="purpleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" style={{stopColor:'#667eea',stopOpacity:1}} />
@@ -61,7 +61,7 @@ const Logo: FC<LogoProps> = ({ onClick }) => {
       </svg>
 
       {/* Desktop Logo - Shield + Text */}
-      <svg viewBox="0 0 520 200" width="280" height="auto" xmlns="http://www.w3.org/2000/svg" className="hidden md:block">
+      <svg viewBox="0 0 520 200" width="280" xmlns="http://www.w3.org/2000/svg" className="hidden md:block">
         <defs>
           <linearGradient id="purpleGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" style={{stopColor:'#667eea',stopOpacity:1}} />

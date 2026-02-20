@@ -504,7 +504,8 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
       )}
     </form>
   )
-      {requiresVerification ? (
+
+  return (
         <>
           <div>
             <label htmlFor="code" className="block text-[15px] lg:text-sm font-semibold text-gray-700 mb-2">Confirmation Code</label>

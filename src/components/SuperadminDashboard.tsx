@@ -87,6 +87,10 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ onLogout, onViewCha
   }
 
   useEffect(() => {
+    console.log('activeSection changed to:', activeSection)
+  }, [activeSection])
+
+  useEffect(() => {
     fetchData()
     if (activeSection === 'schedule') {
       fetchShifts()
@@ -109,7 +113,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ onLogout, onViewCha
     if (nextSection && nextSection !== activeSection) {
       setActiveSection(nextSection)
     }
-  }, [activeView, activeSection])
+  }, [activeView])
 
   const fetchData = async () => {
     try {
@@ -312,6 +316,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ onLogout, onViewCha
           items={navItems}
           activeView={activeSection}
           onNavigate={handleNavigate}
+          onLogoClick={() => setActiveSection('dashboard')}
           onLogout={onLogout}
         />
 

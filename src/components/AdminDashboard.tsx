@@ -146,6 +146,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ onLogout }) => {
         items={navItems}
         activeView={activeSection}
         onNavigate={(view) => setActiveSection(view as 'users' | 'schedule')}
+        onLogoClick={() => setActiveSection('users')}
         onLogout={handleLogout}
       />
 

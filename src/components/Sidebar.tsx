@@ -11,13 +11,14 @@ interface SidebarProps {
   activeView: string
   onNavigate: (view: string) => void
   onLogout: () => void
+  onLogoClick?: () => void
 }
 
-const Sidebar: FC<SidebarProps> = ({ items, activeView, onNavigate, onLogout }) => {
+const Sidebar: FC<SidebarProps> = ({ items, activeView, onNavigate, onLogout, onLogoClick }) => {
   return (
     <aside className="w-64 bg-gradient-to-b from-indigo-600 to-purple-900 text-white p-8 flex flex-col shadow-lg">
       <div className="pb-6 border-b border-white/20 mb-8 flex-shrink-0">
-        <Logo />
+        <Logo onClick={onLogoClick} />
       </div>
       <nav className="flex-1 flex flex-col gap-2 overflow-y-auto pr-2 min-h-0">
         {items.map(({ view, label }) => (

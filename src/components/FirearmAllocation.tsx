@@ -77,6 +77,7 @@ const FirearmAllocation: FC<Props> = ({ onLogout, onViewChange, activeView }) =>
         items={navItems}
         activeView={currentView}
         onNavigate={handleNavigate}
+        onLogoClick={() => onViewChange?.('users')}
         onLogout={onLogout}
       />
 

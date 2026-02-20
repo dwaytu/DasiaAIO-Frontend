@@ -263,8 +263,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
       <Sidebar
         items={navItems}
         activeView={currentView}
-        onNavigate={onViewChange}
-        onLogout={onLogout}
+        onNavigate={onViewChange}        onLogoClick={() => onViewChange?.('users')}        onLogout={onLogout}
       />
 
       <main className="flex-1 flex flex-col overflow-hidden w-full">

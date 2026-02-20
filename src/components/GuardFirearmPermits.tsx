@@ -83,6 +83,7 @@ const GuardFirearmPermits: FC<Props> = ({ user, onLogout, onViewChange, activeVi
         items={navItems}
         activeView={currentView}
         onNavigate={handleNavigate}
+        onLogoClick={() => onViewChange?.('users')}
         onLogout={onLogout}
       />
 

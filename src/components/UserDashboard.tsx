@@ -315,6 +315,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout }) => {
         items={navItems}
         activeView={activeSection}
         onNavigate={(view) => handleNavigate(view as typeof activeSection)}
+        onLogoClick={() => handleNavigate('overview')}
         onLogout={onLogout}
       />
 

@@ -246,18 +246,23 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
   }
 
   return (
-    <div className="min-h-screen flex w-screen bg-white overflow-hidden">
+    <div className="min-h-screen flex w-screen bg-gradient-to-br from-indigo-600 to-purple-700 lg:bg-white overflow-hidden">
       {!isRegistering && (
-        <div className="absolute top-8 left-8 z-10">
+        <div className="absolute top-8 left-8 z-10 hidden lg:block">
           <Logo onClick={() => {}} />
         </div>
       )}
       
       {/* Left Section - Form */}
       <div className="flex-1 lg:flex-1 flex items-center justify-center p-4 md:p-8 overflow-y-auto max-h-screen">
-        <div className="w-full max-w-md">
+        <div className="w-full max-w-md bg-white lg:bg-transparent rounded-3xl lg:rounded-none shadow-2xl lg:shadow-none p-8 md:p-10 lg:p-0 backdrop-blur-sm border border-indigo-100/20 lg:border-0">
+          {/* Mobile Logo - Centered above form */}
+          <div className="flex justify-center mb-8 lg:hidden">
+            <Logo onClick={() => {}} />
+          </div>
+          
           {!requiresVerification && !isRegistering && (
-            <div className="mb-8">
+            <div className="mb-8 text-center lg:text-left">
               <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">Welcome Back!</h1>
               <p className="text-base md:text-lg text-gray-600">Please enter your details</p>
             </div>
@@ -265,7 +270,12 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
           
           {requiresVerification ? (
             <>
-              <div className="mb-8">
+              {/* Mobile Logo for verification page */}
+              <div className="flex justify-center mb-8 lg:hidden">
+                <Logo onClick={() => {}} />
+              </div>
+              
+              <div className="mb-8 text-center lg:text-left">
                 <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">Verify Your Email</h1>
                 <p className="text-gray-600 text-sm md:text-base">Enter the 6-digit code sent to {verificationEmail}</p>
               </div>
@@ -339,8 +349,13 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
             </>
           ) : (
             <>
+              {/* Mobile Logo for registration page */}
+              <div className="flex justify-center mb-8 lg:hidden">
+                <Logo onClick={() => {}} />
+              </div>
+              
               {isRegistering && (
-                <div className="mb-8">
+                <div className="mb-8 text-center lg:text-left">
                   <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">Create Account</h1>
                   <p className="text-base md:text-lg text-gray-600">Fill in your details to get started</p>
                 </div>

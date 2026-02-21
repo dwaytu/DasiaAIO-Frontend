@@ -1,6 +1,7 @@
 import { useState, useEffect, FC } from 'react'
 import EditUserModal from './EditUserModal'
 import EditScheduleModal from './EditScheduleModal'
+import BugReportButton from './BugReportButton'
 import { API_BASE_URL } from '../config'
 import Sidebar from './Sidebar'
 import Header from './Header'
@@ -324,6 +325,8 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout }) => {
               onDelete={fetchShifts}
             />
           )}
+
+          <BugReportButton userId={user.id} />
         </div>
       </main>
     </div>

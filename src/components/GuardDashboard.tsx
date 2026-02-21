@@ -1,4 +1,5 @@
 import { FC } from 'react'
+import BugReportButton from './BugReportButton'
 
 interface User {
   [key: string]: any
@@ -27,6 +28,7 @@ const GuardDashboard: FC<GuardDashboardProps> = ({ user, onLogout }) => {
         </header>
         <main className="p-8">
           <h2 className="text-xl font-bold text-gray-800">Welcome, {user?.username}</h2>
+          <BugReportButton userId={user?.id} />
         </main>
       </div>
     </div>

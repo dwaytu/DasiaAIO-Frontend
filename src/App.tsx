@@ -8,6 +8,7 @@ import FirearmAllocation from './components/FirearmAllocation'
 import GuardFirearmPermits from './components/GuardFirearmPermits'
 import FirearmMaintenance from './components/FirearmMaintenance'
 import ArmoredCarDashboard from './components/ArmoredCarDashboard'
+import ProfileDashboard from './components/ProfileDashboard'
 
 export interface User {
   id: string
@@ -44,12 +45,23 @@ function App() {
     setActiveView('users')
   }
 
+  const handleProfilePhotoUpdate = (photoUrl: string) => {
+    if (user) {
+      setUser({
+        ...user,
+        profilePhoto: photoUrl
+      })
+    }
+  }
+
   console.log('App rendering, isLoggedIn:', isLoggedIn, 'user:', user)
 
   return (
     <div className="app" style={{ minHeight: '100vh', width: '100%' }}>
       {!isLoggedIn ? (
         <LoginPage onLogin={handleLogin} />
+      ) : activeView === 'profile' ? (
+        <ProfileDashboard user={user!} onLogout={handleLogout} onBack={() => setActiveView('users')} onProfilePhotoUpdate={handleProfilePhotoUpdate} />
       ) : user?.role === 'admin' ? (
         activeView === 'performance' ? (
           <PerformanceDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
@@ -83,7 +95,7 @@ function App() {
           <SuperadminDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
         )
       ) : user ? (
-        <UserDashboard user={user} onLogout={handleLogout} />
+        <UserDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} />
       ) : null}
     </div>
   )

@@ -2,6 +2,7 @@ import { useState, useEffect, FC } from 'react'
 import { API_BASE_URL } from '../config'
 import Sidebar from './Sidebar'
 import Header from './Header'
+import { User as AppUser } from '../App'
 
 interface User {
   id: string
@@ -15,8 +16,9 @@ interface User {
 }
 
 interface UserDashboardProps {
-  user: User
+  user: AppUser
   onLogout: () => void
+  onViewChange?: (view: string) => void
 }
 
 interface AttendanceRecord {
@@ -60,7 +62,7 @@ interface SupportTicketItem {
   created_at: string
 }
 
-const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout }) => {
+const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange }) => {
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [activeSection, setActiveSection] = useState<'overview' | 'schedule' | 'firearms' | 'permits' | 'support'>('overview')
@@ -334,6 +336,8 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout }) => {
           badgeLabel={activeSection === 'overview' ? 'Overview' : activeSection.replace('-', ' ')}
           onLogout={onLogout}
           onMenuClick={() => setMobileMenuOpen(true)}
+          user={user}
+          onNavigateToProfile={onViewChange ? () => onViewChange('profile') : undefined}
           rightSlot={
             <button
               onClick={handleRefresh}

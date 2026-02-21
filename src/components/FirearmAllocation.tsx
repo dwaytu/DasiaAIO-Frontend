@@ -19,7 +19,7 @@ interface Props {
   activeView?: string
 }
 
-const FirearmAllocation: FC<Props> = ({ onLogout, onViewChange, activeView }) => {
+const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView }) => {
   const [allocations, setAllocations] = useState<Allocation[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false)
@@ -85,7 +85,7 @@ const FirearmAllocation: FC<Props> = ({ onLogout, onViewChange, activeView }) =>
       />
 
       <main className="flex-1 flex flex-col overflow-hidden w-full">
-        <Header title="Firearm Allocation" badgeLabel="Allocation" onLogout={onLogout} onMenuClick={() => setMobileMenuOpen(true)} />
+        <Header title="Firearm Allocation" badgeLabel="Allocation" onLogout={onLogout} onMenuClick={() => setMobileMenuOpen(true)} user={user} onNavigateToProfile={onViewChange ? () => onViewChange('profile') : undefined} />
 
         {loading ? (
           <div className="flex-1 flex items-center justify-center text-center">

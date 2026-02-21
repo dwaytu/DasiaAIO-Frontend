@@ -1,5 +1,7 @@
 import { FC, ReactNode } from 'react'
 import SectionBadge from './SectionBadge'
+import AccountManager from './AccountManager'
+import { User } from '../App'
 
 interface HeaderProps {
   title: string
@@ -7,9 +9,11 @@ interface HeaderProps {
   onLogout: () => void
   rightSlot?: ReactNode
   onMenuClick?: () => void
+  user: User
+  onNavigateToProfile?: () => void
 }
 
-const Header: FC<HeaderProps> = ({ title, badgeLabel, onLogout, rightSlot, onMenuClick }) => {
+const Header: FC<HeaderProps> = ({ title, badgeLabel, onLogout, rightSlot, onMenuClick, user, onNavigateToProfile }) => {
   return (
     <header className="bg-white px-4 md:px-8 py-4 md:py-6 flex justify-between items-center shadow-sm border-b border-gray-200">
       <div className="flex items-center gap-3">
@@ -28,12 +32,7 @@ const Header: FC<HeaderProps> = ({ title, badgeLabel, onLogout, rightSlot, onMen
       </div>
       <div className="flex items-center gap-2 md:gap-3">
         {rightSlot}
-        <button
-          onClick={onLogout}
-          className="bg-gradient-to-r from-red-500 to-red-600 hover:shadow-lg text-white px-3 md:px-6 py-2 rounded-lg font-semibold transition-all duration-200 transform hover:-translate-y-0.5 text-sm md:text-base"
-        >
-          Logout
-        </button>
+        <AccountManager user={user} onLogout={onLogout} onNavigateToProfile={onNavigateToProfile} />
       </div>
     </header>
   )

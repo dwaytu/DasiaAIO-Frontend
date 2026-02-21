@@ -7,6 +7,7 @@ import NotificationCenter, { Notification, createNotification } from './Notifica
 import Sidebar from './Sidebar'
 import Header from './Header'
 import { API_BASE_URL } from '../config'
+import { User as AppUser } from '../App'
 
 interface User {
   id: string
@@ -21,13 +22,13 @@ interface User {
 }
 
 interface SuperadminDashboardProps {
-  user: User
+  user: AppUser
   onLogout: () => void
   onViewChange?: (view: string) => void
   activeView?: string
 }
 
-const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ onLogout, onViewChange, activeView }) => {
+const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onViewChange, activeView }) => {
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [stats, setStats] = useState<any>({})
@@ -329,6 +330,8 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ onLogout, onViewCha
           badgeLabel={badgeLabel}
           onLogout={onLogout}
           onMenuClick={() => setMobileMenuOpen(true)}
+          user={user}
+          onNavigateToProfile={() => onViewChange('profile')}
           rightSlot={
             <button
               onClick={handleRefresh}

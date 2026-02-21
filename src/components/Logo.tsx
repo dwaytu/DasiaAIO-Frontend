@@ -1,4 +1,4 @@
-mport { FC, MouseEvent } from 'react'
+import { FC, MouseEvent } from 'react'
 
 interface LogoProps {
   onClick?: (e: MouseEvent<HTMLDivElement>) => void
@@ -12,7 +12,7 @@ const Logo: FC<LogoProps> = ({ onClick }) => {
       style={{ cursor: onClick ? 'pointer' : 'default' }}
     >
       {/* Mobile Logo - Shield with Text Below */}
-      <svg viewBox="0 0 200 280" width="160" xmlns="http://www.w3.org/2000/svg" className="block md:hidden">
+      <svg viewBox="0 0 200 280" width="120" xmlns="http://www.w3.org/2000/svg" className="block md:hidden">
         <defs>
           <linearGradient id="purpleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" style={{stopColor:'#667eea',stopOpacity:1}} />
@@ -45,17 +45,17 @@ const Logo: FC<LogoProps> = ({ onClick }) => {
         <circle cx="75" cy="65" r="1.5" fill="white" opacity="0.5"/>
         <circle cx="125" cy="65" r="1.5" fill="white" opacity="0.5"/>
         
-        {/* Text Below Shield */}
+        {/* Text Below Shield - Bigger font sizes */}
         <text x="100" y="180" fontFamily="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" 
-              fontSize="11" fontWeight="700" fill="#333" letterSpacing="0.3" textAnchor="middle">
+              fontSize="16" fontWeight="700" fill="#333" letterSpacing="0.5" textAnchor="middle">
           Davao Security
         </text>
-        <text x="100" y="195" fontFamily="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" 
-              fontSize="11" fontWeight="700" fill="#333" letterSpacing="0.3" textAnchor="middle">
+        <text x="100" y="200" fontFamily="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" 
+              fontSize="16" fontWeight="700" fill="#333" letterSpacing="0.5" textAnchor="middle">
           Investigation
         </text>
-        <text x="100" y="210" fontFamily="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" 
-              fontSize="8" fontWeight="600" fill="#667eea" letterSpacing="0.2" textAnchor="middle">
+        <text x="100" y="220" fontFamily="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" 
+              fontSize="13" fontWeight="600" fill="#667eea" letterSpacing="0.3" textAnchor="middle">
           Agency Inc.
         </text>
       </svg>

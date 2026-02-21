@@ -4,6 +4,7 @@ import EditScheduleModal from './EditScheduleModal'
 import { API_BASE_URL } from '../config'
 import Sidebar from './Sidebar'
 import Header from './Header'
+import { User as AppUser } from '../App'
 
 interface User {
   id: string
@@ -18,11 +19,11 @@ interface User {
 }
 
 interface AdminDashboardProps {
-  user: User
+  user: AppUser
   onLogout: () => void
 }
 
-const AdminDashboard: FC<AdminDashboardProps> = ({ onLogout }) => {
+const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout }) => {
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string>('')
@@ -159,6 +160,8 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ onLogout }) => {
           badgeLabel={activeSection === 'users' ? 'Users' : 'Schedule'}
           onLogout={handleLogout}
           onMenuClick={() => setMobileMenuOpen(true)}
+          user={user}
+          onNavigateToProfile={() => window.location.reload()}
           rightSlot={
             <button
               onClick={handleRefresh}

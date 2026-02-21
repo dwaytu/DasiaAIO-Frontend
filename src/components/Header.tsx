@@ -1,6 +1,7 @@
 import { FC, ReactNode } from 'react'
 import SectionBadge from './SectionBadge'
 import AccountManager from './AccountManager'
+import NotificationPanel from './NotificationPanel'
 import { User } from '../App'
 
 interface HeaderProps {
@@ -32,6 +33,7 @@ const Header: FC<HeaderProps> = ({ title, badgeLabel, onLogout, rightSlot, onMen
       </div>
       <div className="flex items-center gap-2 md:gap-3">
         {rightSlot}
+        <NotificationPanel userId={user.id} />
         <AccountManager user={user} onLogout={onLogout} onNavigateToProfile={onNavigateToProfile} />
       </div>
     </header>

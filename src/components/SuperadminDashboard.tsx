@@ -127,7 +127,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
         throw new Error('Failed to fetch users')
       }
       const data = await response.json()
-      const users = data.users || []
+      const users = Array.isArray(data) ? data : (data.users || data || [])
       setUsers(users)
       
       // Calculate stats

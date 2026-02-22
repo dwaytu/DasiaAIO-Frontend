@@ -101,7 +101,9 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
         throw new Error('Failed to fetch guards')
       }
       const data = await response.json()
-      setGuards((data || []).filter((u: any) => u.role === 'guard'))
+      // Handle both array and object responses
+      const guardsList = Array.isArray(data) ? data : (data.users || data || [])
+      setGuards(guardsList.filter((u: any) => u.role === 'guard'))
       setError('')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch guards')
@@ -116,7 +118,9 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
         throw new Error('Failed to fetch firearms')
       }
       const data = await response.json()
-      setFirearms(data.firearms || [])
+      // Handle both array and object responses
+      const firearmsList = Array.isArray(data) ? data : (data.firearms || data || [])
+      setFirearms(firearmsList)
       setError('')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch firearms')

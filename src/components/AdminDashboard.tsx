@@ -56,7 +56,8 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout }) => {
         throw new Error('Failed to fetch users')
       }
       const data = await response.json()
-      setUsers(data.users)
+      const users = Array.isArray(data) ? data : (data.users || data || [])
+      setUsers(users)
       setError('')
     } catch (err) {
       setError('Error loading users: ' + (err instanceof Error ? err.message : String(err)))

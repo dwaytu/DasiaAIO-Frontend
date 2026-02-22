@@ -36,6 +36,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false)
   const navItems = [
     { view: 'users', label: 'Dashboard' },
+    { view: 'calendar', label: 'Calendar' },
     { view: 'schedule', label: 'Schedule' },
     { view: 'merit', label: 'Merit Scores' }
   ]
@@ -145,7 +146,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout }) => {
   }
 
   return (
-    <div className="flex min-h-screen w-screen bg-gray-100 font-sans">
+    <div className="flex min-h-screen w-full max-w-full overflow-x-hidden bg-gray-100 font-sans">
       <Sidebar
         items={navItems}
         activeView={activeSection}
@@ -174,7 +175,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout }) => {
           }
         />
 
-        <div className="flex-1 p-8 overflow-y-auto w-full animate-fade-in">
+        <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in">
           {error && (
             <div className="mb-6 p-4 bg-red-50 border border-red-300 rounded-lg text-red-800 font-medium">
               {error}
@@ -193,7 +194,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout }) => {
                   <h2 className="text-xl font-bold text-gray-800 mb-6 pb-3 border-b border-gray-200">Users</h2>
                   {users.length > 0 ? (
                     <div className="overflow-x-auto">
-                      <table className="w-full min-w-full">
+                      <table className="w-full min-w-[600px]">
                         <thead className="bg-gray-50 border-b border-gray-200">
                           <tr>
                             <th className="text-left px-6 py-3 text-sm font-semibold text-gray-700 uppercase tracking-wider">Email</th>
@@ -255,7 +256,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout }) => {
                   <h2 className="text-xl font-bold text-gray-800 mb-6 pb-3 border-b border-gray-200">All Guard Schedules</h2>
                   {shifts.length > 0 ? (
                     <div className="overflow-x-auto">
-                      <table className="w-full min-w-full">
+                      <table className="w-full min-w-[600px]">
                         <thead className="bg-gray-50 border-b border-gray-200">
                           <tr>
                             <th className="text-left px-6 py-3 text-sm font-semibold text-gray-700 uppercase tracking-wider">Guard</th>

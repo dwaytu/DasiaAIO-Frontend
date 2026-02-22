@@ -1,0 +1,554 @@
+import { useState, useEffect, FC } from 'react'
+import { API_BASE_URL } from '../config'
+import Sidebar from './Sidebar'
+import Header from './Header'
+import { User } from '../App'
+
+interface CalendarDashboardProps {
+  user: User
+  onLogout: () => void
+  onViewChange?: (view: string) => void
+  activeView?: string
+}
+
+interface ShiftEvent {
+  id: string
+  type: 'shift'
+  title: string
+  date: string
+  startTime: string
+  endTime: string
+  clientSite: string
+  guardName?: string
+  guardId?: string
+  status: string
+}
+
+interface TripEvent {
+  id: string
+  type: 'trip'
+  title: string
+  date: string
+  startTime: string
+  carModel?: string
+  carPlate?: string
+  destination?: string
+  status: string
+}
+
+interface MissionEvent {
+  id: string
+  type: 'mission'
+  title: string
+  date: string
+  startTime: string
+  location?: string
+  clientName?: string
+  status: string
+}
+
+interface MaintenanceEvent {
+  id: string
+  type: 'maintenance'
+  title: string
+  date: string
+  startTime: string
+  firearmId?: string
+  status: string
+}
+
+type CalendarEvent = ShiftEvent | TripEvent | MissionEvent | MaintenanceEvent
+
+const EVENT_COLORS: Record<string, { bg: string; border: string; text: string; dot: string }> = {
+  shift:       { bg: 'bg-blue-900/60',   border: 'border-blue-500',   text: 'text-blue-200',   dot: 'bg-blue-400' },
+  trip:        { bg: 'bg-amber-900/60',  border: 'border-amber-500',  text: 'text-amber-200',  dot: 'bg-amber-400' },
+  mission:     { bg: 'bg-purple-900/60', border: 'border-purple-500', text: 'text-purple-200', dot: 'bg-purple-400' },
+  maintenance: { bg: 'bg-red-900/60',    border: 'border-red-500',    text: 'text-red-200',    dot: 'bg-red-400' },
+}
+
+const TYPE_LABELS: Record<string, string> = {
+  shift: 'Guard Shift',
+  trip: 'Armored Car Trip',
+  mission: 'Mission',
+  maintenance: 'Maintenance',
+}
+
+function isoToDateKey(iso: string): string {
+  return iso.slice(0, 10)
+}
+
+function formatTime(iso: string): string {
+  const d = new Date(iso)
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })
+}
+
+function formatDate(dateStr: string): string {
+  const d = new Date(dateStr + 'T00:00:00')
+  return d.toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+}
+
+function getDaysInMonth(year: number, month: number): number {
+  return new Date(year, month + 1, 0).getDate()
+}
+
+function getFirstDayOfMonth(year: number, month: number): number {
+  return new Date(year, month, 1).getDay()
+}
+
+const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December']
+const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
+
+const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewChange, activeView }) => {
+  const isAdmin = user.role === 'admin' || user.role === 'superadmin'
+
+  const today = new Date()
+  const [currentYear, setCurrentYear] = useState(today.getFullYear())
+  const [currentMonth, setCurrentMonth] = useState(today.getMonth())
+  const [selectedDate, setSelectedDate] = useState<string>(() => today.toISOString().slice(0, 10))
+  const [events, setEvents] = useState<CalendarEvent[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
+  const [filterType, setFilterType] = useState<string>('all')
+
+  // Build nav items matching admin/user dashboard patterns
+  const adminNavItems = [
+    { view: 'users',       label: 'Dashboard' },
+    { view: 'calendar',    label: 'Calendar' },
+    { view: 'schedule',    label: 'Schedule' },
+    { view: 'merit',       label: 'Merit Scores' },
+    { view: 'performance', label: 'Performance' },
+    { view: 'firearms',    label: 'Firearms' },
+    { view: 'armored-cars',label: 'Armored Cars' },
+  ]
+  const userNavItems = [
+    { view: 'dashboard', label: 'Dashboard' },
+    { view: 'calendar',  label: 'Calendar' },
+    { view: 'schedule',  label: 'My Schedule' },
+  ]
+  const navItems = isAdmin ? adminNavItems : userNavItems
+
+  useEffect(() => {
+    fetchAllEvents()
+  }, [user.id])
+
+  const fetchAllEvents = async () => {
+    setLoading(true)
+    setError('')
+    try {
+      const results = await Promise.allSettled([
+        fetchShifts(),
+        fetchTrips(),
+        fetchMissions(),
+        isAdmin ? fetchMaintenanceEvents() : Promise.resolve([]),
+      ])
+      const all: CalendarEvent[] = []
+      results.forEach(r => {
+        if (r.status === 'fulfilled' && Array.isArray(r.value)) {
+          all.push(...r.value)
+        }
+      })
+      setEvents(all)
+    } catch (e) {
+      setError('Failed to load calendar data')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchShifts = async (): Promise<ShiftEvent[]> => {
+    const url = isAdmin
+      ? `${API_BASE_URL}/api/guard-replacement/shifts`
+      : `${API_BASE_URL}/api/guard-replacement/guard/${user.id}/shifts`
+    const res = await fetch(url)
+    if (!res.ok) return []
+    const data = await res.json()
+    const shifts: any[] = data.shifts || (Array.isArray(data) ? data : [])
+    return shifts.map((s: any): ShiftEvent => ({
+      id: s.id,
+      type: 'shift',
+      title: s.client_site || 'Guard Shift',
+      date: isoToDateKey(s.start_time),
+      startTime: s.start_time,
+      endTime: s.end_time,
+      clientSite: s.client_site || 'Unknown Site',
+      guardName: s.guard_name,
+      guardId: s.guard_id,
+      status: s.status || 'scheduled',
+    }))
+  }
+
+  const fetchTrips = async (): Promise<TripEvent[]> => {
+    const res = await fetch(`${API_BASE_URL}/api/trips`)
+    if (!res.ok) return []
+    const data = await res.json()
+    const trips: any[] = Array.isArray(data) ? data : (data.trips || [])
+    return trips.map((t: any): TripEvent => ({
+      id: t.id,
+      type: 'trip',
+      title: `Armored Car: ${t.end_location || t.start_location || 'Trip'}`,
+      date: isoToDateKey(t.start_time || t.created_at),
+      startTime: t.start_time || t.created_at,
+      carModel: t.car_model,
+      carPlate: t.license_plate,
+      destination: t.end_location || t.start_location,
+      status: t.status || 'in_progress',
+    }))
+  }
+
+  const fetchMissions = async (): Promise<MissionEvent[]> => {
+    const res = await fetch(`${API_BASE_URL}/api/missions`)
+    if (!res.ok) return []
+    const data = await res.json()
+    const missions: any[] = data.missions || (Array.isArray(data) ? data : [])
+    return missions.map((m: any): MissionEvent => ({
+      id: m.id,
+      type: 'mission',
+      title: m.mission_name || m.name || 'Mission',
+      date: isoToDateKey(m.start_date || m.scheduled_date || m.created_at),
+      startTime: m.start_date || m.scheduled_date || m.created_at,
+      location: m.location,
+      clientName: m.client_name,
+      status: m.status || 'scheduled',
+    }))
+  }
+
+  const fetchMaintenanceEvents = async (): Promise<MaintenanceEvent[]> => {
+    const res = await fetch(`${API_BASE_URL}/api/firearm-maintenance/pending`)
+    if (!res.ok) return []
+    const data = await res.json()
+    const items: any[] = Array.isArray(data) ? data : []
+    return items.map((m: any): MaintenanceEvent => ({
+      id: m.id,
+      type: 'maintenance',
+      title: `Maintenance: ${m.maintenanceType || m.maintenance_type || 'Firearm'}`,
+      date: isoToDateKey(m.scheduledDate || m.scheduled_date),
+      startTime: m.scheduledDate || m.scheduled_date,
+      firearmId: m.firearmId || m.firearm_id,
+      status: m.status || 'pending',
+    }))
+  }
+
+  // Group events by date
+  const eventsByDate = events.reduce<Record<string, CalendarEvent[]>>((acc, ev) => {
+    if (!acc[ev.date]) acc[ev.date] = []
+    acc[ev.date].push(ev)
+    return acc
+  }, {})
+
+  const selectedDateEvents = (eventsByDate[selectedDate] || [])
+    .filter(e => filterType === 'all' || e.type === filterType)
+
+  const prevMonth = () => {
+    if (currentMonth === 0) { setCurrentMonth(11); setCurrentYear(y => y - 1) }
+    else setCurrentMonth(m => m - 1)
+  }
+  const nextMonth = () => {
+    if (currentMonth === 11) { setCurrentMonth(0); setCurrentYear(y => y + 1) }
+    else setCurrentMonth(m => m + 1)
+  }
+
+  const daysInMonth = getDaysInMonth(currentYear, currentMonth)
+  const firstDay = getFirstDayOfMonth(currentYear, currentMonth)
+  const calendarCells: (number | null)[] = [
+    ...Array(firstDay).fill(null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+  ]
+  // Pad to complete last row
+  while (calendarCells.length % 7 !== 0) calendarCells.push(null)
+
+  const todayKey = today.toISOString().slice(0, 10)
+
+  const getDateKey = (day: number) =>
+    `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+
+  return (
+    <div className="flex h-screen bg-gray-950 overflow-hidden">
+      {/* Sidebar */}
+      <Sidebar
+        items={navItems}
+        activeView={activeView || 'calendar'}
+        onNavigate={onViewChange || (() => {})}
+        onLogout={onLogout}
+      />
+
+      {/* Main content */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <Header
+          user={user}
+          onLogout={onLogout}
+          title={isAdmin ? 'Operations Calendar' : 'My Schedule Calendar'}
+        />
+
+        <main className="flex-1 overflow-auto p-3 sm:p-6">
+          {/* Subtitle row */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+            <p className="text-gray-400 text-sm">
+              {isAdmin ? 'View all shifts, trips, missions & maintenance' : 'Your upcoming shifts and assignments'}
+            </p>
+            <button
+              onClick={fetchAllEvents}
+              className="self-start sm:self-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+            >
+              Refresh
+            </button>
+          </div>
+
+          {error && (
+            <div className="mb-4 p-3 bg-red-900/40 border border-red-500 rounded-lg text-red-300 text-sm">{error}</div>
+          )}
+
+          {/* Legend */}
+          <div className="flex flex-wrap gap-3 mb-5">
+            {Object.entries(TYPE_LABELS).map(([key, label]) => {
+              const c = EVENT_COLORS[key]
+              return (
+                <button
+                  key={key}
+                  onClick={() => setFilterType(f => f === key ? 'all' : key)}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                    filterType === key || filterType === 'all'
+                      ? `${c.bg} ${c.border} ${c.text}`
+                      : 'bg-gray-800 border-gray-700 text-gray-400'
+                  }`}
+                >
+                  <span className={`w-2 h-2 rounded-full ${c.dot}`} />
+                  {label}
+                </button>
+              )
+            })}
+            {filterType !== 'all' && (
+              <button
+                onClick={() => setFilterType('all')}
+                className="px-3 py-1.5 rounded-full text-xs font-medium bg-gray-700 border border-gray-600 text-gray-300 hover:bg-gray-600"
+              >
+                Show All
+              </button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+            {/* Calendar grid — takes 3 cols on lg */}
+            <div className="lg:col-span-3 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+              {/* Month nav */}
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
+                <button onClick={prevMonth} className="p-2 hover:bg-gray-800 rounded-lg text-gray-400 hover:text-white transition-colors">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                </button>
+                <h2 className="text-white font-semibold text-base sm:text-lg">
+                  {MONTH_NAMES[currentMonth]} {currentYear}
+                </h2>
+                <button onClick={nextMonth} className="p-2 hover:bg-gray-800 rounded-lg text-gray-400 hover:text-white transition-colors">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                </button>
+              </div>
+
+              {/* Day headers */}
+              <div className="grid grid-cols-7 border-b border-gray-800">
+                {DAY_NAMES.map(d => (
+                  <div key={d} className="py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wide">
+                    {d}
+                  </div>
+                ))}
+              </div>
+
+              {/* Calendar cells */}
+              {loading ? (
+                <div className="flex items-center justify-center py-16 text-gray-400 text-sm">Loading events&hellip;</div>
+              ) : (
+                <div className="grid grid-cols-7">
+                  {calendarCells.map((day, idx) => {
+                    if (day === null) {
+                      return <div key={`empty-${idx}`} className="h-14 sm:h-20 border-b border-r border-gray-800/50" />
+                    }
+                    const dateKey = getDateKey(day)
+                    const dayEvents = (eventsByDate[dateKey] || []).filter(e => filterType === 'all' || e.type === filterType)
+                    const isToday = dateKey === todayKey
+                    const isSelected = dateKey === selectedDate
+                    return (
+                      <button
+                        key={dateKey}
+                        onClick={() => setSelectedDate(dateKey)}
+                        className={`h-14 sm:h-20 border-b border-r border-gray-800/50 p-1 text-left transition-colors relative
+                          ${isSelected ? 'bg-blue-900/40' : 'hover:bg-gray-800/60'}
+                        `}
+                      >
+                        <span className={`text-xs sm:text-sm font-medium w-6 h-6 flex items-center justify-center rounded-full
+                          ${isToday ? 'bg-blue-500 text-white' : isSelected ? 'text-blue-300' : 'text-gray-300'}`}>
+                          {day}
+                        </span>
+                        {/* Event dots */}
+                        {dayEvents.length > 0 && (
+                          <div className="flex flex-wrap gap-0.5 mt-0.5">
+                            {dayEvents.slice(0, 4).map((ev, i) => (
+                              <span key={i} className={`w-1.5 h-1.5 rounded-full ${EVENT_COLORS[ev.type].dot}`} />
+                            ))}
+                            {dayEvents.length > 4 && (
+                              <span className="text-gray-500 text-xs">+{dayEvents.length - 4}</span>
+                            )}
+                          </div>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Day detail panel — takes 2 cols on lg */}
+            <div className="lg:col-span-2 flex flex-col gap-4">
+              <div className="bg-gray-900 rounded-xl border border-gray-800 flex-1 overflow-hidden flex flex-col">
+                <div className="px-4 py-3 border-b border-gray-800">
+                  <h3 className="text-white font-semibold text-sm">{formatDate(selectedDate)}</h3>
+                  <p className="text-gray-400 text-xs mt-0.5">{selectedDateEvents.length} event{selectedDateEvents.length !== 1 ? 's' : ''}</p>
+                </div>
+                <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                  {selectedDateEvents.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-10 text-center">
+                      <svg className="w-10 h-10 text-gray-700 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      <p className="text-gray-500 text-sm">No events for this day</p>
+                    </div>
+                  ) : (
+                    selectedDateEvents.map(ev => {
+                      const c = EVENT_COLORS[ev.type]
+                      return (
+                        <button
+                          key={ev.id}
+                          onClick={() => setSelectedEvent(ev)}
+                          className={`w-full text-left p-3 rounded-lg border ${c.bg} ${c.border} hover:opacity-90 transition-opacity`}
+                        >
+                          <div className="flex items-start gap-2">
+                            <span className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${c.dot}`} />
+                            <div className="min-w-0 flex-1">
+                              <div className={`font-medium text-sm truncate ${c.text}`}>{ev.title}</div>
+                              <div className="text-gray-400 text-xs mt-0.5">{formatTime(ev.startTime)}</div>
+                              <div className="text-gray-500 text-xs capitalize mt-0.5">
+                                {TYPE_LABELS[ev.type]} &bull; {ev.status}
+                              </div>
+                              {ev.type === 'shift' && (
+                                <div className="text-gray-400 text-xs mt-0.5 truncate">
+                                  Site: {(ev as ShiftEvent).clientSite}
+                                  {isAdmin && (ev as ShiftEvent).guardName ? ` — ${(ev as ShiftEvent).guardName}` : ''}
+                                </div>
+                              )}
+                              {ev.type === 'trip' && (ev as TripEvent).destination && (
+                                <div className="text-gray-400 text-xs mt-0.5 truncate">
+                                  Destination: {(ev as TripEvent).destination}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </button>
+                      )
+                    })
+                  )}
+                </div>
+              </div>
+
+              {/* Weekly summary */}
+              {isAdmin && (
+                <div className="bg-gray-900 rounded-xl border border-gray-800 p-4">
+                  <h4 className="text-white text-sm font-semibold mb-3">This Month Summary</h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    {Object.entries(TYPE_LABELS).map(([key, label]) => {
+                      const c = EVENT_COLORS[key]
+                      const count = events.filter(e => e.type === key).length
+                      return (
+                        <div key={key} className={`p-2 rounded-lg ${c.bg} border ${c.border}`}>
+                          <div className={`text-lg font-bold ${c.text}`}>{count}</div>
+                          <div className="text-gray-400 text-xs">{label}s</div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </main>
+      </div>
+
+      {/* Event detail modal */}
+      {selectedEvent && (
+        <div
+          className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+          onClick={() => setSelectedEvent(null)}
+        >
+          <div
+            className="bg-gray-900 border border-gray-700 rounded-xl max-w-sm w-full p-5 shadow-2xl"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <span className={`w-3 h-3 rounded-full ${EVENT_COLORS[selectedEvent.type].dot}`} />
+                <span className={`text-xs font-medium ${EVENT_COLORS[selectedEvent.type].text}`}>
+                  {TYPE_LABELS[selectedEvent.type]}
+                </span>
+              </div>
+              <button
+                onClick={() => setSelectedEvent(null)}
+                className="text-gray-500 hover:text-white transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <h3 className="text-white font-bold text-base mb-3">{selectedEvent.title}</h3>
+
+            <div className="space-y-2 text-sm">
+              <Row label="Date" value={formatDate(selectedEvent.date)} />
+              <Row label="Time" value={formatTime(selectedEvent.startTime)} />
+              <Row label="Status" value={selectedEvent.status} capitalize />
+
+              {selectedEvent.type === 'shift' && (() => {
+                const s = selectedEvent as ShiftEvent
+                return <>
+                  <Row label="Client Site" value={s.clientSite} />
+                  {s.endTime && <Row label="End Time" value={formatTime(s.endTime)} />}
+                  {isAdmin && s.guardName && <Row label="Guard" value={s.guardName} />}
+                </>
+              })()}
+
+              {selectedEvent.type === 'trip' && (() => {
+                const t = selectedEvent as TripEvent
+                return <>
+                  {t.destination && <Row label="Destination" value={t.destination} />}
+                  {t.carModel && <Row label="Vehicle" value={t.carModel} />}
+                  {t.carPlate && <Row label="Plate" value={t.carPlate} />}
+                </>
+              })()}
+
+              {selectedEvent.type === 'mission' && (() => {
+                const m = selectedEvent as MissionEvent
+                return <>
+                  {m.location && <Row label="Location" value={m.location} />}
+                  {m.clientName && <Row label="Client" value={m.clientName} />}
+                </>
+              })()}
+
+              {selectedEvent.type === 'maintenance' && (() => {
+                const m = selectedEvent as MaintenanceEvent
+                return <>
+                  {m.firearmId && <Row label="Firearm ID" value={m.firearmId.slice(0, 8) + '...'} />}
+                </>
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+const Row: FC<{ label: string; value: string; capitalize?: boolean }> = ({ label, value, capitalize }) => (
+  <div className="flex justify-between gap-2">
+    <span className="text-gray-500 flex-shrink-0">{label}</span>
+    <span className={`text-gray-200 text-right ${capitalize ? 'capitalize' : ''}`}>{value}</span>
+  </div>
+)
+
+export default CalendarDashboard

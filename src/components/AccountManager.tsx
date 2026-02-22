@@ -96,7 +96,7 @@ const AccountManager: FC<AccountManagerProps> = ({ user, onLogout, onNavigateToP
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-72 md:w-80 bg-white rounded-xl shadow-2xl border border-gray-200 py-2 z-50 animate-fadeIn">
+        <div className="absolute right-0 mt-2 w-72 md:w-80 max-w-[calc(100vw-1rem)] bg-white rounded-xl shadow-2xl border border-gray-200 py-2 z-50 animate-fadeIn">
           {/* Profile Header */}
           <div className="px-4 py-3 border-b border-gray-100">
             <div className="flex items-center gap-3">

@@ -5,6 +5,11 @@
     @apply box-border;
   }
   
+  html, body {
+    overflow-x: hidden;
+    max-width: 100%;
+  }
+  
   body {
     @apply flex min-h-screen w-full bg-white text-black;
   }

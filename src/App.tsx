@@ -10,6 +10,7 @@ import FirearmMaintenance from './components/FirearmMaintenance'
 import ArmoredCarDashboard from './components/ArmoredCarDashboard'
 import ProfileDashboard from './components/ProfileDashboard'
 import MeritScoreDashboard from './components/MeritScoreDashboard'
+import CalendarDashboard from './components/CalendarDashboard'
 
 export interface User {
   id: string
@@ -64,7 +65,9 @@ function App() {
       ) : activeView === 'profile' ? (
         <ProfileDashboard user={user!} onLogout={handleLogout} onBack={() => setActiveView('users')} onProfilePhotoUpdate={handleProfilePhotoUpdate} />
       ) : user?.role === 'admin' ? (
-        activeView === 'performance' ? (
+        activeView === 'calendar' ? (
+          <CalendarDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
+        ) : activeView === 'performance' ? (
           <PerformanceDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
         ) : activeView === 'merit' ? (
           <MeritScoreDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
@@ -82,7 +85,9 @@ function App() {
           <SuperadminDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
         )
       ) : user?.role === 'superadmin' ? (
-        activeView === 'performance' ? (
+        activeView === 'calendar' ? (
+          <CalendarDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
+        ) : activeView === 'performance' ? (
           <PerformanceDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
         ) : activeView === 'merit' ? (
           <MeritScoreDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
@@ -100,7 +105,11 @@ function App() {
           <SuperadminDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
         )
       ) : user ? (
-        <UserDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} />
+        activeView === 'calendar' ? (
+          <CalendarDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
+        ) : (
+          <UserDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} />
+        )
       ) : null}
     </div>
   )

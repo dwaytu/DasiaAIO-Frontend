@@ -260,7 +260,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
   const activeTrips = trips.filter((t) => t.status === 'in_transit').length
 
   return (
-    <div className="flex min-h-screen w-screen bg-gray-100 font-sans">
+    <div className="flex min-h-screen w-full max-w-full overflow-x-hidden bg-gray-100 font-sans">
       <Sidebar
         items={navItems}
         activeView={currentView}
@@ -295,7 +295,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
           </div>
         )}
 
-        <div className="flex-1 p-8 overflow-y-auto w-full animate-fade-in">
+        <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in">
           {/* Stats Grid */}
           <div className="grid grid-cols-5 gap-4 mb-8">
             <div className="bg-white rounded-xl shadow-sm border-t-4 border-indigo-600 hover:shadow-md hover:-translate-y-1 transition-all duration-300 p-6">
@@ -418,7 +418,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                   <div className="text-center py-8 text-gray-600 text-sm md:text-base">No vehicles found</div>
                 ) : (
                   <div className="overflow-x-auto">
-                    <table className="w-full min-w-full">
+                    <table className="w-full min-w-[600px]">
                       <thead className="bg-gray-50 border-b border-gray-200">
                         <tr>
                           <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-xs md:text-sm uppercase tracking-wider">License Plate</th>
@@ -518,7 +518,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                   <div className="text-center py-8 text-gray-600 text-sm md:text-base">No active allocations</div>
                 ) : (
                   <div className="overflow-x-auto">
-                    <table className="w-full min-w-full">
+                    <table className="w-full min-w-[600px]">
                       <thead className="bg-gray-50 border-b border-gray-200">
                         <tr>
                           <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-xs md:text-sm uppercase tracking-wider">Vehicle</th>
@@ -632,7 +632,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                   <div className="text-center py-8 text-gray-600 text-sm md:text-base">No maintenance records</div>
                 ) : (
                   <div className="overflow-x-auto">
-                    <table className="w-full min-w-full">
+                    <table className="w-full min-w-[600px]">
                       <thead className="bg-gray-50 border-b border-gray-200">
                         <tr>
                           <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-xs md:text-sm uppercase tracking-wider">Vehicle</th>
@@ -670,7 +670,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                 <div className="text-center py-8 text-gray-600 text-sm md:text-base">No trips recorded</div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full min-w-full">
+                  <table className="w-full min-w-[600px]">
                     <thead className="bg-gray-50 border-b border-gray-200">
                       <tr>
                         <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-xs md:text-sm uppercase tracking-wider">Vehicle</th>

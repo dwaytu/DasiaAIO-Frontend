@@ -84,6 +84,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange })
   const [ticketSubmitting, setTicketSubmitting] = useState<boolean>(false)
   const navItems = [
     { view: 'overview', label: 'Dashboard' },
+    { view: 'calendar', label: 'Calendar' },
     { view: 'schedule', label: 'Schedule' },
     { view: 'firearms', label: 'Firearms' },
     { view: 'permits', label: 'My Permits' },
@@ -295,8 +296,12 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange })
     }
   }
 
-  const handleNavigate = (section: 'overview' | 'schedule' | 'firearms' | 'permits' | 'support') => {
-    setActiveSection(section)
+  const handleNavigate = (section: 'overview' | 'schedule' | 'firearms' | 'permits' | 'support' | 'calendar') => {
+    if (section === 'calendar') {
+      onViewChange?.('calendar')
+      return
+    }
+    setActiveSection(section as 'overview' | 'schedule' | 'firearms' | 'permits' | 'support')
   }
 
   const handleRefresh = async () => {
@@ -313,7 +318,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange })
   }
 
   return (
-    <div className="flex min-h-screen w-screen bg-gray-100 font-sans">
+    <div className="flex min-h-screen w-full max-w-full overflow-x-hidden bg-gray-100 font-sans">
       <Sidebar
         items={navItems}
         activeView={activeSection}
@@ -348,7 +353,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange })
           }
         />
 
-        <div className="flex-1 p-8 overflow-y-auto w-full animate-fade-in">
+        <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in">
           <div className="space-y-8">
             {/* Profile Section */}
             {activeSection === 'overview' && (
@@ -424,7 +429,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange })
                 <div className="text-center py-8 text-gray-600">Loading attendance records...</div>
               ) : attendance.length > 0 ? (
                 <div className="overflow-x-auto">
-                  <table className="w-full">
+                  <table className="w-full min-w-[500px]">
                     <thead className="bg-gray-50 border-b border-gray-200">
                       <tr>
                         <th className="text-left px-6 py-3 text-sm font-semibold text-gray-700">Date</th>
@@ -513,7 +518,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange })
                 </form>
                 {scheduleItems.length > 0 ? (
                   <div className="overflow-x-auto">
-                    <table className="w-full">
+                    <table className="w-full min-w-[500px]">
                       <thead className="bg-gray-50 border-b border-gray-200">
                         <tr>
                           <th className="text-left px-6 py-3 text-sm font-semibold text-gray-700">Site</th>
@@ -549,7 +554,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange })
                 <h2 className="text-xl font-bold text-gray-800 mb-6 pb-3 border-b border-gray-200">Assigned Firearms</h2>
                 {firearmItems.length > 0 ? (
                   <div className="overflow-x-auto">
-                    <table className="w-full">
+                    <table className="w-full min-w-[500px]">
                       <thead className="bg-gray-50 border-b border-gray-200">
                         <tr>
                           <th className="text-left px-6 py-3 text-sm font-semibold text-gray-700">Serial Number</th>
@@ -587,7 +592,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange })
                 <h2 className="text-xl font-bold text-gray-800 mb-6 pb-3 border-b border-gray-200">My Permits</h2>
                 {permitItems.length > 0 ? (
                   <div className="overflow-x-auto">
-                    <table className="w-full">
+                    <table className="w-full min-w-[500px]">
                       <thead className="bg-gray-50 border-b border-gray-200">
                         <tr>
                           <th className="text-left px-6 py-3 text-sm font-semibold text-gray-700">Permit ID</th>

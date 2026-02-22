@@ -57,6 +57,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   const [notifications, setNotifications] = useState<Notification[]>([])
   const navItems = [
     { view: 'dashboard', label: 'Dashboard' },
+    { view: 'calendar', label: 'Calendar' },
     { view: 'analytics', label: 'Analytics' },
     { view: 'trips', label: 'Trip Management' },
     { view: 'schedule', label: 'Schedule' },
@@ -314,7 +315,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   return (
     <>
       <NotificationCenter notifications={notifications} onDismiss={dismissNotification} />
-      <div className="flex min-h-screen w-screen bg-gray-100 font-sans">
+      <div className="flex min-h-screen w-full max-w-full overflow-x-hidden bg-gray-100 font-sans">
         <Sidebar
           items={navItems}
           activeView={activeSection}
@@ -374,7 +375,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
               <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 md:mb-6">All Users</h2>
               {users.length > 0 ? (
                 <div className="overflow-x-auto -mx-4 md:mx-0">
-                  <table className="w-full border-collapse min-w-full">
+                  <table className="w-full border-collapse min-w-[600px]">
                     <thead className="bg-gray-50">
                       <tr>
                         <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-xs md:text-sm uppercase tracking-wider">Email</th>
@@ -427,15 +428,15 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
             </section>
           </div>
         ) : activeSection === 'schedule' ? (
-          <div className="flex-1 p-8 overflow-y-auto w-full animate-fade-in">
+          <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in">
             {shiftsLoading ? (
               <div className="text-center py-12 text-gray-600 font-medium">Loading schedules...</div>
             ) : (
-              <section className="w-full bg-white p-8 rounded-xl shadow-sm">
+              <section className="w-full bg-white p-4 md:p-8 rounded-xl shadow-sm">
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">All Guard Schedules</h2>
                 {shifts.length > 0 ? (
                   <div className="overflow-x-auto">
-                    <table className="w-full border-collapse min-w-full">
+                    <table className="w-full border-collapse min-w-[600px]">
                       <thead className="bg-gray-50">
                         <tr>
                           <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-sm uppercase tracking-wider">Guard</th>
@@ -489,9 +490,9 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
             )}
           </div>
         ) : activeSection === 'missions' ? (
-          <div className="flex-1 p-8 overflow-y-auto w-full animate-fade-in">
+          <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in">
             {/* Mission Assignment Form */}
-            <section className="w-full bg-white p-8 rounded-xl shadow-sm mb-6">
+            <section className="w-full bg-white p-4 md:p-8 rounded-xl shadow-sm mb-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Assign New Mission</h2>
               {error && (
                 <div className="mb-4 p-3 bg-red-50 border border-red-300 text-red-800 rounded-lg text-sm">
@@ -653,13 +654,13 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
             </section>
 
             {/* Mission History */}
-            <section className="w-full bg-white p-8 rounded-xl shadow-sm">
+            <section className="w-full bg-white p-4 md:p-8 rounded-xl shadow-sm">
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Mission History</h2>
               {missionsLoading ? (
                 <div className="text-center py-12 text-gray-600 font-medium">Loading missions...</div>
               ) : missions.length > 0 ? (
                 <div className="overflow-x-auto">
-                  <table className="w-full border-collapse min-w-full">
+                  <table className="w-full border-collapse min-w-[600px]">
                     <thead className="bg-gray-50">
                       <tr>
                         <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-sm uppercase tracking-wider">ID</th>
@@ -705,11 +706,11 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
             </section>
           </div>
         ) : activeSection === 'analytics' ? (
-          <div className="flex-1 p-8 overflow-y-auto w-full animate-fade-in">
+          <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in">
             <AnalyticsDashboard />
           </div>
         ) : activeSection === 'trips' ? (
-          <div className="flex-1 p-8 overflow-y-auto w-full animate-fade-in">
+          <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in">
             <TripManagement />
           </div>
         ) : null}

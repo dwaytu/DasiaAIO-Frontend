@@ -181,7 +181,7 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
   }
 
   return (
-    <div className="flex min-h-screen w-screen bg-gray-100 font-sans">
+    <div className="flex min-h-screen w-full max-w-full overflow-x-hidden bg-gray-100 font-sans">
       <Sidebar
         items={navItems}
         activeView={currentView}
@@ -207,7 +207,7 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
             <div className="text-indigo-600 text-lg font-medium">Loading merit scores...</div>
           </div>
         ) : (
-          <div className="flex-1 p-8 overflow-y-auto w-full animate-fade-in">
+          <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in">
             {error && (
               <div className="mb-4 p-4 bg-red-100 text-red-700 rounded-lg">
                 {error}
@@ -224,7 +224,7 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
                   ← Back to Rankings
                 </button>
 
-                <section className="bg-white p-8 rounded-xl shadow-sm">
+                <section className="bg-white p-4 md:p-8 rounded-xl shadow-sm">
                   <div className="flex items-start justify-between mb-6">
                     <div>
                       <h2 className="text-3xl font-bold text-gray-900">{selectedGuard.guardName}</h2>
@@ -285,7 +285,7 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
                 </section>
 
                 {/* Evaluations Section */}
-                <section className="bg-white p-8 rounded-xl shadow-sm">
+                <section className="bg-white p-4 md:p-8 rounded-xl shadow-sm">
                   <div className="flex items-center justify-between mb-6">
                     <h3 className="text-2xl font-bold text-gray-900">Client Evaluations</h3>
                     <button
@@ -368,7 +368,7 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
               </div>
             ) : (
               // Rankings View
-              <section className="bg-white p-8 rounded-xl shadow-sm">
+              <section className="bg-white p-4 md:p-8 rounded-xl shadow-sm">
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">Guard Merit Score Rankings</h2>
 
                 {rankings.length > 0 ? (

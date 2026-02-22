@@ -79,7 +79,7 @@ const GuardFirearmPermits: FC<Props> = ({ user, onLogout, onViewChange, activeVi
   }
 
   return (
-    <div className="flex min-h-screen w-screen bg-gray-100 font-sans">
+    <div className="flex min-h-screen w-full max-w-full overflow-x-hidden bg-gray-100 font-sans">
       <Sidebar
         items={navItems}
         activeView={currentView}
@@ -98,8 +98,8 @@ const GuardFirearmPermits: FC<Props> = ({ user, onLogout, onViewChange, activeVi
             <div className="text-indigo-600 text-lg font-medium">Loading permits...</div>
           </div>
         ) : (
-          <div className="flex-1 p-8 overflow-y-auto w-full animate-fade-in">
-            <section className="bg-white p-8 rounded-xl shadow-sm w-full">
+          <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in">
+            <section className="bg-white p-4 md:p-8 rounded-xl shadow-sm w-full">
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Active Permits ({permits.length})</h2>
               {permits.length > 0 ? (
                 <div className="overflow-x-auto">

@@ -62,6 +62,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
     { view: 'schedule', label: 'Schedule' },
     { view: 'missions', label: 'Missions' },
     { view: 'performance', label: 'Performance' },
+    { view: 'merit', label: 'Merit Scores' },
     { view: 'firearms', label: 'Firearms' },
     { view: 'allocation', label: 'Allocation' },
     { view: 'permits', label: 'Permits' },

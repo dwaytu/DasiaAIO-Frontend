@@ -9,6 +9,7 @@ import GuardFirearmPermits from './components/GuardFirearmPermits'
 import FirearmMaintenance from './components/FirearmMaintenance'
 import ArmoredCarDashboard from './components/ArmoredCarDashboard'
 import ProfileDashboard from './components/ProfileDashboard'
+import MeritScoreDashboard from './components/MeritScoreDashboard'
 
 export interface User {
   id: string
@@ -65,6 +66,8 @@ function App() {
       ) : user?.role === 'admin' ? (
         activeView === 'performance' ? (
           <PerformanceDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
+        ) : activeView === 'merit' ? (
+          <MeritScoreDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
         ) : activeView === 'firearms' ? (
           <FirearmInventory user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
         ) : activeView === 'allocation' ? (
@@ -81,6 +84,8 @@ function App() {
       ) : user?.role === 'superadmin' ? (
         activeView === 'performance' ? (
           <PerformanceDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
+        ) : activeView === 'merit' ? (
+          <MeritScoreDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
         ) : activeView === 'firearms' ? (
           <FirearmInventory user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
         ) : activeView === 'allocation' ? (

@@ -36,7 +36,8 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false)
   const navItems = [
     { view: 'users', label: 'Dashboard' },
-    { view: 'schedule', label: 'Schedule' }
+    { view: 'schedule', label: 'Schedule' },
+    { view: 'merit', label: 'Merit Scores' }
   ]
 
   useEffect(() => {

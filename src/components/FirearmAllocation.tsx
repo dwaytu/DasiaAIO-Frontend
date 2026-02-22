@@ -12,6 +12,17 @@ interface Allocation {
   [key: string]: any
 }
 
+interface Guard {
+  id: string
+  full_name: string
+}
+
+interface Firearm {
+  id: string
+  serialNumber: string
+  model: string
+}
+
 interface Props {
   user: any
   onLogout: () => void
@@ -21,8 +32,17 @@ interface Props {
 
 const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView }) => {
   const [allocations, setAllocations] = useState<Allocation[]>([])
+  const [guards, setGuards] = useState<Guard[]>([])
+  const [firearms, setFirearms] = useState<Firearm[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false)
+  const [showAllocateForm, setShowAllocateForm] = useState<boolean>(false)
+  const [error, setError] = useState<string>('')
+  const [success, setSuccess] = useState<string>('')
+  const [newAllocation, setNewAllocation] = useState({
+    guardId: '',
+    firearmId: '',
+  })
   const currentView = activeView || 'allocation'
   const navItems = [
     { view: 'dashboard', label: 'Dashboard' },
@@ -41,12 +61,26 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
   ]
 
   useEffect(() => {
-    fetchAllocations()
+    initializeData()
   }, [])
+
+  const initializeData = async () => {
+    setLoading(true)
+    try {
+      await Promise.all([
+        fetchAllocations(),
+        fetchGuards(),
+        fetchFirearms()
+      ])
+    } catch (err) {
+      console.error('Error initializing data:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const fetchAllocations = async () => {
     try {
-      setLoading(true)
       const response = await fetch(`${API_BASE_URL}/api/firearm-allocations`)
       if (response.ok) {
         const data = await response.json()
@@ -54,6 +88,53 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
       }
     } catch (err) {
       console.error('Error fetching allocations:', err)
+    }
+  }
+
+  const fetchGuards = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/users`)
+      if (response.ok) {
+        const data = await response.json()
+        setGuards((data || []).filter((u: any) => u.role === 'guard'))
+      }
+    } catch (err) {
+      console.error('Error fetching guards:', err)
+    }
+  }
+
+  const fetchFirearms = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/firearms`)
+      if (response.ok) {
+        const data = await response.json()
+        setFirearms(data.firearms || [])
+      }
+    } catch (err) {
+      console.error('Error fetching firearms:', err)
+    }
+  }
+
+  const allocateFirearm = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/firearm-allocation/issue`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          guardId: newAllocation.guardId,
+          firearmId: newAllocation.firearmId,
+        }),
+      })
+      if (!response.ok) throw new Error('Failed to allocate firearm')
+      setSuccess('Firearm allocated successfully!')
+      setNewAllocation({ guardId: '', firearmId: '' })
+      setShowAllocateForm(false)
+      fetchAllocations()
+      setError('')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to allocate firearm')
     } finally {
       setLoading(false)
     }
@@ -95,8 +176,62 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
           </div>
         ) : (
           <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in">
-            <section className="bg-white p-4 md:p-8 rounded-xl shadow-sm w-full">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Firearm Allocations ({allocations.length})</h2>
+            {error && <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">{error}</div>}
+            {success && <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">{success}</div>}
+            
+            <section className="bg-white p-4 md:p-8 rounded-xl shadow-sm w-full mb-6">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-4 md:mb-0">Firearm Allocations ({allocations.length})</h2>
+                <button
+                  onClick={() => setShowAllocateForm(!showAllocateForm)}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200"
+                >
+                  {showAllocateForm ? 'Cancel' : '+ Allocate Firearm'}
+                </button>
+              </div>
+
+              {showAllocateForm && (
+                <form onSubmit={allocateFirearm} className="bg-gray-50 p-6 rounded-lg mb-6 border border-gray-200">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Guard</label>
+                      <select
+                        value={newAllocation.guardId}
+                        onChange={(e) => setNewAllocation({ ...newAllocation, guardId: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        required
+                      >
+                        <option value="">Select a guard</option>
+                        {guards.map((g) => (
+                          <option key={g.id} value={g.id}>{g.full_name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Firearm</label>
+                      <select
+                        value={newAllocation.firearmId}
+                        onChange={(e) => setNewAllocation({ ...newAllocation, firearmId: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        required
+                      >
+                        <option value="">Select a firearm</option>
+                        {firearms.map((f) => (
+                          <option key={f.id} value={f.id}>{f.serialNumber} - {f.model}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-semibold py-2 rounded-lg transition duration-200"
+                  >
+                    {loading ? 'Allocating...' : 'Allocate Firearm'}
+                  </button>
+                </form>
+              )}
+
               {allocations.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse">

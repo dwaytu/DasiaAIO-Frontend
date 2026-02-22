@@ -24,6 +24,14 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
   const [firearms, setFirearms] = useState<Firearm[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false)
+  const [showAddForm, setShowAddForm] = useState<boolean>(false)
+  const [error, setError] = useState<string>('')
+  const [success, setSuccess] = useState<string>('')
+  const [newFirearm, setNewFirearm] = useState({
+    serialNumber: '',
+    model: '',
+    type: '',
+  })
   const currentView = activeView || 'firearms'
   const navItems = [
     { view: 'dashboard', label: 'Dashboard' },
@@ -55,6 +63,32 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
       }
     } catch (err) {
       console.error('Error fetching firearms:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const addFirearm = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/firearms`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          serialNumber: newFirearm.serialNumber,
+          model: newFirearm.model,
+          type: newFirearm.type,
+        }),
+      })
+      if (!response.ok) throw new Error('Failed to add firearm')
+      setSuccess('Firearm added successfully!')
+      setNewFirearm({ serialNumber: '', model: '', type: '' })
+      setShowAddForm(false)
+      fetchFirearms()
+      setError('')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to add firearm')
     } finally {
       setLoading(false)
     }
@@ -97,8 +131,67 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
           </div>
         ) : (
           <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in">
-            <section className="bg-white p-4 md:p-8 rounded-xl shadow-sm w-full">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">All Firearms ({firearms.length})</h2>
+            {error && <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">{error}</div>}
+            {success && <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">{success}</div>}
+            
+            <section className="bg-white p-4 md:p-8 rounded-xl shadow-sm w-full mb-6">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-4 md:mb-0">All Firearms ({firearms.length})</h2>
+                <button
+                  onClick={() => setShowAddForm(!showAddForm)}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200"
+                >
+                  {showAddForm ? 'Cancel' : '+ Add Firearm'}
+                </button>
+              </div>
+
+              {showAddForm && (
+                <form onSubmit={addFirearm} className="bg-gray-50 p-6 rounded-lg mb-6 border border-gray-200">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Serial Number</label>
+                      <input
+                        type="text"
+                        value={newFirearm.serialNumber}
+                        onChange={(e) => setNewFirearm({ ...newFirearm, serialNumber: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        placeholder="Enter serial number"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Model</label>
+                      <input
+                        type="text"
+                        value={newFirearm.model}
+                        onChange={(e) => setNewFirearm({ ...newFirearm, model: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        placeholder="Enter model"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Type</label>
+                      <input
+                        type="text"
+                        value={newFirearm.type}
+                        onChange={(e) => setNewFirearm({ ...newFirearm, type: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        placeholder="e.g., Handgun, Rifle"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-semibold py-2 rounded-lg transition duration-200"
+                  >
+                    {loading ? 'Adding...' : 'Add Firearm'}
+                  </button>
+                </form>
+              )}
+
               {firearms.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse">

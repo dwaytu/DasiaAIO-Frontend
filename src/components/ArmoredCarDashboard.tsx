@@ -117,25 +117,43 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
   })
 
   useEffect(() => {
-    fetchCars()
-    fetchAllocations()
-    fetchMaintenance()
-    fetchTrips()
+    initializeData()
   }, [])
 
-  const fetchCars = async () => {
+  const initializeData = async () => {
     setLoading(true)
     try {
-      const response = await fetch(`${API_BASE_URL}/api/armored-cars`)
-      if (!response.ok) throw new Error('Failed to fetch cars')
-      const data = await response.json()
-      setCars(data)
+      // Fetch cars first, since maintenance fetch depends on it
+      const carsResponse = await fetch(`${API_BASE_URL}/api/armored-cars`)
+      if (!carsResponse.ok) throw new Error('Failed to fetch cars')
+      const carsData = await carsResponse.json()
+      setCars(carsData)
+
+      // Then fetch maintenance records for each car
+      if (carsData.length > 0) {
+        let allMaintenance: CarMaintenance[] = []
+        for (const car of carsData) {
+          const mainResponse = await fetch(`${API_BASE_URL}/api/car-maintenance/${car.id}`)
+          if (mainResponse.ok) {
+            const mainData = await mainResponse.json()
+            // Extract records from the API response (handles both array and {value: []} format)
+            const records = Array.isArray(mainData) ? mainData : (mainData.value || mainData)
+            allMaintenance = [...allMaintenance, ...records]
+          }
+        }
+        setMaintenance(allMaintenance)
+      }
+
       setError('')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch cars')
+      setError(err instanceof Error ? err.message : 'Failed to initialize data')
     } finally {
       setLoading(false)
     }
+
+    // Fetch other data in parallel (non-blocking)
+    fetchAllocations()
+    fetchTrips()
   }
 
   const fetchAllocations = async () => {
@@ -161,6 +179,21 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
       }
     } catch (err) {
       console.error('Failed to fetch maintenance:', err)
+    }
+  }
+
+  const fetchCars = async () => {
+    setLoading(true)
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/armored-cars`)
+      if (!response.ok) throw new Error('Failed to fetch cars')
+      const data = await response.json()
+      setCars(data)
+      setError('')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch cars')
+    } finally {
+      setLoading(false)
     }
   }
 

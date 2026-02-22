@@ -102,7 +102,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout }) => {
     if (!editingUser) return
 
     try {
-      const response = await fetch(`http://localhost:5000/api/user/${editingUser.id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/user/${editingUser.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -129,7 +129,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout }) => {
     }
 
     try {
-      const response = await fetch(`http://localhost:5000/api/user/${userId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/user/${userId}`, {
         method: 'DELETE',
       })
 

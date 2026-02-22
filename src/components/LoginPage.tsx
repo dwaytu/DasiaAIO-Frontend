@@ -508,7 +508,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
   return (
     <>
       {/* MOBILE LAYOUT - Completely different design */}
-      <div className="lg:hidden min-h-screen w-full overflow-x-hidden bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-700 flex items-center justify-center p-4">
+      <div className="lg:hidden min-h-screen w-screen bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-700 flex items-center justify-center p-4">
         <div className="w-full max-w-md">
           {/* Form Card */}
           <div className="bg-white rounded-3xl shadow-2xl p-7 maxh-[85vh] overflow-y-auto">
@@ -551,7 +551,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
       </div>
 
       {/* DESKTOP LAYOUT - Original unchanged design */}
-      <div className="hidden lg:flex min-h-screen w-full overflow-x-hidden bg-white overflow-hidden">
+      <div className="hidden lg:flex min-h-screen w-screen bg-white overflow-hidden">
         {!isRegistering && (
           <div className="absolute top-8 left-8 z-10">
             <Logo onClick={() => {}} />

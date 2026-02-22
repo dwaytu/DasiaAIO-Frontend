@@ -113,13 +113,19 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
 
   // Build nav items matching admin/user dashboard patterns
   const adminNavItems = [
-    { view: 'users',       label: 'Dashboard' },
-    { view: 'calendar',    label: 'Calendar' },
-    { view: 'schedule',    label: 'Schedule' },
-    { view: 'merit',       label: 'Merit Scores' },
-    { view: 'performance', label: 'Performance' },
-    { view: 'firearms',    label: 'Firearms' },
-    { view: 'armored-cars',label: 'Armored Cars' },
+    { view: 'dashboard',    label: 'Dashboard' },
+    { view: 'calendar',     label: 'Calendar' },
+    { view: 'analytics',    label: 'Analytics' },
+    { view: 'trips',        label: 'Trip Management' },
+    { view: 'schedule',     label: 'Schedule' },
+    { view: 'missions',     label: 'Missions' },
+    { view: 'performance',  label: 'Performance' },
+    { view: 'merit',        label: 'Merit Scores' },
+    { view: 'firearms',     label: 'Firearms' },
+    { view: 'allocation',   label: 'Allocation' },
+    { view: 'permits',      label: 'Permits' },
+    { view: 'maintenance',  label: 'Maintenance' },
+    { view: 'armored-cars', label: 'Armored Cars' },
   ]
   const userNavItems = [
     { view: 'dashboard', label: 'Dashboard' },
@@ -263,7 +269,7 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
     `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 
   return (
-    <div className="flex h-screen bg-gray-950 overflow-hidden">
+    <div className="flex h-screen w-screen bg-gray-950 overflow-hidden">
       {/* Sidebar */}
       <Sidebar
         items={navItems}
@@ -280,7 +286,7 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
           title={isAdmin ? 'Operations Calendar' : 'My Schedule Calendar'}
         />
 
-        <main className="flex-1 overflow-auto p-3 sm:p-6">
+        <main className="flex-1 overflow-auto p-3 sm:p-6 bg-gray-950">
           {/* Subtitle row */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
             <p className="text-gray-400 text-sm">
@@ -327,9 +333,9 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
             )}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-            {/* Calendar grid — takes 3 cols on lg */}
-            <div className="lg:col-span-3 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
+            {/* Calendar grid — takes 3 cols on sm */}
+            <div className="sm:col-span-3 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
               {/* Month nav */}
               <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
                 <button onClick={prevMonth} className="p-2 hover:bg-gray-800 rounded-lg text-gray-400 hover:text-white transition-colors">
@@ -395,8 +401,8 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
               )}
             </div>
 
-            {/* Day detail panel — takes 2 cols on lg */}
-            <div className="lg:col-span-2 flex flex-col gap-4">
+            {/* Day detail panel — takes 2 cols on sm */}
+            <div className="sm:col-span-2 flex flex-col gap-4">
               <div className="bg-gray-900 rounded-xl border border-gray-800 flex-1 overflow-hidden flex flex-col">
                 <div className="px-4 py-3 border-b border-gray-800">
                   <h3 className="text-white font-semibold text-sm">{formatDate(selectedDate)}</h3>

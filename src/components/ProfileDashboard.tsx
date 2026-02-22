@@ -160,7 +160,7 @@ const ProfileDashboard: FC<ProfileDashboardProps> = ({ user, onLogout, onBack, o
   ]
 
   return (
-    <div className="flex h-screen w-full max-w-full overflow-hidden bg-gray-50">
+    <div className="flex h-screen w-screen overflow-hidden bg-gray-50">
       <Sidebar
         activeView="profile"
         items={navItems}

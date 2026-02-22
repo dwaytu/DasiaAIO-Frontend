@@ -27,12 +27,14 @@ const FirearmMaintenance: FC<Props> = ({ user, onLogout, onViewChange, activeVie
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false)
   const currentView = activeView || 'maintenance'
   const navItems = [
-    { view: 'users', label: 'Dashboard' },
+    { view: 'dashboard', label: 'Dashboard' },
+    { view: 'calendar', label: 'Calendar' },
     { view: 'analytics', label: 'Analytics' },
     { view: 'trips', label: 'Trip Management' },
     { view: 'schedule', label: 'Schedule' },
     { view: 'missions', label: 'Missions' },
     { view: 'performance', label: 'Performance' },
+    { view: 'merit', label: 'Merit Scores' },
     { view: 'firearms', label: 'Firearms' },
     { view: 'allocation', label: 'Allocation' },
     { view: 'permits', label: 'Permits' },
@@ -80,12 +82,12 @@ const FirearmMaintenance: FC<Props> = ({ user, onLogout, onViewChange, activeVie
   }
 
   return (
-    <div className="flex min-h-screen w-full max-w-full overflow-x-hidden bg-gray-100 font-sans">
+    <div className="flex min-h-screen w-screen bg-gray-100 font-sans">
       <Sidebar
         items={navItems}
         activeView={currentView}
         onNavigate={handleNavigate}
-        onLogoClick={() => onViewChange?.('users')}
+        onLogoClick={() => onViewChange?.('dashboard')}
         onLogout={onLogout}
         isOpen={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}

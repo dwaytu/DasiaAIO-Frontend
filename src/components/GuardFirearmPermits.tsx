@@ -27,12 +27,14 @@ const GuardFirearmPermits: FC<Props> = ({ user, onLogout, onViewChange, activeVi
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false)
   const currentView = activeView || 'permits'
   const navItems = [
-    { view: 'users', label: 'Dashboard' },
+    { view: 'dashboard', label: 'Dashboard' },
+    { view: 'calendar', label: 'Calendar' },
     { view: 'analytics', label: 'Analytics' },
     { view: 'trips', label: 'Trip Management' },
     { view: 'schedule', label: 'Schedule' },
     { view: 'missions', label: 'Missions' },
     { view: 'performance', label: 'Performance' },
+    { view: 'merit', label: 'Merit Scores' },
     { view: 'firearms', label: 'Firearms' },
     { view: 'allocation', label: 'Allocation' },
     { view: 'permits', label: 'Permits' },
@@ -79,12 +81,12 @@ const GuardFirearmPermits: FC<Props> = ({ user, onLogout, onViewChange, activeVi
   }
 
   return (
-    <div className="flex min-h-screen w-full max-w-full overflow-x-hidden bg-gray-100 font-sans">
+    <div className="flex min-h-screen w-screen bg-gray-100 font-sans">
       <Sidebar
         items={navItems}
         activeView={currentView}
         onNavigate={handleNavigate}
-        onLogoClick={() => onViewChange?.('users')}
+        onLogoClick={() => onViewChange?.('dashboard')}
         onLogout={onLogout}
         isOpen={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}
@@ -118,7 +120,8 @@ const GuardFirearmPermits: FC<Props> = ({ user, onLogout, onViewChange, activeVi
                       {permits.map((p) => (
                         <tr key={p.id} className={`border-b border-gray-200 hover:bg-gray-50 ${isExpired(p.expiryDate) ? 'bg-red-50' : ''}`}>
                           <td className="px-4 py-3 text-gray-700">{p.guardId}</td>
-                          <td className="px-4 py-3 text-gray-700">{p.firearmId}</td>\n                          <td className="px-4 py-3 text-gray-700">{p.permitType}</td>
+                          <td className="px-4 py-3 text-gray-700">{p.firearmId}</td>
+                          <td className="px-4 py-3 text-gray-700">{p.permitType}</td>
                           <td className="px-4 py-3 text-gray-700">{new Date(p.issuedDate).toLocaleDateString()}</td>
                           <td className={`px-4 py-3 ${isExpired(p.expiryDate) ? 'text-red-700 font-semibold' : 'text-gray-700'}`}>
                             {new Date(p.expiryDate).toLocaleDateString()}

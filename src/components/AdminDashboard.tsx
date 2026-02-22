@@ -146,7 +146,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout }) => {
   }
 
   return (
-    <div className="flex min-h-screen w-full max-w-full overflow-x-hidden bg-gray-100 font-sans">
+    <div className="flex min-h-screen w-screen bg-gray-100 font-sans">
       <Sidebar
         items={navItems}
         activeView={activeSection}

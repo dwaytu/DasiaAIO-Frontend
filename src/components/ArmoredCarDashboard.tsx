@@ -202,7 +202,12 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
       const response = await fetch(`${API_BASE_URL}/api/car-allocation/issue`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newAllocation),
+        body: JSON.stringify({
+          carId: newAllocation.car_id,
+          clientId: newAllocation.client_id,
+          expectedReturnDate: newAllocation.expected_return_date ? new Date(newAllocation.expected_return_date).toISOString() : null,
+          notes: newAllocation.notes || null,
+        }),
       })
       if (!response.ok) throw new Error('Failed to allocate car')
       setSuccess('Car allocated successfully!')
@@ -223,7 +228,13 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
       const response = await fetch(`${API_BASE_URL}/api/car-maintenance/schedule`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newMaintenance),
+        body: JSON.stringify({
+          carId: newMaintenance.car_id,
+          maintenanceType: newMaintenance.maintenance_type,
+          description: newMaintenance.description,
+          scheduledDate: newMaintenance.scheduled_date ? new Date(newMaintenance.scheduled_date).toISOString() : null,
+          cost: newMaintenance.cost || null,
+        }),
       })
       if (!response.ok) throw new Error('Failed to schedule maintenance')
       setSuccess('Maintenance scheduled successfully!')
@@ -242,12 +253,14 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
 
   const currentView = activeView || 'armored-cars'
   const navItems = [
-    { view: 'users', label: 'Dashboard' },
+    { view: 'dashboard', label: 'Dashboard' },
+    { view: 'calendar', label: 'Calendar' },
     { view: 'analytics', label: 'Analytics' },
     { view: 'trips', label: 'Trip Management' },
     { view: 'schedule', label: 'Schedule' },
     { view: 'missions', label: 'Missions' },
     { view: 'performance', label: 'Performance' },
+    { view: 'merit', label: 'Merit Scores' },
     { view: 'firearms', label: 'Firearms' },
     { view: 'allocation', label: 'Allocation' },
     { view: 'permits', label: 'Permits' },
@@ -260,11 +273,11 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
   const activeTrips = trips.filter((t) => t.status === 'in_transit').length
 
   return (
-    <div className="flex min-h-screen w-full max-w-full overflow-x-hidden bg-gray-100 font-sans">
+    <div className="flex min-h-screen w-screen bg-gray-100 font-sans">
       <Sidebar
         items={navItems}
         activeView={currentView}
-        onNavigate={onViewChange}        onLogoClick={() => onViewChange?.('users')}        onLogout={onLogout}
+        onNavigate={onViewChange}        onLogoClick={() => onViewChange?.('dashboard')}        onLogout={onLogout}
         isOpen={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}
       />

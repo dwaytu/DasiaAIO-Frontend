@@ -82,11 +82,14 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
   const fetchAllocations = async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/firearm-allocations`)
-      if (response.ok) {
-        const data = await response.json()
-        setAllocations(data.allocations || [])
+      if (!response.ok) {
+        throw new Error('Failed to fetch allocations')
       }
+      const data = await response.json()
+      setAllocations(data.allocations || [])
+      setError('')
     } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch allocations')
       console.error('Error fetching allocations:', err)
     }
   }
@@ -94,11 +97,14 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
   const fetchGuards = async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/users`)
-      if (response.ok) {
-        const data = await response.json()
-        setGuards((data || []).filter((u: any) => u.role === 'guard'))
+      if (!response.ok) {
+        throw new Error('Failed to fetch guards')
       }
+      const data = await response.json()
+      setGuards((data || []).filter((u: any) => u.role === 'guard'))
+      setError('')
     } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch guards')
       console.error('Error fetching guards:', err)
     }
   }
@@ -106,11 +112,14 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
   const fetchFirearms = async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/firearms`)
-      if (response.ok) {
-        const data = await response.json()
-        setFirearms(data.firearms || [])
+      if (!response.ok) {
+        throw new Error('Failed to fetch firearms')
       }
+      const data = await response.json()
+      setFirearms(data.firearms || [])
+      setError('')
     } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch firearms')
       console.error('Error fetching firearms:', err)
     }
   }

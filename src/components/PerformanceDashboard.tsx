@@ -56,7 +56,7 @@ const PerformanceDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeV
       if (response.ok) {
         const data = await response.json()
         // Create mock performance data
-        const perf = data.users.map((u: any) => ({
+        const perf = (data.users || []).map((u: any) => ({
           guardId: u.id,
           guardName: u.email.split('@')[0],
           attendanceRate: Math.floor(Math.random() * 40 + 60),

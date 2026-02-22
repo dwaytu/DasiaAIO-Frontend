@@ -123,22 +123,24 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
     try {
       setLoading(true)
       const response = await fetch(`${API_BASE_URL}/api/users`)
-      if (response.ok) {
-        const data = await response.json()
-        setUsers(data.users)
-        
-        // Calculate stats
-        const adminCount = data.users.filter((u: User) => u.role === 'admin').length
-        const guardCount = data.users.filter((u: User) => u.role === 'guard').length
-        const userCount = data.users.filter((u: User) => u.role === 'user').length
-        
-        setStats({
-          totalUsers: data.users.length,
-          admins: adminCount,
-          guards: guardCount,
-          regularUsers: userCount
-        })
+      if (!response.ok) {
+        throw new Error('Failed to fetch users')
       }
+      const data = await response.json()
+      const users = data.users || []
+      setUsers(users)
+      
+      // Calculate stats
+      const adminCount = users.filter((u: User) => u.role === 'admin').length
+      const guardCount = users.filter((u: User) => u.role === 'guard').length
+      const userCount = users.filter((u: User) => u.role === 'user').length
+      
+      setStats({
+        totalUsers: users.length,
+        admins: adminCount,
+        guards: guardCount,
+        regularUsers: userCount
+      })
     } catch (err) {
       console.error('Error fetching data:', err)
     } finally {

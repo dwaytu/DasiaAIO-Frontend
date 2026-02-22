@@ -7,7 +7,7 @@ interface Firearm {
   id: string
   serialNumber: string
   model: string
-  type: string
+  caliber: string
   status: string
   lastMaintenance?: string
   [key: string]: any
@@ -30,7 +30,7 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
   const [newFirearm, setNewFirearm] = useState({
     serialNumber: '',
     model: '',
-    type: '',
+    caliber: '',
   })
   const currentView = activeView || 'firearms'
   const navItems = [
@@ -78,12 +78,12 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
         body: JSON.stringify({
           serialNumber: newFirearm.serialNumber,
           model: newFirearm.model,
-          type: newFirearm.type,
+          caliber: newFirearm.caliber,
         }),
       })
       if (!response.ok) throw new Error('Failed to add firearm')
       setSuccess('Firearm added successfully!')
-      setNewFirearm({ serialNumber: '', model: '', type: '' })
+      setNewFirearm({ serialNumber: '', model: '', caliber: '' })
       setShowAddForm(false)
       fetchFirearms()
       setError('')
@@ -171,13 +171,13 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Type</label>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Caliber</label>
                       <input
                         type="text"
-                        value={newFirearm.type}
-                        onChange={(e) => setNewFirearm({ ...newFirearm, type: e.target.value })}
+                        value={newFirearm.caliber}
+                        onChange={(e) => setNewFirearm({ ...newFirearm, caliber: e.target.value })}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        placeholder="e.g., Handgun, Rifle"
+                        placeholder="e.g., 9mm, .45 ACP"
                         required
                       />
                     </div>
@@ -199,7 +199,7 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
                       <tr>
                         <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-sm uppercase tracking-wider">Serial Number</th>
                         <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-sm uppercase tracking-wider">Model</th>
-                        <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-sm uppercase tracking-wider">Type</th>
+                        <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-sm uppercase tracking-wider">Caliber</th>
                         <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-sm uppercase tracking-wider">Status</th>
                         <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-sm uppercase tracking-wider">Last Maintenance</th>
                       </tr>
@@ -209,7 +209,7 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
                         <tr key={f.id} className="border-b border-gray-200 hover:bg-gray-50">
                           <td className="px-4 py-3 text-gray-700">{f.serialNumber}</td>
                           <td className="px-4 py-3 text-gray-700">{f.model}</td>
-                          <td className="px-4 py-3 text-gray-700">{f.type}</td>
+                          <td className="px-4 py-3 text-gray-700">{f.caliber}</td>
                           <td className="px-4 py-3">
                             <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${getStatusBadgeColor(f.status)}`}>
                               {f.status}

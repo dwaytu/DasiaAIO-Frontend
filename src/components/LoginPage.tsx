@@ -588,32 +588,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
 
         {/* Right Section - Design */}
         <div className="flex-1 bg-gradient-to-br from-indigo-600 to-purple-700 flex items-center justify-center flex-col gap-8 p-12">
-          <style>{`
-            @keyframes shieldPulse {
-              0%, 100% {
-                transform: scale(1);
-                box-shadow: 0 0 0px rgba(255, 255, 255, 0);
-              }
-              50% {
-                transform: scale(1.05);
-                box-shadow: 0 0 30px rgba(255, 255, 255, 0.6), 0 0 60px rgba(99, 102, 241, 0.4);
-              }
-            }
-            .shield-pulse {
-              animation: shieldPulse 2s ease-in-out infinite;
-            }
-          `}</style>
-          <div className="text-center space-y-4">
-            <div className="w-24 h-24 mx-auto bg-white/10 rounded-full flex items-center justify-center shield-pulse">
-              <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
-                <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" className="w-10 h-10">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                </svg>
-              </div>
-            </div>
-            <h2 className="text-3xl font-bold text-white">Secure Access</h2>
-            <p className="text-indigo-100 text-lg">Guard & Firearm Management System</p>
-          </div>
+          <Logo size="lg" />
           
           <div className="grid grid-cols-2 gap-6 w-full max-w-md">
             <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-4 text-center">
@@ -635,7 +610,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
           </div>
           
           <div className="text-center">
-            <p className="text-indigo-100 text-sm">Davao Security & Investigation Agency</p>
+            <p className="text-indigo-100 text-sm">Davao Security & Investigation Agency Inc.</p>
           </div>
         </div>
       </div>

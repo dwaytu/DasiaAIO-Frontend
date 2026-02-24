@@ -1,4 +1,4 @@
-# DASIA AIO Management System
+# SENTINEL Security Operations Management System
 
 > **Comprehensive Asset Management & Operations Platform**
 

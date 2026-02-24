@@ -57,7 +57,7 @@ const Sidebar: FC<SidebarProps> = ({ items, activeView, onNavigate, onLogout, on
         )}
         
         <div className="pb-6 border-b border-white/20 mb-8 flex-shrink-0">
-          <Logo onClick={onLogoClick} />
+          <Logo onClick={onLogoClick} size="sm" horizontal={true} />
         </div>
         <nav className="flex-1 flex flex-col gap-2 overflow-y-auto pr-2 min-h-0">
           {items.map(({ view, label }) => (

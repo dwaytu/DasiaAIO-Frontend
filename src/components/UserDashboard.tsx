@@ -634,7 +634,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange })
                     <p className="text-sm text-gray-600 mb-3">24/7 support for urgent issues.</p>
                     <div className="text-sm text-gray-800">
                       <div>Phone: +63 912 345 6789</div>
-                      <div>Email: ops@dasiaaio.com</div>
+                      <div>Email: ops@sentinel-security.com</div>
                     </div>
                   </div>
                   <div className="rounded-lg border border-gray-200 p-5">
@@ -642,7 +642,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange })
                     <p className="text-sm text-gray-600 mb-3">For on-site scheduling changes.</p>
                     <div className="text-sm text-gray-800">
                       <div>Phone: +63 901 234 5678</div>
-                      <div>Email: supervisor@dasiaaio.com</div>
+                      <div>Email: supervisor@sentinel-security.com</div>
                     </div>
                   </div>
                   <div className="rounded-lg border border-gray-200 p-5">
@@ -650,7 +650,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange })
                     <p className="text-sm text-gray-600 mb-3">Licensing and permit concerns.</p>
                     <div className="text-sm text-gray-800">
                       <div>Phone: +63 955 321 4567</div>
-                      <div>Email: hr@dasiaaio.com</div>
+                      <div>Email: hr@sentinel-security.com</div>
                     </div>
                   </div>
                   <div className="rounded-lg border border-gray-200 p-5">

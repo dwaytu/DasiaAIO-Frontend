@@ -2,8 +2,6 @@
   "$schema": "https://railway.json.schema",
   "services": {
     "frontend": {
-      "buildCommand": "npm install && npm run build",
-      "startCommand": "npm run preview",
       "variables": {
         "VITE_API_URL": "https://backend-production-0c47.up.railway.app"
       }

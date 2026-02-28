@@ -306,7 +306,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
   const activeTrips = trips.filter((t) => t.status === 'in_transit').length
 
   return (
-    <div className="flex min-h-screen w-screen bg-background font-sans">
+    <div className="flex h-screen w-screen bg-background font-sans">
       <Sidebar
         items={navItems}
         activeView={currentView}
@@ -465,7 +465,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full min-w-[600px]">
-                      <thead className="bg-background border-b border-border">
+                      <thead className="thead-glass">
                         <tr>
                           <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-text-primary border-b-2 border-border text-xs md:text-sm uppercase tracking-wider">License Plate</th>
                           <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-text-primary border-b-2 border-border text-xs md:text-sm uppercase tracking-wider hidden sm:table-cell">Model</th>
@@ -565,7 +565,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full min-w-[600px]">
-                      <thead className="bg-background border-b border-border">
+                      <thead className="thead-glass">
                         <tr>
                           <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-text-primary border-b-2 border-border text-xs md:text-sm uppercase tracking-wider">Vehicle</th>
                           <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-text-primary border-b-2 border-border text-xs md:text-sm uppercase tracking-wider hidden sm:table-cell">Client</th>
@@ -679,7 +679,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full min-w-[600px]">
-                      <thead className="bg-background border-b border-border">
+                      <thead className="thead-glass">
                         <tr>
                           <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-text-primary border-b-2 border-border text-xs md:text-sm uppercase tracking-wider">Vehicle</th>
                           <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-text-primary border-b-2 border-border text-xs md:text-sm uppercase tracking-wider hidden sm:table-cell">Type</th>
@@ -717,7 +717,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[600px]">
-                    <thead className="bg-background border-b border-border">
+                    <thead className="thead-glass">
                       <tr>
                         <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-text-primary border-b-2 border-border text-xs md:text-sm uppercase tracking-wider">Vehicle</th>
                         <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-text-primary border-b-2 border-border text-xs md:text-sm uppercase tracking-wider hidden sm:table-cell">Start</th>

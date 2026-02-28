@@ -111,7 +111,7 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
   }
 
   return (
-    <div className="flex min-h-screen w-screen bg-background font-sans">
+    <div className="flex h-screen w-screen bg-background font-sans">
       <Sidebar
         items={navItems}
         activeView={currentView}
@@ -134,7 +134,7 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
             {error && <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">{error}</div>}
             {success && <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">{success}</div>}
             
-            <section className="bg-surface p-4 md:p-8 rounded-xl shadow-sm w-full mb-6">
+            <section className="table-glass rounded-2xl p-4 md:p-8 w-full mb-6">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
                 <h2 className="text-2xl font-bold text-text-primary mb-4 md:mb-0">All Firearms ({firearms.length})</h2>
                 <button
@@ -195,7 +195,7 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
               {firearms.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse">
-                    <thead className="bg-background">
+                    <thead className="thead-glass">
                       <tr>
                         <th className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Serial Number</th>
                         <th className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Model</th>

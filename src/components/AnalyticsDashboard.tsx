@@ -91,7 +91,7 @@ const AnalyticsDashboard: FC = () => {
 
   if (!analytics) {
     return (
-      <div className="bg-gray-50 border border-gray-300 text-gray-700 rounded-lg p-4 text-center">
+      <div className="bg-zinc-500/15 border border-zinc-500/30 text-text-secondary rounded-lg p-4 text-center">
         <p className="font-medium">No analytics data available</p>
         <p className="text-xs mt-2">Backend is not returning data. Please check server connection.</p>
       </div>

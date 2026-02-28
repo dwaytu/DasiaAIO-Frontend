@@ -142,12 +142,12 @@ const TripManagement: FC = () => {
       )}
 
       {/* Active Trips */}
-      <section className="bg-surface p-6 rounded-xl shadow-sm">
+      <section className="table-glass rounded-xl p-6">
         <h2 className="text-2xl font-bold text-text-primary mb-6">Active Trips</h2>
         {trips.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full border-collapse min-w-full">
-              <thead className="bg-background">
+              <thead className="thead-glass">
                 <tr>
                   <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Destination</th>
                   <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Vehicle</th>

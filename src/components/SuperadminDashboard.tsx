@@ -325,7 +325,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   return (
     <>
       <NotificationCenter notifications={notifications} onDismiss={dismissNotification} />
-      <div className="flex min-h-screen w-screen bg-background font-sans">
+      <div className="flex h-screen w-screen bg-background font-sans">
         <Sidebar
           items={navItems}
           activeView={activeSection}
@@ -361,8 +361,8 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
             <div className="text-indigo-600 text-lg font-medium">Loading system data...</div>
           </div>
         ) : activeSection === 'dashboard' ? (
-          <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in">
-            <section className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
+          <div className="flex-1 flex flex-col overflow-hidden p-4 md:p-8 w-full animate-fade-in gap-4 md:gap-6">
+            <section className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 flex-shrink-0">
               {/* Total Users */}
               <div className="bento-card flex items-center gap-4">
                 <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center flex-shrink-0">
@@ -405,9 +405,9 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
               </div>
             </section>
 
-            <section className="w-full bento-card !p-0 overflow-hidden">
-              {/* Table header */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-5 border-b border-border-subtle">
+            <section className="flex flex-col flex-1 min-h-0 w-full bento-card !p-0 overflow-hidden table-glass">
+              {/* Table header — static, never scrolls */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-5 border-b border-border-subtle flex-shrink-0">
                 <div>
                   <h2 className="text-lg font-bold text-text-primary">User Management</h2>
                   <p className="text-xs text-text-tertiary mt-0.5">Manage system users, permissions, and security roles</p>
@@ -430,10 +430,10 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                 </div>
               </div>
               {filteredUsers.length > 0 ? (
-                <div className="overflow-x-auto">
+                <div className="flex-1 min-h-0 overflow-auto">
                   <table className="w-full min-w-[700px]">
-                    <thead>
-                      <tr className="border-b border-border-subtle">
+                    <thead className="thead-glass">
+                      <tr className="border-b border-border">
                         <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">User Details</th>
                         <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Username</th>
                         <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Role</th>
@@ -518,16 +518,18 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
             </section>
           </div>
         ) : activeSection === 'schedule' ? (
-          <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in">
+          <div className="flex-1 flex flex-col p-4 md:p-8 overflow-hidden w-full animate-fade-in">
             {shiftsLoading ? (
               <div className="text-center py-12 text-text-secondary font-medium">Loading schedules...</div>
             ) : (
-              <section className="w-full bg-surface p-6 md:p-8 rounded-xl shadow-sm">
-                <h2 className="text-2xl font-bold text-text-primary mb-6">All Guard Schedules</h2>
+              <section className="flex flex-col flex-1 min-h-0 w-full rounded-2xl overflow-hidden table-glass">
+                <div className="flex-shrink-0 px-6 py-5 border-b border-border-subtle">
+                  <h2 className="text-xl font-bold text-text-primary">All Guard Schedules</h2>
+                </div>
                 {shifts.length > 0 ? (
-                  <div className="overflow-x-auto">
+                  <div className="flex-1 min-h-0 overflow-auto">
                     <table className="w-full border-collapse min-w-[600px]">
-                      <thead className="bg-background">
+                      <thead className="thead-glass">
                         <tr>
                           <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Guard</th>
                           <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Site</th>
@@ -582,7 +584,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
         ) : activeSection === 'missions' ? (
           <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in">
             {/* Mission Assignment Form */}
-            <section className="w-full bg-surface p-6 md:p-8 rounded-xl shadow-sm mb-6">
+            <section className="w-full table-glass rounded-2xl p-6 md:p-8 mb-6">
               <h2 className="text-2xl font-bold text-text-primary mb-6">Assign New Mission</h2>
               {error && (
                 <div className="mb-4 p-3 bg-red-50 border border-red-300 text-red-800 rounded-lg text-sm">
@@ -744,14 +746,14 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
             </section>
 
             {/* Mission History */}
-            <section className="w-full bg-surface p-6 md:p-8 rounded-xl shadow-sm">
+            <section className="w-full table-glass rounded-2xl p-6 md:p-8">
               <h2 className="text-2xl font-bold text-text-primary mb-6">Mission History</h2>
               {missionsLoading ? (
                 <div className="text-center py-12 text-text-secondary font-medium">Loading missions...</div>
               ) : missions.length > 0 ? (
-                <div className="overflow-x-auto">
+                <div className="overflow-auto">
                   <table className="w-full border-collapse min-w-[600px]">
-                    <thead className="bg-background">
+                    <thead className="thead-glass">
                       <tr>
                         <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">ID</th>
                         <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Destination</th>

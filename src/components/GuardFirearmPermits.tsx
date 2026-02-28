@@ -81,7 +81,7 @@ const GuardFirearmPermits: FC<Props> = ({ user, onLogout, onViewChange, activeVi
   }
 
   return (
-    <div className="flex min-h-screen w-screen bg-background font-sans">
+    <div className="flex h-screen w-screen bg-background font-sans">
       <Sidebar
         items={navItems}
         activeView={currentView}
@@ -100,13 +100,15 @@ const GuardFirearmPermits: FC<Props> = ({ user, onLogout, onViewChange, activeVi
             <div className="text-indigo-600 text-lg font-medium">Loading permits...</div>
           </div>
         ) : (
-          <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in">
-            <section className="bg-surface p-4 md:p-8 rounded-xl shadow-sm w-full">
-              <h2 className="text-2xl font-bold text-text-primary mb-6">Active Permits ({permits.length})</h2>
+          <div className="flex-1 flex flex-col p-4 md:p-8 overflow-hidden w-full animate-fade-in">
+            <section className="flex flex-col flex-1 min-h-0 rounded-2xl overflow-hidden table-glass">
+              <div className="flex-shrink-0 px-6 py-5 border-b border-border-subtle">
+                <h2 className="text-xl font-bold text-text-primary">Active Permits ({permits.length})</h2>
+              </div>
               {permits.length > 0 ? (
-                <div className="overflow-x-auto">
+                <div className="flex-1 min-h-0 overflow-auto">
                   <table className="w-full border-collapse">
-                    <thead className="bg-background">
+                    <thead className="thead-glass">
                       <tr>
                         <th className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Guard ID</th>
                         <th className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Firearm ID</th>

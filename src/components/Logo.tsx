@@ -6,11 +6,15 @@ interface LogoProps {
   size?: 'sm' | 'md' | 'lg'
   horizontal?: boolean
   logoOnly?: boolean
+  /** Force light-mode colours to render as dark-mode (use when Logo sits on a permanently dark background) */
+  forceDark?: boolean
 }
 
-const Logo: FC<LogoProps> = ({ onClick, size = 'md', horizontal = false, logoOnly = false }) => {
+const Logo: FC<LogoProps> = ({ onClick, size = 'md', horizontal = false, logoOnly = false, forceDark = false }) => {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
+  // useDark: true when the logo is actually on a dark surface (either theme is dark, or caller forces dark)
+  const useDark = isDark || forceDark
   
   const sizeMap = {
     sm: { logoWidth: 52, fontSize: 'text-xl', gap: 'gap-2.5' },
@@ -152,7 +156,7 @@ const Logo: FC<LogoProps> = ({ onClick, size = 'md', horizontal = false, logoOnl
       {!logoOnly && (horizontal ? (
         <div className="text-left">
           <h1
-            className={`${config.fontSize} font-black tracking-tight text-white leading-none`}
+            className={`${config.fontSize} font-black tracking-tight leading-none transition-colors duration-[250ms] ${useDark ? 'text-white' : 'text-text-primary'}`}
             style={{ fontFamily: "'Inter', 'Helvetica Neue', sans-serif", letterSpacing: '-0.5px' }}
           >
             Sentinel
@@ -162,20 +166,21 @@ const Logo: FC<LogoProps> = ({ onClick, size = 'md', horizontal = false, logoOnl
         <div
           className="rounded-xl px-4 py-2 text-center"
           style={{
-            background: 'rgba(0,150,200,0.1)',
-            border: '1px solid rgba(0,200,240,0.25)',
+            background: useDark ? 'rgba(0,150,200,0.1)' : 'rgba(37,99,235,0.08)',
+            border: `1px solid ${useDark ? 'rgba(0,200,240,0.25)' : 'rgba(37,99,235,0.2)'}`,
             backdropFilter: 'blur(8px)',
+            transition: 'background 250ms ease, border-color 250ms ease',
           }}
         >
           <h1
-            className={`${config.fontSize} font-black tracking-widest text-white leading-tight`}
+            className={`${config.fontSize} font-black tracking-widest leading-tight transition-colors duration-[250ms] ${useDark ? 'text-white' : 'text-text-primary'}`}
             style={{ fontFamily: "'Inter', 'Helvetica Neue', sans-serif" }}
           >
             SENTINEL
           </h1>
           <p
             className="text-xs font-semibold tracking-wider"
-            style={{ color: '#5DD8F0', fontFamily: "'Inter', sans-serif", letterSpacing: '1px' }}
+            style={{ color: useDark ? '#5DD8F0' : '#2563EB', fontFamily: "'Inter', sans-serif", letterSpacing: '1px', transition: 'color 250ms ease' }}
           >
             Integrated Security Operations
           </p>

@@ -182,7 +182,7 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
   }
 
   return (
-    <div className="flex min-h-screen w-screen bg-background font-sans">
+    <div className="flex h-screen w-screen bg-background font-sans">
       <Sidebar
         items={navItems}
         activeView={currentView}
@@ -369,13 +369,13 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
               </div>
             ) : (
               // Rankings View
-              <section className="bg-surface p-6 md:p-8 rounded-xl shadow-sm">
+              <section className="table-glass rounded-2xl p-6 md:p-8">
                 <h2 className="text-2xl font-bold text-text-primary mb-6">Guard Merit Score Rankings</h2>
 
                 {rankings.length > 0 ? (
-                  <div className="overflow-x-auto">
+                  <div className="overflow-auto">
                     <table className="w-full border-collapse">
-                      <thead className="bg-background">
+                      <thead className="thead-glass">
                         <tr>
                           <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">
                             Rank

@@ -59,7 +59,7 @@ function App() {
   console.log('App rendering, isLoggedIn:', isLoggedIn, 'user:', user)
 
   return (
-    <div className="app" style={{ minHeight: '100vh', width: '100%' }}>
+    <div className="h-screen overflow-hidden w-full">
       {!isLoggedIn ? (
         <LoginPage onLogin={handleLogin} />
       ) : activeView === 'profile' ? (

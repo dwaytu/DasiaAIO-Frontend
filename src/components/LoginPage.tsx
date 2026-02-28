@@ -497,7 +497,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
 
         {/* Right Section - Design */}
         <div className="flex-1 flex items-center justify-center flex-col gap-8 p-12" style={{ background: 'linear-gradient(135deg, #0F172A 0%, #1E3A5F 50%, #0D0F1A 100%)', borderLeft: '1px solid var(--border-color)' }}>
-          <Logo size="lg" />
+          <Logo size="lg" forceDark />
           
           <div className="grid grid-cols-2 gap-6 w-full max-w-md">
             {[

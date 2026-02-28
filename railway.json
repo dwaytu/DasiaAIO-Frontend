@@ -4,7 +4,7 @@
     "builder": "DOCKERFILE"
   },
   "deploy": {
-    "startCommand": "serve -s app-dist -l $PORT"
+    "startCommand": null
   }
 }
 

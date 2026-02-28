@@ -68,7 +68,7 @@ const AnalyticsDashboard: FC = () => {
   }
 
   if (loading) {
-    return <div className="text-center py-12 text-gray-600 font-medium">Loading analytics...</div>
+    return <div className="text-center py-12 text-text-secondary font-medium">Loading analytics...</div>
   }
 
   if (error) {
@@ -101,8 +101,8 @@ const AnalyticsDashboard: FC = () => {
   return (
     <div className="space-y-6">
       {/* Overview Stats */}
-      <section className="bg-white p-6 rounded-xl shadow-sm">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">System Overview</h2>
+      <section className="bg-surface p-6 rounded-xl shadow-sm">
+        <h2 className="text-2xl font-bold text-text-primary mb-6">System Overview</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
             <h3 className="text-sm font-semibold text-blue-800 uppercase mb-2">Guards</h3>
@@ -159,76 +159,76 @@ const AnalyticsDashboard: FC = () => {
       </section>
 
       {/* Performance Metrics */}
-      <section className="bg-white p-6 rounded-xl shadow-sm">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Performance Metrics</h2>
+      <section className="bg-surface p-6 rounded-xl shadow-sm">
+        <h2 className="text-2xl font-bold text-text-primary mb-6">Performance Metrics</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <div className="border-l-4 border-green-500 pl-4">
-            <p className="text-sm text-gray-600 mb-1">Mission Completion Rate</p>
-            <p className="text-3xl font-bold text-gray-900">{analytics.performance_metrics.mission_completion_rate.toFixed(1)}%</p>
+            <p className="text-sm text-text-secondary mb-1">Mission Completion Rate</p>
+            <p className="text-3xl font-bold text-text-primary">{analytics.performance_metrics.mission_completion_rate.toFixed(1)}%</p>
           </div>
 
           <div className="border-l-4 border-blue-500 pl-4">
-            <p className="text-sm text-gray-600 mb-1">Guard Attendance Rate</p>
-            <p className="text-3xl font-bold text-gray-900">{analytics.performance_metrics.guard_attendance_rate.toFixed(1)}%</p>
+            <p className="text-sm text-text-secondary mb-1">Guard Attendance Rate</p>
+            <p className="text-3xl font-bold text-text-primary">{analytics.performance_metrics.guard_attendance_rate.toFixed(1)}%</p>
           </div>
 
           <div className="border-l-4 border-purple-500 pl-4">
-            <p className="text-sm text-gray-600 mb-1">Firearm Availability</p>
-            <p className="text-3xl font-bold text-gray-900">{analytics.performance_metrics.firearm_availability_rate.toFixed(1)}%</p>
+            <p className="text-sm text-text-secondary mb-1">Firearm Availability</p>
+            <p className="text-3xl font-bold text-text-primary">{analytics.performance_metrics.firearm_availability_rate.toFixed(1)}%</p>
           </div>
 
           <div className="border-l-4 border-orange-500 pl-4">
-            <p className="text-sm text-gray-600 mb-1">Vehicle Utilization</p>
-            <p className="text-3xl font-bold text-gray-900">{analytics.performance_metrics.vehicle_utilization_rate.toFixed(1)}%</p>
+            <p className="text-sm text-text-secondary mb-1">Vehicle Utilization</p>
+            <p className="text-3xl font-bold text-text-primary">{analytics.performance_metrics.vehicle_utilization_rate.toFixed(1)}%</p>
           </div>
 
           <div className="border-l-4 border-indigo-500 pl-4">
-            <p className="text-sm text-gray-600 mb-1">Avg Mission Duration</p>
-            <p className="text-3xl font-bold text-gray-900">{analytics.performance_metrics.average_mission_duration.toFixed(1)}<span className="text-lg text-gray-600">h</span></p>
+            <p className="text-sm text-text-secondary mb-1">Avg Mission Duration</p>
+            <p className="text-3xl font-bold text-text-primary">{analytics.performance_metrics.average_mission_duration.toFixed(1)}<span className="text-lg text-text-secondary">h</span></p>
           </div>
         </div>
       </section>
 
       {/* Mission Stats */}
-      <section className="bg-white p-6 rounded-xl shadow-sm">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Mission Statistics (This Month)</h2>
+      <section className="bg-surface p-6 rounded-xl shadow-sm">
+        <h2 className="text-2xl font-bold text-text-primary mb-6">Mission Statistics (This Month)</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="text-center p-4 bg-gray-50 rounded-lg">
-            <p className="text-4xl font-bold text-indigo-600">{analytics.mission_stats.total_missions_this_month}</p>
-            <p className="text-sm text-gray-600 mt-2">Total Missions</p>
+          <div className="text-center p-4 bg-surface-elevated rounded-lg">
+            <p className="text-4xl font-bold text-indigo-500">{analytics.mission_stats.total_missions_this_month}</p>
+            <p className="text-sm text-text-secondary mt-2">Total Missions</p>
           </div>
 
-          <div className="text-center p-4 bg-gray-50 rounded-lg">
-            <p className="text-4xl font-bold text-green-600">{analytics.mission_stats.completed_missions_this_month}</p>
-            <p className="text-sm text-gray-600 mt-2">Completed</p>
+          <div className="text-center p-4 bg-surface-elevated rounded-lg">
+            <p className="text-4xl font-bold text-green-500">{analytics.mission_stats.completed_missions_this_month}</p>
+            <p className="text-sm text-text-secondary mt-2">Completed</p>
           </div>
 
-          <div className="text-center p-4 bg-gray-50 rounded-lg">
-            <p className="text-4xl font-bold text-yellow-600">{analytics.mission_stats.pending_missions}</p>
-            <p className="text-sm text-gray-600 mt-2">Pending</p>
+          <div className="text-center p-4 bg-surface-elevated rounded-lg">
+            <p className="text-4xl font-bold text-yellow-500">{analytics.mission_stats.pending_missions}</p>
+            <p className="text-sm text-text-secondary mt-2">Pending</p>
           </div>
 
-          <div className="text-center p-4 bg-gray-50 rounded-lg">
-            <p className="text-4xl font-bold text-blue-600">{analytics.mission_stats.average_guards_per_mission.toFixed(1)}</p>
-            <p className="text-sm text-gray-600 mt-2">Avg Guards/Mission</p>
+          <div className="text-center p-4 bg-surface-elevated rounded-lg">
+            <p className="text-4xl font-bold text-blue-500">{analytics.mission_stats.average_guards_per_mission.toFixed(1)}</p>
+            <p className="text-sm text-text-secondary mt-2">Avg Guards/Mission</p>
           </div>
         </div>
       </section>
 
       {/* Resource Utilization */}
-      <section className="bg-white p-6 rounded-xl shadow-sm">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Resource Utilization</h2>
+      <section className="bg-surface p-6 rounded-xl shadow-sm">
+        <h2 className="text-2xl font-bold text-text-primary mb-6">Resource Utilization</h2>
         <div className="space-y-4">
           <div>
             <div className="flex justify-between mb-2">
-              <span className="text-sm font-medium text-gray-700">Firearms</span>
-              <span className="text-sm text-gray-600">
+              <span className="text-sm font-medium text-text-secondary">Firearms</span>
+              <span className="text-sm text-text-tertiary">
                 {analytics.resource_utilization.firearms_in_use} in use / {analytics.resource_utilization.firearms_in_use + analytics.resource_utilization.firearms_available} total
               </span>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-3">
+            <div className="w-full bg-border rounded-full h-3">
               <div 
-                className="bg-purple-600 h-3 rounded-full transition-all duration-300"
+                className="bg-purple-500 h-3 rounded-full transition-all duration-300"
                 style={{ width: `${(analytics.resource_utilization.firearms_in_use / (analytics.resource_utilization.firearms_in_use + analytics.resource_utilization.firearms_available)) * 100}%` }}
               ></div>
             </div>
@@ -236,14 +236,14 @@ const AnalyticsDashboard: FC = () => {
 
           <div>
             <div className="flex justify-between mb-2">
-              <span className="text-sm font-medium text-gray-700">Vehicles</span>
-              <span className="text-sm text-gray-600">
+              <span className="text-sm font-medium text-text-secondary">Vehicles</span>
+              <span className="text-sm text-text-tertiary">
                 {analytics.resource_utilization.vehicles_deployed} deployed / {analytics.resource_utilization.vehicles_deployed + analytics.resource_utilization.vehicles_available} total
               </span>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-3">
+            <div className="w-full bg-border rounded-full h-3">
               <div 
-                className="bg-orange-600 h-3 rounded-full transition-all duration-300"
+                className="bg-orange-500 h-3 rounded-full transition-all duration-300"
                 style={{ width: `${(analytics.resource_utilization.vehicles_deployed / (analytics.resource_utilization.vehicles_deployed + analytics.resource_utilization.vehicles_available)) * 100}%` }}
               ></div>
             </div>
@@ -251,14 +251,14 @@ const AnalyticsDashboard: FC = () => {
 
           <div>
             <div className="flex justify-between mb-2">
-              <span className="text-sm font-medium text-gray-700">Guards</span>
-              <span className="text-sm text-gray-600">
+              <span className="text-sm font-medium text-text-secondary">Guards</span>
+              <span className="text-sm text-text-tertiary">
                 {analytics.resource_utilization.guards_on_duty} on duty / {analytics.resource_utilization.guards_on_duty + analytics.resource_utilization.guards_available} total
               </span>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-3">
+            <div className="w-full bg-border rounded-full h-3">
               <div 
-                className="bg-blue-600 h-3 rounded-full transition-all duration-300"
+                className="bg-blue-500 h-3 rounded-full transition-all duration-300"
                 style={{ width: `${(analytics.resource_utilization.guards_on_duty / (analytics.resource_utilization.guards_on_duty + analytics.resource_utilization.guards_available)) * 100}%` }}
               ></div>
             </div>

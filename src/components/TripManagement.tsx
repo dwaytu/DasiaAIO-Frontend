@@ -111,18 +111,18 @@ const TripManagement: FC = () => {
   const getStatusColor = (status?: string) => {
     switch (status) {
       case 'completed':
-        return 'bg-green-100 text-green-800'
+        return 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30'
       case 'in_progress':
-        return 'bg-blue-100 text-blue-800'
+        return 'bg-blue-500/15 text-blue-300 ring-1 ring-blue-500/30'
       case 'scheduled':
-        return 'bg-yellow-100 text-yellow-800'
+        return 'bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30'
       default:
-        return 'bg-gray-100 text-gray-800'
+        return 'bg-surface-hover text-gray-800'
     }
   }
 
   if (loading) {
-    return <div className="text-center py-12 text-gray-600 font-medium">Loading trips...</div>
+    return <div className="text-center py-12 text-text-secondary font-medium">Loading trips...</div>
   }
 
   return (
@@ -142,34 +142,34 @@ const TripManagement: FC = () => {
       )}
 
       {/* Active Trips */}
-      <section className="bg-white p-6 rounded-xl shadow-sm">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Active Trips</h2>
+      <section className="bg-surface p-6 rounded-xl shadow-sm">
+        <h2 className="text-2xl font-bold text-text-primary mb-6">Active Trips</h2>
         {trips.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full border-collapse min-w-full">
-              <thead className="bg-gray-50">
+              <thead className="bg-background">
                 <tr>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-sm uppercase tracking-wider">Destination</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-sm uppercase tracking-wider">Vehicle</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-sm uppercase tracking-wider">Driver</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-sm uppercase tracking-wider">Start Time</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-sm uppercase tracking-wider">Status</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-sm uppercase tracking-wider">Actions</th>
+                  <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Destination</th>
+                  <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Vehicle</th>
+                  <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Driver</th>
+                  <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Start Time</th>
+                  <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Status</th>
+                  <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {trips.map((trip) => (
-                  <tr key={trip.id} className="border-b border-gray-200 hover:bg-gray-50">
-                    <td className="px-4 py-3 text-gray-700 font-medium">{trip.destination || 'N/A'}</td>
-                    <td className="px-4 py-3 text-gray-700">
+                  <tr key={trip.id} className="border-b border-border hover:bg-surface-hover">
+                    <td className="px-4 py-3 text-text-primary font-medium">{trip.destination || 'N/A'}</td>
+                    <td className="px-4 py-3 text-text-primary">
                       <div>{trip.vehicle_model || 'N/A'}</div>
-                      <div className="text-xs text-gray-500">{trip.vehicle_plate}</div>
+                      <div className="text-xs text-text-tertiary">{trip.vehicle_plate}</div>
                     </td>
-                    <td className="px-4 py-3 text-gray-700">
+                    <td className="px-4 py-3 text-text-primary">
                       <div>{trip.driver_name || 'N/A'}</div>
-                      <div className="text-xs text-gray-500">{trip.driver_phone}</div>
+                      <div className="text-xs text-text-tertiary">{trip.driver_phone}</div>
                     </td>
-                    <td className="px-4 py-3 text-gray-700">
+                    <td className="px-4 py-3 text-text-primary">
                       {trip.start_time ? new Date(trip.start_time).toLocaleString() : 'N/A'}
                     </td>
                     <td className="px-4 py-3">
@@ -207,18 +207,18 @@ const TripManagement: FC = () => {
             </table>
           </div>
         ) : (
-          <p className="text-center text-gray-400 py-8 italic">No active trips</p>
+          <p className="text-center text-text-secondary py-8 italic">No active trips</p>
         )}
       </section>
 
       {/* Trip Details Modal */}
       {selectedTrip && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setSelectedTrip(null)}>
-          <div className="bg-white rounded-lg shadow-2xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-              <h2 className="text-xl font-bold text-gray-900">Trip Details</h2>
+          <div className="bg-surface rounded-lg shadow-2xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+              <h2 className="text-xl font-bold text-text-primary">Trip Details</h2>
               <button 
-                className="text-3xl text-gray-500 hover:text-gray-700 transition-colors w-8 h-8 flex items-center justify-center"
+                className="text-3xl text-text-secondary hover:text-text-primary transition-colors w-8 h-8 flex items-center justify-center"
                 onClick={() => setSelectedTrip(null)}
               >
                 ×
@@ -227,84 +227,84 @@ const TripManagement: FC = () => {
 
             <div className="p-6 space-y-6">
               {/* Trip Information */}
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h3 className="font-bold text-gray-900 mb-3">Trip Information</h3>
+              <div className="bg-surface-elevated p-4 rounded-lg">
+                <h3 className="font-bold text-text-primary mb-3">Trip Information</h3>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <p className="text-gray-600">Destination:</p>
-                    <p className="font-medium text-gray-900">{selectedTrip.destination || 'N/A'}</p>
+                    <p className="text-text-secondary">Destination:</p>
+                    <p className="font-medium text-text-primary">{selectedTrip.destination || 'N/A'}</p>
                   </div>
                   <div>
-                    <p className="text-gray-600">Status:</p>
+                    <p className="text-text-secondary">Status:</p>
                     <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(selectedTrip.status)}`}>
                       {selectedTrip.status || 'unknown'}
                     </span>
                   </div>
                   <div>
-                    <p className="text-gray-600">Start Time:</p>
-                    <p className="font-medium text-gray-900">
+                    <p className="text-text-secondary">Start Time:</p>
+                    <p className="font-medium text-text-primary">
                       {selectedTrip.start_time ? new Date(selectedTrip.start_time).toLocaleString() : 'N/A'}
                     </p>
                   </div>
                   <div>
-                    <p className="text-gray-600">End Time:</p>
-                    <p className="font-medium text-gray-900">
+                    <p className="text-text-secondary">End Time:</p>
+                    <p className="font-medium text-text-primary">
                       {selectedTrip.end_time ? new Date(selectedTrip.end_time).toLocaleString() : 'N/A'}
                     </p>
                   </div>
                   <div>
-                    <p className="text-gray-600">Vehicle:</p>
-                    <p className="font-medium text-gray-900">{selectedTrip.vehicle_model || 'N/A'}</p>
-                    <p className="text-xs text-gray-500">{selectedTrip.vehicle_plate}</p>
+                    <p className="text-text-secondary">Vehicle:</p>
+                    <p className="font-medium text-text-primary">{selectedTrip.vehicle_model || 'N/A'}</p>
+                    <p className="text-xs text-text-tertiary">{selectedTrip.vehicle_plate}</p>
                   </div>
                   <div>
-                    <p className="text-gray-600">Driver:</p>
-                    <p className="font-medium text-gray-900">{selectedTrip.driver_name || 'N/A'}</p>
-                    <p className="text-xs text-gray-500">{selectedTrip.driver_phone}</p>
+                    <p className="text-text-secondary">Driver:</p>
+                    <p className="font-medium text-text-primary">{selectedTrip.driver_name || 'N/A'}</p>
+                    <p className="text-xs text-text-tertiary">{selectedTrip.driver_phone}</p>
                   </div>
                 </div>
               </div>
 
               {/* Assigned Guards */}
               <div>
-                <h3 className="font-bold text-gray-900 mb-3">Assigned Guards ({selectedTrip.guard_count})</h3>
+                <h3 className="font-bold text-text-primary mb-3">Assigned Guards ({selectedTrip.guard_count})</h3>
                 {selectedTrip.guards.length > 0 ? (
                   <div className="space-y-2">
                     {selectedTrip.guards.map((guard) => (
                       <div key={guard.id} className="flex items-center justify-between bg-blue-50 p-3 rounded-lg">
                         <div>
-                          <p className="font-medium text-gray-900">{guard.name || guard.username}</p>
-                          <p className="text-xs text-gray-600">@{guard.username}</p>
+                          <p className="font-medium text-text-primary">{guard.name || guard.username}</p>
+                          <p className="text-xs text-text-secondary">@{guard.username}</p>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-gray-500 text-sm">No guards assigned</p>
+                  <p className="text-text-secondary text-sm">No guards assigned</p>
                 )}
               </div>
 
               {/* Allocated Firearms */}
               <div>
-                <h3 className="font-bold text-gray-900 mb-3">Allocated Firearms ({selectedTrip.firearm_count})</h3>
+                <h3 className="font-bold text-text-primary mb-3">Allocated Firearms ({selectedTrip.firearm_count})</h3>
                 {selectedTrip.firearms.length > 0 ? (
                   <div className="space-y-2">
                     {selectedTrip.firearms.map((firearm) => (
                       <div key={firearm.id} className="flex items-center justify-between bg-purple-50 p-3 rounded-lg">
                         <div>
-                          <p className="font-medium text-gray-900">{firearm.model || 'Unknown Model'} - {firearm.name}</p>
-                          <p className="text-xs text-gray-600">SN: {firearm.serial_number || 'N/A'}</p>
+                          <p className="font-medium text-text-primary">{firearm.model || 'Unknown Model'} - {firearm.name}</p>
+                          <p className="text-xs text-text-secondary">SN: {firearm.serial_number || 'N/A'}</p>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-gray-500 text-sm">No firearms allocated</p>
+                  <p className="text-text-secondary text-sm">No firearms allocated</p>
                 )}
               </div>
 
               {/* Actions */}
-              <div className="flex gap-3 pt-4 border-t border-gray-200">
+              <div className="flex gap-3 pt-4 border-t border-border">
                 {selectedTrip.status === 'scheduled' && (
                   <button
                     onClick={() => {
@@ -343,3 +343,4 @@ const TripManagement: FC = () => {
 }
 
 export default TripManagement
+

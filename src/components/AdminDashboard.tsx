@@ -147,7 +147,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout }) => {
   }
 
   return (
-    <div className="flex min-h-screen w-screen bg-gray-100 font-sans">
+    <div className="flex min-h-screen w-screen bg-background font-sans">
       <Sidebar
         items={navItems}
         activeView={activeSection}
@@ -169,7 +169,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout }) => {
           rightSlot={
             <button
               onClick={handleRefresh}
-              className="px-3 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors hidden md:block"
+              className="px-3 py-2 text-sm font-semibold text-text-primary bg-surface border border-border rounded-lg hover:bg-surface-hover transition-colors hidden md:block"
             >
               Refresh
             </button>
@@ -187,32 +187,32 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout }) => {
           {activeSection === 'users' && (
             <>
               {loading && (
-                <div className="text-center py-12 text-gray-600 font-medium">Loading users...</div>
+                <div className="text-center py-12 text-text-secondary font-medium">Loading users...</div>
               )}
 
               {!loading && (
-                <div className="bg-white rounded-lg shadow-md p-6">
-                  <h2 className="text-xl font-bold text-gray-800 mb-6 pb-3 border-b border-gray-200">Users</h2>
+                <div className="bg-surface rounded-lg shadow-md p-6">
+                  <h2 className="text-xl font-bold text-text-primary mb-6 pb-3 border-b border-border">Users</h2>
                   {users.length > 0 ? (
                     <div className="overflow-x-auto">
                       <table className="w-full min-w-[600px]">
-                        <thead className="bg-gray-50 border-b border-gray-200">
+                        <thead className="bg-surface-hover border-b border-border">
                           <tr>
-                            <th className="text-left px-6 py-3 text-sm font-semibold text-gray-700 uppercase tracking-wider">Email</th>
-                            <th className="text-left px-6 py-3 text-sm font-semibold text-gray-700 uppercase tracking-wider">Username</th>
-                            <th className="text-left px-6 py-3 text-sm font-semibold text-gray-700 uppercase tracking-wider">Full Name</th>
-                            <th className="text-left px-6 py-3 text-sm font-semibold text-gray-700 uppercase tracking-wider">Role</th>
-                            <th className="text-left px-6 py-3 text-sm font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
+                            <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary uppercase tracking-wider">Email</th>
+                            <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary uppercase tracking-wider">Username</th>
+                            <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary uppercase tracking-wider">Full Name</th>
+                            <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary uppercase tracking-wider">Role</th>
+                            <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary uppercase tracking-wider">Actions</th>
                           </tr>
                         </thead>
                         <tbody>
                           {users.map((u: User) => (
-                            <tr key={u.id} className="border-b border-gray-200 hover:bg-gray-50 transition-colors">
-                              <td className="px-6 py-3 text-gray-800">{u.email}</td>
-                              <td className="px-6 py-3 text-gray-800">{u.username}</td>
-                              <td className="px-6 py-3 text-gray-800">{u.full_name || '-'}</td>
+                            <tr key={u.id} className="border-b border-border hover:bg-surface-hover transition-colors">
+                              <td className="px-6 py-3 text-text-primary">{u.email}</td>
+                              <td className="px-6 py-3 text-text-primary">{u.username}</td>
+                              <td className="px-6 py-3 text-text-primary">{u.full_name || '-'}</td>
                               <td className="px-6 py-3">
-                                <span className="inline-block px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-semibold">
+                                <span className="inline-block px-3 py-1 bg-blue-500/15 text-blue-300 ring-1 ring-blue-500/30 rounded-full text-xs font-semibold">
                                   {u.role}
                                 </span>
                               </td>
@@ -238,7 +238,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout }) => {
                       </table>
                     </div>
                   ) : (
-                    <p className="text-gray-600 text-center py-8">No users found</p>
+                    <p className="text-text-secondary text-center py-8">No users found</p>
                   )}
                 </div>
               )}
@@ -249,43 +249,43 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout }) => {
           {activeSection === 'schedule' && (
             <>
               {shiftsLoading && (
-                <div className="text-center py-12 text-gray-600 font-medium">Loading schedules...</div>
+                <div className="text-center py-12 text-text-secondary font-medium">Loading schedules...</div>
               )}
 
               {!shiftsLoading && (
-                <div className="bg-white rounded-lg shadow-md p-6">
-                  <h2 className="text-xl font-bold text-gray-800 mb-6 pb-3 border-b border-gray-200">All Guard Schedules</h2>
+                <div className="bg-surface rounded-lg shadow-md p-6">
+                  <h2 className="text-xl font-bold text-text-primary mb-6 pb-3 border-b border-border">All Guard Schedules</h2>
                   {shifts.length > 0 ? (
                     <div className="overflow-x-auto">
                       <table className="w-full min-w-[600px]">
-                        <thead className="bg-gray-50 border-b border-gray-200">
+                        <thead className="bg-surface-hover border-b border-border">
                           <tr>
-                            <th className="text-left px-6 py-3 text-sm font-semibold text-gray-700 uppercase tracking-wider">Guard</th>
-                            <th className="text-left px-6 py-3 text-sm font-semibold text-gray-700 uppercase tracking-wider">Site</th>
-                            <th className="text-left px-6 py-3 text-sm font-semibold text-gray-700 uppercase tracking-wider">Date</th>
-                            <th className="text-left px-6 py-3 text-sm font-semibold text-gray-700 uppercase tracking-wider">Start Time</th>
-                            <th className="text-left px-6 py-3 text-sm font-semibold text-gray-700 uppercase tracking-wider">End Time</th>
-                            <th className="text-left px-6 py-3 text-sm font-semibold text-gray-700 uppercase tracking-wider">Status</th>
-                            <th className="text-left px-6 py-3 text-sm font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
+                            <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary uppercase tracking-wider">Guard</th>
+                            <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary uppercase tracking-wider">Site</th>
+                            <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary uppercase tracking-wider">Date</th>
+                            <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary uppercase tracking-wider">Start Time</th>
+                            <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary uppercase tracking-wider">End Time</th>
+                            <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary uppercase tracking-wider">Status</th>
+                            <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary uppercase tracking-wider">Actions</th>
                           </tr>
                         </thead>
                         <tbody>
                           {shifts.map((shift: any) => (
-                            <tr key={shift.id} className="border-b border-gray-200 hover:bg-gray-50 transition-colors">
-                              <td className="px-6 py-3 text-gray-800">
+                            <tr key={shift.id} className="border-b border-border hover:bg-surface-hover transition-colors">
+                              <td className="px-6 py-3 text-text-primary">
                                 <div className="font-medium">{shift.guard_name || shift.guard_username}</div>
-                                <div className="text-xs text-gray-500">{shift.guard_username}</div>
+                                <div className="text-xs text-text-tertiary">{shift.guard_username}</div>
                               </td>
-                              <td className="px-6 py-3 text-gray-800">{shift.client_site}</td>
-                              <td className="px-6 py-3 text-gray-800">{new Date(shift.start_time).toLocaleDateString()}</td>
-                              <td className="px-6 py-3 text-gray-800">{new Date(shift.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
-                              <td className="px-6 py-3 text-gray-800">{new Date(shift.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+                              <td className="px-6 py-3 text-text-primary">{shift.client_site}</td>
+                              <td className="px-6 py-3 text-text-primary">{new Date(shift.start_time).toLocaleDateString()}</td>
+                              <td className="px-6 py-3 text-text-primary">{new Date(shift.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+                              <td className="px-6 py-3 text-text-primary">{new Date(shift.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
                               <td className="px-6 py-3">
                                 <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
-                                  shift.status === 'completed' ? 'bg-green-100 text-green-800' :
-                                  shift.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
-                                  shift.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800' :
-                                  'bg-gray-100 text-gray-800'
+                                  shift.status === 'completed' ? 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30' :
+                                  shift.status === 'scheduled' ? 'bg-blue-500/15 text-blue-300 ring-1 ring-blue-500/30' :
+                                  shift.status === 'in_progress' ? 'bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30' :
+                                  'bg-surface-hover text-text-primary'
                                 }`}>
                                   {shift.status}
                                 </span>
@@ -305,7 +305,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout }) => {
                       </table>
                     </div>
                   ) : (
-                    <p className="text-gray-600 text-center py-8">No schedules found</p>
+                    <p className="text-text-secondary text-center py-8">No schedules found</p>
                   )}
                 </div>
               )}
@@ -337,3 +337,4 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout }) => {
 }
 
 export default AdminDashboard
+

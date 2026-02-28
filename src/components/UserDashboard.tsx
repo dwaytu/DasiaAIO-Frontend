@@ -83,12 +83,12 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange })
   const [ticketStatus, setTicketStatus] = useState<string>('')
   const [ticketSubmitting, setTicketSubmitting] = useState<boolean>(false)
   const navItems = [
-    { view: 'overview', label: 'Dashboard' },
-    { view: 'calendar', label: 'Calendar' },
-    { view: 'schedule', label: 'Schedule' },
-    { view: 'firearms', label: 'Firearms' },
-    { view: 'permits', label: 'My Permits' },
-    { view: 'support', label: 'Contacts' }
+    { view: 'overview', label: 'Dashboard', group: 'MAIN MENU' },
+    { view: 'calendar', label: 'Calendar', group: 'MAIN MENU' },
+    { view: 'schedule', label: 'Schedule', group: 'MAIN MENU' },
+    { view: 'firearms', label: 'Firearms', group: 'RESOURCES' },
+    { view: 'permits', label: 'My Permits', group: 'RESOURCES' },
+    { view: 'support', label: 'Contacts', group: 'RESOURCES' },
   ]
 
   useEffect(() => {
@@ -176,17 +176,17 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange })
   const getStatusBadgeColor = (status: string): string => {
     switch (status?.toLowerCase()) {
       case 'present':
-        return 'bg-green-100 text-green-800'
+        return 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30'
       case 'checked_in':
-        return 'bg-blue-100 text-blue-800'
+        return 'bg-blue-500/15 text-blue-300 ring-1 ring-blue-500/30'
       case 'checked_out':
-        return 'bg-green-100 text-green-800'
+        return 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30'
       case 'absent':
-        return 'bg-red-100 text-red-800'
+        return 'bg-red-500/15 text-red-300 ring-1 ring-red-500/30'
       case 'late':
-        return 'bg-yellow-100 text-yellow-800'
+        return 'bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30'
       default:
-        return 'bg-gray-100 text-gray-800'
+        return 'bg-background text-gray-800'
     }
   }
 
@@ -318,7 +318,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange })
   }
 
   return (
-    <div className="flex min-h-screen w-screen bg-gray-100 font-sans">
+    <div className="flex min-h-screen w-screen bg-background font-sans">
       <Sidebar
         items={navItems}
         activeView={activeSection}
@@ -346,7 +346,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange })
           rightSlot={
             <button
               onClick={handleRefresh}
-              className="px-3 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              className="px-3 py-2 text-sm font-semibold text-text-primary bg-surface border border-border rounded-lg hover:bg-surface-hover transition-colors"
             >
               Refresh
             </button>
@@ -357,24 +357,24 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange })
           <div className="space-y-8">
             {/* Profile Section */}
             {activeSection === 'overview' && (
-              <section className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-bold text-gray-800 mb-6 pb-3 border-b border-gray-200">My Profile</h2>
+              <section className="bg-surface rounded-lg shadow-md p-6">
+              <h2 className="text-xl font-bold text-text-primary mb-6 pb-3 border-b border-border">My Profile</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <label className="text-sm font-semibold text-gray-600 block mb-2">Full Name</label>
-                  <p className="text-gray-800 font-medium">{user?.full_name || 'N/A'}</p>
+                <div className="p-4 bg-surface-elevated rounded-lg border border-border">
+                  <label className="text-sm font-semibold text-text-secondary block mb-2">Full Name</label>
+                  <p className="text-text-primary font-medium">{user?.full_name || 'N/A'}</p>
                 </div>
-                <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <label className="text-sm font-semibold text-gray-600 block mb-2">Email</label>
-                  <p className="text-gray-800 font-medium">{user?.email || 'N/A'}</p>
+                <div className="p-4 bg-surface-elevated rounded-lg border border-border">
+                  <label className="text-sm font-semibold text-text-secondary block mb-2">Email</label>
+                  <p className="text-text-primary font-medium">{user?.email || 'N/A'}</p>
                 </div>
-                <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <label className="text-sm font-semibold text-gray-600 block mb-2">Phone</label>
-                  <p className="text-gray-800 font-medium">{user?.phone_number || 'N/A'}</p>
+                <div className="p-4 bg-surface-elevated rounded-lg border border-border">
+                  <label className="text-sm font-semibold text-text-secondary block mb-2">Phone</label>
+                  <p className="text-text-primary font-medium">{user?.phone_number || 'N/A'}</p>
                 </div>
-                <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <label className="text-sm font-semibold text-gray-600 block mb-2">License Number</label>
-                  <p className="text-gray-800 font-medium">{user?.license_number || 'N/A'}</p>
+                <div className="p-4 bg-surface-elevated rounded-lg border border-border">
+                  <label className="text-sm font-semibold text-text-secondary block mb-2">License Number</label>
+                  <p className="text-text-primary font-medium">{user?.license_number || 'N/A'}</p>
                 </div>
               </div>
               </section>
@@ -382,15 +382,15 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange })
 
             {/* License Status */}
             {activeSection === 'overview' && (
-              <section className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-bold text-gray-800 mb-6 pb-3 border-b border-gray-200">License Status</h2>
+              <section className="bg-surface rounded-lg shadow-md p-6">
+              <h2 className="text-xl font-bold text-gray-800 mb-6 pb-3 border-b border-border">License Status</h2>
               <div className={`p-6 rounded-lg border-2 flex items-center justify-between ${
                 isLicenseExpired()
                   ? 'bg-red-50 border-red-300'
                   : 'bg-green-50 border-green-300'
               }`}>
                 <div>
-                  <p className="text-sm font-semibold text-gray-600 mb-1">License Expiry Date</p>
+                  <p className="text-sm font-semibold text-text-secondary mb-1">License Expiry Date</p>
                   <p className="text-lg font-bold text-gray-800">
                     {user?.license_expiry_date
                       ? new Date(user.license_expiry_date).toLocaleDateString()
@@ -423,25 +423,25 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange })
 
             {/* Attendance Section */}
             {activeSection === 'overview' && (
-              <section className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-bold text-gray-800 mb-6 pb-3 border-b border-gray-200">Recent Attendance</h2>
+              <section className="bg-surface rounded-lg shadow-md p-6">
+              <h2 className="text-xl font-bold text-gray-800 mb-6 pb-3 border-b border-border">Recent Attendance</h2>
               {loading ? (
-                <div className="text-center py-8 text-gray-600">Loading attendance records...</div>
+                <div className="text-center py-8 text-text-secondary">Loading attendance records...</div>
               ) : attendance.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[500px]">
-                    <thead className="bg-gray-50 border-b border-gray-200">
+                    <thead className="bg-gray-50 border-b border-border">
                       <tr>
-                        <th className="text-left px-6 py-3 text-sm font-semibold text-gray-700">Date</th>
-                        <th className="text-left px-6 py-3 text-sm font-semibold text-gray-700">Check-In</th>
-                        <th className="text-left px-6 py-3 text-sm font-semibold text-gray-700">Check-Out</th>
-                        <th className="text-left px-6 py-3 text-sm font-semibold text-gray-700">Hours</th>
-                        <th className="text-left px-6 py-3 text-sm font-semibold text-gray-700">Status</th>
+                        <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary">Date</th>
+                        <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary">Check-In</th>
+                        <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary">Check-Out</th>
+                        <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary">Hours</th>
+                        <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary">Status</th>
                       </tr>
                     </thead>
                     <tbody>
                       {attendance.slice(0, 5).map((record) => (
-                        <tr key={record.id} className="border-b border-gray-200 hover:bg-gray-50 transition-colors">
+                        <tr key={record.id} className="border-b border-border hover:bg-surface-hover transition-colors">
                           <td className="px-6 py-3 text-gray-800">{new Date(record.check_in_time).toLocaleDateString()}</td>
                           <td className="px-6 py-3 text-gray-800">{new Date(record.check_in_time).toLocaleTimeString()}</td>
                           <td className="px-6 py-3 text-gray-800">{record.check_out_time ? new Date(record.check_out_time).toLocaleTimeString() : '-'}</td>
@@ -457,48 +457,48 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange })
                   </table>
                 </div>
               ) : (
-                <p className="text-center py-8 text-gray-600">No attendance records found</p>
+                <p className="text-center py-8 text-text-secondary">No attendance records found</p>
               )}
               </section>
             )}
 
             {activeSection === 'schedule' && (
-              <section className="bg-white rounded-lg shadow-md p-6">
-                <h2 className="text-xl font-bold text-gray-800 mb-6 pb-3 border-b border-gray-200">Shift Schedule</h2>
+              <section className="bg-surface rounded-lg shadow-md p-6">
+                <h2 className="text-xl font-bold text-gray-800 mb-6 pb-3 border-b border-border">Shift Schedule</h2>
                 <form className="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4" onSubmit={handleScheduleSubmit}>
                   <div className="md:col-span-2">
-                    <label className="text-sm font-semibold text-gray-600 block mb-2">Client Site</label>
+                    <label className="text-sm font-semibold text-text-secondary block mb-2">Client Site</label>
                     <input
                       type="text"
-                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-gray-800"
+                      className="w-full rounded-lg border border-border px-3 py-2 text-gray-800"
                       placeholder="Site name"
                       value={scheduleForm.clientSite}
                       onChange={(event) => setScheduleForm((prev) => ({ ...prev, clientSite: event.target.value }))}
                     />
                   </div>
                   <div>
-                    <label className="text-sm font-semibold text-gray-600 block mb-2">Date</label>
+                    <label className="text-sm font-semibold text-text-secondary block mb-2">Date</label>
                     <input
                       type="date"
-                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-gray-800"
+                      className="w-full rounded-lg border border-border px-3 py-2 text-gray-800"
                       value={scheduleForm.date}
                       onChange={(event) => setScheduleForm((prev) => ({ ...prev, date: event.target.value }))}
                     />
                   </div>
                   <div>
-                    <label className="text-sm font-semibold text-gray-600 block mb-2">Start Time</label>
+                    <label className="text-sm font-semibold text-text-secondary block mb-2">Start Time</label>
                     <input
                       type="time"
-                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-gray-800"
+                      className="w-full rounded-lg border border-border px-3 py-2 text-gray-800"
                       value={scheduleForm.startTime}
                       onChange={(event) => setScheduleForm((prev) => ({ ...prev, startTime: event.target.value }))}
                     />
                   </div>
                   <div>
-                    <label className="text-sm font-semibold text-gray-600 block mb-2">End Time</label>
+                    <label className="text-sm font-semibold text-text-secondary block mb-2">End Time</label>
                     <input
                       type="time"
-                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-gray-800"
+                      className="w-full rounded-lg border border-border px-3 py-2 text-gray-800"
                       value={scheduleForm.endTime}
                       onChange={(event) => setScheduleForm((prev) => ({ ...prev, endTime: event.target.value }))}
                     />
@@ -512,29 +512,29 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange })
                       {scheduleSubmitting ? 'Submitting...' : 'Request Schedule'}
                     </button>
                     {scheduleStatus && (
-                      <span className="text-sm font-semibold text-gray-700">{scheduleStatus}</span>
+                      <span className="text-sm font-semibold text-text-primary">{scheduleStatus}</span>
                     )}
                   </div>
                 </form>
                 {scheduleItems.length > 0 ? (
                   <div className="overflow-x-auto">
                     <table className="w-full min-w-[500px]">
-                      <thead className="bg-gray-50 border-b border-gray-200">
+                      <thead className="bg-gray-50 border-b border-border">
                         <tr>
-                          <th className="text-left px-6 py-3 text-sm font-semibold text-gray-700">Site</th>
-                          <th className="text-left px-6 py-3 text-sm font-semibold text-gray-700">Date</th>
-                          <th className="text-left px-6 py-3 text-sm font-semibold text-gray-700">Time</th>
-                          <th className="text-left px-6 py-3 text-sm font-semibold text-gray-700">Status</th>
+                          <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary">Site</th>
+                          <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary">Date</th>
+                          <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary">Time</th>
+                          <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary">Status</th>
                         </tr>
                       </thead>
                       <tbody>
                         {scheduleItems.map((item) => (
-                          <tr key={item.id} className="border-b border-gray-200 hover:bg-gray-50 transition-colors">
+                          <tr key={item.id} className="border-b border-border hover:bg-surface-hover transition-colors">
                             <td className="px-6 py-3 text-gray-800">{item.client_site}</td>
                             <td className="px-6 py-3 text-gray-800">{new Date(item.start_time).toLocaleDateString()}</td>
                             <td className="px-6 py-3 text-gray-800">{formatShiftTime(item.start_time, item.end_time)}</td>
                             <td className="px-6 py-3">
-                              <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+                              <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/15 text-blue-300 ring-1 ring-blue-500/30">
                                 {item.status}
                               </span>
                             </td>
@@ -544,34 +544,34 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange })
                     </table>
                   </div>
                 ) : (
-                  <p className="text-center py-8 text-gray-600">No shifts scheduled</p>
+                  <p className="text-center py-8 text-text-secondary">No shifts scheduled</p>
                 )}
               </section>
             )}
 
             {activeSection === 'firearms' && (
-              <section className="bg-white rounded-lg shadow-md p-6">
-                <h2 className="text-xl font-bold text-gray-800 mb-6 pb-3 border-b border-gray-200">Assigned Firearms</h2>
+              <section className="bg-surface rounded-lg shadow-md p-6">
+                <h2 className="text-xl font-bold text-gray-800 mb-6 pb-3 border-b border-border">Assigned Firearms</h2>
                 {firearmItems.length > 0 ? (
                   <div className="overflow-x-auto">
                     <table className="w-full min-w-[500px]">
-                      <thead className="bg-gray-50 border-b border-gray-200">
+                      <thead className="bg-gray-50 border-b border-border">
                         <tr>
-                          <th className="text-left px-6 py-3 text-sm font-semibold text-gray-700">Serial Number</th>
-                          <th className="text-left px-6 py-3 text-sm font-semibold text-gray-700">Model</th>
-                          <th className="text-left px-6 py-3 text-sm font-semibold text-gray-700">Caliber</th>
-                          <th className="text-left px-6 py-3 text-sm font-semibold text-gray-700">Status</th>
-                          <th className="text-left px-6 py-3 text-sm font-semibold text-gray-700">Allocated</th>
+                          <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary">Serial Number</th>
+                          <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary">Model</th>
+                          <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary">Caliber</th>
+                          <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary">Status</th>
+                          <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary">Allocated</th>
                         </tr>
                       </thead>
                       <tbody>
                         {firearmItems.map((item) => (
-                          <tr key={item.id} className="border-b border-gray-200 hover:bg-gray-50 transition-colors">
+                          <tr key={item.id} className="border-b border-border hover:bg-surface-hover transition-colors">
                             <td className="px-6 py-3 text-gray-800">{item.firearm_serial_number}</td>
                             <td className="px-6 py-3 text-gray-800">{item.firearm_model}</td>
                             <td className="px-6 py-3 text-gray-800">{item.firearm_caliber}</td>
                             <td className="px-6 py-3">
-                              <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${item.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                              <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${item.status === 'active' ? 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30' : 'bg-background text-gray-800'}`}>
                                 {item.status}
                               </span>
                             </td>
@@ -582,35 +582,35 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange })
                     </table>
                   </div>
                 ) : (
-                  <p className="text-center py-8 text-gray-600">No active allocations</p>
+                  <p className="text-center py-8 text-text-secondary">No active allocations</p>
                 )}
               </section>
             )}
 
             {activeSection === 'permits' && (
-              <section className="bg-white rounded-lg shadow-md p-6">
-                <h2 className="text-xl font-bold text-gray-800 mb-6 pb-3 border-b border-gray-200">My Permits</h2>
+              <section className="bg-surface rounded-lg shadow-md p-6">
+                <h2 className="text-xl font-bold text-gray-800 mb-6 pb-3 border-b border-border">My Permits</h2>
                 {permitItems.length > 0 ? (
                   <div className="overflow-x-auto">
                     <table className="w-full min-w-[500px]">
-                      <thead className="bg-gray-50 border-b border-gray-200">
+                      <thead className="bg-gray-50 border-b border-border">
                         <tr>
-                          <th className="text-left px-6 py-3 text-sm font-semibold text-gray-700">Permit ID</th>
-                          <th className="text-left px-6 py-3 text-sm font-semibold text-gray-700">Type</th>
-                          <th className="text-left px-6 py-3 text-sm font-semibold text-gray-700">Issued</th>
-                          <th className="text-left px-6 py-3 text-sm font-semibold text-gray-700">Expiry</th>
-                          <th className="text-left px-6 py-3 text-sm font-semibold text-gray-700">Status</th>
+                          <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary">Permit ID</th>
+                          <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary">Type</th>
+                          <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary">Issued</th>
+                          <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary">Expiry</th>
+                          <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary">Status</th>
                         </tr>
                       </thead>
                       <tbody>
                         {permitItems.map((item) => (
-                          <tr key={item.id} className="border-b border-gray-200 hover:bg-gray-50 transition-colors">
+                          <tr key={item.id} className="border-b border-border hover:bg-surface-hover transition-colors">
                             <td className="px-6 py-3 text-gray-800">{item.id}</td>
                             <td className="px-6 py-3 text-gray-800">{item.permit_type}</td>
                             <td className="px-6 py-3 text-gray-800">{new Date(item.issued_date).toLocaleDateString()}</td>
                             <td className="px-6 py-3 text-gray-800">{new Date(item.expiry_date).toLocaleDateString()}</td>
                             <td className="px-6 py-3">
-                              <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                              <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30">
                                 {item.status}
                               </span>
                             </td>
@@ -620,52 +620,52 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange })
                     </table>
                   </div>
                 ) : (
-                  <p className="text-center py-8 text-gray-600">No permits found</p>
+                  <p className="text-center py-8 text-text-secondary">No permits found</p>
                 )}
               </section>
             )}
 
             {activeSection === 'support' && (
-              <section className="bg-white rounded-lg shadow-md p-6">
-                <h2 className="text-xl font-bold text-gray-800 mb-6 pb-3 border-b border-gray-200">Contacts Dashboard</h2>
+              <section className="bg-surface rounded-lg shadow-md p-6">
+                <h2 className="text-xl font-bold text-gray-800 mb-6 pb-3 border-b border-border">Contacts Dashboard</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                  <div className="rounded-lg border border-gray-200 p-5">
+                  <div className="rounded-lg border border-border p-5">
                     <h3 className="text-lg font-semibold text-gray-800 mb-2">Operations Desk</h3>
-                    <p className="text-sm text-gray-600 mb-3">24/7 support for urgent issues.</p>
+                    <p className="text-sm text-text-secondary mb-3">24/7 support for urgent issues.</p>
                     <div className="text-sm text-gray-800">
                       <div>Phone: +63 912 345 6789</div>
                       <div>Email: ops@sentinel-security.com</div>
                     </div>
                   </div>
-                  <div className="rounded-lg border border-gray-200 p-5">
+                  <div className="rounded-lg border border-border p-5">
                     <h3 className="text-lg font-semibold text-gray-800 mb-2">Site Supervisor</h3>
-                    <p className="text-sm text-gray-600 mb-3">For on-site scheduling changes.</p>
+                    <p className="text-sm text-text-secondary mb-3">For on-site scheduling changes.</p>
                     <div className="text-sm text-gray-800">
                       <div>Phone: +63 901 234 5678</div>
                       <div>Email: supervisor@sentinel-security.com</div>
                     </div>
                   </div>
-                  <div className="rounded-lg border border-gray-200 p-5">
+                  <div className="rounded-lg border border-border p-5">
                     <h3 className="text-lg font-semibold text-gray-800 mb-2">HR and Compliance</h3>
-                    <p className="text-sm text-gray-600 mb-3">Licensing and permit concerns.</p>
+                    <p className="text-sm text-text-secondary mb-3">Licensing and permit concerns.</p>
                     <div className="text-sm text-gray-800">
                       <div>Phone: +63 955 321 4567</div>
                       <div>Email: hr@sentinel-security.com</div>
                     </div>
                   </div>
-                  <div className="rounded-lg border border-gray-200 p-5">
+                  <div className="rounded-lg border border-border p-5">
                     <h3 className="text-lg font-semibold text-gray-800 mb-2">Submit a Ticket</h3>
-                    <p className="text-sm text-gray-600 mb-3">We will respond within 24 hours.</p>
+                    <p className="text-sm text-text-secondary mb-3">We will respond within 24 hours.</p>
                     <form className="space-y-3" onSubmit={handleTicketSubmit}>
                       <input
                         type="text"
-                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-gray-800"
+                        className="w-full rounded-lg border border-border px-3 py-2 text-gray-800"
                         placeholder="Subject"
                         value={ticketForm.subject}
                         onChange={(event) => setTicketForm((prev) => ({ ...prev, subject: event.target.value }))}
                       />
                       <textarea
-                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-gray-800 min-h-[96px]"
+                        className="w-full rounded-lg border border-border px-3 py-2 text-gray-800 min-h-[96px]"
                         placeholder="Message"
                         value={ticketForm.message}
                         onChange={(event) => setTicketForm((prev) => ({ ...prev, message: event.target.value }))}
@@ -678,31 +678,31 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange })
                         {ticketSubmitting ? 'Submitting...' : 'Create Ticket'}
                       </button>
                       {ticketStatus && (
-                        <div className="text-sm font-semibold text-gray-700">{ticketStatus}</div>
+                        <div className="text-sm font-semibold text-text-primary">{ticketStatus}</div>
                       )}
                     </form>
                   </div>
                 </div>
 
-                <div className="bg-gray-50 rounded-lg border border-gray-200 p-5">
+                <div className="bg-surface-elevated rounded-lg border border-border p-5">
                   <h3 className="text-lg font-semibold text-gray-800 mb-4">My Tickets</h3>
                   {ticketItems.length > 0 ? (
                     <div className="space-y-3">
                       {ticketItems.map((ticket) => (
-                        <div key={ticket.id} className="bg-white rounded-lg border border-gray-200 p-4">
+                        <div key={ticket.id} className="bg-surface rounded-lg border border-border p-4">
                           <div className="flex items-center justify-between mb-2">
                             <h4 className="text-sm font-semibold text-gray-800">{ticket.subject}</h4>
-                            <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+                            <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/15 text-blue-300 ring-1 ring-blue-500/30">
                               {ticket.status}
                             </span>
                           </div>
-                          <p className="text-sm text-gray-600 mb-2">{ticket.message}</p>
-                          <div className="text-xs text-gray-500">{new Date(ticket.created_at).toLocaleString()}</div>
+                          <p className="text-sm text-text-secondary mb-2">{ticket.message}</p>
+                          <div className="text-xs text-text-tertiary">{new Date(ticket.created_at).toLocaleString()}</div>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-gray-600">No tickets yet.</p>
+                    <p className="text-sm text-text-secondary">No tickets yet.</p>
                   )}
                 </div>
               </section>
@@ -715,3 +715,4 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange })
 }
 
 export default UserDashboard
+

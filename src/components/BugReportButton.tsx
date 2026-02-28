@@ -71,17 +71,17 @@ const BugReportButton: React.FC<BugReportButtonProps> = ({ userId }) => {
       {/* Modal */}
       {isOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-surface rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               {/* Header */}
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <Bug className="text-red-500" size={24} />
-                  <h2 className="text-xl font-bold text-gray-900">Report a Bug</h2>
+                  <h2 className="text-xl font-bold text-text-primary">Report a Bug</h2>
                 </div>
                 <button
                   onClick={() => setIsOpen(false)}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-text-secondary hover:text-text-primary"
                 >
                   ×
                 </button>
@@ -175,7 +175,7 @@ const BugReportButton: React.FC<BugReportButtonProps> = ({ userId }) => {
                   <button
                     type="button"
                     onClick={() => setIsOpen(false)}
-                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                    className="flex-1 px-4 py-2 border border-border text-text-primary rounded-lg hover:bg-surface-hover transition-colors"
                     disabled={isSubmitting}
                   >
                     Cancel
@@ -191,7 +191,7 @@ const BugReportButton: React.FC<BugReportButtonProps> = ({ userId }) => {
               </form>
 
               {/* Info Text */}
-              <p className="mt-4 text-xs text-gray-500 text-center">
+              <p className="mt-4 text-xs text-text-tertiary text-center">
                 Your feedback helps us improve the system. Thank you!
               </p>
             </div>

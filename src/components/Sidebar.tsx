@@ -4,6 +4,7 @@ import Logo from './Logo'
 export interface SidebarItem {
   view: string
   label: string
+  group?: string
 }
 
 interface SidebarProps {
@@ -65,33 +66,47 @@ const Sidebar: FC<SidebarProps> = ({ items, activeView, onNavigate, onLogout, on
             <Logo onClick={onLogoClick} size="sm" horizontal={true} />
           </div>
 
-          <nav className="flex-1 flex flex-col gap-1 overflow-y-auto min-h-0">
-            {items.map(({ view, label }) => (
-              <button
-                key={view}
-                className={`px-3 py-2.5 rounded-lg text-left text-sm font-medium transition-all duration-200 cursor-pointer select-none ${
-                  view === activeView
-                    ? 'text-white'
-                    : 'hover:text-white'
-                }`}
-                style={view === activeView ? {
-                  background: 'linear-gradient(135deg, rgba(59,130,246,0.2), rgba(99,102,241,0.2))',
-                  color: '#60A5FA',
-                  borderLeft: '2px solid #3B82F6',
-                  paddingLeft: '10px'
-                } : {
-                  color: 'var(--text-secondary)'
-                }}
-                onMouseEnter={e => { if (view !== activeView) { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.05)'; (e.currentTarget as HTMLButtonElement).style.color = '#E2E8F0'; }}}
-                onMouseLeave={e => { if (view !== activeView) { (e.currentTarget as HTMLButtonElement).style.background = ''; (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'; }}}
-                onClick={() => {
-                  handleNavigate(view)
-                }}
-                type="button"
-              >
-                {label}
-              </button>
-            ))}
+          <nav className="flex-1 flex flex-col overflow-y-auto min-h-0">
+            {(() => {
+              const grouped: Record<string, SidebarItem[]> = {}
+              items.forEach(item => {
+                const g = item.group || ''
+                if (!grouped[g]) grouped[g] = []
+                grouped[g].push(item)
+              })
+              const groupOrder = ['MAIN MENU', 'OPERATIONS', 'RESOURCES', '']
+              return groupOrder.filter(g => grouped[g]?.length).map(groupName => (
+                <div key={groupName || 'other'} className="mb-4">
+                  {groupName && (
+                    <p className="px-3 pt-1 pb-1.5 text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-tertiary)', opacity: 0.6 }}>
+                      {groupName}
+                    </p>
+                  )}
+                  <div className="flex flex-col gap-0.5">
+                    {grouped[groupName].map(({ view, label }) => (
+                      <button
+                        key={view}
+                        className={`px-3 py-2.5 rounded-lg text-left text-sm font-medium transition-all duration-200 cursor-pointer select-none ${
+                          view === activeView ? 'text-white' : 'hover:text-white'
+                        }`}
+                        style={view === activeView ? {
+                          background: 'linear-gradient(135deg, rgba(59,130,246,0.2), rgba(99,102,241,0.2))',
+                          color: '#60A5FA',
+                          borderLeft: '2px solid #3B82F6',
+                          paddingLeft: '10px'
+                        } : { color: 'var(--text-secondary)' }}
+                        onMouseEnter={e => { if (view !== activeView) { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.05)'; (e.currentTarget as HTMLButtonElement).style.color = '#E2E8F0'; }}}
+                        onMouseLeave={e => { if (view !== activeView) { (e.currentTarget as HTMLButtonElement).style.background = ''; (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'; }}}
+                        onClick={() => handleNavigate(view)}
+                        type="button"
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))
+            })()}
           </nav>
 
           <button 

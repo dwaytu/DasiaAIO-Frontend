@@ -27,19 +27,19 @@ const FirearmMaintenance: FC<Props> = ({ user, onLogout, onViewChange, activeVie
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false)
   const currentView = activeView || 'maintenance'
   const navItems = [
-    { view: 'dashboard', label: 'Dashboard' },
-    { view: 'calendar', label: 'Calendar' },
-    { view: 'analytics', label: 'Analytics' },
-    { view: 'trips', label: 'Trip Management' },
-    { view: 'schedule', label: 'Schedule' },
-    { view: 'missions', label: 'Missions' },
-    { view: 'performance', label: 'Performance' },
-    { view: 'merit', label: 'Merit Scores' },
-    { view: 'firearms', label: 'Firearms' },
-    { view: 'allocation', label: 'Allocation' },
-    { view: 'permits', label: 'Permits' },
-    { view: 'maintenance', label: 'Maintenance' },
-    { view: 'armored-cars', label: 'Armored Cars' }
+    { view: 'dashboard', label: 'Dashboard', group: 'MAIN MENU' },
+    { view: 'calendar', label: 'Calendar', group: 'MAIN MENU' },
+    { view: 'analytics', label: 'Analytics', group: 'MAIN MENU' },
+    { view: 'trips', label: 'Trip Management', group: 'OPERATIONS' },
+    { view: 'schedule', label: 'Schedule', group: 'OPERATIONS' },
+    { view: 'missions', label: 'Missions', group: 'OPERATIONS' },
+    { view: 'performance', label: 'Performance', group: 'OPERATIONS' },
+    { view: 'merit', label: 'Merit Scores', group: 'OPERATIONS' },
+    { view: 'firearms', label: 'Firearms', group: 'RESOURCES' },
+    { view: 'allocation', label: 'Allocation', group: 'RESOURCES' },
+    { view: 'permits', label: 'Permits', group: 'RESOURCES' },
+    { view: 'maintenance', label: 'Maintenance', group: 'RESOURCES' },
+    { view: 'armored-cars', label: 'Armored Cars', group: 'RESOURCES' },
   ]
 
   useEffect(() => {
@@ -74,15 +74,15 @@ const FirearmMaintenance: FC<Props> = ({ user, onLogout, onViewChange, activeVie
 
   const getStatusBadgeColor = (status: string) => {
     switch (status?.toLowerCase()) {
-      case 'completed': return 'bg-green-100 text-green-800'
-      case 'pending': return 'bg-amber-100 text-amber-800'
-      case 'scheduled': return 'bg-blue-100 text-blue-800'
-      default: return 'bg-gray-100 text-gray-800'
+      case 'completed': return 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30'
+      case 'pending': return 'bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30'
+      case 'scheduled': return 'bg-blue-500/15 text-blue-300 ring-1 ring-blue-500/30'
+      default: return 'bg-zinc-500/15 text-zinc-400 ring-1 ring-zinc-500/30'
     }
   }
 
   return (
-    <div className="flex min-h-screen w-screen bg-gray-100 font-sans">
+    <div className="flex min-h-screen w-screen bg-background font-sans">
       <Sidebar
         items={navItems}
         activeView={currentView}
@@ -102,28 +102,28 @@ const FirearmMaintenance: FC<Props> = ({ user, onLogout, onViewChange, activeVie
           </div>
         ) : (
           <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in">
-            <section className="bg-white p-4 md:p-8 rounded-xl shadow-sm w-full">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Maintenance Records ({maintenances.length})</h2>
+            <section className="bg-surface p-6 md:p-8 rounded-xl shadow-sm w-full">
+              <h2 className="text-2xl font-bold text-text-primary mb-6">Maintenance Records ({maintenances.length})</h2>
               {maintenances.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse">
-                    <thead className="bg-gray-50">
+                    <thead className="bg-background">
                       <tr>
-                        <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-sm uppercase tracking-wider">Firearm ID</th>
-                        <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-sm uppercase tracking-wider">Type</th>
-                        <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-sm uppercase tracking-wider">Maintenance Date</th>
-                        <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-sm uppercase tracking-wider">Next Scheduled</th>
-                        <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-sm uppercase tracking-wider">Status</th>
-                        <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-sm uppercase tracking-wider">Notes</th>
+                        <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Firearm ID</th>
+                        <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Type</th>
+                        <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Maintenance Date</th>
+                        <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Next Scheduled</th>
+                        <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Status</th>
+                        <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Notes</th>
                       </tr>
                     </thead>
                     <tbody>
                       {maintenances.map((m) => (
-                        <tr key={m.id} className={`border-b border-gray-200 hover:bg-gray-50 ${isOverdue(m.nextScheduledDate) ? 'bg-red-50' : ''}`}>
-                          <td className="px-4 py-3 text-gray-700">{m.firearmId}</td>
-                          <td className="px-4 py-3 text-gray-700">{m.maintenanceType}</td>
-                          <td className="px-4 py-3 text-gray-700">{new Date(m.maintenanceDate).toLocaleDateString()}</td>
-                          <td className={`px-4 py-3 ${isOverdue(m.nextScheduledDate) ? 'text-red-700 font-semibold' : 'text-gray-700'}`}>
+                        <tr key={m.id} className={`border-b border-border hover:bg-surface-hover ${isOverdue(m.nextScheduledDate) ? 'bg-red-50' : ''}`}>
+                          <td className="px-4 py-3 text-text-primary">{m.firearmId}</td>
+                          <td className="px-4 py-3 text-text-primary">{m.maintenanceType}</td>
+                          <td className="px-4 py-3 text-text-primary">{new Date(m.maintenanceDate).toLocaleDateString()}</td>
+                          <td className={`px-4 py-3 ${isOverdue(m.nextScheduledDate) ? 'text-red-700 font-semibold' : 'text-text-primary'}`}>
                             {m.nextScheduledDate ? new Date(m.nextScheduledDate).toLocaleDateString() : 'N/A'}
                           </td>
                           <td className="px-4 py-3">
@@ -131,14 +131,14 @@ const FirearmMaintenance: FC<Props> = ({ user, onLogout, onViewChange, activeVie
                               {m.status}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-gray-700">{m.notes || '-'}</td>
+                          <td className="px-4 py-3 text-text-primary">{m.notes || '-'}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
               ) : (
-                <p className="text-center text-gray-400 py-8 italic">No maintenance records found</p>
+                <p className="text-center text-text-secondary py-8 italic">No maintenance records found</p>
               )}
             </section>
           </div>
@@ -149,3 +149,4 @@ const FirearmMaintenance: FC<Props> = ({ user, onLogout, onViewChange, activeVie
 }
 
 export default FirearmMaintenance
+

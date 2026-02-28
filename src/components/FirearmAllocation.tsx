@@ -45,19 +45,19 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
   })
   const currentView = activeView || 'allocation'
   const navItems = [
-    { view: 'dashboard', label: 'Dashboard' },
-    { view: 'calendar', label: 'Calendar' },
-    { view: 'analytics', label: 'Analytics' },
-    { view: 'trips', label: 'Trip Management' },
-    { view: 'schedule', label: 'Schedule' },
-    { view: 'missions', label: 'Missions' },
-    { view: 'performance', label: 'Performance' },
-    { view: 'merit', label: 'Merit Scores' },
-    { view: 'firearms', label: 'Firearms' },
-    { view: 'allocation', label: 'Allocation' },
-    { view: 'permits', label: 'Permits' },
-    { view: 'maintenance', label: 'Maintenance' },
-    { view: 'armored-cars', label: 'Armored Cars' }
+    { view: 'dashboard', label: 'Dashboard', group: 'MAIN MENU' },
+    { view: 'calendar', label: 'Calendar', group: 'MAIN MENU' },
+    { view: 'analytics', label: 'Analytics', group: 'MAIN MENU' },
+    { view: 'trips', label: 'Trip Management', group: 'OPERATIONS' },
+    { view: 'schedule', label: 'Schedule', group: 'OPERATIONS' },
+    { view: 'missions', label: 'Missions', group: 'OPERATIONS' },
+    { view: 'performance', label: 'Performance', group: 'OPERATIONS' },
+    { view: 'merit', label: 'Merit Scores', group: 'OPERATIONS' },
+    { view: 'firearms', label: 'Firearms', group: 'RESOURCES' },
+    { view: 'allocation', label: 'Allocation', group: 'RESOURCES' },
+    { view: 'permits', label: 'Permits', group: 'RESOURCES' },
+    { view: 'maintenance', label: 'Maintenance', group: 'RESOURCES' },
+    { view: 'armored-cars', label: 'Armored Cars', group: 'RESOURCES' },
   ]
 
   useEffect(() => {
@@ -161,15 +161,15 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
 
   const getStatusBadgeColor = (status: string) => {
     switch (status?.toLowerCase()) {
-      case 'active': return 'bg-green-100 text-green-800'
-      case 'returned': return 'bg-gray-100 text-gray-800'
-      case 'pending': return 'bg-amber-100 text-amber-800'
-      default: return 'bg-gray-100 text-gray-800'
+      case 'active': return 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30'
+      case 'returned': return 'bg-zinc-500/15 text-zinc-400 ring-1 ring-zinc-500/30'
+      case 'pending': return 'bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30'
+      default: return 'bg-zinc-500/15 text-zinc-400 ring-1 ring-zinc-500/30'
     }
   }
 
   return (
-    <div className="flex min-h-screen w-screen bg-gray-100 font-sans">
+    <div className="flex min-h-screen w-screen bg-background font-sans">
       <Sidebar
         items={navItems}
         activeView={currentView}
@@ -192,9 +192,9 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
             {error && <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">{error}</div>}
             {success && <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">{success}</div>}
             
-            <section className="bg-white p-4 md:p-8 rounded-xl shadow-sm w-full mb-6">
+            <section className="bg-surface p-6 md:p-8 rounded-xl shadow-sm w-full mb-6">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4 md:mb-0">Firearm Allocations ({allocations.length})</h2>
+                <h2 className="text-2xl font-bold text-text-primary mb-4 md:mb-0">Firearm Allocations ({allocations.length})</h2>
                 <button
                   onClick={() => setShowAllocateForm(!showAllocateForm)}
                   className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200"
@@ -204,14 +204,14 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
               </div>
 
               {showAllocateForm && (
-                <form onSubmit={allocateFirearm} className="bg-gray-50 p-6 rounded-lg mb-6 border border-gray-200">
+                <form onSubmit={allocateFirearm} className="bg-surface-elevated p-6 rounded-lg mb-6 border border-border">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Guard</label>
+                      <label className="block text-sm font-semibold text-text-primary mb-2">Guard</label>
                       <select
                         value={newAllocation.guardId}
                         onChange={(e) => setNewAllocation({ ...newAllocation, guardId: e.target.value })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         required
                       >
                         <option value="">Select a guard</option>
@@ -221,11 +221,11 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Firearm</label>
+                      <label className="block text-sm font-semibold text-text-primary mb-2">Firearm</label>
                       <select
                         value={newAllocation.firearmId}
                         onChange={(e) => setNewAllocation({ ...newAllocation, firearmId: e.target.value })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         required
                       >
                         <option value="">Select a firearm</option>
@@ -248,20 +248,20 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
               {allocations.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse">
-                    <thead className="bg-gray-50">
+                    <thead className="bg-background">
                       <tr>
-                        <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-sm uppercase tracking-wider">Guard ID</th>
-                        <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-sm uppercase tracking-wider">Firearm ID</th>
-                        <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-sm uppercase tracking-wider">Allocation Date</th>
-                        <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-sm uppercase tracking-wider">Status</th>
+                        <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Guard ID</th>
+                        <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Firearm ID</th>
+                        <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Allocation Date</th>
+                        <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Status</th>
                       </tr>
                     </thead>
                     <tbody>
                       {allocations.map((a) => (
-                        <tr key={a.id} className="border-b border-gray-200 hover:bg-gray-50">
-                          <td className="px-4 py-3 text-gray-700">{a.guardId}</td>
-                          <td className="px-4 py-3 text-gray-700">{a.firearmId}</td>
-                          <td className="px-4 py-3 text-gray-700">{new Date(a.allocationDate).toLocaleDateString()}</td>
+                        <tr key={a.id} className="border-b border-border hover:bg-surface-hover">
+                          <td className="px-4 py-3 text-text-primary">{a.guardId}</td>
+                          <td className="px-4 py-3 text-text-primary">{a.firearmId}</td>
+                          <td className="px-4 py-3 text-text-primary">{new Date(a.allocationDate).toLocaleDateString()}</td>
                           <td className="px-4 py-3">
                             <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${getStatusBadgeColor(a.status)}`}>
                               {a.status}
@@ -273,7 +273,7 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
                   </table>
                 </div>
               ) : (
-                <p className="text-center text-gray-400 py-8 italic">No allocations found</p>
+                <p className="text-center text-text-secondary py-8 italic">No allocations found</p>
               )}
             </section>
           </div>
@@ -284,3 +284,4 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
 }
 
 export default FirearmAllocation
+

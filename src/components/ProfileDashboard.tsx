@@ -143,24 +143,24 @@ const ProfileDashboard: FC<ProfileDashboardProps> = ({ user, onLogout, onBack, o
   }
 
   const navItems = user.role === 'superadmin' || user.role === 'admin' ? [
-    { view: 'dashboard', label: 'Dashboard' },
-    { view: 'schedule', label: 'Schedule' },
-    { view: 'firearms', label: 'Firearms' },
-    { view: 'allocation', label: 'Allocation' },
-    { view: 'permits', label: 'Permits' },
-    { view: 'maintenance', label: 'Maintenance' },
-    { view: 'armored-cars', label: 'Armored Cars' },
-    { view: 'analytics', label: 'Analytics' }
+    { view: 'dashboard', label: 'Dashboard', group: 'MAIN MENU' },
+    { view: 'analytics', label: 'Analytics', group: 'MAIN MENU' },
+    { view: 'schedule', label: 'Schedule', group: 'OPERATIONS' },
+    { view: 'firearms', label: 'Firearms', group: 'RESOURCES' },
+    { view: 'allocation', label: 'Allocation', group: 'RESOURCES' },
+    { view: 'permits', label: 'Permits', group: 'RESOURCES' },
+    { view: 'maintenance', label: 'Maintenance', group: 'RESOURCES' },
+    { view: 'armored-cars', label: 'Armored Cars', group: 'RESOURCES' },
   ] : [
-    { view: 'overview', label: 'Dashboard' },
-    { view: 'schedule', label: 'Schedule' },
-    { view: 'firearms', label: 'Firearms' },
-    { view: 'permits', label: 'My Permits' },
-    { view: 'support', label: 'Support' }
+    { view: 'overview', label: 'Dashboard', group: 'MAIN MENU' },
+    { view: 'schedule', label: 'Schedule', group: 'MAIN MENU' },
+    { view: 'firearms', label: 'Firearms', group: 'RESOURCES' },
+    { view: 'permits', label: 'My Permits', group: 'RESOURCES' },
+    { view: 'support', label: 'Support', group: 'RESOURCES' },
   ]
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-gray-50">
+    <div className="flex h-screen w-screen overflow-hidden bg-background">
       <Sidebar
         activeView="profile"
         items={navItems}
@@ -181,7 +181,7 @@ const ProfileDashboard: FC<ProfileDashboardProps> = ({ user, onLogout, onBack, o
           rightSlot={
             <button
               onClick={onBack}
-              className="px-3 md:px-4 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
+              className="px-3 md:px-4 py-2 text-sm font-semibold text-text-primary bg-surface border border-border rounded-lg hover:bg-surface-hover transition-colors flex items-center gap-2"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -201,8 +201,8 @@ const ProfileDashboard: FC<ProfileDashboardProps> = ({ user, onLogout, onBack, o
             )}
 
             {/* Profile Photo Section */}
-            <div className="bg-white rounded-xl shadow-md p-6 md:p-8 mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Profile Photo</h2>
+            <div className="bg-surface rounded-xl shadow-md p-6 md:p-8 mb-6">
+              <h2 className="text-2xl font-bold text-text-primary mb-6">Profile Photo</h2>
               
               <div className="flex flex-col md:flex-row items-center gap-6">
                 {/* Photo Preview */}
@@ -225,8 +225,8 @@ const ProfileDashboard: FC<ProfileDashboardProps> = ({ user, onLogout, onBack, o
                 </div>
 
                 <div className="flex-1 text-center md:text-left">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Upload New Photo</h3>
-                  <p className="text-sm text-gray-600 mb-4">JPG, PNG or GIF. Max size 5MB.</p>
+                  <h3 className="text-lg font-semibold text-text-primary mb-2">Upload New Photo</h3>
+                  <p className="text-sm text-text-secondary mb-4">JPG, PNG or GIF. Max size 5MB.</p>
                   
                   <input
                     ref={fileInputRef}
@@ -259,7 +259,7 @@ const ProfileDashboard: FC<ProfileDashboardProps> = ({ user, onLogout, onBack, o
                             setMessage('Failed to remove photo')
                           }
                         }}
-                        className="px-6 py-2.5 bg-white border border-red-300 text-red-600 hover:bg-red-50 font-semibold rounded-lg transition-colors"
+                      className="px-6 py-2.5 bg-surface border border-red-300 text-red-600 hover:bg-red-50 font-semibold rounded-lg transition-colors"
                       >
                         Remove Photo
                       </button>
@@ -270,100 +270,100 @@ const ProfileDashboard: FC<ProfileDashboardProps> = ({ user, onLogout, onBack, o
             </div>
 
             {/* Account Information */}
-            <div className="bg-white rounded-xl shadow-md p-6 md:p-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Account Information</h2>
+            <div className="bg-surface rounded-xl shadow-md p-6 md:p-8">
+              <h2 className="text-2xl font-bold text-text-primary mb-6">Account Information</h2>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Full Name</label>
+                  <label className="block text-sm font-semibold text-text-primary mb-2">Full Name</label>
                   <input
                     type="text"
                     name="fullName"
                     value={formData.fullName}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-4 py-2.5 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     placeholder="Enter your full name"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Email</label>
+                  <label className="block text-sm font-semibold text-text-primary mb-2">Email</label>
                   <input
                     type="email"
                     name="email"
                     value={formData.email}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-4 py-2.5 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     placeholder="Enter your email"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Phone Number</label>
+                  <label className="block text-sm font-semibold text-text-primary mb-2">Phone Number</label>
                   <input
                     type="text"
                     name="phoneNumber"
                     value={formData.phoneNumber}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-4 py-2.5 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     placeholder="+63-###-###-####"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Username</label>
+                  <label className="block text-sm font-semibold text-text-primary mb-2">Username</label>
                   <input
                     type="text"
                     value={user.username}
                     disabled
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-gray-50 text-gray-500"
+                    className="w-full px-4 py-2.5 border border-border rounded-lg bg-surface-elevated text-text-tertiary"
                   />
                 </div>
 
                 {user.role !== 'admin' && (
                   <>
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">License Number</label>
+                      <label className="block text-sm font-semibold text-text-primary mb-2">License Number</label>
                       <input
                         type="text"
                         name="licenseNumber"
                         value={formData.licenseNumber}
                         onChange={handleInputChange}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full px-4 py-2.5 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         placeholder="Enter license number"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">License Expiry Date</label>
+                      <label className="block text-sm font-semibold text-text-primary mb-2">License Expiry Date</label>
                       <input
                         type="date"
                         name="licenseExpiryDate"
                         value={formData.licenseExpiryDate}
                         onChange={handleInputChange}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full px-4 py-2.5 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       />
                     </div>
                   </>
                 )}
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Role</label>
+                  <label className="block text-sm font-semibold text-text-primary mb-2">Role</label>
                   <input
                     type="text"
                     value={user.role.toUpperCase()}
                     disabled
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-gray-50 text-gray-500"
+                    className="w-full px-4 py-2.5 border border-border rounded-lg bg-surface-elevated text-text-tertiary"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">User ID</label>
+                  <label className="block text-sm font-semibold text-text-primary mb-2">User ID</label>
                   <input
                     type="text"
                     value={user.id}
                     disabled
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-gray-50 text-gray-500 text-sm"
+                    className="w-full px-4 py-2.5 border border-border rounded-lg bg-surface-elevated text-text-tertiary text-sm"
                   />
                 </div>
               </div>

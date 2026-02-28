@@ -3,6 +3,8 @@ import { API_BASE_URL } from '../config'
 import Sidebar from './Sidebar'
 import Header from './Header'
 import { User } from '../App'
+import SecurityBentoGrid from './SecurityBentoGrid'
+import BentoGrid, { BentoCard } from './BentoGrid'
 
 interface CalendarDashboardProps {
   user: User
@@ -110,27 +112,31 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
   const [error, setError] = useState('')
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
   const [filterType, setFilterType] = useState<string>('all')
+  const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false)
 
   // Build nav items matching admin/user dashboard patterns
   const adminNavItems = [
-    { view: 'dashboard',    label: 'Dashboard' },
-    { view: 'calendar',     label: 'Calendar' },
-    { view: 'analytics',    label: 'Analytics' },
-    { view: 'trips',        label: 'Trip Management' },
-    { view: 'schedule',     label: 'Schedule' },
-    { view: 'missions',     label: 'Missions' },
-    { view: 'performance',  label: 'Performance' },
-    { view: 'merit',        label: 'Merit Scores' },
-    { view: 'firearms',     label: 'Firearms' },
-    { view: 'allocation',   label: 'Allocation' },
-    { view: 'permits',      label: 'Permits' },
-    { view: 'maintenance',  label: 'Maintenance' },
-    { view: 'armored-cars', label: 'Armored Cars' },
+    { view: 'dashboard',    label: 'Dashboard',       group: 'MAIN MENU' },
+    { view: 'calendar',     label: 'Calendar',        group: 'MAIN MENU' },
+    { view: 'analytics',    label: 'Analytics',       group: 'MAIN MENU' },
+    { view: 'trips',        label: 'Trip Management', group: 'OPERATIONS' },
+    { view: 'schedule',     label: 'Schedule',        group: 'OPERATIONS' },
+    { view: 'missions',     label: 'Missions',        group: 'OPERATIONS' },
+    { view: 'performance',  label: 'Performance',     group: 'OPERATIONS' },
+    { view: 'merit',        label: 'Merit Scores',    group: 'OPERATIONS' },
+    { view: 'firearms',     label: 'Firearms',        group: 'RESOURCES' },
+    { view: 'allocation',   label: 'Allocation',      group: 'RESOURCES' },
+    { view: 'permits',      label: 'Permits',         group: 'RESOURCES' },
+    { view: 'maintenance',  label: 'Maintenance',     group: 'RESOURCES' },
+    { view: 'armored-cars', label: 'Armored Cars',    group: 'RESOURCES' },
   ]
   const userNavItems = [
-    { view: 'dashboard', label: 'Dashboard' },
-    { view: 'calendar',  label: 'Calendar' },
-    { view: 'schedule',  label: 'My Schedule' },
+    { view: 'dashboard', label: 'Dashboard',  group: 'MAIN MENU' },
+    { view: 'calendar',  label: 'Calendar',   group: 'MAIN MENU' },
+    { view: 'schedule',  label: 'Schedule',   group: 'MAIN MENU' },
+    { view: 'firearms',  label: 'Firearms',   group: 'RESOURCES' },
+    { view: 'permits',   label: 'My Permits', group: 'RESOURCES' },
+    { view: 'support',   label: 'Contacts',   group: 'RESOURCES' },
   ]
   const navItems = isAdmin ? adminNavItems : userNavItems
 
@@ -269,13 +275,16 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
     `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 
   return (
-    <div className="flex h-screen w-screen bg-gray-950 overflow-hidden">
+    <div className="flex h-screen w-screen bg-background overflow-hidden">
       {/* Sidebar */}
       <Sidebar
         items={navItems}
         activeView={activeView || 'calendar'}
         onNavigate={onViewChange || (() => {})}
+        onLogoClick={() => onViewChange?.('dashboard')}
         onLogout={onLogout}
+        isOpen={mobileMenuOpen}
+        onClose={() => setMobileMenuOpen(false)}
       />
 
       {/* Main content */}
@@ -284,12 +293,14 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
           user={user}
           onLogout={onLogout}
           title={isAdmin ? 'Operations Calendar' : 'My Schedule Calendar'}
+          onMenuClick={() => setMobileMenuOpen(true)}
+          onNavigateToProfile={onViewChange ? () => onViewChange('profile') : undefined}
         />
 
-        <main className="flex-1 overflow-auto p-3 sm:p-6 bg-gray-950">
+        <main className="flex-1 overflow-auto p-3 sm:p-6 bg-background">
           {/* Subtitle row */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
-            <p className="text-gray-400 text-sm">
+            <p className="text-text-secondary text-sm">
               {isAdmin ? 'View all shifts, trips, missions & maintenance' : 'Your upcoming shifts and assignments'}
             </p>
             <button
@@ -304,6 +315,29 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
             <div className="mb-4 p-3 bg-red-900/40 border border-red-500 rounded-lg text-red-300 text-sm">{error}</div>
           )}
 
+          {/* Security Bento Grid - Mission-Critical Dashboard */}
+          <div className="mb-8">
+            <SecurityBentoGrid
+              loading={loading}
+              data={{
+                activeGuardsCount: 24,
+                activeGuardsTotal: 32,
+                pendingAlertsCount: 3,
+                pendingAlertsLevel: 'warning',
+                equipmentHealthPercentage: 97,
+                equipmentHealthStatus: 'operational',
+              }}
+              activityMapContent={
+                <div className="h-64 bg-surface-elevated rounded-lg flex items-center justify-center">
+                  <p className="text-text-secondary text-sm">Activity Timeline - Mission Data</p>
+                </div>
+              }
+              onActiveGuardsClick={() => onViewChange?.('users')}
+              onPendingAlertsClick={() => onViewChange?.('alerts')}
+              onEquipmentStatusClick={() => onViewChange?.('equipment')}
+            />
+          </div>
+
           {/* Legend */}
           <div className="flex flex-wrap gap-3 mb-5">
             {Object.entries(TYPE_LABELS).map(([key, label]) => {
@@ -315,7 +349,7 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
                   className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
                     filterType === key || filterType === 'all'
                       ? `${c.bg} ${c.border} ${c.text}`
-                      : 'bg-gray-800 border-gray-700 text-gray-400'
+                      : 'bg-surface border-border text-text-secondary'
                   }`}
                 >
                   <span className={`w-2 h-2 rounded-full ${c.dot}`} />
@@ -326,33 +360,33 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
             {filterType !== 'all' && (
               <button
                 onClick={() => setFilterType('all')}
-                className="px-3 py-1.5 rounded-full text-xs font-medium bg-gray-700 border border-gray-600 text-gray-300 hover:bg-gray-600"
+                className="px-3 py-1.5 rounded-full text-xs font-medium bg-surface border border-border text-text-primary hover:bg-surface-hover"
               >
                 Show All
               </button>
             )}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
-            {/* Calendar grid — takes 3 cols on sm */}
-            <div className="sm:col-span-3 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <BentoGrid className="items-start">
+            {/* Main calendar — hero card (2 cols × 2 rows) */}
+            <BentoCard isMain className="!p-0 overflow-hidden">
               {/* Month nav */}
-              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
-                <button onClick={prevMonth} className="p-2 hover:bg-gray-800 rounded-lg text-gray-400 hover:text-white transition-colors">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+                <button onClick={prevMonth} className="p-2 hover:bg-surface-hover rounded-lg text-text-secondary hover:text-text-primary transition-colors">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
                 </button>
-                <h2 className="text-white font-semibold text-base sm:text-lg">
+                <h2 className="text-text-primary font-semibold text-base sm:text-lg">
                   {MONTH_NAMES[currentMonth]} {currentYear}
                 </h2>
-                <button onClick={nextMonth} className="p-2 hover:bg-gray-800 rounded-lg text-gray-400 hover:text-white transition-colors">
+                <button onClick={nextMonth} className="p-2 hover:bg-surface-hover rounded-lg text-text-secondary hover:text-text-primary transition-colors">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
                 </button>
               </div>
 
               {/* Day headers */}
-              <div className="grid grid-cols-7 border-b border-gray-800">
+              <div className="grid grid-cols-7 border-b border-border">
                 {DAY_NAMES.map(d => (
-                  <div key={d} className="py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wide">
+                  <div key={d} className="py-2 text-center text-xs font-medium text-text-tertiary uppercase tracking-wide">
                     {d}
                   </div>
                 ))}
@@ -360,12 +394,12 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
 
               {/* Calendar cells */}
               {loading ? (
-                <div className="flex items-center justify-center py-16 text-gray-400 text-sm">Loading events&hellip;</div>
+                <div className="flex items-center justify-center py-16 text-text-secondary text-sm">Loading events&hellip;</div>
               ) : (
                 <div className="grid grid-cols-7">
                   {calendarCells.map((day, idx) => {
                     if (day === null) {
-                      return <div key={`empty-${idx}`} className="h-14 sm:h-20 border-b border-r border-gray-800/50" />
+                      return <div key={`empty-${idx}`} className="h-14 sm:h-20 border-b border-r border-border/50" />
                     }
                     const dateKey = getDateKey(day)
                     const dayEvents = (eventsByDate[dateKey] || []).filter(e => filterType === 'all' || e.type === filterType)
@@ -375,12 +409,12 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
                       <button
                         key={dateKey}
                         onClick={() => setSelectedDate(dateKey)}
-                        className={`h-14 sm:h-20 border-b border-r border-gray-800/50 p-1 text-left transition-colors relative
-                          ${isSelected ? 'bg-blue-900/40' : 'hover:bg-gray-800/60'}
+                        className={`h-14 sm:h-20 border-b border-r border-border/50 p-1 text-left transition-colors relative
+                          ${isSelected ? 'bg-blue-900/40' : 'hover:bg-surface-hover/60'}
                         `}
                       >
                         <span className={`text-xs sm:text-sm font-medium w-6 h-6 flex items-center justify-center rounded-full
-                          ${isToday ? 'bg-blue-500 text-white' : isSelected ? 'text-blue-300' : 'text-gray-300'}`}>
+                          ${isToday ? 'bg-blue-500 text-white' : isSelected ? 'text-blue-300' : 'text-text-primary'}`}>
                           {day}
                         </span>
                         {/* Event dots */}
@@ -390,7 +424,7 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
                               <span key={i} className={`w-1.5 h-1.5 rounded-full ${EVENT_COLORS[ev.type].dot}`} />
                             ))}
                             {dayEvents.length > 4 && (
-                              <span className="text-gray-500 text-xs">+{dayEvents.length - 4}</span>
+                              <span className="text-text-tertiary text-xs">+{dayEvents.length - 4}</span>
                             )}
                           </div>
                         )}
@@ -399,22 +433,22 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
                   })}
                 </div>
               )}
-            </div>
+            </BentoCard>
 
-            {/* Day detail panel — takes 2 cols on sm */}
-            <div className="sm:col-span-2 flex flex-col gap-4">
-              <div className="bg-gray-900 rounded-xl border border-gray-800 flex-1 overflow-hidden flex flex-col">
-                <div className="px-4 py-3 border-b border-gray-800">
-                  <h3 className="text-white font-semibold text-sm">{formatDate(selectedDate)}</h3>
-                  <p className="text-gray-400 text-xs mt-0.5">{selectedDateEvents.length} event{selectedDateEvents.length !== 1 ? 's' : ''}</p>
+            {/* Day detail panel — 2 cols */}
+            <BentoCard colSpan={2} className="!p-0 overflow-hidden flex flex-col min-h-[320px]">
+              <div className="flex-1 overflow-hidden flex flex-col">
+                <div className="px-4 py-3 border-b border-border">
+                  <h3 className="text-text-primary font-semibold text-sm">{formatDate(selectedDate)}</h3>
+                  <p className="text-text-secondary text-xs mt-0.5">{selectedDateEvents.length} event{selectedDateEvents.length !== 1 ? 's' : ''}</p>
                 </div>
                 <div className="flex-1 overflow-y-auto p-3 space-y-2">
                   {selectedDateEvents.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-10 text-center">
-                      <svg className="w-10 h-10 text-gray-700 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="w-10 h-10 text-text-tertiary mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
-                      <p className="text-gray-500 text-sm">No events for this day</p>
+                      <p className="text-text-tertiary text-sm">No events for this day</p>
                     </div>
                   ) : (
                     selectedDateEvents.map(ev => {
@@ -429,18 +463,18 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
                             <span className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${c.dot}`} />
                             <div className="min-w-0 flex-1">
                               <div className={`font-medium text-sm truncate ${c.text}`}>{ev.title}</div>
-                              <div className="text-gray-400 text-xs mt-0.5">{formatTime(ev.startTime)}</div>
-                              <div className="text-gray-500 text-xs capitalize mt-0.5">
+                              <div className="text-text-secondary text-xs mt-0.5">{formatTime(ev.startTime)}</div>
+                              <div className="text-text-tertiary text-xs capitalize mt-0.5">
                                 {TYPE_LABELS[ev.type]} &bull; {ev.status}
                               </div>
                               {ev.type === 'shift' && (
-                                <div className="text-gray-400 text-xs mt-0.5 truncate">
+                                <div className="text-text-secondary text-xs mt-0.5 truncate">
                                   Site: {(ev as ShiftEvent).clientSite}
                                   {isAdmin && (ev as ShiftEvent).guardName ? ` — ${(ev as ShiftEvent).guardName}` : ''}
                                 </div>
                               )}
                               {ev.type === 'trip' && (ev as TripEvent).destination && (
-                                <div className="text-gray-400 text-xs mt-0.5 truncate">
+                                <div className="text-text-secondary text-xs mt-0.5 truncate">
                                   Destination: {(ev as TripEvent).destination}
                                 </div>
                               )}
@@ -453,26 +487,27 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
                 </div>
               </div>
 
-              {/* Weekly summary */}
-              {isAdmin && (
-                <div className="bg-gray-900 rounded-xl border border-gray-800 p-4">
-                  <h4 className="text-white text-sm font-semibold mb-3">This Month Summary</h4>
-                  <div className="grid grid-cols-2 gap-2">
-                    {Object.entries(TYPE_LABELS).map(([key, label]) => {
-                      const c = EVENT_COLORS[key]
-                      const count = events.filter(e => e.type === key).length
-                      return (
-                        <div key={key} className={`p-2 rounded-lg ${c.bg} border ${c.border}`}>
-                          <div className={`text-lg font-bold ${c.text}`}>{count}</div>
-                          <div className="text-gray-400 text-xs">{label}s</div>
-                        </div>
-                      )
-                    })}
-                  </div>
+            </BentoCard>
+
+            {/* Monthly summary — admin only */}
+            {isAdmin && (
+              <BentoCard colSpan={2}>
+                <h4 className="text-text-primary text-sm font-semibold mb-3">This Month Summary</h4>
+                <div className="grid grid-cols-2 gap-2">
+                  {Object.entries(TYPE_LABELS).map(([key, label]) => {
+                    const c = EVENT_COLORS[key]
+                    const count = events.filter(e => e.type === key).length
+                    return (
+                      <div key={key} className={`p-2 rounded-lg ${c.bg} border ${c.border}`}>
+                        <div className={`text-lg font-bold ${c.text}`}>{count}</div>
+                        <div className="text-text-secondary text-xs">{label}s</div>
+                      </div>
+                    )
+                  })}
                 </div>
-              )}
-            </div>
-          </div>
+              </BentoCard>
+            )}
+          </BentoGrid>
         </main>
       </div>
 
@@ -483,7 +518,7 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
           onClick={() => setSelectedEvent(null)}
         >
           <div
-            className="bg-gray-900 border border-gray-700 rounded-xl max-w-sm w-full p-5 shadow-2xl"
+            className="bg-surface border border-border rounded-xl max-w-sm w-full p-5 shadow-2xl"
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-start justify-between mb-4">
@@ -495,7 +530,7 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
               </div>
               <button
                 onClick={() => setSelectedEvent(null)}
-                className="text-gray-500 hover:text-white transition-colors"
+                className="text-text-tertiary hover:text-text-primary transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -503,7 +538,7 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
               </button>
             </div>
 
-            <h3 className="text-white font-bold text-base mb-3">{selectedEvent.title}</h3>
+            <h3 className="text-text-primary font-bold text-base mb-3">{selectedEvent.title}</h3>
 
             <div className="space-y-2 text-sm">
               <Row label="Date" value={formatDate(selectedEvent.date)} />
@@ -552,9 +587,10 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
 
 const Row: FC<{ label: string; value: string; capitalize?: boolean }> = ({ label, value, capitalize }) => (
   <div className="flex justify-between gap-2">
-    <span className="text-gray-500 flex-shrink-0">{label}</span>
-    <span className={`text-gray-200 text-right ${capitalize ? 'capitalize' : ''}`}>{value}</span>
+    <span className="text-text-tertiary flex-shrink-0">{label}</span>
+    <span className={`text-text-primary text-right ${capitalize ? 'capitalize' : ''}`}>{value}</span>
   </div>
 )
 
 export default CalendarDashboard
+

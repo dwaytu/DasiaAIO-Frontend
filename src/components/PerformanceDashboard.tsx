@@ -29,19 +29,19 @@ const PerformanceDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeV
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false)
   const currentView = activeView || 'performance'
   const navItems = [
-    { view: 'dashboard', label: 'Dashboard' },
-    { view: 'calendar', label: 'Calendar' },
-    { view: 'analytics', label: 'Analytics' },
-    { view: 'trips', label: 'Trip Management' },
-    { view: 'schedule', label: 'Schedule' },
-    { view: 'missions', label: 'Missions' },
-    { view: 'performance', label: 'Performance' },
-    { view: 'merit', label: 'Merit Scores' },
-    { view: 'firearms', label: 'Firearms' },
-    { view: 'allocation', label: 'Allocation' },
-    { view: 'permits', label: 'Permits' },
-    { view: 'maintenance', label: 'Maintenance' },
-    { view: 'armored-cars', label: 'Armored Cars' }
+    { view: 'dashboard', label: 'Dashboard', group: 'MAIN MENU' },
+    { view: 'calendar', label: 'Calendar', group: 'MAIN MENU' },
+    { view: 'analytics', label: 'Analytics', group: 'MAIN MENU' },
+    { view: 'trips', label: 'Trip Management', group: 'OPERATIONS' },
+    { view: 'schedule', label: 'Schedule', group: 'OPERATIONS' },
+    { view: 'missions', label: 'Missions', group: 'OPERATIONS' },
+    { view: 'performance', label: 'Performance', group: 'OPERATIONS' },
+    { view: 'merit', label: 'Merit Scores', group: 'OPERATIONS' },
+    { view: 'firearms', label: 'Firearms', group: 'RESOURCES' },
+    { view: 'allocation', label: 'Allocation', group: 'RESOURCES' },
+    { view: 'permits', label: 'Permits', group: 'RESOURCES' },
+    { view: 'maintenance', label: 'Maintenance', group: 'RESOURCES' },
+    { view: 'armored-cars', label: 'Armored Cars', group: 'RESOURCES' },
   ]
 
   useEffect(() => {
@@ -80,7 +80,7 @@ const PerformanceDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeV
   }
 
   return (
-    <div className="flex min-h-screen w-screen bg-gray-100 font-sans">
+    <div className="flex min-h-screen w-screen bg-background font-sans">
       <Sidebar
         items={navItems}
         activeView={currentView}
@@ -100,43 +100,43 @@ const PerformanceDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeV
           </div>
         ) : (
           <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in">
-            <section className="bg-white p-4 md:p-8 rounded-xl shadow-sm">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Guard Performance</h2>
+            <section className="bg-surface p-6 md:p-8 rounded-xl shadow-sm">
+              <h2 className="text-2xl font-bold text-text-primary mb-6">Guard Performance</h2>
               {performance.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse">
-                    <thead className="bg-gray-50">
+                    <thead className="bg-background">
                       <tr>
-                        <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-sm uppercase tracking-wider">Guard Name</th>
-                        <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-sm uppercase tracking-wider">Attendance Rate</th>
-                        <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-sm uppercase tracking-wider">Allocations</th>
-                        <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-sm uppercase tracking-wider">Maintenance Tasks</th>
+                        <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Guard Name</th>
+                        <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Attendance Rate</th>
+                        <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Allocations</th>
+                        <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Maintenance Tasks</th>
                       </tr>
                     </thead>
                     <tbody>
                       {performance.map((p) => (
-                        <tr key={p.guardId} className="border-b border-gray-200 hover:bg-gray-50">
-                          <td className="px-4 py-3 text-gray-700">{p.guardName}</td>
+                        <tr key={p.guardId} className="border-b border-border hover:bg-surface-hover">
+                          <td className="px-4 py-3 text-text-primary">{p.guardName}</td>
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">
-                              <div className="flex-1 bg-gray-200 rounded-full h-2 overflow-hidden">
+                              <div className="flex-1 bg-border rounded-full h-2 overflow-hidden">
                                 <div 
                                   className="bg-indigo-600 h-full transition-all duration-300" 
                                   style={{width: `${p.attendanceRate}%`}}
                                 ></div>
                               </div>
-                              <span className="text-sm font-medium text-gray-700 min-w-12">{p.attendanceRate}%</span>
+                              <span className="text-sm font-medium text-text-primary min-w-12">{p.attendanceRate}%</span>
                             </div>
                           </td>
-                          <td className="px-4 py-3"><span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold">{p.allocationsCompleted}</span></td>
-                          <td className="px-4 py-3"><span className="inline-block bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-semibold">{p.maintenanceCompleted}</span></td>
+                          <td className="px-4 py-3"><span className="inline-block bg-blue-500/15 text-blue-300 ring-1 ring-blue-500/30 px-3 py-1 rounded-full text-sm font-semibold">{p.allocationsCompleted}</span></td>
+                          <td className="px-4 py-3"><span className="inline-block bg-red-500/15 text-red-300 ring-1 ring-red-500/30 px-3 py-1 rounded-full text-sm font-semibold">{p.maintenanceCompleted}</span></td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
               ) : (
-                <p className="text-center text-gray-400 py-8 italic">No performance data available</p>
+                <p className="text-center text-text-secondary py-8 italic">No performance data available</p>
               )}
             </section>
           </div>
@@ -147,3 +147,4 @@ const PerformanceDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeV
 }
 
 export default PerformanceDashboard
+

@@ -1,4 +1,5 @@
 ﻿import { FC, MouseEvent } from 'react'
+import { useTheme } from '../context/ThemeProvider'
 
 interface LogoProps {
   onClick?: (e: MouseEvent<HTMLDivElement>) => void
@@ -8,6 +9,9 @@ interface LogoProps {
 }
 
 const Logo: FC<LogoProps> = ({ onClick, size = 'md', horizontal = false, logoOnly = false }) => {
+  const { theme } = useTheme()
+  const isDark = theme === 'dark'
+  
   const sizeMap = {
     sm: { logoWidth: 52, fontSize: 'text-xl', gap: 'gap-2.5' },
     md: { logoWidth: 72, fontSize: 'text-2xl', gap: 'gap-3' },
@@ -28,17 +32,33 @@ const Logo: FC<LogoProps> = ({ onClick, size = 'md', horizontal = false, logoOnl
         width={config.logoWidth}
         xmlns="http://www.w3.org/2000/svg"
         className="drop-shadow-lg flex-shrink-0"
-        style={{ filter: 'drop-shadow(0 0 8px rgba(0,180,220,0.4))' }}
+        style={{ 
+          filter: isDark 
+            ? 'drop-shadow(0 0 8px rgba(0,180,220,0.4))' 
+            : 'drop-shadow(0 0 12px rgba(59,130,246,0.3))'
+        }}
       >
         <defs>
+          {/* Dark Mode Gradients */}
           <linearGradient id="tealGrad" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%"   stopColor="#00D4F0" />
             <stop offset="55%"  stopColor="#0098C8" />
             <stop offset="100%" stopColor="#005A82" />
           </linearGradient>
-          <linearGradient id="shieldGrad" x1="0" y1="0" x2="1" y2="1">
+          <linearGradient id="shieldGradDark" x1="0" y1="0" x2="1" y2="1">
             <stop offset="0%"   stopColor="#00C4E8" />
             <stop offset="100%" stopColor="#004E72" />
+          </linearGradient>
+          
+          {/* Light Mode Gradients */}
+          <linearGradient id="blueGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stopColor="#3B82F6" />
+            <stop offset="55%"  stopColor="#2563EB" />
+            <stop offset="100%" stopColor="#1E40AF" />
+          </linearGradient>
+          <linearGradient id="shieldGradLight" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%"   stopColor="#60A5FA" />
+            <stop offset="100%" stopColor="#1E40AF" />
           </linearGradient>
           <clipPath id="innerShieldClip">
             <path d="M100,212 C84,200 36,174 32,144 L32,72 C32,53 65,30 100,19 C135,30 168,53 168,72 L168,144 C164,174 116,200 100,212 Z" />
@@ -49,7 +69,7 @@ const Logo: FC<LogoProps> = ({ onClick, size = 'md', horizontal = false, logoOnl
         <path
           d="M100,225 C78,211 18,178 14,144 L14,64 C14,42 57,16 100,4 C143,16 186,42 186,64 L186,144 C182,178 122,211 100,225 Z"
           fill="none"
-          stroke="url(#shieldGrad)"
+          stroke={isDark ? "url(#shieldGradDark)" : "url(#shieldGradLight)"}
           strokeWidth="3.5"
           strokeLinejoin="round"
         />
@@ -58,14 +78,16 @@ const Logo: FC<LogoProps> = ({ onClick, size = 'md', horizontal = false, logoOnl
         <path
           d="M100,212 C84,200 36,174 32,144 L32,72 C32,53 65,30 100,19 C135,30 168,53 168,72 L168,144 C164,174 116,200 100,212 Z"
           fill="none"
-          stroke="url(#shieldGrad)"
+          stroke={isDark ? "url(#shieldGradDark)" : "url(#shieldGradLight)"}
           strokeWidth="2"
           strokeLinejoin="round"
           opacity="0.8"
         />
 
         {/* Circuit traces clipped to inner shield */}
-        <g clipPath="url(#innerShieldClip)" stroke="url(#tealGrad)" fill="url(#tealGrad)">
+        <g clipPath="url(#innerShieldClip)" 
+           stroke={isDark ? "url(#tealGrad)" : "url(#blueGrad)"} 
+           fill={isDark ? "url(#tealGrad)" : "url(#blueGrad)"}>
 
           {/* x=48 â€“ far left, short */}
           <line x1="48" y1="192" x2="48" y2="162" strokeWidth="1.8" />

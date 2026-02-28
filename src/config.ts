@@ -35,9 +35,12 @@ function getDefaultAPIURL(): string {
       return `${protocol}//${hostname}:5000`
     }
     
-    // For Railway deployed frontend, use the deployed backend URL
+    // For Railway deployed frontend, VITE_API_URL must be set as a build-time variable
+    // in the Railway service settings pointing to the backend service URL.
+    // If it reaches here without VITE_API_URL set, log a warning.
     if (hostname.includes('.up.railway.app')) {
-      return 'https://dasiaaio-backend-production.up.railway.app'
+      console.warn('VITE_API_URL is not set. Set it in Railway frontend service variables to point to the backend URL.')
+      return ''
     }
     
     // For other remote deployments, don't append a port (assume standard HTTPS)

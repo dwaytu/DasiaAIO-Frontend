@@ -2,6 +2,7 @@
   "$schema": "https://railway.json.schema",
   "services": {
     "frontend": {
+      "startCommand": "serve -s app-dist -l $PORT",
       "variables": {
         "VITE_API_URL": "https://backend-production-0c47.up.railway.app"
       }

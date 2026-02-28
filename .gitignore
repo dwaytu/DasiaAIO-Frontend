@@ -1,5 +1,6 @@
 node_modules/
 dist/
+app-dist/
 .venv/
 __pycache__/
 .DS_Store

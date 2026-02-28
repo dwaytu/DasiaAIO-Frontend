@@ -40,7 +40,7 @@ function getDefaultAPIURL(): string {
     // If it reaches here without VITE_API_URL set, log a warning.
     if (hostname.includes('.up.railway.app')) {
       console.warn('VITE_API_URL is not set. Set it in Railway frontend service variables to point to the backend URL.')
-      return ''
+      return 'https://backend-production-0c47.up.railway.app'
     }
     
     // For other remote deployments, don't append a port (assume standard HTTPS)

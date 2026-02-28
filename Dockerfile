@@ -7,6 +7,10 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 
+# Accept build-time env vars (Railway injects these as Docker build args)
+ARG VITE_API_URL
+ENV VITE_API_URL=${VITE_API_URL}
+
 # Build the app
 COPY . .
 RUN npm run build
@@ -24,9 +28,6 @@ COPY --from=builder /app/app-dist ./app-dist
 
 # Expose port (Railway uses dynamic port from $PORT)
 EXPOSE 3000
-
-# Environment variable for API URL will be passed by Railway
-ENV VITE_API_URL=${VITE_API_URL:-http://localhost:5000}
 
 # Start the app (serve only needs port number)
 CMD ["/bin/sh", "-c", "serve -s app-dist -l ${PORT:-3000}"]

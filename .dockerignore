@@ -1,0 +1,26 @@
+# Dependencies – always reinstalled fresh inside the container
+node_modules
+npm-debug.log*
+
+# Build output – built inside the container
+app-dist
+dist
+
+# Test / coverage artifacts
+coverage
+__mocks__
+
+# Dev tooling and local config
+.env
+.env.*
+.git
+.gitignore
+.DS_Store
+*.local
+
+# VS Code / IDE
+.vscode
+*.code-workspace
+
+# Electron desktop output
+public/electron.js

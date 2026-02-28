@@ -28,9 +28,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ userId }) => {
   // Fetch notifications
   const fetchNotifications = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/users/${userId}/notifications`, {
-        credentials: 'include',
-      });
+      const response = await fetch(`${API_BASE_URL}/api/users/${userId}/notifications`, {});
       if (response.ok) {
         const data = await response.json();
         setNotifications(data.notifications || []);
@@ -44,9 +42,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ userId }) => {
   // Fetch unread count
   const fetchUnreadCount = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/users/${userId}/notifications/unread-count`, {
-        credentials: 'include',
-      });
+      const response = await fetch(`${API_BASE_URL}/api/users/${userId}/notifications/unread-count`);
       if (response.ok) {
         const data = await response.json();
         setUnreadCount(data.unreadCount || 0);
@@ -61,7 +57,6 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ userId }) => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/notifications/${notificationId}/read`, {
         method: 'PUT',
-        credentials: 'include',
       });
       if (response.ok) {
         setNotifications(prev =>
@@ -81,7 +76,6 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ userId }) => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/users/${userId}/notifications/mark-all-read`, {
         method: 'PUT',
-        credentials: 'include',
       });
       if (response.ok) {
         setNotifications(prev => prev.map(notif => ({ ...notif, read: true })));
@@ -99,7 +93,6 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ userId }) => {
       const response = await fetch(`${API_BASE_URL}/api/guard-replacement/accept-replacement`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({
           guardId: userId,
           shiftId: shiftId,
@@ -127,7 +120,6 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ userId }) => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/notifications/${notificationId}`, {
         method: 'DELETE',
-        credentials: 'include',
       });
       if (response.ok) {
         setNotifications(prev => prev.filter(notif => notif.id !== notificationId));

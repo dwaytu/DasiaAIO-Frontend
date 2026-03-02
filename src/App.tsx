@@ -105,10 +105,10 @@ function App() {
           <SuperadminDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
         )
       ) : user ? (
-        activeView === 'calendar' || activeView === 'schedule' ? (
+        activeView === 'calendar' ? (
           <CalendarDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
         ) : (
-          <UserDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} />
+          <UserDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
         )
       ) : null}
     </div>

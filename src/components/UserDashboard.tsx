@@ -21,6 +21,7 @@ interface UserDashboardProps {
   user: AppUser
   onLogout: () => void
   onViewChange?: (view: string) => void
+  activeView?: string
 }
 
 interface AttendanceRecord {
@@ -64,10 +65,16 @@ interface SupportTicketItem {
   created_at: string
 }
 
-const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange }) => {
+const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, activeView }) => {
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeSection, setActiveSection] = useState<'overview' | 'schedule' | 'firearms' | 'permits' | 'support'>('overview')
+  const [activeSection, setActiveSection] = useState<'overview' | 'schedule' | 'firearms' | 'permits' | 'support'>(() => {
+    // If activeView is 'schedule', 'firearms', 'permits', or 'support', use that
+    if (activeView === 'schedule' || activeView === 'firearms' || activeView === 'permits' || activeView === 'support') {
+      return activeView
+    }
+    return 'overview'
+  })
   const [scheduleItems, setScheduleItems] = useState<ShiftItem[]>([])
   const [firearmItems, setFirearmItems] = useState<AllocationItem[]>([])
   const [permitItems, setPermitItems] = useState<PermitItem[]>([])

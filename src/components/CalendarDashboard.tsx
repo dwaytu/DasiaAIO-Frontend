@@ -113,7 +113,6 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
   const [filterType, setFilterType] = useState<string>('all')
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false)
-  const [internalSection, setInternalSection] = useState<'calendar' | 'schedule'>('calendar')
 
   // Build nav items matching admin/user dashboard patterns
   const adminNavItems = [
@@ -277,23 +276,16 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
 
   // Handle navigation
   const handleNavigate = (view: string) => {
-    // Keep calendar and schedule internal to CalendarDashboard
+    // Only calendar stays internal to CalendarDashboard
+    // All other views (schedule, dashboard, firearms, etc.) route to parent
     if (view === 'calendar') {
-      setInternalSection('calendar')
       return
     }
-    if (view === 'schedule') {
-      setInternalSection('schedule')
-      return
-    }
-    
-    // All other views route to parent component (dashboard, firearms, permits, support)
     onViewChange?.(view)
   }
 
-  // Determine current active view for sidebar highlighting
-  // Both calendar and schedule are internal to this component
-  const currentActiveView = (activeView === 'calendar' || activeView === 'schedule') ? internalSection : activeView
+  // Calendardashboard always shows activeView as calendar since it's always internal
+  const currentActiveView = 'calendar'
 
   return (
     <div className="flex h-screen w-screen bg-background overflow-hidden">

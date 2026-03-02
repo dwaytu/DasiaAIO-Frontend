@@ -275,26 +275,25 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
   const getDateKey = (day: number) =>
     `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 
-  // Handle navigation - keep calendar/schedule internal, pass others to parent
+  // Handle navigation
   const handleNavigate = (view: string) => {
-    // For users: calendar and schedule are internal sections
-    // For admins: only calendar is internal, schedule navigates to SuperadminDashboard
+    // Keep calendar and schedule internal to CalendarDashboard
     if (view === 'calendar') {
       setInternalSection('calendar')
-    } else if (view === 'schedule' && !isAdmin) {
-      // Users stay in CalendarDashboard, just switch to schedule view
-      setInternalSection('schedule')
-    } else if (view === 'dashboard') {
-      // Navigate back to main dashboard
-      onViewChange?.('dashboard')
-    } else {
-      // All other views navigate to different components
-      onViewChange?.(view)
+      return
     }
+    if (view === 'schedule') {
+      setInternalSection('schedule')
+      return
+    }
+    
+    // All other views route to parent component (dashboard, firearms, permits, support)
+    onViewChange?.(view)
   }
 
   // Determine current active view for sidebar highlighting
-  const currentActiveView = (activeView === 'calendar' || !activeView) ? internalSection : activeView
+  // Both calendar and schedule are internal to this component
+  const currentActiveView = (activeView === 'calendar' || activeView === 'schedule') ? internalSection : activeView
 
   return (
     <div className="flex h-screen w-screen bg-background overflow-hidden">
@@ -314,11 +313,7 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
         <Header
           user={user}
           onLogout={onLogout}
-          title={
-            internalSection === 'calendar' 
-              ? (isAdmin ? 'Operations Calendar' : 'My Schedule Calendar')
-              : (isAdmin ? 'Operations Schedule' : 'My Schedule')
-          }
+          title={isAdmin ? 'Operations Calendar' : 'My Schedule Calendar'}
           onMenuClick={() => setMobileMenuOpen(true)}
           onNavigateToProfile={onViewChange ? () => onViewChange('profile') : undefined}
         />

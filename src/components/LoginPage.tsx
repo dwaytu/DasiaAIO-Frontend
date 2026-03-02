@@ -469,32 +469,34 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
       {/* DESKTOP LAYOUT */}
       <div className="hidden lg:flex h-screen w-screen overflow-hidden" style={{ background: 'var(--bg-primary)' }}>
         {/* Left Section - Form */}
-        <div className="flex-1 flex flex-col relative h-full overflow-y-auto" style={{
-          scrollbarWidth: 'none',
-          msOverflowStyle: 'none',
-        }}>          
-          {/* Particle background */}
-          <div className="absolute inset-0 pointer-events-none">
+        <div className="flex-1 relative h-full">          
+          {/* Particle background - FIXED */}
+          <div className="absolute inset-0 pointer-events-none z-0">
             <ParticleBackground particleCount={90} color="0, 190, 220" connectDistance={130} mouseRadius={160} />
           </div>
 
-          {/* Logo top-left */}
-          {!isRegistering && (
-            <div className="relative z-10 pt-6 pl-8">
-              <Logo size="md" logoOnly />
-            </div>
-          )}
+          {/* Scrollable content */}
+          <div className="relative z-10 h-full flex flex-col overflow-y-auto" style={{
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
+          }}>
+            {/* Logo top-left */}
+            {!isRegistering && (
+              <div className="pt-6 pl-8">
+                <Logo size="md" logoOnly />
+              </div>
+            )}
 
-          {/* Form centered */}
-          <div 
-            className={`flex-1 flex ${isRegistering ? 'items-start' : 'items-center'} justify-center p-8 relative z-10`}
-          >
-          <style>{`
-            .flex-1.flex.flex-col::-webkit-scrollbar {
-              display: none;
-            }
-          `}</style>
-          <div className="w-full max-w-md py-8">
+            {/* Form centered */}
+            <div 
+              className={`flex-1 flex ${isRegistering ? 'items-start' : 'items-center'} justify-center p-8`}
+            >
+            <style>{`
+              .relative.z-10.h-full.flex.flex-col.overflow-y-auto::-webkit-scrollbar {
+                display: none;
+              }
+            `}</style>
+            <div className="w-full max-w-md py-8">
             {!requiresVerification && !isRegistering && (
               <div className="mb-8">
                 <h1 className="text-4xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>Welcome Back!</h1>
@@ -517,6 +519,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
             )}
 
             {renderForm()}
+          </div>
           </div>
           </div>
         </div>

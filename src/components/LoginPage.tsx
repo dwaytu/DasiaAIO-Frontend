@@ -483,7 +483,19 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
           )}
 
           {/* Form centered */}
-          <div className="flex-1 flex items-center justify-center p-8 relative z-10 overflow-y-auto">
+          <div 
+            className="flex-1 flex items-start justify-center p-8 relative z-10 overflow-y-auto"
+            style={{
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none',
+              WebkitOverflowScrolling: 'touch'
+            }}
+          >
+          <style>{`
+            .flex-1.flex.items-start.justify-center::-webkit-scrollbar {
+              display: none;
+            }
+          `}</style>
           <div className="w-full max-w-md py-8">
             {!requiresVerification && !isRegistering && (
               <div className="mb-8">

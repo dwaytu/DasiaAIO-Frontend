@@ -113,6 +113,7 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
   const [filterType, setFilterType] = useState<string>('all')
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false)
+  const [internalSection, setInternalSection] = useState<'calendar' | 'schedule'>('calendar')
 
   // Build nav items matching admin/user dashboard patterns
   const adminNavItems = [
@@ -274,14 +275,35 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
   const getDateKey = (day: number) =>
     `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 
+  // Handle navigation - keep calendar/schedule internal, pass others to parent
+  const handleNavigate = (view: string) => {
+    // For users: calendar and schedule are internal sections
+    // For admins: only calendar is internal, schedule navigates to SuperadminDashboard
+    if (view === 'calendar') {
+      setInternalSection('calendar')
+    } else if (view === 'schedule' && !isAdmin) {
+      // Users stay in CalendarDashboard, just switch to schedule view
+      setInternalSection('schedule')
+    } else if (view === 'dashboard') {
+      // Navigate back to main dashboard
+      onViewChange?.('dashboard')
+    } else {
+      // All other views navigate to different components
+      onViewChange?.(view)
+    }
+  }
+
+  // Determine current active view for sidebar highlighting
+  const currentActiveView = (activeView === 'calendar' || !activeView) ? internalSection : activeView
+
   return (
     <div className="flex h-screen w-screen bg-background overflow-hidden">
       {/* Sidebar */}
       <Sidebar
         items={navItems}
-        activeView={activeView || 'calendar'}
-        onNavigate={onViewChange || (() => {})}
-        onLogoClick={() => onViewChange?.('dashboard')}
+        activeView={currentActiveView}
+        onNavigate={handleNavigate}
+        onLogoClick={() => handleNavigate('dashboard')}
         onLogout={onLogout}
         isOpen={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}
@@ -292,7 +314,11 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
         <Header
           user={user}
           onLogout={onLogout}
-          title={isAdmin ? 'Operations Calendar' : 'My Schedule Calendar'}
+          title={
+            internalSection === 'calendar' 
+              ? (isAdmin ? 'Operations Calendar' : 'My Schedule Calendar')
+              : (isAdmin ? 'Operations Schedule' : 'My Schedule')
+          }
           onMenuClick={() => setMobileMenuOpen(true)}
           onNavigateToProfile={onViewChange ? () => onViewChange('profile') : undefined}
         />

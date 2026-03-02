@@ -469,7 +469,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
       {/* DESKTOP LAYOUT */}
       <div className="hidden lg:flex min-h-screen w-screen overflow-hidden" style={{ background: 'var(--bg-primary)' }}>
         {/* Left Section - Form */}
-        <div className="flex-1 flex flex-col relative overflow-hidden">          
+        <div className="flex-1 flex flex-col relative">          
           {/* Particle background */}
           <div className="absolute inset-0 pointer-events-none">
             <ParticleBackground particleCount={90} color="0, 190, 220" connectDistance={130} mouseRadius={160} />
@@ -484,7 +484,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
 
           {/* Form centered */}
           <div 
-            className="flex-1 flex items-start justify-center p-8 relative z-10 overflow-y-auto"
+            className={`flex-1 flex ${isRegistering ? 'items-start' : 'items-center'} justify-center p-8 relative z-10 overflow-y-auto`}
             style={{
               scrollbarWidth: 'none',
               msOverflowStyle: 'none',
@@ -492,7 +492,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
             }}
           >
           <style>{`
-            .flex-1.flex.items-start.justify-center::-webkit-scrollbar {
+            .flex-1.flex::-webkit-scrollbar {
               display: none;
             }
           `}</style>

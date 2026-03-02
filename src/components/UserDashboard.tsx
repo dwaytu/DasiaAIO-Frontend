@@ -82,6 +82,11 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange })
   const [ticketForm, setTicketForm] = useState({ subject: '', message: '' })
   const [ticketStatus, setTicketStatus] = useState<string>('')
   const [ticketSubmitting, setTicketSubmitting] = useState<boolean>(false)
+  const [activeShifts, setActiveShifts] = useState<ShiftItem[]>([])
+  const [checkInStatus, setCheckInStatus] = useState<{ [key: string]: 'idle' | 'checked_in' | 'elapsed' }>({})
+  const [elapsedTime, setElapsedTime] = useState<{ [key: string]: string }>({})
+  const [checkInTimes, setCheckInTimes] = useState<{ [key: string]: Date }>({})
+  const [checkInSubmitting, setCheckInSubmitting] = useState<{ [key: string]: boolean }>({})
   const navItems = [
     { view: 'overview', label: 'Dashboard', group: 'MAIN MENU' },
     { view: 'calendar', label: 'Calendar', group: 'MAIN MENU' },
@@ -99,6 +104,42 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange })
     fetchPermits(user.id)
     fetchTickets(user.id)
   }, [user?.id])
+
+  // Filter today's shifts
+  useEffect(() => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+
+    const todaysShifts = scheduleItems.filter(shift => {
+      const shiftStart = new Date(shift.start_time)
+      return shiftStart >= today && shiftStart < tomorrow
+    })
+
+    setActiveShifts(todaysShifts)
+  }, [scheduleItems])
+
+  // Update elapsed time
+  useEffect(() => {
+    const interval = setInterval(() => {
+      Object.entries(checkInTimes).forEach(([shiftId, checkInTime]) => {
+        if (checkInStatus[shiftId] === 'checked_in') {
+          const now = new Date()
+          const elapsed = Math.floor((now.getTime() - checkInTime.getTime()) / 1000)
+          const hours = Math.floor(elapsed / 3600)
+          const minutes = Math.floor((elapsed % 3600) / 60)
+          const seconds = elapsed % 60
+          setElapsedTime(prev => ({
+            ...prev,
+            [shiftId]: `${hours}h ${minutes}m ${seconds}s`
+          }))
+        }
+      })
+    }, 1000)
+
+    return () => clearInterval(interval)
+  }, [checkInStatus, checkInTimes])
 
   const fetchAttendance = async (guardId: string) => {
     try {
@@ -163,13 +204,15 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange })
   }
 
   const isLicenseExpired = () => {
-    if (!user?.license_expiry_date) return false
-    return new Date(user.license_expiry_date) < new Date()
+    const expiryDate = user?.licenseExpiryDate || user?.license_expiry_date
+    if (!expiryDate) return false
+    return new Date(expiryDate) < new Date()
   }
 
   const daysUntilExpiry = () => {
-    if (!user?.license_expiry_date) return null
-    const days = Math.ceil((new Date(user.license_expiry_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+    const expiryDate = user?.licenseExpiryDate || user?.license_expiry_date
+    if (!expiryDate) return null
+    const days = Math.ceil((new Date(expiryDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
     return days
   }
 
@@ -304,6 +347,94 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange })
     setActiveSection(section as 'overview' | 'schedule' | 'firearms' | 'permits' | 'support')
   }
 
+  const handleCheckIn = async (shift: ShiftItem) => {
+    if (!user?.id) return
+
+    setCheckInSubmitting(prev => ({ ...prev, [shift.id]: true }))
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/guard-replacement/attendance/check-in`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          guard_id: user.id,
+          shift_id: shift.id
+        })
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        console.error('Check-in failed:', data)
+        return
+      }
+
+      const data = await response.json()
+      setCheckInStatus(prev => ({ ...prev, [shift.id]: 'checked_in' }))
+      setCheckInTimes(prev => ({ ...prev, [shift.id]: new Date() }))
+      console.log('Check-in successful:', data.attendanceId)
+    } catch (err) {
+      console.error('Check-in error:', err)
+    } finally {
+      setCheckInSubmitting(prev => ({ ...prev, [shift.id]: false }))
+    }
+  }
+
+  const handleCheckOut = async (shift: ShiftItem) => {
+    if (!user?.id) return
+
+    // Find the most recent attendance for this shift
+    const recentAttendance = attendance.find(a => 
+      a.status === 'checked_in' && 
+      new Date(a.check_in_time).toDateString() === new Date().toDateString()
+    )
+
+    if (!recentAttendance) {
+      console.error('No active check-in found')
+      return
+    }
+
+    setCheckInSubmitting(prev => ({ ...prev, [shift.id]: true }))
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/guard-replacement/attendance/check-out`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          attendance_id: recentAttendance.id
+        })
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        console.error('Check-out failed:', data)
+        return
+      }
+
+      setCheckInStatus(prev => ({ ...prev, [shift.id]: 'idle' }))
+      setCheckInTimes(prev => {
+        const newTimes = { ...prev }
+        delete newTimes[shift.id]
+        return newTimes
+      })
+      setElapsedTime(prev => {
+        const newTimes = { ...prev }
+        delete newTimes[shift.id]
+        return newTimes
+      })
+
+      // Refresh attendance records
+      if (user?.id) {
+        await fetchAttendance(user.id)
+      }
+
+      console.log('Check-out successful')
+    } catch (err) {
+      console.error('Check-out error:', err)
+    } finally {
+      setCheckInSubmitting(prev => ({ ...prev, [shift.id]: false }))
+    }
+  }
+
   const handleRefresh = async () => {
     if (!user?.id) return
     setLoading(true)
@@ -362,7 +493,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange })
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <div className="p-4 bg-surface-elevated rounded-lg border border-border">
                   <label className="text-sm font-semibold text-text-secondary block mb-2">Full Name</label>
-                  <p className="text-text-primary font-medium">{user?.full_name || 'N/A'}</p>
+                  <p className="text-text-primary font-medium">{user?.fullName || user?.full_name || 'N/A'}</p>
                 </div>
                 <div className="p-4 bg-surface-elevated rounded-lg border border-border">
                   <label className="text-sm font-semibold text-text-secondary block mb-2">Email</label>
@@ -370,11 +501,11 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange })
                 </div>
                 <div className="p-4 bg-surface-elevated rounded-lg border border-border">
                   <label className="text-sm font-semibold text-text-secondary block mb-2">Phone</label>
-                  <p className="text-text-primary font-medium">{user?.phone_number || 'N/A'}</p>
+                  <p className="text-text-primary font-medium">{user?.phoneNumber || user?.phone_number || 'N/A'}</p>
                 </div>
                 <div className="p-4 bg-surface-elevated rounded-lg border border-border">
                   <label className="text-sm font-semibold text-text-secondary block mb-2">License Number</label>
-                  <p className="text-text-primary font-medium">{user?.license_number || 'N/A'}</p>
+                  <p className="text-text-primary font-medium">{user?.licenseNumber || user?.license_number || 'N/A'}</p>
                 </div>
               </div>
               </section>
@@ -392,8 +523,8 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange })
                 <div>
                   <p className="text-sm font-semibold text-text-secondary mb-1">License Expiry Date</p>
                   <p className="text-lg font-bold text-text-primary">
-                    {user?.license_expiry_date
-                      ? new Date(user.license_expiry_date).toLocaleDateString()
+                    {(user?.licenseExpiryDate || user?.license_expiry_date)
+                      ? new Date(user.licenseExpiryDate || user.license_expiry_date).toLocaleDateString()
                       : 'N/A'}
                   </p>
                 </div>
@@ -418,6 +549,67 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange })
                   )}
                 </div>
               </div>
+              </section>
+            )}
+
+            {/* Active Shift Section */}
+            {activeSection === 'overview' && (
+              <section className="bg-surface rounded-lg shadow-md p-6">
+                <h2 className="text-xl font-bold text-text-primary mb-6 pb-3 border-b border-border">Today's Shifts</h2>
+                {activeShifts && activeShifts.length > 0 ? (
+                  <div className="space-y-4">
+                    {activeShifts.map((shift) => (
+                      <div key={shift.id} className="bg-surface-elevated rounded-lg border border-blue-500/40 p-6 flex items-center justify-between">
+                        <div className="flex-1">
+                          <h3 className="text-lg font-semibold text-text-primary mb-2">{shift.client_site}</h3>
+                          <div className="grid grid-cols-3 gap-4 text-sm">
+                            <div>
+                              <p className="text-text-secondary font-semibold">Time</p>
+                              <p className="text-text-primary">{formatShiftTime(shift.start_time, shift.end_time)}</p>
+                            </div>
+                            <div>
+                              <p className="text-text-secondary font-semibold">Status</p>
+                              <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
+                                checkInStatus[shift.id] === 'checked_in'
+                                  ? 'bg-green-500/15 text-green-300 ring-1 ring-green-500/30'
+                                  : 'bg-blue-500/15 text-blue-300 ring-1 ring-blue-500/30'
+                              }`}>
+                                {checkInStatus[shift.id] === 'checked_in' ? 'Checked In' : 'Ready to Check In'}
+                              </span>
+                            </div>
+                            {elapsedTime[shift.id] && (
+                              <div>
+                                <p className="text-text-secondary font-semibold">Elapsed Time</p>
+                                <p className="text-emerald-300 font-mono">{elapsedTime[shift.id]}</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex gap-3">
+                          {checkInStatus[shift.id] !== 'checked_in' ? (
+                            <button
+                              onClick={() => handleCheckIn(shift)}
+                              disabled={checkInSubmitting[shift.id]}
+                              className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-semibold disabled:opacity-70"
+                            >
+                              {checkInSubmitting[shift.id] ? 'Checking In...' : 'Check In'}
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleCheckOut(shift)}
+                              disabled={checkInSubmitting[shift.id]}
+                              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold disabled:opacity-70"
+                            >
+                              {checkInSubmitting[shift.id] ? 'Checking Out...' : 'Check Out'}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-center py-8 text-text-secondary">No shifts assigned for today</p>
+                )}
               </section>
             )}
 

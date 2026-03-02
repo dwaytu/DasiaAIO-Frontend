@@ -467,9 +467,9 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
       </div>
 
       {/* DESKTOP LAYOUT */}
-      <div className="hidden lg:flex min-h-screen w-screen" style={{ background: 'var(--bg-primary)' }}>
+      <div className="hidden lg:flex h-screen w-screen overflow-hidden" style={{ background: 'var(--bg-primary)' }}>
         {/* Left Section - Form */}
-        <div className="flex-1 flex flex-col relative max-h-screen overflow-y-auto" style={{
+        <div className="flex-1 flex flex-col relative h-full overflow-y-auto" style={{
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
         }}>          

@@ -17,7 +17,9 @@ interface User {
   full_name?: string
   phone_number?: string
   license_number?: string
+  license_issued_date?: string
   license_expiry_date?: string
+  address?: string
   [key: string]: any
 }
 

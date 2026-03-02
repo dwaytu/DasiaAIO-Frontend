@@ -46,7 +46,9 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
   const [email, setEmail] = useState<string>('')
   const [phoneNumber, setPhoneNumber] = useState<string>('')
   const [licenseNumber, setLicenseNumber] = useState<string>('')
+  const [licenseIssuedDate, setLicenseIssuedDate] = useState<string>('')
   const [licenseExpiryDate, setLicenseExpiryDate] = useState<string>('')
+  const [address, setAddress] = useState<string>('')
   const [role, setRole] = useState<string>('user')
   const [adminCode, setAdminCode] = useState<string>('')
   const [error, setError] = useState<string>('')
@@ -103,8 +105,8 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
           return
         }
 
-        if (role !== 'admin' && (!licenseNumber || !licenseExpiryDate)) {
-          setError('License number and expiry date are required for regular users')
+        if (role !== 'admin' && (!licenseNumber || !licenseIssuedDate || !licenseExpiryDate)) {
+          setError('License number, issued date, and expiry date are required for regular users')
           setIsLoading(false)
           return
         }
@@ -145,7 +147,9 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
         
         if (role !== 'admin') {
           requestBody.licenseNumber = licenseNumber
+          requestBody.licenseIssuedDate = licenseIssuedDate
           requestBody.licenseExpiryDate = licenseExpiryDate
+          requestBody.address = address
         }
         
         const response = await fetch(`${API_BASE_URL}/api/register`, {
@@ -173,7 +177,9 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
           setFullName('')
           setPhoneNumber('')
           setLicenseNumber('')
+          setLicenseIssuedDate('')
           setLicenseExpiryDate('')
+          setAddress('')
           setAdminCode('')
           setIsLoading(false)
           return
@@ -328,8 +334,18 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
               </div>
 
               <div>
+                <label htmlFor="licenseIssuedDate" className={labelClass} style={labelStyle}>License Issued Date</label>
+                <input id="licenseIssuedDate" type="date" value={licenseIssuedDate} onChange={(e: ChangeEvent<HTMLInputElement>) => setLicenseIssuedDate(e.target.value)} disabled={isLoading} className={inputClass} style={inputStyle} />
+              </div>
+
+              <div>
                 <label htmlFor="licenseExpiryDate" className={labelClass} style={labelStyle}>License Expiry Date</label>
                 <input id="licenseExpiryDate" type="date" value={licenseExpiryDate} onChange={(e: ChangeEvent<HTMLInputElement>) => setLicenseExpiryDate(e.target.value)} disabled={isLoading} className={inputClass} style={inputStyle} />
+              </div>
+
+              <div>
+                <label htmlFor="address" className={labelClass} style={labelStyle}>Full Address</label>
+                <textarea id="address" value={address} onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setAddress(e.target.value)} placeholder="Enter your complete address" disabled={isLoading} rows={2} className={inputClass} style={inputStyle} />
               </div>
             </>
           )}
@@ -467,8 +483,8 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
           )}
 
           {/* Form centered */}
-          <div className="flex-1 flex items-center justify-center p-8 relative z-10">
-          <div className="w-full max-w-md">
+          <div className="flex-1 flex items-center justify-center p-8 relative z-10 overflow-y-auto">
+          <div className="w-full max-w-md py-8">
             {!requiresVerification && !isRegistering && (
               <div className="mb-8">
                 <h1 className="text-4xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>Welcome Back!</h1>

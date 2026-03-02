@@ -21,7 +21,9 @@ const ProfileDashboard: FC<ProfileDashboardProps> = ({ user, onLogout, onBack, o
     phoneNumber: user.phoneNumber || '',
     email: user.email || '',
     licenseNumber: user.licenseNumber || '',
-    licenseExpiryDate: user.licenseExpiryDate ? new Date(user.licenseExpiryDate).toISOString().split('T')[0] : ''
+    licenseIssuedDate: user.licenseIssuedDate ? new Date(user.licenseIssuedDate).toISOString().split('T')[0] : '',
+    licenseExpiryDate: user.licenseExpiryDate ? new Date(user.licenseExpiryDate).toISOString().split('T')[0] : '',
+    address: user.address || ''
   })
   const [saving, setSaving] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -113,7 +115,9 @@ const ProfileDashboard: FC<ProfileDashboardProps> = ({ user, onLogout, onBack, o
           phoneNumber: formData.phoneNumber,
           email: formData.email,
           licenseNumber: formData.licenseNumber || undefined,
-          licenseExpiryDate: formData.licenseExpiryDate || undefined
+          licenseIssuedDate: formData.licenseIssuedDate || undefined,
+          licenseExpiryDate: formData.licenseExpiryDate || undefined,
+          address: formData.address || undefined
         })
       })
 
@@ -335,6 +339,17 @@ const ProfileDashboard: FC<ProfileDashboardProps> = ({ user, onLogout, onBack, o
                     </div>
 
                     <div>
+                      <label className="block text-sm font-semibold text-text-primary mb-2">License Issued Date</label>
+                      <input
+                        type="date"
+                        name="licenseIssuedDate"
+                        value={formData.licenseIssuedDate}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-2.5 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                    </div>
+
+                    <div>
                       <label className="block text-sm font-semibold text-text-primary mb-2">License Expiry Date</label>
                       <input
                         type="date"
@@ -342,6 +357,18 @@ const ProfileDashboard: FC<ProfileDashboardProps> = ({ user, onLogout, onBack, o
                         value={formData.licenseExpiryDate}
                         onChange={handleInputChange}
                         className="w-full px-4 py-2.5 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-semibold text-text-primary mb-2">Full Address</label>
+                      <textarea
+                        name="address"
+                        value={formData.address}
+                        onChange={handleInputChange}
+                        rows={2}
+                        className="w-full px-4 py-2.5 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        placeholder="Enter complete address"
                       />
                     </div>
                   </>

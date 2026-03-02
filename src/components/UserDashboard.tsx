@@ -11,7 +11,9 @@ interface User {
   full_name?: string
   phone_number?: string
   license_number?: string
+  license_issued_date?: string
   license_expiry_date?: string
+  address?: string
   [key: string]: any
 }
 
@@ -506,6 +508,18 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange })
                 <div className="p-4 bg-surface-elevated rounded-lg border border-border">
                   <label className="text-sm font-semibold text-text-secondary block mb-2">License Number</label>
                   <p className="text-text-primary font-medium">{user?.licenseNumber || user?.license_number || 'N/A'}</p>
+                </div>
+                <div className="p-4 bg-surface-elevated rounded-lg border border-border">
+                  <label className="text-sm font-semibold text-text-secondary block mb-2">License Issued Date</label>
+                  <p className="text-text-primary font-medium">
+                    {(user?.licenseIssuedDate || user?.license_issued_date)
+                      ? new Date(user.licenseIssuedDate || user.license_issued_date).toLocaleDateString()
+                      : 'N/A'}
+                  </p>
+                </div>
+                <div className="p-4 bg-surface-elevated rounded-lg border border-border md:col-span-2 lg:col-span-3">
+                  <label className="text-sm font-semibold text-text-secondary block mb-2">Address</label>
+                  <p className="text-text-primary font-medium">{user?.address || 'N/A'}</p>
                 </div>
               </div>
               </section>

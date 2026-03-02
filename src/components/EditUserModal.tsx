@@ -8,7 +8,9 @@ interface User {
   full_name?: string
   phone_number?: string
   license_number?: string
+  license_issued_date?: string
   license_expiry_date?: string
+  address?: string
 }
 
 interface EditUserModalProps {
@@ -22,14 +24,16 @@ const EditUserModal: FC<EditUserModalProps> = ({ user, onClose, onSave }) => {
     fullName: user?.full_name || '',
     phoneNumber: user?.phone_number || '',
     licenseNumber: user?.license_number || '',
+    licenseIssuedDate: user?.license_issued_date ? user.license_issued_date.split('T')[0] : '',
     licenseExpiryDate: user?.license_expiry_date ? user.license_expiry_date.split('T')[0] : '',
+    address: user?.address || '',
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   if (!user) return null
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData(prev => ({
       ...prev,
@@ -47,7 +51,9 @@ const EditUserModal: FC<EditUserModalProps> = ({ user, onClose, onSave }) => {
         full_name: formData.fullName,
         phone_number: formData.phoneNumber,
         license_number: formData.licenseNumber,
+        license_issued_date: formData.licenseIssuedDate,
         license_expiry_date: formData.licenseExpiryDate,
+        address: formData.address,
       })
       onClose()
     } catch (err) {
@@ -117,6 +123,18 @@ const EditUserModal: FC<EditUserModalProps> = ({ user, onClose, onSave }) => {
           </div>
 
           <div>
+            <label htmlFor="licenseIssuedDate" className="block text-sm font-semibold text-gray-700 mb-1">License Issued Date</label>
+            <input
+              type="date"
+              id="licenseIssuedDate"
+              name="licenseIssuedDate"
+              value={formData.licenseIssuedDate}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+            />
+          </div>
+
+          <div>
             <label htmlFor="licenseExpiryDate" className="block text-sm font-semibold text-gray-700 mb-1">License Expiry Date</label>
             <input
               type="date"
@@ -124,6 +142,19 @@ const EditUserModal: FC<EditUserModalProps> = ({ user, onClose, onSave }) => {
               name="licenseExpiryDate"
               value={formData.licenseExpiryDate}
               onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="address" className="block text-sm font-semibold text-gray-700 mb-1">Full Address</label>
+            <textarea
+              id="address"
+              name="address"
+              value={formData.address}
+              onChange={handleChange}
+              placeholder="Enter complete address"
+              rows={2}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
             />
           </div>

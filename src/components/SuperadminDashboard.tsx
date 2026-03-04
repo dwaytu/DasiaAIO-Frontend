@@ -45,9 +45,6 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false)
   const [missionFormData, setMissionFormData] = useState({
     mission_name: '',
-    guards_required: 2,
-    vehicles_required: 1,
-    firearms_required: 2,
     date: '',
     start_time: '',
     end_time: '',
@@ -60,8 +57,10 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   const [searchQuery, setSearchQuery] = useState<string>('')
   const [availableGuards, setAvailableGuards] = useState<User[]>([])
   const [availableFirearms, setAvailableFirearms] = useState<any[]>([])
+  const [availableVehicles, setAvailableVehicles] = useState<any[]>([])
   const [selectedGuards, setSelectedGuards] = useState<string[]>([])
   const [selectedFirearms, setSelectedFirearms] = useState<string[]>([])
+  const [selectedVehicles, setSelectedVehicles] = useState<string[]>([])
   const [showAddScheduleForm, setShowAddScheduleForm] = useState<boolean>(false)
   const [scheduleFormData, setScheduleFormData] = useState({
     guard_id: '',

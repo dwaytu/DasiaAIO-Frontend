@@ -276,8 +276,19 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        const errorMsg = errorData.message || 'Failed to assign mission'
+        let errorMsg = 'Failed to assign mission'
+        try {
+          const errorData = await response.json()
+          errorMsg = errorData.error || errorData.message || errorMsg
+        } catch {
+          // If response is not JSON, try to get text
+          try {
+            const text = await response.text()
+            errorMsg = text || errorMsg
+          } catch {
+            errorMsg = `Server error: ${response.status} ${response.statusText}`
+          }
+        }
         addNotification('error', 'Mission Assignment Failed', errorMsg)
         throw new Error(errorMsg)
       }
@@ -357,8 +368,19 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        const errorMsg = errorData.message || 'Failed to create schedule'
+        let errorMsg = 'Failed to create schedule'
+        try {
+          const errorData = await response.json()
+          errorMsg = errorData.error || errorData.message || errorMsg
+        } catch {
+          // If response is not JSON, try to get text
+          try {
+            const text = await response.text()
+            errorMsg = text || errorMsg
+          } catch {
+            errorMsg = `Server error: ${response.status} ${response.statusText}`
+          }
+        }
         addNotification('error', 'Schedule Creation Failed', errorMsg)
         throw new Error(errorMsg)
       }

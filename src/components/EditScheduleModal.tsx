@@ -96,8 +96,20 @@ const EditScheduleModal: FC<EditScheduleModalProps> = ({ shift, onClose, onSave,
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || 'Failed to update shift')
+        let errorMsg = 'Failed to update shift'
+        try {
+          const errorData = await response.json()
+          errorMsg = errorData.error || errorData.message || errorMsg
+        } catch {
+          // If response is not JSON, try to get text
+          try {
+            const text = await response.text()
+            errorMsg = text || errorMsg
+          } catch {
+            errorMsg = `Server error: ${response.status} ${response.statusText}`
+          }
+        }
+        throw new Error(errorMsg)
       }
 
       await onSave()
@@ -123,8 +135,20 @@ const EditScheduleModal: FC<EditScheduleModalProps> = ({ shift, onClose, onSave,
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || 'Failed to delete shift')
+        let errorMsg = 'Failed to delete shift'
+        try {
+          const errorData = await response.json()
+          errorMsg = errorData.error || errorData.message || errorMsg
+        } catch {
+          // If response is not JSON, try to get text
+          try {
+            const text = await response.text()
+            errorMsg = text || errorMsg
+          } catch {
+            errorMsg = `Server error: ${response.status} ${response.statusText}`
+          }
+        }
+        throw new Error(errorMsg)
       }
 
       await onDelete()

@@ -294,8 +294,20 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
       })
 
       if (!response.ok) {
-        const data = await response.json()
-        setScheduleStatus(data.error || 'Failed to request schedule.')
+        let errorMsg = 'Failed to request schedule.'
+        try {
+          const data = await response.json()
+          errorMsg = data.error || data.message || errorMsg
+        } catch {
+          // If response is not JSON, try to get text
+          try {
+            const text = await response.text()
+            errorMsg = text || errorMsg
+          } catch {
+            errorMsg = `Server error: ${response.status} ${response.statusText}`
+          }
+        }
+        setScheduleStatus(errorMsg)
         return
       }
 

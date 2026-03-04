@@ -146,7 +146,7 @@ const ProfileDashboard: FC<ProfileDashboardProps> = ({ user, onLogout, onBack, o
     return user.username.substring(0, 2).toUpperCase()
   }
 
-  const navItems = user.role === 'superadmin' || user.role === 'admin' ? [
+  const navItems = user.role === 'admin' ? [
     { view: 'dashboard', label: 'Dashboard', group: 'MAIN MENU' },
     { view: 'analytics', label: 'Analytics', group: 'MAIN MENU' },
     { view: 'schedule', label: 'Schedule', group: 'OPERATIONS' },

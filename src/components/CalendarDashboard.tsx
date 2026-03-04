@@ -101,7 +101,7 @@ const MONTH_NAMES = ['January','February','March','April','May','June','July','A
 const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
 
 const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewChange, activeView }) => {
-  const isAdmin = user.role === 'admin' || user.role === 'superadmin'
+  const isAdmin = user.role === 'admin'
 
   const today = new Date()
   const [currentYear, setCurrentYear] = useState(today.getFullYear())

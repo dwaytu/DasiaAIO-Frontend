@@ -574,15 +574,15 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                     <tbody className="divide-y divide-border-subtle">
                       {filteredUsers.map((u: User) => {
                         const initial = (u.full_name || u.username || '?').charAt(0).toUpperCase()
-                        const avatarColor = u.role === 'admin' || u.role === 'superadmin'
+                        // Admin gets purple, all others (users/guards) get teal
+                        const avatarColor = u.role === 'admin'
                           ? 'bg-purple-500/20 text-purple-300'
                           : 'bg-teal-500/20 text-teal-300'
-                        const rolePill = u.role === 'superadmin'
-                          ? 'bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30'
-                          : u.role === 'admin'
+                        const rolePill = u.role === 'admin'
                           ? 'bg-purple-500/15 text-purple-300 ring-1 ring-purple-500/30'
                           : 'bg-teal-500/15 text-teal-300 ring-1 ring-teal-500/30'
-                        const displayRole = u.role === 'user' ? 'guard' : u.role
+                        // Display 'guard' for all non-admin users
+                        const displayRole = u.role === 'admin' ? 'admin' : 'guard'
                         return (
                           <tr key={u.id} className="hover:bg-surface-hover/50 transition-colors">
                             <td className="px-5 py-3.5">
@@ -745,9 +745,9 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                         required
                         value={scheduleFormData.guard_id}
                         onChange={(e) => setScheduleFormData({...scheduleFormData, guard_id: e.target.value})}
-                        className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400"
+                        className="w-full px-4 py-2.5 border-2 border-border/50 rounded-xl bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 transition-all duration-200 hover:border-border [&>option]:py-2 [&>option]:px-2 [&>option:disabled]:text-text-tertiary [&>option:disabled]:italic"
                       >
-                        <option value="">-- Select a guard --</option>
+                        <option value="" className="text-text-tertiary italic">-- Select a guard --</option>
                         {availableGuards.map((guard) => (
                           <option key={guard.id} value={guard.id}>
                             {guard.full_name || guard.username}
@@ -876,23 +876,24 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                   <select
                     required
                     multiple
-                    size={4}
+                    size={6}
                     value={selectedGuards}
                     onChange={(e) => {
                       const selected = Array.from(e.target.selectedOptions, option => option.value)
                       setSelectedGuards(selected)
                     }}
-                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400"
+                    className="w-full px-4 py-2.5 border-2 border-border/50 rounded-xl bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 transition-all duration-200 hover:border-border [&>option]:py-2 [&>option]:px-3 [&>option:checked]:bg-teal-500/20 [&>option:checked]:text-teal-300 [&>option:hover]:bg-surface-hover [&>option:disabled]:text-text-tertiary [&>option:disabled]:italic"
+                    style={{ scrollbarWidth: 'thin', scrollbarColor: '#14b8a6 #1e293b' }}
                   >
-                    <option value="">-- Hold Ctrl/Cmd to select multiple guards --</option>
+                    <option value="" disabled className="text-text-tertiary italic">-- Hold Ctrl/Cmd to select multiple guards --</option>
                     {availableGuards.length > 0 ? (
                       availableGuards.map((guard) => (
-                        <option key={guard.id} value={guard.id}>
+                        <option key={guard.id} value={guard.id} className="py-2">
                           {guard.full_name || guard.username}
                         </option>
                       ))
                     ) : (
-                      <option disabled>No guards available</option>
+                      <option disabled className="text-text-tertiary italic">No guards available</option>
                     )}
                   </select>
                   <p className="text-xs text-text-tertiary mt-1">{selectedGuards.length} guard(s) selected (hold Ctrl/Cmd for multiple)</p>
@@ -903,23 +904,24 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                   <select
                     required
                     multiple
-                    size={4}
+                    size={6}
                     value={selectedFirearms}
                     onChange={(e) => {
                       const selected = Array.from(e.target.selectedOptions, option => option.value)
                       setSelectedFirearms(selected)
                     }}
-                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400"
+                    className="w-full px-4 py-2.5 border-2 border-border/50 rounded-xl bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all duration-200 hover:border-border [&>option]:py-2 [&>option]:px-3 [&>option:checked]:bg-indigo-500/20 [&>option:checked]:text-indigo-300 [&>option:hover]:bg-surface-hover [&>option:disabled]:text-text-tertiary [&>option:disabled]:italic"
+                    style={{ scrollbarWidth: 'thin', scrollbarColor: '#6366f1 #1e293b' }}
                   >
-                    <option value="">-- Hold Ctrl/Cmd to select multiple firearms --</option>
+                    <option value="" disabled className="text-text-tertiary italic">-- Hold Ctrl/Cmd to select multiple firearms --</option>
                     {availableFirearms.length > 0 ? (
                       availableFirearms.map((firearm) => (
-                        <option key={firearm.id} value={firearm.id}>
+                        <option key={firearm.id} value={firearm.id} className="py-2">
                           {firearm.serial_number} - {firearm.model} ({firearm.caliber})
                         </option>
                       ))
                     ) : (
-                      <option disabled>No available firearms in inventory</option>
+                      <option disabled className="text-text-tertiary italic">No available firearms in inventory</option>
                     )}
                   </select>
                   <p className="text-xs text-text-tertiary mt-1">{selectedFirearms.length} firearm(s) selected (hold Ctrl/Cmd for multiple)</p>
@@ -930,23 +932,24 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                   <select
                     required
                     multiple
-                    size={4}
+                    size={6}
                     value={selectedVehicles}
                     onChange={(e) => {
                       const selected = Array.from(e.target.selectedOptions, option => option.value)
                       setSelectedVehicles(selected)
                     }}
-                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400"
+                    className="w-full px-4 py-2.5 border-2 border-border/50 rounded-xl bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all duration-200 hover:border-border [&>option]:py-2 [&>option]:px-3 [&>option:checked]:bg-amber-500/20 [&>option:checked]:text-amber-300 [&>option:hover]:bg-surface-hover [&>option:disabled]:text-text-tertiary [&>option:disabled]:italic"
+                    style={{ scrollbarWidth: 'thin', scrollbarColor: '#f59e0b #1e293b' }}
                   >
-                    <option value="">-- Hold Ctrl/Cmd to select multiple vehicles --</option>
+                    <option value="" disabled className="text-text-tertiary italic">-- Hold Ctrl/Cmd to select multiple vehicles --</option>
                     {availableVehicles.length > 0 ? (
                       availableVehicles.map((vehicle) => (
-                        <option key={vehicle.id} value={vehicle.id}>
+                        <option key={vehicle.id} value={vehicle.id} className="py-2">
                           {vehicle.model} - {vehicle.license_plate} (Capacity: {vehicle.capacity_kg}kg)
                         </option>
                       ))
                     ) : (
-                      <option disabled>No available vehicles</option>
+                      <option disabled className="text-text-tertiary italic">No available vehicles</option>
                     )}
                   </select>
                   <p className="text-xs text-text-tertiary mt-1">{selectedVehicles.length} vehicle(s) selected (hold Ctrl/Cmd for multiple)</p>

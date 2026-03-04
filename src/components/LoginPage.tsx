@@ -222,7 +222,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
         setIsLoading(false)
         const user: User = {
           ...data.user,
-          role: data.user.role as 'admin' | 'superadmin' | 'user' | 'guard'
+          role: data.user.role as 'admin' | 'user' | 'guard'
         }
         onLogin(user)
       }

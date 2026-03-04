@@ -43,14 +43,11 @@ const AccountManager: FC<AccountManagerProps> = ({ user, onLogout, onNavigateToP
   // Get role badge color
   const getRoleBadgeColor = () => {
     switch (user.role) {
-      case 'superadmin':
-        return { background: 'rgba(139,92,246,0.2)', color: '#A78BFA', border: '1px solid rgba(139,92,246,0.3)' }
       case 'admin':
-        return { background: 'rgba(59,130,246,0.2)', color: '#60A5FA', border: '1px solid rgba(59,130,246,0.3)' }
+        return { background: 'rgba(139,92,246,0.2)', color: '#A78BFA', border: '1px solid rgba(139,92,246,0.3)' }
       case 'user':
-        return { background: 'rgba(34,197,94,0.2)', color: '#4ADE80', border: '1px solid rgba(34,197,94,0.3)' }
       case 'guard':
-        return { background: 'rgba(251,146,60,0.2)', color: '#FB923C', border: '1px solid rgba(251,146,60,0.3)' }
+        return { background: 'rgba(20,184,166,0.2)', color: '#5EEAD4', border: '1px solid rgba(20,184,166,0.3)' }
       default:
         return { background: 'rgba(148,163,184,0.2)', color: '#94A3B8', border: '1px solid rgba(148,163,184,0.3)' }
     }

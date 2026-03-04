@@ -58,6 +58,18 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   const [missionResponse, setMissionResponse] = useState<any>(null)
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [searchQuery, setSearchQuery] = useState<string>('')
+  const [availableGuards, setAvailableGuards] = useState<User[]>([])
+  const [availableFirearms, setAvailableFirearms] = useState<any[]>([])
+  const [selectedGuards, setSelectedGuards] = useState<string[]>([])
+  const [selectedFirearms, setSelectedFirearms] = useState<string[]>([])
+  const [showAddScheduleForm, setShowAddScheduleForm] = useState<boolean>(false)
+  const [scheduleFormData, setScheduleFormData] = useState({
+    guard_id: '',
+    client_site: '',
+    date: '',
+    start_time: '',
+    end_time: ''
+  })
   const navItems = [
     { view: 'dashboard', label: 'Dashboard', group: 'MAIN MENU' },
     { view: 'calendar', label: 'Calendar', group: 'MAIN MENU' },
@@ -99,6 +111,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
 
   useEffect(() => {
     fetchData()
+    fetchGuardsAndFirearms()
     if (activeSection === 'schedule') {
       fetchShifts()
     } else if (activeSection === 'missions') {
@@ -188,11 +201,47 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
     }
   }
 
+  const fetchGuardsAndFirearms = async () => {
+    try {
+      // Fetch guards (users with role 'guard')
+      const usersResponse = await fetch(`${API_BASE_URL}/api/users`)
+      if (usersResponse.ok) {
+        const usersData = await usersResponse.json()
+        const allUsers = Array.isArray(usersData) ? usersData : (usersData.users || [])
+        const guards = allUsers.filter((u: User) => u.role === 'guard')
+        setAvailableGuards(guards)
+      }
+
+      // Fetch firearms
+      const firearmsResponse = await fetch(`${API_BASE_URL}/api/firearms`)
+      if (firearmsResponse.ok) {
+        const firearmsData = await firearmsResponse.json()
+        const firearms = Array.isArray(firearmsData) ? firearmsData : (firearmsData.firearms || [])
+        setAvailableFirearms(firearms)
+      }
+    } catch (err) {
+      console.error('Error fetching guards and firearms:', err)
+    }
+  }
+
   const handleMissionSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
       setMissionsLoading(true)
       setError('')
+      
+      // Validate selections
+      if (selectedGuards.length === 0) {
+        addNotification('error', 'Validation Error', 'Please select at least one guard')
+        setMissionsLoading(false)
+        return
+      }
+      if (selectedFirearms.length === 0) {
+        addNotification('error', 'Validation Error', 'Please select at least one firearm')
+        setMissionsLoading(false)
+        return
+      }
+      
       const token = localStorage.getItem('token')
       const response = await fetch(`${API_BASE_URL}/api/missions/assign`, {
         method: 'POST',
@@ -200,7 +249,11 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify(missionFormData)
+        body: JSON.stringify({
+          ...missionFormData,
+          guards_required: selectedGuards.length,
+          firearms_required: selectedFirearms.length
+        })
       })
 
       if (!response.ok) {
@@ -233,6 +286,8 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
         priority: 'medium',
         special_requirements: ''
       })
+      setSelectedGuards([])
+      setSelectedFirearms([])
 
       // Refresh missions list
       await fetchMissions()
@@ -253,6 +308,62 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
       onViewChange(view)
     } else {
       console.log('No handler for view:', view);
+    }
+  }
+
+  const handleScheduleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      setShiftsLoading(true)
+      setError('')
+      
+      // Combine date and times to create datetime strings
+      const startDateTime = `${scheduleFormData.date}T${scheduleFormData.start_time}:00Z`
+      const endDateTime = `${scheduleFormData.date}T${scheduleFormData.end_time}:00Z`
+      
+      const payload = {
+        guard_id: scheduleFormData.guard_id,
+        client_site: scheduleFormData.client_site,
+        start_time: startDateTime,
+        end_time: endDateTime,
+        status: 'scheduled'
+      }
+
+      const token = localStorage.getItem('token')
+      const response = await fetch(`${API_BASE_URL}/api/guard-replacement/shifts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        const errorMsg = errorData.message || 'Failed to create schedule'
+        addNotification('error', 'Schedule Creation Failed', errorMsg)
+        throw new Error(errorMsg)
+      }
+
+      addNotification('success', 'Schedule Created', 'Guard schedule created successfully')
+      
+      // Reset form
+      setScheduleFormData({
+        guard_id: '',
+        client_site: '',
+        date: '',
+        start_time: '',
+        end_time: ''
+      })
+      setShowAddScheduleForm(false)
+
+      // Refresh shifts list
+      await fetchShifts()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create schedule')
+    } finally {
+      setShiftsLoading(false)
     }
   }
 
@@ -524,11 +635,21 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
             {shiftsLoading ? (
               <div className="text-center py-12 text-text-secondary font-medium">Loading schedules...</div>
             ) : (
-              <section className="flex flex-col flex-1 min-h-0 w-full rounded-2xl overflow-hidden table-glass">
-                <div className="flex-shrink-0 px-6 py-5 border-b border-border-subtle">
-                  <h2 className="text-xl font-bold text-text-primary">All Guard Schedules</h2>
-                </div>
-                {shifts.length > 0 ? (
+              <>
+                <section className="flex flex-col flex-1 min-h-0 w-full rounded-2xl overflow-hidden table-glass mb-4">
+                  <div className="flex-shrink-0 px-6 py-5 border-b border-border-subtle flex justify-between items-center">
+                    <h2 className="text-xl font-bold text-text-primary">All Guard Schedules</h2>
+                    <button
+                      onClick={() => setShowAddScheduleForm(!showAddScheduleForm)}
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                    >
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      Add Schedule
+                    </button>
+                  </div>
+                  {shifts.length > 0 ? (
                   <div className="flex-1 min-h-0 overflow-auto">
                     <table className="w-full border-collapse min-w-[600px]">
                       <thead className="thead-glass">
@@ -581,6 +702,104 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                   <p className="text-center text-text-secondary py-8 italic text-sm md:text-base">No schedules found</p>
                 )}
               </section>
+
+              {showAddScheduleForm && (
+                <section className="w-full table-glass rounded-2xl p-6 md:p-8">
+                  <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-2xl font-bold text-text-primary">Add New Schedule</h2>
+                    <button
+                      onClick={() => setShowAddScheduleForm(false)}
+                      className="text-text-tertiary hover:text-text-primary transition-colors"
+                      title="Close form"
+                    >
+                      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                  
+                  {error && (
+                    <div className="mb-4 p-3 bg-red-50 border border-red-300 text-red-800 rounded-lg text-sm">
+                      {error}
+                    </div>
+                  )}
+                  
+                  <form onSubmit={handleScheduleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-semibold text-text-primary mb-1">Select Guard</label>
+                      <select
+                        required
+                        value={scheduleFormData.guard_id}
+                        onChange={(e) => setScheduleFormData({...scheduleFormData, guard_id: e.target.value})}
+                        className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400"
+                      >
+                        <option value="">-- Select a guard --</option>
+                        {availableGuards.map((guard) => (
+                          <option key={guard.id} value={guard.id}>
+                            {guard.full_name || guard.username} ({guard.email})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-semibold text-text-primary mb-1">Site/Location</label>
+                      <input
+                        type="text"
+                        required
+                        value={scheduleFormData.client_site}
+                        onChange={(e) => setScheduleFormData({...scheduleFormData, client_site: e.target.value})}
+                        placeholder="Enter site or location"
+                        className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-text-primary mb-1">Date</label>
+                      <input
+                        type="date"
+                        required
+                        value={scheduleFormData.date}
+                        onChange={(e) => setScheduleFormData({...scheduleFormData, date: e.target.value})}
+                        className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-text-primary mb-1">Start Time</label>
+                      <input
+                        type="time"
+                        required
+                        value={scheduleFormData.start_time}
+                        onChange={(e) => setScheduleFormData({...scheduleFormData, start_time: e.target.value})}
+                        className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-text-primary mb-1">End Time</label>
+                      <input
+                        type="time"
+                        required
+                        value={scheduleFormData.end_time}
+                        onChange={(e) => setScheduleFormData({...scheduleFormData, end_time: e.target.value})}
+                        className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400"
+                      />
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <button
+                        type="submit"
+                        disabled={shiftsLoading}
+                        className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-semibold py-3 rounded-lg transition-colors"
+                      >
+                        {shiftsLoading ? 'Creating Schedule...' : 'Create Schedule'}
+                      </button>
+                    </div>
+                  </form>
+                </section>
+              )}
+            </>
             )}
           </div>
         ) : activeSection === 'missions' ? (
@@ -638,30 +857,64 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-text-primary mb-1">Guards Required</label>
-                  <input
-                    type="number"
-                    required
-                    min="1"
-                    max="10"
-                    value={missionFormData.guards_required}
-                    onChange={(e) => setMissionFormData({...missionFormData, guards_required: parseInt(e.target.value)})}
-                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400"
-                  />
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-semibold text-text-primary mb-1">Select Guards</label>
+                  <div className="border border-border rounded-lg bg-background p-3 max-h-40 overflow-y-auto">
+                    {availableGuards.length > 0 ? (
+                      availableGuards.map((guard) => (
+                        <label key={guard.id} className="flex items-center gap-2 py-1 hover:bg-surface-hover rounded px-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={selectedGuards.includes(guard.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedGuards([...selectedGuards, guard.id])
+                              } else {
+                                setSelectedGuards(selectedGuards.filter(id => id !== guard.id))
+                              }
+                            }}
+                            className="w-4 h-4 text-indigo-600 border-border rounded focus:ring-indigo-500"
+                          />
+                          <span className="text-text-primary text-sm">
+                            {guard.full_name || guard.username} ({guard.email})
+                          </span>
+                        </label>
+                      ))
+                    ) : (
+                      <p className="text-text-tertiary text-sm">No guards available</p>
+                    )}
+                  </div>
+                  <p className="text-xs text-text-tertiary mt-1">{selectedGuards.length} guard(s) selected</p>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-text-primary mb-1">Firearms Required</label>
-                  <input
-                    type="number"
-                    required
-                    min="1"
-                    max="10"
-                    value={missionFormData.firearms_required}
-                    onChange={(e) => setMissionFormData({...missionFormData, firearms_required: parseInt(e.target.value)})}
-                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400"
-                  />
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-semibold text-text-primary mb-1">Select Firearms</label>
+                  <div className="border border-border rounded-lg bg-background p-3 max-h-40 overflow-y-auto">
+                    {availableFirearms.length > 0 ? (
+                      availableFirearms.map((firearm) => (
+                        <label key={firearm.id} className="flex items-center gap-2 py-1 hover:bg-surface-hover rounded px-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={selectedFirearms.includes(firearm.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedFirearms([...selectedFirearms, firearm.id])
+                              } else {
+                                setSelectedFirearms(selectedFirearms.filter(id => id !== firearm.id))
+                              }
+                            }}
+                            className="w-4 h-4 text-indigo-600 border-border rounded focus:ring-indigo-500"
+                          />
+                          <span className="text-text-primary text-sm">
+                            {firearm.serial_number} - {firearm.type} ({firearm.status})
+                          </span>
+                        </label>
+                      ))
+                    ) : (
+                      <p className="text-text-tertiary text-sm">No firearms available</p>
+                    )}
+                  </div>
+                  <p className="text-xs text-text-tertiary mt-1">{selectedFirearms.length} firearm(s) selected</p>
                 </div>
 
                 <div>

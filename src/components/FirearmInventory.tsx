@@ -59,7 +59,9 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
       const response = await fetch(`${API_BASE_URL}/api/firearms`)
       if (response.ok) {
         const data = await response.json()
-        setFirearms(data.firearms || [])
+        // Backend returns array directly, not wrapped in object
+        const firearmsList = Array.isArray(data) ? data : (data.firearms || [])
+        setFirearms(firearmsList)
       }
     } catch (err) {
       console.error('Error fetching firearms:', err)

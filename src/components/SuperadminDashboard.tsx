@@ -212,10 +212,11 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
         setAvailableGuards(guards)
       }
 
-      // Fetch firearms
+      // Fetch firearms (backend returns array directly)
       const firearmsResponse = await fetch(`${API_BASE_URL}/api/firearms`)
       if (firearmsResponse.ok) {
         const firearmsData = await firearmsResponse.json()
+        // Backend returns array directly, handle both formats for compatibility
         const firearms = Array.isArray(firearmsData) ? firearmsData : (firearmsData.firearms || [])
         setAvailableFirearms(firearms)
       }

@@ -576,16 +576,13 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                         const initial = (u.full_name || u.username || '?').charAt(0).toUpperCase()
                         const avatarColor = u.role === 'admin' || u.role === 'superadmin'
                           ? 'bg-purple-500/20 text-purple-300'
-                          : u.role === 'guard'
-                          ? 'bg-teal-500/20 text-teal-300'
-                          : 'bg-blue-500/20 text-blue-300'
+                          : 'bg-teal-500/20 text-teal-300'
                         const rolePill = u.role === 'superadmin'
                           ? 'bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30'
                           : u.role === 'admin'
                           ? 'bg-purple-500/15 text-purple-300 ring-1 ring-purple-500/30'
-                          : u.role === 'guard'
-                          ? 'bg-teal-500/15 text-teal-300 ring-1 ring-teal-500/30'
-                          : 'bg-zinc-500/15 text-zinc-400 ring-1 ring-zinc-500/30'
+                          : 'bg-teal-500/15 text-teal-300 ring-1 ring-teal-500/30'
+                        const displayRole = u.role === 'user' ? 'guard' : u.role
                         return (
                           <tr key={u.id} className="hover:bg-surface-hover/50 transition-colors">
                             <td className="px-5 py-3.5">
@@ -602,7 +599,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                             <td className="px-5 py-3.5 text-sm text-text-secondary">{u.username}</td>
                             <td className="px-5 py-3.5">
                               <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wide ${rolePill}`}>
-                                {u.role}
+                                {displayRole}
                               </span>
                             </td>
                             <td className="px-5 py-3.5">
@@ -753,7 +750,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                         <option value="">-- Select a guard --</option>
                         {availableGuards.map((guard) => (
                           <option key={guard.id} value={guard.id}>
-                            {guard.full_name || guard.username} ({guard.email})
+                            {guard.full_name || guard.username}
                           </option>
                         ))}
                       </select>
@@ -891,7 +888,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                     {availableGuards.length > 0 ? (
                       availableGuards.map((guard) => (
                         <option key={guard.id} value={guard.id}>
-                          {guard.full_name || guard.username} ({guard.email})
+                          {guard.full_name || guard.username}
                         </option>
                       ))
                     ) : (

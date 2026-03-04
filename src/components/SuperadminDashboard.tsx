@@ -58,9 +58,9 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   const [availableGuards, setAvailableGuards] = useState<User[]>([])
   const [availableFirearms, setAvailableFirearms] = useState<any[]>([])
   const [availableVehicles, setAvailableVehicles] = useState<any[]>([])
-  const [selectedGuards, setSelectedGuards] = useState<string[]>([])
-  const [selectedFirearms, setSelectedFirearms] = useState<string[]>([])
-  const [selectedVehicles, setSelectedVehicles] = useState<string[]>([])
+  const [selectedGuards, setSelectedGuards] = useState<string>('')
+  const [selectedFirearms, setSelectedFirearms] = useState<string>('')
+  const [selectedVehicles, setSelectedVehicles] = useState<string>('')
   const [showAddScheduleForm, setShowAddScheduleForm] = useState<boolean>(false)
   const [scheduleFormData, setScheduleFormData] = useState({
     guard_id: '',
@@ -244,18 +244,18 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
       setError('')
       
       // Validate selections
-      if (selectedGuards.length === 0) {
-        addNotification('error', 'Validation Error', 'Please select at least one guard')
+      if (!selectedGuards) {
+        addNotification('error', 'Validation Error', 'Please select a guard')
         setMissionsLoading(false)
         return
       }
-      if (selectedFirearms.length === 0) {
-        addNotification('error', 'Validation Error', 'Please select at least one firearm')
+      if (!selectedFirearms) {
+        addNotification('error', 'Validation Error', 'Please select a firearm')
         setMissionsLoading(false)
         return
       }
-      if (selectedVehicles.length === 0) {
-        addNotification('error', 'Validation Error', 'Please select at least one vehicle')
+      if (!selectedVehicles) {
+        addNotification('error', 'Validation Error', 'Please select a vehicle')
         setMissionsLoading(false)
         return
       }
@@ -269,9 +269,9 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
         },
         body: JSON.stringify({
           ...missionFormData,
-          guards_required: selectedGuards.length,
-          firearms_required: selectedFirearms.length,
-          vehicles_required: selectedVehicles.length
+          guards_required: selectedGuards ? 1 : 0,
+          firearms_required: selectedFirearms ? 1 : 0,
+          vehicles_required: selectedVehicles ? 1 : 0
         })
       })
 
@@ -302,9 +302,9 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
         priority: 'medium',
         special_requirements: ''
       })
-      setSelectedGuards([])
-      setSelectedFirearms([])
-      setSelectedVehicles([])
+      setSelectedGuards('')
+      setSelectedFirearms('')
+      setSelectedVehicles('')
 
       // Refresh missions list
       await fetchMissions()
@@ -871,88 +871,67 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                   />
                 </div>
 
-                <div className="md:col-span-2">
+                <div>
                   <label className="block text-sm font-semibold text-text-primary mb-1">Select Guard</label>
                   <select
                     required
-                    multiple
-                    size={6}
                     value={selectedGuards}
-                    onChange={(e) => {
-                      const selected = Array.from(e.target.selectedOptions, option => option.value)
-                      setSelectedGuards(selected)
-                    }}
-                    className="w-full px-4 py-2.5 border-2 border-border/50 rounded-xl bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 transition-all duration-200 hover:border-border [&>option]:py-2 [&>option]:px-3 [&>option:checked]:bg-teal-500/20 [&>option:checked]:text-teal-300 [&>option:hover]:bg-surface-hover [&>option:disabled]:text-text-tertiary [&>option:disabled]:italic"
-                    style={{ scrollbarWidth: 'thin', scrollbarColor: '#14b8a6 #1e293b' }}
+                    onChange={(e) => setSelectedGuards(e.target.value)}
+                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 transition-all duration-200"
                   >
-                    <option value="" disabled className="text-text-tertiary italic">-- Hold Ctrl/Cmd to select multiple guards --</option>
+                    <option value="">-- Select a guard --</option>
                     {availableGuards.length > 0 ? (
                       availableGuards.map((guard) => (
-                        <option key={guard.id} value={guard.id} className="py-2">
+                        <option key={guard.id} value={guard.id}>
                           {guard.full_name || guard.username}
                         </option>
                       ))
                     ) : (
-                      <option disabled className="text-text-tertiary italic">No guards available</option>
+                      <option disabled>No guards available</option>
                     )}
                   </select>
-                  <p className="text-xs text-text-tertiary mt-1">{selectedGuards.length} guard(s) selected (hold Ctrl/Cmd for multiple)</p>
                 </div>
 
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-semibold text-text-primary mb-1">Select Firearms</label>
+                <div>
+                  <label className="block text-sm font-semibold text-text-primary mb-1">Select Firearm</label>
                   <select
                     required
-                    multiple
-                    size={6}
                     value={selectedFirearms}
-                    onChange={(e) => {
-                      const selected = Array.from(e.target.selectedOptions, option => option.value)
-                      setSelectedFirearms(selected)
-                    }}
-                    className="w-full px-4 py-2.5 border-2 border-border/50 rounded-xl bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all duration-200 hover:border-border [&>option]:py-2 [&>option]:px-3 [&>option:checked]:bg-indigo-500/20 [&>option:checked]:text-indigo-300 [&>option:hover]:bg-surface-hover [&>option:disabled]:text-text-tertiary [&>option:disabled]:italic"
-                    style={{ scrollbarWidth: 'thin', scrollbarColor: '#6366f1 #1e293b' }}
+                    onChange={(e) => setSelectedFirearms(e.target.value)}
+                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all duration-200"
                   >
-                    <option value="" disabled className="text-text-tertiary italic">-- Hold Ctrl/Cmd to select multiple firearms --</option>
+                    <option value="">-- Select a firearm --</option>
                     {availableFirearms.length > 0 ? (
                       availableFirearms.map((firearm) => (
-                        <option key={firearm.id} value={firearm.id} className="py-2">
+                        <option key={firearm.id} value={firearm.id}>
                           {firearm.serial_number} - {firearm.model} ({firearm.caliber})
                         </option>
                       ))
                     ) : (
-                      <option disabled className="text-text-tertiary italic">No available firearms in inventory</option>
+                      <option disabled>No available firearms in inventory</option>
                     )}
                   </select>
-                  <p className="text-xs text-text-tertiary mt-1">{selectedFirearms.length} firearm(s) selected (hold Ctrl/Cmd for multiple)</p>
                 </div>
 
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-semibold text-text-primary mb-1">Select Vehicles</label>
+                <div>
+                  <label className="block text-sm font-semibold text-text-primary mb-1">Select Vehicle</label>
                   <select
                     required
-                    multiple
-                    size={6}
                     value={selectedVehicles}
-                    onChange={(e) => {
-                      const selected = Array.from(e.target.selectedOptions, option => option.value)
-                      setSelectedVehicles(selected)
-                    }}
-                    className="w-full px-4 py-2.5 border-2 border-border/50 rounded-xl bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all duration-200 hover:border-border [&>option]:py-2 [&>option]:px-3 [&>option:checked]:bg-amber-500/20 [&>option:checked]:text-amber-300 [&>option:hover]:bg-surface-hover [&>option:disabled]:text-text-tertiary [&>option:disabled]:italic"
-                    style={{ scrollbarWidth: 'thin', scrollbarColor: '#f59e0b #1e293b' }}
+                    onChange={(e) => setSelectedVehicles(e.target.value)}
+                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all duration-200"
                   >
-                    <option value="" disabled className="text-text-tertiary italic">-- Hold Ctrl/Cmd to select multiple vehicles --</option>
+                    <option value="">-- Select a vehicle --</option>
                     {availableVehicles.length > 0 ? (
                       availableVehicles.map((vehicle) => (
-                        <option key={vehicle.id} value={vehicle.id} className="py-2">
+                        <option key={vehicle.id} value={vehicle.id}>
                           {vehicle.model} - {vehicle.license_plate} (Capacity: {vehicle.capacity_kg}kg)
                         </option>
                       ))
                     ) : (
-                      <option disabled className="text-text-tertiary italic">No available vehicles</option>
+                      <option disabled>No available vehicles</option>
                     )}
                   </select>
-                  <p className="text-xs text-text-tertiary mt-1">{selectedVehicles.length} vehicle(s) selected (hold Ctrl/Cmd for multiple)</p>
                 </div>
 
                 <div>

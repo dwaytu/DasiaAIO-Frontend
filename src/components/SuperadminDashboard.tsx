@@ -203,12 +203,13 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
 
   const fetchGuardsAndFirearms = async () => {
     try {
-      // Fetch guards (users with role 'guard')
+      // Fetch all users (all users are guards)
       const usersResponse = await fetch(`${API_BASE_URL}/api/users`)
       if (usersResponse.ok) {
         const usersData = await usersResponse.json()
         const allUsers = Array.isArray(usersData) ? usersData : (usersData.users || [])
-        const guards = allUsers.filter((u: User) => u.role === 'guard')
+        // Filter out admin users, only get regular users (guards)
+        const guards = allUsers.filter((u: User) => u.role !== 'admin')
         setAvailableGuards(guards)
       }
 
@@ -218,10 +219,22 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
         const firearmsData = await firearmsResponse.json()
         // Backend returns array directly, handle both formats for compatibility
         const firearms = Array.isArray(firearmsData) ? firearmsData : (firearmsData.firearms || [])
-        setAvailableFirearms(firearms)
+        // Only show available firearms
+        const availableOnly = firearms.filter((f: any) => f.status === 'available')
+        setAvailableFirearms(availableOnly)
+      }
+
+      // Fetch armored cars (vehicles)
+      const vehiclesResponse = await fetch(`${API_BASE_URL}/api/armored-cars`)
+      if (vehiclesResponse.ok) {
+        const vehiclesData = await vehiclesResponse.json()
+        const vehicles = Array.isArray(vehiclesData) ? vehiclesData : (vehiclesData.armored_cars || vehiclesData.vehicles || [])
+        // Only show available vehicles
+        const availableVehicles = vehicles.filter((v: any) => v.status === 'available')
+        setAvailableVehicles(availableVehicles)
       }
     } catch (err) {
-      console.error('Error fetching guards and firearms:', err)
+      console.error('Error fetching guards, firearms, and vehicles:', err)
     }
   }
 
@@ -242,6 +255,11 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
         setMissionsLoading(false)
         return
       }
+      if (selectedVehicles.length === 0) {
+        addNotification('error', 'Validation Error', 'Please select at least one vehicle')
+        setMissionsLoading(false)
+        return
+      }
       
       const token = localStorage.getItem('token')
       const response = await fetch(`${API_BASE_URL}/api/missions/assign`, {
@@ -253,7 +271,8 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
         body: JSON.stringify({
           ...missionFormData,
           guards_required: selectedGuards.length,
-          firearms_required: selectedFirearms.length
+          firearms_required: selectedFirearms.length,
+          vehicles_required: selectedVehicles.length
         })
       })
 
@@ -277,9 +296,6 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
       // Reset form
       setMissionFormData({
         mission_name: '',
-        guards_required: 2,
-        vehicles_required: 1,
-        firearms_required: 2,
         date: '',
         start_time: '',
         end_time: '',
@@ -289,6 +305,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
       })
       setSelectedGuards([])
       setSelectedFirearms([])
+      setSelectedVehicles([])
 
       // Refresh missions list
       await fetchMissions()
@@ -859,76 +876,84 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-semibold text-text-primary mb-1">Select Guards</label>
-                  <div className="border border-border rounded-lg bg-background p-3 max-h-40 overflow-y-auto">
+                  <label className="block text-sm font-semibold text-text-primary mb-1">Select Guard</label>
+                  <select
+                    required
+                    multiple
+                    size={4}
+                    value={selectedGuards}
+                    onChange={(e) => {
+                      const selected = Array.from(e.target.selectedOptions, option => option.value)
+                      setSelectedGuards(selected)
+                    }}
+                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400"
+                  >
+                    <option value="">-- Hold Ctrl/Cmd to select multiple guards --</option>
                     {availableGuards.length > 0 ? (
                       availableGuards.map((guard) => (
-                        <label key={guard.id} className="flex items-center gap-2 py-1 hover:bg-surface-hover rounded px-2 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={selectedGuards.includes(guard.id)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSelectedGuards([...selectedGuards, guard.id])
-                              } else {
-                                setSelectedGuards(selectedGuards.filter(id => id !== guard.id))
-                              }
-                            }}
-                            className="w-4 h-4 text-indigo-600 border-border rounded focus:ring-indigo-500"
-                          />
-                          <span className="text-text-primary text-sm">
-                            {guard.full_name || guard.username} ({guard.email})
-                          </span>
-                        </label>
+                        <option key={guard.id} value={guard.id}>
+                          {guard.full_name || guard.username} ({guard.email})
+                        </option>
                       ))
                     ) : (
-                      <p className="text-text-tertiary text-sm">No guards available</p>
+                      <option disabled>No guards available</option>
                     )}
-                  </div>
-                  <p className="text-xs text-text-tertiary mt-1">{selectedGuards.length} guard(s) selected</p>
+                  </select>
+                  <p className="text-xs text-text-tertiary mt-1">{selectedGuards.length} guard(s) selected (hold Ctrl/Cmd for multiple)</p>
                 </div>
 
                 <div className="md:col-span-2">
                   <label className="block text-sm font-semibold text-text-primary mb-1">Select Firearms</label>
-                  <div className="border border-border rounded-lg bg-background p-3 max-h-40 overflow-y-auto">
+                  <select
+                    required
+                    multiple
+                    size={4}
+                    value={selectedFirearms}
+                    onChange={(e) => {
+                      const selected = Array.from(e.target.selectedOptions, option => option.value)
+                      setSelectedFirearms(selected)
+                    }}
+                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400"
+                  >
+                    <option value="">-- Hold Ctrl/Cmd to select multiple firearms --</option>
                     {availableFirearms.length > 0 ? (
                       availableFirearms.map((firearm) => (
-                        <label key={firearm.id} className="flex items-center gap-2 py-1 hover:bg-surface-hover rounded px-2 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={selectedFirearms.includes(firearm.id)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSelectedFirearms([...selectedFirearms, firearm.id])
-                              } else {
-                                setSelectedFirearms(selectedFirearms.filter(id => id !== firearm.id))
-                              }
-                            }}
-                            className="w-4 h-4 text-indigo-600 border-border rounded focus:ring-indigo-500"
-                          />
-                          <span className="text-text-primary text-sm">
-                            {firearm.serial_number} - {firearm.type} ({firearm.status})
-                          </span>
-                        </label>
+                        <option key={firearm.id} value={firearm.id}>
+                          {firearm.serial_number} - {firearm.model} ({firearm.caliber})
+                        </option>
                       ))
                     ) : (
-                      <p className="text-text-tertiary text-sm">No firearms available</p>
+                      <option disabled>No available firearms in inventory</option>
                     )}
-                  </div>
-                  <p className="text-xs text-text-tertiary mt-1">{selectedFirearms.length} firearm(s) selected</p>
+                  </select>
+                  <p className="text-xs text-text-tertiary mt-1">{selectedFirearms.length} firearm(s) selected (hold Ctrl/Cmd for multiple)</p>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-text-primary mb-1">Vehicles Required</label>
-                  <input
-                    type="number"
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-semibold text-text-primary mb-1">Select Vehicles</label>
+                  <select
                     required
-                    min="1"
-                    max="5"
-                    value={missionFormData.vehicles_required}
-                    onChange={(e) => setMissionFormData({...missionFormData, vehicles_required: parseInt(e.target.value)})}
+                    multiple
+                    size={4}
+                    value={selectedVehicles}
+                    onChange={(e) => {
+                      const selected = Array.from(e.target.selectedOptions, option => option.value)
+                      setSelectedVehicles(selected)
+                    }}
                     className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400"
-                  />
+                  >
+                    <option value="">-- Hold Ctrl/Cmd to select multiple vehicles --</option>
+                    {availableVehicles.length > 0 ? (
+                      availableVehicles.map((vehicle) => (
+                        <option key={vehicle.id} value={vehicle.id}>
+                          {vehicle.model} - {vehicle.license_plate} (Capacity: {vehicle.capacity_kg}kg)
+                        </option>
+                      ))
+                    ) : (
+                      <option disabled>No available vehicles</option>
+                    )}
+                  </select>
+                  <p className="text-xs text-text-tertiary mt-1">{selectedVehicles.length} vehicle(s) selected (hold Ctrl/Cmd for multiple)</p>
                 </div>
 
                 <div>

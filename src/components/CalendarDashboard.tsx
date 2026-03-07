@@ -1,5 +1,6 @@
 import { useState, useEffect, FC } from 'react'
 import { API_BASE_URL } from '../config'
+import { parseResponseBody } from '../utils/api'
 import Sidebar from './Sidebar'
 import Header from './Header'
 import { User } from '../App'
@@ -100,7 +101,7 @@ function getFirstDayOfMonth(year: number, month: number): number {
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December']
 const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
 
-const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewChange, activeView }) => {
+const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewChange, activeView: _activeView }) => {
   const isAdmin = user.role === 'admin'
 
   const today = new Date()
@@ -174,7 +175,7 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
       : `${API_BASE_URL}/api/guard-replacement/guard/${user.id}/shifts`
     const res = await fetch(url)
     if (!res.ok) return []
-    const data = await res.json()
+    const data = await parseResponseBody(res)
     const shifts: any[] = data.shifts || (Array.isArray(data) ? data : [])
     return shifts.map((s: any): ShiftEvent => ({
       id: s.id,
@@ -193,7 +194,7 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
   const fetchTrips = async (): Promise<TripEvent[]> => {
     const res = await fetch(`${API_BASE_URL}/api/trips`)
     if (!res.ok) return []
-    const data = await res.json()
+    const data = await parseResponseBody(res)
     const trips: any[] = Array.isArray(data) ? data : (data.trips || [])
     return trips.map((t: any): TripEvent => ({
       id: t.id,
@@ -211,7 +212,7 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
   const fetchMissions = async (): Promise<MissionEvent[]> => {
     const res = await fetch(`${API_BASE_URL}/api/missions`)
     if (!res.ok) return []
-    const data = await res.json()
+    const data = await parseResponseBody(res)
     const missions: any[] = data.missions || (Array.isArray(data) ? data : [])
     return missions.map((m: any): MissionEvent => ({
       id: m.id,
@@ -228,7 +229,7 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
   const fetchMaintenanceEvents = async (): Promise<MaintenanceEvent[]> => {
     const res = await fetch(`${API_BASE_URL}/api/firearm-maintenance/pending`)
     if (!res.ok) return []
-    const data = await res.json()
+    const data = await parseResponseBody(res)
     const items: any[] = Array.isArray(data) ? data : []
     return items.map((m: any): MaintenanceEvent => ({
       id: m.id,

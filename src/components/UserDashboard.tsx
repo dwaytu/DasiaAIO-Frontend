@@ -4,19 +4,6 @@ import Sidebar from './Sidebar'
 import Header from './Header'
 import { User as AppUser } from '../App'
 
-interface User {
-  id: string
-  email: string
-  username: string
-  full_name?: string
-  phone_number?: string
-  license_number?: string
-  license_issued_date?: string
-  license_expiry_date?: string
-  address?: string
-  [key: string]: any
-}
-
 interface UserDashboardProps {
   user: AppUser
   onLogout: () => void

@@ -18,6 +18,17 @@ interface NotificationPanelProps {
   userId: string;
 }
 
+async function parseResponseBody(response: Response): Promise<any> {
+  const raw = await response.text();
+  if (!raw) return {};
+
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return { error: raw };
+  }
+}
+
 const NotificationPanel: React.FC<NotificationPanelProps> = ({ userId }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -104,7 +115,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ userId }) => {
         alert('Replacement shift accepted successfully!');
         await fetchNotifications();
       } else {
-        const error = await response.json();
+        const error = await parseResponseBody(response);
         alert(error.error || 'Failed to accept replacement');
       }
     } catch (error) {

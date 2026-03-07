@@ -54,7 +54,9 @@ const AccountManager: FC<AccountManagerProps> = ({ user, onLogout, onNavigateToP
   }
 
   const handleRefresh = () => {
-    window.location.reload()
+    // Navigate to home page without losing authentication
+    // Since auth is now persisted in localStorage, the page refresh will restore it
+    window.location.pathname = '/'
     setIsOpen(false)
   }
 

@@ -2,13 +2,10 @@ import { useState, useEffect, FC } from 'react'
 import { API_BASE_URL } from '../config'
 import Sidebar from './Sidebar'
 import Header from './Header'
-
-interface User {
-  [key: string]: any
-}
+import { User as AppUser } from '../App'
 
 interface Props {
-  user: User
+  user: AppUser
   onLogout: () => void
   onViewChange?: (view: string) => void
   activeView?: string
@@ -92,7 +89,7 @@ const PerformanceDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeV
       />
 
       <main className="flex-1 flex flex-col overflow-hidden w-full">
-        <Header title="Performance Dashboard" badgeLabel="Performance" onLogout={onLogout} onMenuClick={() => setMobileMenuOpen(true)} user={user} onNavigateToProfile={() => onViewChange('profile')} />
+        <Header title="Performance Dashboard" badgeLabel="Performance" onLogout={onLogout} onMenuClick={() => setMobileMenuOpen(true)} user={user} onNavigateToProfile={() => onViewChange?.('profile')} />
 
         {loading ? (
           <div className="flex-1 flex items-center justify-center text-center">

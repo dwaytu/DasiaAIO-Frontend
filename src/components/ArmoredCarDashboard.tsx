@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { User } from '../App'
 import { API_BASE_URL } from '../config'
+import { fetchJsonOrThrow, parseResponseBody } from '../utils/api'
 import Sidebar from './Sidebar'
 import Header from './Header'
 
@@ -11,6 +12,7 @@ interface ArmoredCar {
   model: string
   manufacturer: string
   capacity_kg: number
+  passenger_capacity?: number
   status: string
   registration_expiry?: string
   insurance_expiry?: string
@@ -94,11 +96,12 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
 
   // Form states
   const [newCar, setNewCar] = useState({
-    license_plate: '',
+    licensePlate: '',
     vin: '',
     model: '',
     manufacturer: '',
-    capacity_kg: 0,
+    capacityKg: 0,
+    passengerCapacity: 4,
   })
 
   const [newAllocation, setNewAllocation] = useState({
@@ -124,9 +127,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
     setLoading(true)
     try {
       // Fetch cars first, since maintenance fetch depends on it
-      const carsResponse = await fetch(`${API_BASE_URL}/api/armored-cars`)
-      if (!carsResponse.ok) throw new Error('Failed to fetch cars')
-      const carsData = await carsResponse.json()
+      const carsData = await fetchJsonOrThrow<ArmoredCar[]>(`${API_BASE_URL}/api/armored-cars`, undefined, 'Failed to fetch cars')
       setCars(carsData)
 
       // Then fetch maintenance records for each car
@@ -135,7 +136,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
         for (const car of carsData) {
           const mainResponse = await fetch(`${API_BASE_URL}/api/car-maintenance/${car.id}`)
           if (mainResponse.ok) {
-            const mainData = await mainResponse.json()
+            const mainData = await parseResponseBody(mainResponse)
             // Extract records from the API response (handles both array and {value: []} format)
             const records = Array.isArray(mainData) ? mainData : (mainData.value || mainData)
             allMaintenance = [...allMaintenance, ...records]
@@ -158,9 +159,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
 
   const fetchAllocations = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/car-allocations/active`)
-      if (!response.ok) throw new Error('Failed to fetch allocations')
-      const data = await response.json()
+      const data = await fetchJsonOrThrow<CarAllocation[]>(`${API_BASE_URL}/api/car-allocations/active`, undefined, 'Failed to fetch allocations')
       setAllocations(data)
     } catch (err) {
       console.error('Failed to fetch allocations:', err)
@@ -173,7 +172,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
       for (const car of cars) {
         const response = await fetch(`${API_BASE_URL}/api/car-maintenance/${car.id}`)
         if (response.ok) {
-          const data = await response.json()
+          const data = await parseResponseBody(response)
           setMaintenance((prev) => [...prev, ...data])
         }
       }
@@ -185,9 +184,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
   const fetchCars = async () => {
     setLoading(true)
     try {
-      const response = await fetch(`${API_BASE_URL}/api/armored-cars`)
-      if (!response.ok) throw new Error('Failed to fetch cars')
-      const data = await response.json()
+      const data = await fetchJsonOrThrow<ArmoredCar[]>(`${API_BASE_URL}/api/armored-cars`, undefined, 'Failed to fetch cars')
       setCars(data)
       setError('')
     } catch (err) {
@@ -199,9 +196,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
 
   const fetchTrips = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/trips`)
-      if (!response.ok) throw new Error('Failed to fetch trips')
-      const data = await response.json()
+      const data = await fetchJsonOrThrow<Trip[]>(`${API_BASE_URL}/api/trips`, undefined, 'Failed to fetch trips')
       setTrips(data)
     } catch (err) {
       console.error('Failed to fetch trips:', err)
@@ -219,7 +214,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
       })
       if (!response.ok) throw new Error('Failed to add car')
       setSuccess('Armored car added successfully!')
-      setNewCar({ license_plate: '', vin: '', model: '', manufacturer: '', capacity_kg: 0 })
+      setNewCar({ licensePlate: '', vin: '', model: '', manufacturer: '', capacityKg: 0, passengerCapacity: 4 })
       fetchCars()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add car')
@@ -397,8 +392,8 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                     <label className="block text-xs md:text-sm font-semibold text-text-primary mb-1 md:mb-2">License Plate</label>
                     <input
                       type="text"
-                      value={newCar.license_plate}
-                      onChange={(e) => setNewCar({ ...newCar, license_plate: e.target.value })}
+                      value={newCar.licensePlate}
+                      onChange={(e) => setNewCar({ ...newCar, licensePlate: e.target.value })}
                       required
                       className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
@@ -437,9 +432,21 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                     <label className="block text-xs md:text-sm font-semibold text-text-primary mb-1 md:mb-2">Capacity (kg)</label>
                     <input
                       type="number"
-                      value={newCar.capacity_kg}
-                      onChange={(e) => setNewCar({ ...newCar, capacity_kg: parseInt(e.target.value) })}
+                      value={newCar.capacityKg}
+                      onChange={(e) => setNewCar({ ...newCar, capacityKg: parseInt(e.target.value) })}
                       required
+                      className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs md:text-sm font-semibold text-text-primary mb-1 md:mb-2">Passenger Capacity</label>
+                    <input
+                      type="number"
+                      value={newCar.passengerCapacity}
+                      onChange={(e) => setNewCar({ ...newCar, passengerCapacity: parseInt(e.target.value) || 4 })}
+                      required
+                      min="1"
+                      max="20"
                       className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>

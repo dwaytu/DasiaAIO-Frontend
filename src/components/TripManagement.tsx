@@ -1,5 +1,6 @@
 import { useState, useEffect, FC } from 'react'
 import { API_BASE_URL } from '../config'
+import { fetchJsonOrThrow } from '../utils/api'
 
 interface Trip {
   id: string
@@ -46,13 +47,10 @@ const TripManagement: FC = () => {
   const fetchActiveTrips = async () => {
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch(`${API_BASE_URL}/api/trip-management/active`, {
+      const data = await fetchJsonOrThrow<{ trips?: Trip[] }>(`${API_BASE_URL}/api/trip-management/active`, {
         headers: { Authorization: `Bearer ${token}` }
-      })
-      
-      if (!response.ok) throw new Error('Failed to fetch trips')
-      
-      const data = await response.json()
+      }, 'Failed to fetch trips')
+
       setTrips(data.trips || [])
       setError('')
     } catch (err) {
@@ -65,13 +63,10 @@ const TripManagement: FC = () => {
   const fetchTripDetails = async (tripId: string) => {
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch(`${API_BASE_URL}/api/trip-management/${tripId}`, {
+      const data = await fetchJsonOrThrow<any>(`${API_BASE_URL}/api/trip-management/${tripId}`, {
         headers: { Authorization: `Bearer ${token}` }
-      })
-      
-      if (!response.ok) throw new Error('Failed to fetch trip details')
-      
-      const data = await response.json()
+      }, 'Failed to fetch trip details')
+
       setSelectedTrip({
         ...data.trip,
         guards: data.guards,
@@ -87,16 +82,14 @@ const TripManagement: FC = () => {
   const updateTripStatus = async (tripId: string, status: string) => {
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch(`${API_BASE_URL}/api/trip-management/${tripId}/status`, {
+      await fetchJsonOrThrow(`${API_BASE_URL}/api/trip-management/${tripId}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
         body: JSON.stringify({ status })
-      })
-      
-      if (!response.ok) throw new Error('Failed to update trip status')
+      }, 'Failed to update trip status')
       
       await fetchActiveTrips()
       if (selectedTrip && selectedTrip.id === tripId) {

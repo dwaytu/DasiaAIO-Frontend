@@ -4,7 +4,11 @@
     "builder": "DOCKERFILE"
   },
   "deploy": {
-    "startCommand": null
+    "startCommand": null,
+    "healthcheckPath": "/",
+    "healthcheckTimeout": 120,
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 10
   }
 }
 

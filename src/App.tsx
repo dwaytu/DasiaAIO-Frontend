@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import LoginPage from './components/LoginPage'
 import SuperadminDashboard from './components/SuperadminDashboard'
 import UserDashboard from './components/UserDashboard'
@@ -24,6 +24,33 @@ function App() {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false)
   const [user, setUser] = useState<User | null>(null)
   const [activeView, setActiveView] = useState<string>('users')
+  const [isLoading, setIsLoading] = useState<boolean>(true)
+
+  // Restore authentication from localStorage on component mount
+  useEffect(() => {
+    const restoreAuth = () => {
+      try {
+        const storedUser = localStorage.getItem('user')
+        const storedToken = localStorage.getItem('token')
+        
+        if (storedUser && storedToken) {
+          const parsedUser = JSON.parse(storedUser)
+          setUser(parsedUser)
+          setIsLoggedIn(true)
+          console.log('Authentication restored from localStorage')
+        }
+      } catch (error) {
+        console.error('Failed to restore authentication:', error)
+        // Clear potentially corrupted data
+        localStorage.removeItem('user')
+        localStorage.removeItem('token')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    restoreAuth()
+  }, [])
 
   const handleLogin = (userData: User) => {
     const validRoles: Array<'admin' | 'user' | 'guard'> = ['admin', 'user', 'guard']
@@ -36,12 +63,20 @@ function App() {
       role: userData.role as 'admin' | 'user' | 'guard'
     }
     console.log('Login successful:', typedUser)
+    
+    // Store user data in localStorage for persistence
+    localStorage.setItem('user', JSON.stringify(typedUser))
+    
     setUser(typedUser)
     setIsLoggedIn(true)
     setActiveView('users')
   }
 
   const handleLogout = () => {
+    // Clear authentication from localStorage
+    localStorage.removeItem('user')
+    localStorage.removeItem('token')
+    
     setUser(null)
     setIsLoggedIn(false)
     setActiveView('users')
@@ -56,7 +91,18 @@ function App() {
     }
   }
 
-  console.log('App rendering, isLoggedIn:', isLoggedIn, 'user:', user)
+  console.log('App rendering, isLoggedIn:', isLoggedIn, 'user:', user, 'isLoading:', isLoading)
+
+  if (isLoading) {
+    return (
+      <div className="h-screen overflow-hidden w-full flex items-center justify-center" style={{ background: 'var(--bg-primary)' }}>
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+          <p className="mt-4" style={{ color: 'var(--text-primary)' }}>Loading...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="h-screen overflow-hidden w-full">

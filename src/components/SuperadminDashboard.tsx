@@ -495,7 +495,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
           onLogout={onLogout}
           onMenuClick={() => setMobileMenuOpen(true)}
           user={user}
-          onNavigateToProfile={() => onViewChange('profile')}
+          onNavigateToProfile={() => onViewChange?.('profile')}
           rightSlot={
             <button
               onClick={handleRefresh}

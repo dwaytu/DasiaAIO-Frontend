@@ -8,6 +8,17 @@ interface LoginPageProps {
   onLogin: (user: User) => void
 }
 
+async function parseResponseBody(response: Response): Promise<any> {
+  const raw = await response.text()
+  if (!raw) return {}
+
+  try {
+    return JSON.parse(raw)
+  } catch {
+    return { error: raw }
+  }
+}
+
 // Format phone number to +63-###-###-####
 function formatPhoneNumber(value: string): string {
   // Remove all non-digits
@@ -57,6 +68,11 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
   const [requiresVerification, setRequiresVerification] = useState<boolean>(false)
   const [verificationCode, setVerificationCode] = useState<string>('')
   const [verificationEmail, setVerificationEmail] = useState<string>('')
+  const [forgotPasswordMode, setForgotPasswordMode] = useState<'email' | 'code' | 'newPassword' | null>(null)
+  const [resetEmail, setResetEmail] = useState<string>('')
+  const [resetCode, setResetCode] = useState<string>('')
+  const [newPassword, setNewPassword] = useState<string>('')
+  const [confirmPassword, setConfirmPassword] = useState<string>('')
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -77,8 +93,9 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
           body: JSON.stringify({ email: verificationEmail, code: verificationCode })
         })
 
+        const data = await parseResponseBody(response)
+
         if (!response.ok) {
-          const data = await response.json()
           setError(data.error || 'Verification failed')
           setIsLoading(false)
           return
@@ -158,14 +175,14 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
           body: JSON.stringify(requestBody)
         })
 
+        const data = await parseResponseBody(response)
+
         if (!response.ok) {
-          const data = await response.json()
-          setError(data.error || 'Registration failed')
+          setError(data.error || data.message || 'Registration failed')
           setIsLoading(false)
           return
         }
 
-        const data = await response.json()
         if (data.requiresVerification) {
           setRequiresVerification(true)
           setVerificationEmail(email)
@@ -203,8 +220,9 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
           body: JSON.stringify({ identifier, password })
         })
 
+        const data = await parseResponseBody(response)
+
         if (!response.ok) {
-          const data = await response.json()
           if (data.requiresVerification) {
             setRequiresVerification(true)
             setVerificationEmail(email)
@@ -218,11 +236,14 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
           return
         }
 
-        const data = await response.json()
         setIsLoading(false)
         const user: User = {
           ...data.user,
           role: data.user.role as 'admin' | 'user' | 'guard'
+        }
+        // Store token in localStorage for authentication persistence
+        if (data.token) {
+          localStorage.setItem('token', data.token)
         }
         onLogin(user)
       }
@@ -232,12 +253,245 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
     }
   }
 
+  const handleForgotPassword = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setError('')
+    setIsLoading(true)
+
+    try {
+      if (forgotPasswordMode === 'email') {
+        if (!resetEmail) {
+          setError('Email is required')
+          setIsLoading(false)
+          return
+        }
+
+        const response = await fetch(`${API_BASE_URL}/api/forgot-password`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: resetEmail })
+        })
+
+        const data = await parseResponseBody(response)
+
+        if (!response.ok) {
+          setError(data.error || 'Failed to send reset code')
+          setIsLoading(false)
+          return
+        }
+
+        setError('Reset code sent to your email!')
+        setForgotPasswordMode('code')
+        setIsLoading(false)
+        return
+      } else if (forgotPasswordMode === 'code') {
+        if (!resetCode) {
+          setError('Reset code is required')
+          setIsLoading(false)
+          return
+        }
+
+        const response = await fetch(`${API_BASE_URL}/api/verify-reset-code`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: resetEmail, code: resetCode })
+        })
+
+        const data = await parseResponseBody(response)
+
+        if (!response.ok) {
+          setError(data.error || 'Invalid or expired code')
+          setIsLoading(false)
+          return
+        }
+
+        setError('Code verified! Enter your new password.')
+        setForgotPasswordMode('newPassword')
+        setIsLoading(false)
+        return
+      } else if (forgotPasswordMode === 'newPassword') {
+        if (!newPassword || !confirmPassword) {
+          setError('Both password fields are required')
+          setIsLoading(false)
+          return
+        }
+
+        if (newPassword.length < 6) {
+          setError('Password must be at least 6 characters')
+          setIsLoading(false)
+          return
+        }
+
+        if (newPassword !== confirmPassword) {
+          setError('Passwords do not match')
+          setIsLoading(false)
+          return
+        }
+
+        const response = await fetch(`${API_BASE_URL}/api/reset-password`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: resetEmail, code: resetCode, new_password: newPassword })
+        })
+
+        const data = await parseResponseBody(response)
+
+        if (!response.ok) {
+          setError(data.error || 'Failed to reset password')
+          setIsLoading(false)
+          return
+        }
+
+        setError('Password reset successful! You can now login with your new password.')
+        setForgotPasswordMode(null)
+        setResetEmail('')
+        setResetCode('')
+        setNewPassword('')
+        setConfirmPassword('')
+        setIsLoading(false)
+        return
+      }
+    } catch (err) {
+      setError('Error: ' + (err instanceof Error ? err.message : String(err)))
+      setIsLoading(false)
+    }
+  }
+
+  const handleCancelForgotPassword = () => {
+    setForgotPasswordMode(null)
+    setResetEmail('')
+    setResetCode('')
+    setNewPassword('')
+    setConfirmPassword('')
+    setError('')
+  }
+
   const inputClass = "w-full px-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
   const inputStyle = { background: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }
   const labelClass = "block text-sm font-semibold mb-2"
   const labelStyle = { color: 'var(--text-secondary)' }
 
-  const renderForm = () => (
+  const renderForm = () => {
+    // Show forgot password form if in forgot password mode
+    if (forgotPasswordMode !== null) {
+      return (
+        <form onSubmit={handleForgotPassword} className="space-y-4">
+          {forgotPasswordMode === 'email' && (
+            <>
+              <div>
+                <label htmlFor="reset-email" className={labelClass} style={labelStyle}>Email Address</label>
+                <input
+                  id="reset-email"
+                  type="email"
+                  value={resetEmail}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => setResetEmail(e.target.value)}
+                  placeholder="Enter your email"
+                  disabled={isLoading}
+                  className={inputClass}
+                  style={inputStyle}
+                />
+              </div>
+
+              {error && (
+                <div className={`p-3 rounded-lg text-sm border`} style={error.includes('sent') ? { background: 'rgba(34,197,94,0.1)', color: '#4ADE80', borderColor: 'rgba(34,197,94,0.3)' } : { background: 'rgba(239,68,68,0.1)', color: '#FCA5A5', borderColor: 'rgba(239,68,68,0.3)' }}>
+                  {error}
+                </div>
+              )}
+
+              <button type="submit" disabled={isLoading} className="w-full text-white font-bold py-3 rounded-lg transition-all disabled:opacity-50" style={{ background: 'var(--accent)' }}>
+                {isLoading ? 'Sending...' : 'Send Reset Code'}
+              </button>
+            </>
+          )}
+
+          {forgotPasswordMode === 'code' && (
+            <>
+              <div>
+                <label htmlFor="reset-code" className={labelClass} style={labelStyle}>Reset Code</label>
+                <input
+                  id="reset-code"
+                  type="text"
+                  value={resetCode}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => setResetCode(e.target.value.slice(0, 6))}
+                  placeholder="000000"
+                  disabled={isLoading}
+                  maxLength={6}
+                  className={`${inputClass} text-center text-2xl tracking-widest`}
+                  style={inputStyle}
+                />
+              </div>
+              <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Check your email for the 6-digit code</p>
+
+              {error && (
+                <div className={`p-3 rounded-lg text-sm border`} style={error.includes('verified') ? { background: 'rgba(34,197,94,0.1)', color: '#4ADE80', borderColor: 'rgba(34,197,94,0.3)' } : { background: 'rgba(239,68,68,0.1)', color: '#FCA5A5', borderColor: 'rgba(239,68,68,0.3)' }}>
+                  {error}
+                </div>
+              )}
+
+              <button type="submit" disabled={isLoading} className="w-full text-white font-bold py-3 rounded-lg transition-all disabled:opacity-50" style={{ background: 'var(--accent)' }}>
+                {isLoading ? 'Verifying...' : 'Verify Code'}
+              </button>
+            </>
+          )}
+
+          {forgotPasswordMode === 'newPassword' && (
+            <>
+              <div>
+                <label htmlFor="new-password" className={labelClass} style={labelStyle}>New Password</label>
+                <input
+                  id="new-password"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => setNewPassword(e.target.value)}
+                  placeholder="Enter new password"
+                  disabled={isLoading}
+                  className={inputClass}
+                  style={inputStyle}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="confirm-password" className={labelClass} style={labelStyle}>Confirm Password</label>
+                <input
+                  id="confirm-password"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => setConfirmPassword(e.target.value)}
+                  placeholder="Confirm password"
+                  disabled={isLoading}
+                  className={inputClass}
+                  style={inputStyle}
+                />
+              </div>
+
+              {error && (
+                <div className={`p-3 rounded-lg text-sm border`} style={error.includes('successful') ? { background: 'rgba(34,197,94,0.1)', color: '#4ADE80', borderColor: 'rgba(34,197,94,0.3)' } : { background: 'rgba(239,68,68,0.1)', color: '#FCA5A5', borderColor: 'rgba(239,68,68,0.3)' }}>
+                  {error}
+                </div>
+              )}
+
+              <button type="submit" disabled={isLoading} className="w-full text-white font-bold py-3 rounded-lg transition-all disabled:opacity-50" style={{ background: 'var(--accent)' }}>
+                {isLoading ? 'Resetting...' : 'Reset Password'}
+              </button>
+            </>
+          )}
+
+          <div className="text-center">
+            <button
+              type="button"
+              className="font-semibold transition-colors disabled:opacity-40 text-sm"
+              style={{ color: '#60A5FA' }}
+              onClick={handleCancelForgotPassword}
+              disabled={isLoading}
+            >
+              Back to Login
+            </button>
+          </div>
+        </form>
+      )
+    }
+
+    return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {requiresVerification ? (
         <>
@@ -279,8 +533,12 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email: verificationEmail })
                   })
-                  const data = await response.json()
-                  setError(data.message || 'Code resent!')
+                  const data = await parseResponseBody(response)
+                  if (!response.ok) {
+                    setError(data.error || data.message || 'Failed to resend code')
+                  } else {
+                    setError(data.message || 'Code resent!')
+                  }
                 } catch (err) {
                   setError('Error: ' + (err instanceof Error ? err.message : String(err)))
                 } finally {
@@ -418,10 +676,28 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
               Don't have an account? Register
             </button>
           </div>
+
+          <div className="text-center">
+            <button
+              type="button"
+              className="font-semibold transition-colors disabled:opacity-40 text-sm"
+              style={{ color: '#FF9966' }}
+              onClick={() => {
+                setForgotPasswordMode('email')
+                setError('')
+                setIdentifier('')
+                setPassword('')
+              }}
+              disabled={isLoading}
+            >
+              Forgot your password?
+            </button>
+          </div>
         </>
       )}
     </form>
   )
+}
 
   return (
     <>

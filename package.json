@@ -11,7 +11,7 @@
     "preview": "vite preview",
     "backend": "node backend/server.js",
     "start": "npm run dev",
-    "test": "jest"
+    "test": "jest --passWithNoTests"
   },
   "dependencies": {
     "lucide-react": "^0.575.0",

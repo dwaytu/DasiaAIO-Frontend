@@ -39,7 +39,7 @@ The documentation site includes:
 - **Deployment Guide** - Railway & local deployment instructions
 - **Features Overview** - Core modules and capabilities
 
-- **[DOCUMENTATION.md](DOCUMENTATION.md)** - Comprehensive technical documentation
+- **Comprehensive Docs:** https://cloudyrowdyyy.github.io/capstone-1.0
 
 ---
 
@@ -70,7 +70,7 @@ This project is proprietary software. Unauthorized copying prohibited.
 ## 📞 Support
 
 For issues or questions:
-1. Check [DOCUMENTATION.md](DOCUMENTATION.md)
+1. Check https://cloudyrowdyyy.github.io/capstone-1.0
 2. Review error logs in Railway dashboard
 3. Check browser developer console (F12)
 

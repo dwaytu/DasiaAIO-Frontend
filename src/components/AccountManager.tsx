@@ -45,7 +45,6 @@ const AccountManager: FC<AccountManagerProps> = ({ user, onLogout, onNavigateToP
     switch (user.role) {
       case 'admin':
         return { background: 'rgba(139,92,246,0.2)', color: '#A78BFA', border: '1px solid rgba(139,92,246,0.3)' }
-      case 'user':
       case 'guard':
         return { background: 'rgba(20,184,166,0.2)', color: '#5EEAD4', border: '1px solid rgba(20,184,166,0.3)' }
       default:

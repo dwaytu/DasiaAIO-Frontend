@@ -48,7 +48,7 @@ interface ThemeProviderProps {
  * @returns 'light' | 'dark'
  */
 const getSystemTheme = (): Theme => {
-  if (typeof window === 'undefined') return 'light';
+  if (typeof window === 'undefined') return 'dark';
   
   const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
   return mediaQuery.matches ? 'dark' : 'light';
@@ -59,7 +59,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
   defaultTheme,
   storageKey = 'sentinel-theme',
 }) => {
-  const [theme, setThemeState] = useState<Theme>('light');
+  const [theme, setThemeState] = useState<Theme>('dark');
   const [isLoading, setIsLoading] = useState(true);
 
   /**
@@ -77,12 +77,11 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
       } else if (defaultTheme) {
         setThemeState(defaultTheme);
       } else {
-        // Use system preference
-        setThemeState(getSystemTheme());
+        setThemeState('dark');
       }
     } catch (error) {
       console.error('Failed to load theme from localStorage:', error);
-      setThemeState(defaultTheme || getSystemTheme());
+      setThemeState(defaultTheme || 'dark');
     } finally {
       setIsLoading(false);
     }
@@ -108,7 +107,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
     if (metaThemeColor) {
       metaThemeColor.setAttribute(
         'content',
-        theme === 'dark' ? '#0F1115' : '#F4F5F7'
+        theme === 'dark' ? '#0b1220' : '#f8fafc'
       );
     }
   }, [theme, isLoading]);

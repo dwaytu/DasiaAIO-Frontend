@@ -1,5 +1,5 @@
 import { FC } from 'react'
-import Logo from './Logo'
+import SentinelLogo from './SentinelLogo'
 
 export interface SidebarItem {
   view: string
@@ -39,13 +39,13 @@ const Sidebar: FC<SidebarProps> = ({ items, activeView, onNavigate, onLogout, on
       {/* Sidebar */}
       <aside className={`
         fixed lg:relative inset-y-0 left-0 z-50
-        w-64 flex flex-col shadow-2xl
+        w-72 flex flex-col shadow-2xl
         transform transition-transform duration-300 ease-in-out
         lg:transform-none
         ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `} style={{ background: 'var(--bg-surface)', borderRight: '1px solid var(--border-color)' }}>
         {/* Top accent line */}
-        <div className="h-0.5 w-full" style={{ background: 'linear-gradient(90deg, #3B82F6, #6366F1)' }} />
+        <div className="h-1 w-full" style={{ background: 'linear-gradient(90deg, var(--color-info), var(--color-accent))' }} />
 
         <div className="flex flex-col flex-1 p-5 md:p-6 overflow-hidden">
           {/* Close button for mobile */}
@@ -62,8 +62,10 @@ const Sidebar: FC<SidebarProps> = ({ items, activeView, onNavigate, onLogout, on
             </button>
           )}
           
-          <div className="pb-5 mb-6 flex-shrink-0" style={{ borderBottom: '1px solid var(--border-color)' }}>
-            <Logo onClick={onLogoClick} size="sm" horizontal={true} />
+          <div className="mb-6 flex-shrink-0 rounded-xl border border-border-subtle bg-surface-elevated p-3" style={{ borderBottom: '1px solid var(--border-color)' }}>
+            <button type="button" onClick={onLogoClick} className="w-full text-left" aria-label="Go to dashboard">
+              <SentinelLogo size="sm" />
+            </button>
           </div>
 
           <nav className="flex-1 flex flex-col overflow-y-auto min-h-0">
@@ -78,7 +80,7 @@ const Sidebar: FC<SidebarProps> = ({ items, activeView, onNavigate, onLogout, on
               return groupOrder.filter(g => grouped[g]?.length).map(groupName => (
                 <div key={groupName || 'other'} className="mb-4">
                   {groupName && (
-                    <p className="px-3 pt-1 pb-1.5 text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-tertiary)', opacity: 0.6 }}>
+                    <p className="px-3 pb-2 pt-1 text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: 'var(--text-tertiary)', opacity: 0.8 }}>
                       {groupName}
                     </p>
                   )}
@@ -86,16 +88,16 @@ const Sidebar: FC<SidebarProps> = ({ items, activeView, onNavigate, onLogout, on
                     {grouped[groupName].map(({ view, label }) => (
                       <button
                         key={view}
-                        className={`px-3 py-2.5 rounded-lg text-left text-sm font-medium transition-all duration-200 cursor-pointer select-none ${
+                        className={`px-3 py-2.5 rounded-lg text-left text-sm font-semibold uppercase tracking-wide transition-all duration-200 cursor-pointer select-none ${
                           view === activeView ? 'text-white' : 'hover:text-white'
                         }`}
                         style={view === activeView ? {
-                          background: 'linear-gradient(135deg, rgba(59,130,246,0.2), rgba(99,102,241,0.2))',
-                          color: '#60A5FA',
-                          borderLeft: '2px solid #3B82F6',
+                          background: 'linear-gradient(135deg, color-mix(in srgb, var(--color-info) 28%, transparent), color-mix(in srgb, var(--color-accent) 24%, transparent))',
+                          color: 'var(--color-text-primary)',
+                          borderLeft: '3px solid var(--color-info)',
                           paddingLeft: '10px'
                         } : { color: 'var(--text-secondary)' }}
-                        onMouseEnter={e => { if (view !== activeView) { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.05)'; (e.currentTarget as HTMLButtonElement).style.color = '#E2E8F0'; }}}
+                          onMouseEnter={e => { if (view !== activeView) { (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-surface-hover)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--color-text-primary)'; }}}
                         onMouseLeave={e => { if (view !== activeView) { (e.currentTarget as HTMLButtonElement).style.background = ''; (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'; }}}
                         onClick={() => handleNavigate(view)}
                         type="button"
@@ -111,8 +113,8 @@ const Sidebar: FC<SidebarProps> = ({ items, activeView, onNavigate, onLogout, on
 
           <button 
             onClick={onLogout} 
-            className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium mt-4 transition-all duration-200 cursor-pointer flex-shrink-0 group"
-            style={{ color: '#F87171', border: '1px solid rgba(248,113,113,0.2)' }}
+            className="group mt-4 flex flex-shrink-0 cursor-pointer items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold uppercase tracking-wide transition-all duration-200"
+            style={{ color: '#F87171', border: '1px solid rgba(248,113,113,0.25)' }}
             onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(248,113,113,0.1)'; }}
             onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = ''; }}
           >

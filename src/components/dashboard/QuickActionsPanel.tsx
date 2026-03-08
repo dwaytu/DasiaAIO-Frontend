@@ -11,21 +11,24 @@ interface QuickActionsPanelProps {
 }
 
 const toneClass: Record<NonNullable<QuickActionItem['tone']>, string> = {
-  indigo: 'bg-indigo-600 hover:bg-indigo-700',
-  blue: 'bg-blue-600 hover:bg-blue-700',
-  emerald: 'bg-emerald-600 hover:bg-emerald-700',
-  amber: 'bg-amber-600 hover:bg-amber-700',
+  indigo: 'border-info-border bg-info-bg text-info-text hover:bg-info/20',
+  blue: 'border-info-border bg-info-bg text-info-text hover:bg-info/20',
+  emerald: 'border-success-border bg-success-bg text-success-text hover:bg-success/20',
+  amber: 'border-warning-border bg-warning-bg text-warning-text hover:bg-warning/20',
 }
 
 const QuickActionsPanel: FC<QuickActionsPanelProps> = ({ actions }) => {
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="grid grid-cols-2 gap-2 lg:grid-cols-3">
       {actions.map((action) => (
         <button
           key={action.label}
           onClick={action.onClick}
-          className={`rounded-lg px-3 py-2 text-sm font-semibold text-white transition-colors ${toneClass[action.tone || 'indigo']}`}
+          className={`group flex min-h-12 items-center gap-2 rounded-lg border px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide transition-all duration-200 hover:-translate-y-0.5 hover:shadow-bento-hover ${toneClass[action.tone || 'indigo']}`}
         >
+          <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-surface text-[11px] font-black text-text-primary">
+            {action.label.slice(0, 1)}
+          </span>
           {action.label}
         </button>
       ))}

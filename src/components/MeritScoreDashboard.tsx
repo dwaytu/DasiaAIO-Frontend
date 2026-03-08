@@ -210,7 +210,7 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
         ) : (
           <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in">
             {error && (
-              <div className="mb-4 p-4 bg-red-100 text-red-700 rounded-lg">
+              <div className="mb-4 soc-alert-error">
                 {error}
               </div>
             )}
@@ -220,12 +220,12 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
               <div className="space-y-6">
                 <button
                   onClick={() => setSelectedGuard(null)}
-                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                  className="soc-btn soc-btn-neutral"
                 >
                   ← Back to Rankings
                 </button>
 
-                <section className="bg-surface p-6 md:p-8 rounded-xl shadow-sm">
+                <section className="command-panel p-6 md:p-8">
                   <div className="flex items-start justify-between mb-6">
                     <div>
                       <h2 className="text-3xl font-bold text-text-primary">{selectedGuard.guardName}</h2>
@@ -237,31 +237,31 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-                    <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 p-6 rounded-lg text-white">
+                    <div className="bento-card status-bar-info">
                       <p className="text-sm opacity-90">Overall Score</p>
                       <p className={`text-4xl font-bold ${getScoreColor(selectedGuard.overallScore)}`}>
                         {selectedGuard.overallScore.toFixed(1)}
                       </p>
                     </div>
 
-                    <div className="bg-gradient-to-br from-green-500 to-green-600 p-6 rounded-lg text-white">
+                    <div className="bento-card status-bar-success">
                       <p className="text-sm opacity-90">Attendance</p>
-                      <p className="text-3xl font-bold">{selectedGuard.attendanceScore.toFixed(1)}</p>
+                      <p className="text-3xl font-bold text-text-primary">{selectedGuard.attendanceScore.toFixed(1)}</p>
                     </div>
 
-                    <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-lg text-white">
+                    <div className="bento-card status-bar-info">
                       <p className="text-sm opacity-90">Punctuality</p>
-                      <p className="text-3xl font-bold">{selectedGuard.punctualityScore.toFixed(1)}</p>
+                      <p className="text-3xl font-bold text-text-primary">{selectedGuard.punctualityScore.toFixed(1)}</p>
                     </div>
 
-                    <div className="bg-gradient-to-br from-yellow-500 to-yellow-600 p-6 rounded-lg text-white">
+                    <div className="bento-card status-bar-warning">
                       <p className="text-sm opacity-90">Client Rating</p>
-                      <p className="text-3xl font-bold">{(selectedGuard.clientRating / 20).toFixed(1)}/5 ★</p>
+                      <p className="text-3xl font-bold text-text-primary">{(selectedGuard.clientRating / 20).toFixed(1)}/5 ★</p>
                     </div>
                   </div>
 
                   {/* Performance Stats */}
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8 bg-surface-elevated p-6 rounded-lg">
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8 command-panel p-6">
                     <div>
                       <p className="text-sm text-text-secondary">Total Shifts</p>
                       <p className="text-2xl font-bold text-text-primary">{selectedGuard.stats.totalShifts}</p>
@@ -286,19 +286,19 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
                 </section>
 
                 {/* Evaluations Section */}
-                <section className="bg-surface p-6 md:p-8 rounded-xl shadow-sm">
+                <section className="command-panel p-6 md:p-8">
                   <div className="flex items-center justify-between mb-6">
                     <h3 className="text-2xl font-bold text-text-primary">Client Evaluations</h3>
                     <button
                       onClick={() => setShowEvaluationForm(!showEvaluationForm)}
-                      className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                      className="soc-btn"
                     >
                       {showEvaluationForm ? 'Cancel' : '+ Add Evaluation'}
                     </button>
                   </div>
 
                   {showEvaluationForm && (
-                    <div className="mb-6 p-6 bg-surface-elevated rounded-lg">
+                    <div className="mb-6 p-6 command-panel">
                       <div className="space-y-4">
                         <div>
                           <label className="block text-sm font-semibold text-text-primary mb-2">Evaluator Name</label>
@@ -339,7 +339,7 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
 
                         <button
                           onClick={handleSubmitEvaluation}
-                          className="w-full px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold"
+                          className="w-full soc-btn"
                         >
                           Submit Evaluation
                         </button>
@@ -436,7 +436,7 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
                             <td className="px-4 py-3">
                               <button
                                 onClick={() => fetchGuardDetails(guard.guardId)}
-                                className="px-3 py-1 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition-colors"
+                                className="soc-btn"
                               >
                                 View Details
                               </button>

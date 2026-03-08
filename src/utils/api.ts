@@ -53,3 +53,15 @@ export async function fetchJsonOrThrow<T>(
 
   return parseResponseBody(response) as Promise<T>
 }
+
+export function getAuthToken(): string {
+  return localStorage.getItem('token') || ''
+}
+
+export function getAuthHeaders(extraHeaders: Record<string, string> = {}): Record<string, string> {
+  const token = getAuthToken()
+  return {
+    Authorization: `Bearer ${token}`,
+    ...extraHeaders,
+  }
+}

@@ -110,7 +110,7 @@ const TripManagement: FC = () => {
       case 'scheduled':
         return 'bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30'
       default:
-        return 'bg-surface-hover text-gray-800'
+        return 'bg-surface-hover text-text-primary'
     }
   }
 
@@ -121,13 +121,13 @@ const TripManagement: FC = () => {
   return (
     <div className="space-y-6">
       {error && (
-        <div className="bg-red-50 border border-red-300 text-red-800 rounded-lg p-4 text-sm">
+        <div className="soc-alert-error text-sm">
           <p className="font-semibold">Failed to load trips</p>
           <p>{error}</p>
-          <p className="text-xs mt-2 text-red-700">Make sure the backend server is running on port 5000</p>
+          <p className="text-xs mt-2">Make sure the backend server is running on port 5000</p>
           <button 
             onClick={() => fetchActiveTrips()}
-            className="mt-3 bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-xs font-medium transition-colors"
+            className="soc-btn soc-btn-danger mt-3"
           >
             Retry
           </button>
@@ -136,7 +136,7 @@ const TripManagement: FC = () => {
 
       {/* Active Trips */}
       <section className="table-glass rounded-xl p-6">
-        <h2 className="text-2xl font-bold text-text-primary mb-6">Active Trips</h2>
+        <h2 className="mb-6 text-2xl font-bold uppercase tracking-wide text-text-primary">Active Trips</h2>
         {trips.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full border-collapse min-w-full">
@@ -173,14 +173,14 @@ const TripManagement: FC = () => {
                     <td className="px-4 py-3 space-x-2">
                       <button
                         onClick={() => fetchTripDetails(trip.id)}
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded text-xs font-medium transition-colors"
+                        className="soc-btn"
                       >
                         Details
                       </button>
                       {trip.status === 'scheduled' && (
                         <button
                           onClick={() => updateTripStatus(trip.id, 'in_progress')}
-                          className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs font-medium transition-colors"
+                          className="soc-btn"
                         >
                           Start
                         </button>
@@ -188,7 +188,7 @@ const TripManagement: FC = () => {
                       {trip.status === 'in_progress' && (
                         <button
                           onClick={() => updateTripStatus(trip.id, 'completed')}
-                          className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs font-medium transition-colors"
+                          className="soc-btn soc-btn-success"
                         >
                           Complete
                         </button>
@@ -207,9 +207,9 @@ const TripManagement: FC = () => {
       {/* Trip Details Modal */}
       {selectedTrip && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setSelectedTrip(null)}>
-          <div className="bg-surface rounded-lg shadow-2xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="command-panel w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-              <h2 className="text-xl font-bold text-text-primary">Trip Details</h2>
+              <h2 className="text-xl font-bold uppercase tracking-wide text-text-primary">Trip Details</h2>
               <button 
                 className="text-3xl text-text-secondary hover:text-text-primary transition-colors w-8 h-8 flex items-center justify-center"
                 onClick={() => setSelectedTrip(null)}
@@ -220,7 +220,7 @@ const TripManagement: FC = () => {
 
             <div className="p-6 space-y-6">
               {/* Trip Information */}
-              <div className="bg-surface-elevated p-4 rounded-lg">
+              <div className="bento-card">
                 <h3 className="font-bold text-text-primary mb-3">Trip Information</h3>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
@@ -264,7 +264,7 @@ const TripManagement: FC = () => {
                 {selectedTrip.guards.length > 0 ? (
                   <div className="space-y-2">
                     {selectedTrip.guards.map((guard) => (
-                      <div key={guard.id} className="flex items-center justify-between bg-blue-50 p-3 rounded-lg">
+                      <div key={guard.id} className="flex items-center justify-between bg-info-bg p-3 rounded-lg border border-info-border">
                         <div>
                           <p className="font-medium text-text-primary">{guard.name || guard.username}</p>
                           <p className="text-xs text-text-secondary">@{guard.username}</p>
@@ -283,7 +283,7 @@ const TripManagement: FC = () => {
                 {selectedTrip.firearms.length > 0 ? (
                   <div className="space-y-2">
                     {selectedTrip.firearms.map((firearm) => (
-                      <div key={firearm.id} className="flex items-center justify-between bg-purple-50 p-3 rounded-lg">
+                      <div key={firearm.id} className="flex items-center justify-between bg-warning-bg p-3 rounded-lg border border-warning-border">
                         <div>
                           <p className="font-medium text-text-primary">{firearm.model || 'Unknown Model'} - {firearm.name}</p>
                           <p className="text-xs text-text-secondary">SN: {firearm.serial_number || 'N/A'}</p>
@@ -304,7 +304,7 @@ const TripManagement: FC = () => {
                       updateTripStatus(selectedTrip.id, 'in_progress')
                       setSelectedTrip(null)
                     }}
-                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg transition-colors"
+                    className="soc-btn flex-1"
                   >
                     Start Trip
                   </button>
@@ -315,14 +315,14 @@ const TripManagement: FC = () => {
                       updateTripStatus(selectedTrip.id, 'completed')
                       setSelectedTrip(null)
                     }}
-                    className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 rounded-lg transition-colors"
+                    className="soc-btn soc-btn-success flex-1"
                   >
                     Complete Trip
                   </button>
                 )}
                 <button
                   onClick={() => setSelectedTrip(null)}
-                  className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 rounded-lg transition-colors"
+                  className="soc-btn soc-btn-neutral flex-1"
                 >
                   Close
                 </button>

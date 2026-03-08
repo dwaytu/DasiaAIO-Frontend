@@ -14,7 +14,7 @@ interface OperationalSummaryStripProps {
 
 const OperationalSummaryStrip: FC<OperationalSummaryStripProps> = ({ metrics }) => {
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <section aria-label="Operational summary strip" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
       {metrics.map((metric) => (
         <CommandMetricCard
           key={metric.label}
@@ -24,7 +24,7 @@ const OperationalSummaryStrip: FC<OperationalSummaryStripProps> = ({ metrics }) 
           hint={metric.hint}
         />
       ))}
-    </div>
+    </section>
   )
 }
 

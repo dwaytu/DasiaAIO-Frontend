@@ -72,14 +72,14 @@ const AnalyticsDashboard: FC = () => {
   if (error) {
     return (
       <div className="space-y-4">
-        <div className="bg-red-50 border border-red-300 text-red-800 rounded-lg p-4 text-sm">
+        <div className="soc-alert-error">
           <p className="font-semibold">Failed to load analytics data</p>
           <p className="text-xs mt-1">{error}</p>
-          <p className="text-xs mt-2 text-red-700">Make sure the backend server is running on port 5000</p>
+          <p className="text-xs mt-2">Make sure the backend server is running on port 5000</p>
         </div>
         <button 
           onClick={() => fetchAnalytics()}
-          className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+          className="soc-btn soc-btn-danger"
         >
           Retry
         </button>
@@ -89,7 +89,7 @@ const AnalyticsDashboard: FC = () => {
 
   if (!analytics) {
     return (
-      <div className="bg-zinc-500/15 border border-zinc-500/30 text-text-secondary rounded-lg p-4 text-center">
+      <div className="command-panel p-4 text-center text-text-secondary">
         <p className="font-medium">No analytics data available</p>
         <p className="text-xs mt-2">Backend is not returning data. Please check server connection.</p>
       </div>
@@ -99,57 +99,57 @@ const AnalyticsDashboard: FC = () => {
   return (
     <div className="space-y-6">
       {/* Overview Stats */}
-      <section className="bg-surface p-6 rounded-xl shadow-sm">
-        <h2 className="text-2xl font-bold text-text-primary mb-6">System Overview</h2>
+      <section className="command-panel p-6">
+        <h2 className="mb-6 text-2xl font-bold uppercase tracking-wide text-text-primary">System Overview</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-            <h3 className="text-sm font-semibold text-blue-800 uppercase mb-2">Guards</h3>
+          <div className="bento-card status-bar-info">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-info-text mb-2">Guards</h3>
             <div className="flex justify-between items-end">
               <div>
-                <p className="text-3xl font-bold text-blue-900">{analytics.overview.active_guards}</p>
-                <p className="text-xs text-blue-700">Active / {analytics.overview.total_guards} Total</p>
+                <p className="text-3xl font-black text-text-primary">{analytics.overview.active_guards}</p>
+                <p className="text-xs text-text-secondary">Active / {analytics.overview.total_guards} Total</p>
               </div>
               <div className="text-right">
-                <p className="text-sm text-blue-800">{analytics.resource_utilization.guards_available} Available</p>
+                <p className="text-sm text-text-secondary">{analytics.resource_utilization.guards_available} Available</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-            <h3 className="text-sm font-semibold text-green-800 uppercase mb-2">Missions</h3>
+          <div className="bento-card status-bar-success">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-success-text mb-2">Missions</h3>
             <div className="flex justify-between items-end">
               <div>
-                <p className="text-3xl font-bold text-green-900">{analytics.overview.active_missions}</p>
-                <p className="text-xs text-green-700">Active / {analytics.overview.total_missions} Total</p>
+                <p className="text-3xl font-black text-text-primary">{analytics.overview.active_missions}</p>
+                <p className="text-xs text-text-secondary">Active / {analytics.overview.total_missions} Total</p>
               </div>
               <div className="text-right">
-                <p className="text-sm text-green-800">{analytics.overview.completed_missions} Completed</p>
+                <p className="text-sm text-text-secondary">{analytics.overview.completed_missions} Completed</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
-            <h3 className="text-sm font-semibold text-purple-800 uppercase mb-2">Firearms</h3>
+          <div className="bento-card status-bar-warning">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-warning-text mb-2">Firearms</h3>
             <div className="flex justify-between items-end">
               <div>
-                <p className="text-3xl font-bold text-purple-900">{analytics.overview.allocated_firearms}</p>
-                <p className="text-xs text-purple-700">Allocated / {analytics.overview.total_firearms} Total</p>
+                <p className="text-3xl font-black text-text-primary">{analytics.overview.allocated_firearms}</p>
+                <p className="text-xs text-text-secondary">Allocated / {analytics.overview.total_firearms} Total</p>
               </div>
               <div className="text-right">
-                <p className="text-sm text-purple-800">{analytics.resource_utilization.firearms_available} Available</p>
+                <p className="text-sm text-text-secondary">{analytics.resource_utilization.firearms_available} Available</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
-            <h3 className="text-sm font-semibold text-orange-800 uppercase mb-2">Vehicles</h3>
+          <div className="bento-card status-bar-info">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-info-text mb-2">Vehicles</h3>
             <div className="flex justify-between items-end">
               <div>
-                <p className="text-3xl font-bold text-orange-900">{analytics.overview.deployed_vehicles}</p>
-                <p className="text-xs text-orange-700">Deployed / {analytics.overview.total_vehicles} Total</p>
+                <p className="text-3xl font-black text-text-primary">{analytics.overview.deployed_vehicles}</p>
+                <p className="text-xs text-text-secondary">Deployed / {analytics.overview.total_vehicles} Total</p>
               </div>
               <div className="text-right">
-                <p className="text-sm text-orange-800">{analytics.resource_utilization.vehicles_available} Available</p>
+                <p className="text-sm text-text-secondary">{analytics.resource_utilization.vehicles_available} Available</p>
               </div>
             </div>
           </div>
@@ -157,8 +157,8 @@ const AnalyticsDashboard: FC = () => {
       </section>
 
       {/* Performance Metrics */}
-      <section className="bg-surface p-6 rounded-xl shadow-sm">
-        <h2 className="text-2xl font-bold text-text-primary mb-6">Performance Metrics</h2>
+      <section className="command-panel p-6">
+        <h2 className="mb-6 text-2xl font-bold uppercase tracking-wide text-text-primary">Performance Metrics</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <div className="border-l-4 border-green-500 pl-4">
             <p className="text-sm text-text-secondary mb-1">Mission Completion Rate</p>
@@ -188,25 +188,25 @@ const AnalyticsDashboard: FC = () => {
       </section>
 
       {/* Mission Stats */}
-      <section className="bg-surface p-6 rounded-xl shadow-sm">
-        <h2 className="text-2xl font-bold text-text-primary mb-6">Mission Statistics (This Month)</h2>
+      <section className="command-panel p-6">
+        <h2 className="mb-6 text-2xl font-bold uppercase tracking-wide text-text-primary">Mission Statistics (This Month)</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="text-center p-4 bg-surface-elevated rounded-lg">
+          <div className="bento-card text-center status-bar-info">
             <p className="text-4xl font-bold text-indigo-500">{analytics.mission_stats.total_missions_this_month}</p>
             <p className="text-sm text-text-secondary mt-2">Total Missions</p>
           </div>
 
-          <div className="text-center p-4 bg-surface-elevated rounded-lg">
+          <div className="bento-card text-center status-bar-success">
             <p className="text-4xl font-bold text-green-500">{analytics.mission_stats.completed_missions_this_month}</p>
             <p className="text-sm text-text-secondary mt-2">Completed</p>
           </div>
 
-          <div className="text-center p-4 bg-surface-elevated rounded-lg">
+          <div className="bento-card text-center status-bar-warning">
             <p className="text-4xl font-bold text-yellow-500">{analytics.mission_stats.pending_missions}</p>
             <p className="text-sm text-text-secondary mt-2">Pending</p>
           </div>
 
-          <div className="text-center p-4 bg-surface-elevated rounded-lg">
+          <div className="bento-card text-center status-bar-info">
             <p className="text-4xl font-bold text-blue-500">{analytics.mission_stats.average_guards_per_mission.toFixed(1)}</p>
             <p className="text-sm text-text-secondary mt-2">Avg Guards/Mission</p>
           </div>
@@ -214,8 +214,8 @@ const AnalyticsDashboard: FC = () => {
       </section>
 
       {/* Resource Utilization */}
-      <section className="bg-surface p-6 rounded-xl shadow-sm">
-        <h2 className="text-2xl font-bold text-text-primary mb-6">Resource Utilization</h2>
+      <section className="command-panel p-6">
+        <h2 className="mb-6 text-2xl font-bold uppercase tracking-wide text-text-primary">Resource Utilization</h2>
         <div className="space-y-4">
           <div>
             <div className="flex justify-between mb-2">

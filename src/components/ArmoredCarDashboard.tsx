@@ -352,10 +352,10 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
         <Header title="Armored Car Management" badgeLabel="Armored Cars" onLogout={onLogout} onMenuClick={() => setMobileMenuOpen(true)} user={user} onNavigateToProfile={() => onViewChange('profile')} />
 
         {error && (
-          <div className="bg-red-50 text-red-900 px-8 py-3 border border-red-200 rounded mx-8 my-4 font-medium flex items-center justify-between">
+          <div className="soc-alert-error mx-8 my-4 font-medium flex items-center justify-between">
             <span>{error}</span>
             <button
-              className="text-red-900 hover:text-red-800"
+              className="opacity-80 hover:opacity-100"
               onClick={() => setError('')}
             >
               ✕
@@ -363,10 +363,10 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
           </div>
         )}
         {success && (
-          <div className="bg-green-50 text-green-900 px-8 py-3 border border-green-200 rounded mx-8 my-4 font-medium flex items-center justify-between">
+          <div className="soc-alert-success mx-8 my-4 font-medium flex items-center justify-between">
             <span>{success}</span>
             <button
-              className="text-green-900 hover:text-green-800"
+              className="opacity-80 hover:opacity-100"
               onClick={() => setSuccess('')}
             >
               ✕
@@ -376,24 +376,24 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
 
         <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in">
           {/* Stats Grid */}
-          <div className="grid grid-cols-5 gap-4 mb-8">
-            <div className="bg-surface rounded-xl shadow-sm border-t-4 border-indigo-600 hover:shadow-md hover:-translate-y-1 transition-all duration-300 p-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-4 mb-8">
+            <div className="bento-card status-bar-info">
               <div className="text-text-secondary text-sm font-semibold uppercase tracking-wider mb-2">Total Vehicles</div>
               <p className="text-4xl font-bold text-indigo-600">{cars.length}</p>
             </div>
-            <div className="bg-surface rounded-xl shadow-sm border-t-4 border-green-600 hover:shadow-md hover:-translate-y-1 transition-all duration-300 p-6">
+            <div className="bento-card status-bar-success">
               <div className="text-text-secondary text-sm font-semibold uppercase tracking-wider mb-2">Available</div>
               <p className="text-4xl font-bold text-green-600">{availableCars}</p>
             </div>
-            <div className="bg-surface rounded-xl shadow-sm border-t-4 border-amber-600 hover:shadow-md hover:-translate-y-1 transition-all duration-300 p-6">
+            <div className="bento-card status-bar-warning">
               <div className="text-text-secondary text-sm font-semibold uppercase tracking-wider mb-2">Allocated</div>
               <p className="text-4xl font-bold text-amber-600">{allocatedCars}</p>
             </div>
-            <div className="bg-surface rounded-xl shadow-sm border-t-4 border-red-600 hover:shadow-md hover:-translate-y-1 transition-all duration-300 p-6">
+            <div className="bento-card status-bar-critical">
               <div className="text-text-secondary text-sm font-semibold uppercase tracking-wider mb-2">In Maintenance</div>
               <p className="text-4xl font-bold text-red-600">{maintenanceCars}</p>
             </div>
-            <div className="bg-surface rounded-xl shadow-sm border-t-4 border-blue-600 hover:shadow-md hover:-translate-y-1 transition-all duration-300 p-6">
+            <div className="bento-card status-bar-info">
               <div className="text-text-secondary text-sm font-semibold uppercase tracking-wider mb-2">Active Trips</div>
               <p className="text-4xl font-bold text-blue-600">{activeTrips}</p>
             </div>
@@ -423,7 +423,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
           {activeTab === 'inventory' && (
             <div className="grid grid-cols-2 gap-8">
               {/* Add New Vehicle Form */}
-              <div className="bg-surface rounded-lg shadow p-6">
+              <div className="command-panel p-6">
                 <h2 className="text-lg md:text-xl font-bold text-text-primary mb-4 md:mb-6 pb-3 border-b border-border">Add New Armored Vehicle</h2>
                 <form onSubmit={addCar} className="space-y-3 md:space-y-4">
                   <div>
@@ -499,7 +499,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
               </div>
 
               {/* Vehicle Inventory */}
-              <div className="bg-surface rounded-lg shadow p-4 md:p-6">
+              <div className="table-glass rounded-lg p-4 md:p-6">
                 <h2 className="text-lg md:text-xl font-bold text-text-primary mb-4 md:mb-6 pb-3 border-b border-border">Vehicle Inventory</h2>
                 {loading ? (
                   <div className="flex justify-center py-8">
@@ -543,7 +543,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
           {activeTab === 'allocation' && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-8">
               {/* Allocate Vehicle Form */}
-              <div className="bg-surface rounded-lg shadow p-4 md:p-6">
+              <div className="command-panel p-4 md:p-6">
                 <h2 className="text-lg md:text-xl font-bold text-text-primary mb-4 md:mb-6 pb-3 border-b border-border">Allocate Vehicle</h2>
                 <form onSubmit={issueAllocation} className="space-y-3 md:space-y-4">
                   <div>
@@ -603,7 +603,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
               </div>
 
               {/* Active Allocations */}
-              <div className="bg-surface rounded-lg shadow p-4 md:p-6">
+              <div className="table-glass rounded-lg p-4 md:p-6">
                 <h2 className="text-lg md:text-xl font-bold text-text-primary mb-4 md:mb-6 pb-3 border-b border-border">Active Allocations</h2>
                 {allocations.length === 0 ? (
                   <div className="text-center py-8 text-text-secondary text-sm md:text-base">No active allocations</div>
@@ -643,7 +643,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
           {activeTab === 'maintenance' && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-8">
               {/* Schedule Maintenance Form */}
-              <div className="bg-surface rounded-lg shadow p-4 md:p-6">
+              <div className="command-panel p-4 md:p-6">
                 <h2 className="text-lg md:text-xl font-bold text-text-primary mb-4 md:mb-6 pb-3 border-b border-border">Schedule Maintenance</h2>
                 <form onSubmit={scheduleMaintenance} className="space-y-3 md:space-y-4">
                   <div>
@@ -717,7 +717,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
               </div>
 
               {/* Maintenance Records */}
-              <div className="bg-surface rounded-lg shadow p-4 md:p-6">
+              <div className="table-glass rounded-lg p-4 md:p-6">
                 <h2 className="text-lg md:text-xl font-bold text-text-primary mb-4 md:mb-6 pb-3 border-b border-border">Maintenance Records</h2>
                 {maintenance.length === 0 ? (
                   <div className="text-center py-8 text-text-secondary text-sm md:text-base">No maintenance records</div>
@@ -755,7 +755,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
 
           {/* Trips Tab */}
           {activeTab === 'trips' && (
-            <div className="bg-surface rounded-lg shadow p-4 md:p-6">
+            <div className="table-glass rounded-lg p-4 md:p-6">
               <h2 className="text-lg md:text-xl font-bold text-text-primary mb-4 md:mb-6 pb-3 border-b border-border">Trip History</h2>
               {trips.length === 0 ? (
                 <div className="text-center py-8 text-text-secondary text-sm md:text-base">No trips recorded</div>

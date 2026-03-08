@@ -1,5 +1,5 @@
 import { useState, FC, FormEvent, ChangeEvent } from 'react'
-import Logo from './Logo'
+import SentinelLogo from './SentinelLogo'
 import ParticleBackground from './ParticleBackground'
 import { User } from '../App'
 import { API_BASE_URL } from '../config'
@@ -677,126 +677,77 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
 
   return (
     <>
-      {/* MOBILE LAYOUT */}
-      <div className="lg:hidden min-h-screen w-screen flex items-center justify-center p-4" style={{ background: 'var(--bg-primary)' }}>
-        <div className="w-full max-w-md">
-          {/* Form Card */}
-          <div className="rounded-3xl shadow-2xl p-7 max-h-[90vh] overflow-y-auto" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-color)' }}>
-            {/* Logo */}
-            <div className="flex justify-center mb-6">
-              <Logo onClick={() => {}} />
+      <a href="#auth-main" className="skip-link">Skip to main content</a>
+      <div className="relative min-h-screen overflow-hidden">
+        <div className="pointer-events-none absolute inset-0 opacity-40" aria-hidden="true">
+          <div className="h-full w-full" style={{
+            backgroundImage: 'linear-gradient(rgba(56,189,248,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(56,189,248,0.08) 1px, transparent 1px)',
+            backgroundSize: '42px 42px'
+          }} />
+        </div>
+
+        <div className="pointer-events-none absolute inset-0 opacity-70" aria-hidden="true">
+          <ParticleBackground particleCount={65} color="56, 189, 248" connectDistance={120} mouseRadius={120} />
+        </div>
+
+        <div className="relative z-10 grid min-h-screen grid-cols-1 lg:grid-cols-[1.1fr_0.9fr]">
+          <main id="auth-main" className="flex items-center justify-center px-4 py-10 sm:px-6 lg:px-10">
+            <section className="w-full max-w-xl rounded-2xl border border-border-elevated bg-surface/85 p-6 shadow-modal backdrop-blur-md sm:p-8" aria-labelledby="auth-title">
+              <div className="mb-6 flex justify-center">
+                <SentinelLogo size="lg" stacked showText />
+              </div>
+
+              {!requiresVerification && !isRegistering && (
+                <div className="mb-6 text-center">
+                  <h1 id="auth-title" className="text-3xl font-bold uppercase tracking-wide text-text-primary">Mission Access Terminal</h1>
+                  <p className="mt-2 text-sm font-medium text-text-secondary">Authenticate to enter SENTINEL command operations.</p>
+                </div>
+              )}
+
+              {requiresVerification && (
+                <div className="mb-6 text-center">
+                  <h1 id="auth-title" className="text-3xl font-bold uppercase tracking-wide text-text-primary">Verify Clearance Code</h1>
+                  <p className="mt-2 text-sm font-medium text-text-secondary">Enter the 6-digit code sent to {verificationEmail}.</p>
+                </div>
+              )}
+
+              {isRegistering && !requiresVerification && (
+                <div className="mb-6 text-center">
+                  <h1 id="auth-title" className="text-3xl font-bold uppercase tracking-wide text-text-primary">Register Guard Profile</h1>
+                  <p className="mt-2 text-sm font-medium text-text-secondary">Provide operator details for approval workflow.</p>
+                </div>
+              )}
+
+              {renderForm()}
+            </section>
+          </main>
+
+          <aside className="hidden border-l border-border-subtle bg-surface-elevated/70 p-10 lg:flex lg:flex-col lg:justify-between">
+            <div>
+              <SentinelLogo size="md" showText />
+              <p className="mt-5 max-w-md text-sm text-text-secondary">
+                Real-time protection platform for mission planning, personnel readiness, and critical asset oversight.
+              </p>
             </div>
 
-            {/* Accent Line */}
-            <div className="w-16 h-0.5 mx-auto mb-5 rounded-full" style={{ background: 'linear-gradient(to right, #3B82F6, #6366F1)' }}></div>
-
-            {/* Page Title */}
-            {!requiresVerification && !isRegistering && (
-              <div className="mb-5 text-center">
-                <h1 className="text-2xl font-bold mb-1" style={{ color: 'var(--text-primary)' }}>Welcome Back!</h1>
-                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Please enter your details</p>
+            <div className="space-y-4">
+              <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-text-tertiary">System Status</h2>
+              <div className="grid gap-3">
+                {[
+                  { label: 'System Status', value: 'Operational', tone: 'success' },
+                  { label: 'Network', value: 'Secure', tone: 'info' },
+                  { label: 'Monitoring Nodes', value: 'Active', tone: 'warning' },
+                ].map((item) => (
+                  <div key={item.label} className={`bento-card ${item.tone === 'success' ? 'status-bar-success' : item.tone === 'warning' ? 'status-bar-warning' : 'status-bar-info'}`}>
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-tertiary">{item.label}</p>
+                    <p className="mt-1 text-lg font-bold text-text-primary">{item.value}</p>
+                  </div>
+                ))}
               </div>
-            )}
+            </div>
 
-            {requiresVerification && (
-              <div className="mb-5 text-center">
-                <h1 className="text-2xl font-bold mb-1" style={{ color: 'var(--text-primary)' }}>Verify Your Email</h1>
-                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Enter the 6-digit code sent to {verificationEmail}</p>
-              </div>
-            )}
-
-            {isRegistering && !requiresVerification && (
-              <div className="mb-5 text-center">
-                <h1 className="text-2xl font-bold mb-1" style={{ color: 'var(--text-primary)' }}>Create Account</h1>
-                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Fill in your details to get started</p>
-              </div>
-            )}
-
-            {/* Form */}
-            {renderForm()}
-          </div>
-        </div>
-      </div>
-
-      {/* DESKTOP LAYOUT */}
-      <div className="hidden lg:flex h-screen w-screen overflow-hidden" style={{ background: 'var(--bg-primary)' }}>
-        {/* Left Section - Form */}
-        <div className="flex-1 relative h-full">          
-          {/* Particle background - FIXED */}
-          <div className="absolute inset-0 pointer-events-none z-0">
-            <ParticleBackground particleCount={90} color="0, 190, 220" connectDistance={130} mouseRadius={160} />
-          </div>
-
-          {/* Scrollable content */}
-          <div className="relative z-10 h-full flex flex-col overflow-y-auto" style={{
-            scrollbarWidth: 'none',
-            msOverflowStyle: 'none',
-          }}>
-            {/* Logo top-left */}
-            {!isRegistering && (
-              <div className="pt-6 pl-8">
-                <Logo size="md" logoOnly />
-              </div>
-            )}
-
-            {/* Form centered */}
-            <div 
-              className={`flex-1 flex ${isRegistering ? 'items-start' : 'items-center'} justify-center p-8`}
-            >
-            <style>{`
-              .relative.z-10.h-full.flex.flex-col.overflow-y-auto::-webkit-scrollbar {
-                display: none;
-              }
-            `}</style>
-            <div className="w-full max-w-md py-8">
-            {!requiresVerification && !isRegistering && (
-              <div className="mb-8">
-                <h1 className="text-4xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>Welcome Back!</h1>
-                <p className="text-lg" style={{ color: 'var(--text-secondary)' }}>Please enter your details</p>
-              </div>
-            )}
-
-            {requiresVerification && (
-              <div className="mb-8">
-                <h1 className="text-4xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>Verify Your Email</h1>
-                <p className="text-base" style={{ color: 'var(--text-secondary)' }}>Enter the 6-digit code sent to {verificationEmail}</p>
-              </div>
-            )}
-
-            {isRegistering && !requiresVerification && (
-              <div className="mb-8">
-                <h1 className="text-4xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>Create Account</h1>
-                <p className="text-lg" style={{ color: 'var(--text-secondary)' }}>Fill in your details to get started</p>
-              </div>
-            )}
-
-            {renderForm()}
-          </div>
-          </div>
-          </div>
-        </div>
-
-        {/* Right Section - Design */}
-        <div className="flex-1 flex items-center justify-center flex-col gap-8 p-12" style={{ background: 'linear-gradient(135deg, #0F172A 0%, #1E3A5F 50%, #0D0F1A 100%)', borderLeft: '1px solid var(--border-color)' }}>
-          <Logo size="lg" forceDark />
-          
-          <div className="grid grid-cols-2 gap-6 w-full max-w-md">
-            {[
-              { value: '24/7', label: 'Security' },
-              { value: '100%', label: 'Encrypted' },
-              { value: '∞', label: 'Scalable' },
-              { value: '✓', label: 'Verified' },
-            ].map(item => (
-              <div key={item.label} className="rounded-lg p-4 text-center" style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.15)' }}>
-                <div className="text-2xl font-bold text-white mb-2">{item.value}</div>
-                <p className="text-sm" style={{ color: '#93C5FD' }}>{item.label}</p>
-              </div>
-            ))}
-          </div>
-          
-          <div className="text-center">
-            <p className="text-sm" style={{ color: '#64748B' }}>Davao Security & Investigation Agency Inc.</p>
-          </div>
+            <p className="text-xs font-medium uppercase tracking-[0.16em] text-text-tertiary">Davao Security & Investigation Agency</p>
+          </aside>
         </div>
       </div>
     </>

@@ -4,16 +4,16 @@ import EditScheduleModal from './EditScheduleModal'
 import AnalyticsDashboard from './AnalyticsDashboard'
 import TripManagement from './TripManagement'
 import NotificationCenter, { Notification, createNotification } from './NotificationCenter'
-import Sidebar from './Sidebar'
-import Header from './Header'
 import { API_BASE_URL } from '../config'
 import { User as AppUser } from '../App'
 import { getSidebarNav } from '../config/navigation'
-import { can } from '../utils/permissions'
 import { normalizeRole } from '../types/auth'
-import SectionPanel from './dashboard/SectionPanel'
-import OperationalSummaryStrip from './dashboard/OperationalSummaryStrip'
-import QuickActionsPanel from './dashboard/QuickActionsPanel'
+import CommandCenterDashboard from './dashboard/CommandCenterDashboard'
+import AssignmentPicker from './dashboard/AssignmentPicker'
+import Allowed from './rbac/Allowed'
+import DeniedFallback from './rbac/DeniedFallback'
+import OperationalShell from './layout/OperationalShell'
+import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
 
 interface User {
   id: string
@@ -64,6 +64,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   const [missions, setMissions] = useState<any[]>([])
   const [missionsLoading, setMissionsLoading] = useState<boolean>(false)
   const [pendingApprovals, setPendingApprovals] = useState<PendingApprovalUser[]>([])
+  const [selectedApproval, setSelectedApproval] = useState<PendingApprovalUser | null>(null)
   const [approvalsLoading, setApprovalsLoading] = useState<boolean>(false)
   const [processingApprovalId, setProcessingApprovalId] = useState<string | null>(null)
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false)
@@ -97,7 +98,6 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   const isSuperadminViewer = normalizedViewerRole === 'superadmin'
   const isAdminViewer = normalizedViewerRole === 'admin'
   const isSupervisorViewer = normalizedViewerRole === 'supervisor'
-  const canDeleteUsers = can(user.role, 'manage_users')
   const navItems = getSidebarNav(user.role)
 
   const canViewUserRow = (targetRoleRaw: string) => {
@@ -137,10 +137,6 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   }
 
   useEffect(() => {
-    console.log('activeSection changed to:', activeSection)
-  }, [activeSection])
-
-  useEffect(() => {
     fetchData()
     fetchGuardsAndFirearms()
     if (activeSection === 'dashboard') {
@@ -176,14 +172,11 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   const fetchData = async () => {
     try {
       setLoading(true)
-      const token = localStorage.getItem('token')
-      const response = await fetch(`${API_BASE_URL}/api/users`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      if (!response.ok) {
-        throw new Error('Failed to fetch users')
-      }
-      const data = await response.json()
+      const data = await fetchJsonOrThrow<any>(
+        `${API_BASE_URL}/api/users`,
+        { headers: getAuthHeaders() },
+        'Failed to fetch users',
+      )
       const users = Array.isArray(data) ? data : (data.users || data || [])
       setUsers(users)
       
@@ -210,14 +203,11 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   const fetchShifts = async () => {
     try {
       setShiftsLoading(true)
-      const token = localStorage.getItem('token')
-      const response = await fetch(`${API_BASE_URL}/api/guard-replacement/shifts`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      if (!response.ok) {
-        throw new Error('Failed to fetch shifts')
-      }
-      const data = await response.json()
+      const data = await fetchJsonOrThrow<any>(
+        `${API_BASE_URL}/api/guard-replacement/shifts`,
+        { headers: getAuthHeaders() },
+        'Failed to fetch shifts',
+      )
       setShifts(data.shifts || [])
       setError('')
     } catch (err) {
@@ -230,14 +220,11 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   const fetchMissions = async () => {
     try {
       setMissionsLoading(true)
-      const token = localStorage.getItem('token')
-      const response = await fetch(`${API_BASE_URL}/api/missions`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      if (!response.ok) {
-        throw new Error('Failed to fetch missions')
-      }
-      const data = await response.json()
+      const data = await fetchJsonOrThrow<any>(
+        `${API_BASE_URL}/api/missions`,
+        { headers: getAuthHeaders() },
+        'Failed to fetch missions',
+      )
       setMissions(data.missions || [])
       setError('')
     } catch (err) {
@@ -250,14 +237,11 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   const fetchPendingApprovals = async () => {
     try {
       setApprovalsLoading(true)
-      const token = localStorage.getItem('token')
-      const response = await fetch(`${API_BASE_URL}/api/users/pending-approvals`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      if (!response.ok) {
-        throw new Error('Failed to fetch pending approvals')
-      }
-      const data = await response.json()
+      const data = await fetchJsonOrThrow<any>(
+        `${API_BASE_URL}/api/users/pending-approvals`,
+        { headers: getAuthHeaders() },
+        'Failed to fetch pending approvals',
+      )
       const pendingList = Array.isArray(data) ? data : (data.users || data || [])
       setPendingApprovals(pendingList)
       setError('')
@@ -270,43 +254,35 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
 
   const fetchGuardsAndFirearms = async () => {
     try {
-      // Fetch all users (all users are guards)
-      const token = localStorage.getItem('token')
-      const usersResponse = await fetch(`${API_BASE_URL}/api/users`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      if (usersResponse.ok) {
-        const usersData = await usersResponse.json()
-        const allUsers = Array.isArray(usersData) ? usersData : (usersData.users || [])
-        // Filter out admin users, only get regular users (guards)
-        const guards = allUsers.filter((u: User) => normalizeRole(u.role) === 'guard')
-        setAvailableGuards(guards)
-      }
+      const [usersData, firearmsData, vehiclesData] = await Promise.all([
+        fetchJsonOrThrow<any>(
+          `${API_BASE_URL}/api/users`,
+          { headers: getAuthHeaders() },
+          'Failed to fetch users',
+        ),
+        fetchJsonOrThrow<any>(
+          `${API_BASE_URL}/api/firearms`,
+          { headers: getAuthHeaders() },
+          'Failed to fetch firearms',
+        ),
+        fetchJsonOrThrow<any>(
+          `${API_BASE_URL}/api/armored-cars`,
+          { headers: getAuthHeaders() },
+          'Failed to fetch armored cars',
+        ),
+      ])
 
-      // Fetch firearms (backend returns array directly)
-      const firearmsResponse = await fetch(`${API_BASE_URL}/api/firearms`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      if (firearmsResponse.ok) {
-        const firearmsData = await firearmsResponse.json()
-        // Backend returns array directly, handle both formats for compatibility
-        const firearms = Array.isArray(firearmsData) ? firearmsData : (firearmsData.firearms || [])
-        // Only show available firearms
-        const availableOnly = firearms.filter((f: any) => f.status === 'available')
-        setAvailableFirearms(availableOnly)
-      }
+      const allUsers = Array.isArray(usersData) ? usersData : (usersData.users || [])
+      const guards = allUsers.filter((u: User) => normalizeRole(u.role) === 'guard')
+      setAvailableGuards(guards)
 
-      // Fetch armored cars (vehicles)
-      const vehiclesResponse = await fetch(`${API_BASE_URL}/api/armored-cars`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      if (vehiclesResponse.ok) {
-        const vehiclesData = await vehiclesResponse.json()
-        const vehicles = Array.isArray(vehiclesData) ? vehiclesData : (vehiclesData.armored_cars || vehiclesData.vehicles || [])
-        // Only show available vehicles
-        const availableVehicles = vehicles.filter((v: any) => v.status === 'available')
-        setAvailableVehicles(availableVehicles)
-      }
+      const firearms = Array.isArray(firearmsData) ? firearmsData : (firearmsData.firearms || [])
+      setAvailableFirearms(firearms.filter((f: any) => f.status === 'available'))
+
+      const vehicles = Array.isArray(vehiclesData)
+        ? vehiclesData
+        : (vehiclesData.armored_cars || vehiclesData.vehicles || [])
+      setAvailableVehicles(vehicles.filter((v: any) => v.status === 'available'))
     } catch (err) {
       console.error('Error fetching guards, firearms, and vehicles:', err)
     }
@@ -335,40 +311,16 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
         return
       }
       
-      const token = localStorage.getItem('token')
-      const response = await fetch(`${API_BASE_URL}/api/missions/assign`, {
+      const data = await fetchJsonOrThrow<any>(`${API_BASE_URL}/api/missions/assign`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           ...missionFormData,
           guards_required: selectedGuards ? 1 : 0,
           firearms_required: selectedFirearms ? 1 : 0,
           vehicles_required: selectedVehicles ? 1 : 0
         })
-      })
-
-      if (!response.ok) {
-        let errorMsg = 'Failed to assign mission'
-        try {
-          const errorData = await response.json()
-          errorMsg = errorData.error || errorData.message || errorMsg
-        } catch {
-          // If response is not JSON, try to get text
-          try {
-            const text = await response.text()
-            errorMsg = text || errorMsg
-          } catch {
-            errorMsg = `Server error: ${response.status} ${response.statusText}`
-          }
-        }
-        addNotification('error', 'Mission Assignment Failed', errorMsg)
-        throw new Error(errorMsg)
-      }
-
-      const data = await response.json()
+      }, 'Failed to assign mission')
       setMissionResponse(data)
       
       // Add success notification
@@ -395,22 +347,19 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
       // Refresh missions list
       await fetchMissions()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to assign mission')
+      const message = err instanceof Error ? err.message : 'Failed to assign mission'
+      setError(message)
+      addNotification('error', 'Mission Assignment Failed', message)
     } finally {
       setMissionsLoading(false)
     }
   }
 
   const handleNavigate = (view: string) => {
-    console.log('handleNavigate called with view:', view);
     if (view === 'approvals' || view === 'schedule' || view === 'dashboard' || view === 'missions' || view === 'analytics' || view === 'trips') {
-      console.log('Setting activeSection to:', view);
       setActiveSection(view as 'dashboard' | 'approvals' | 'schedule' | 'missions' | 'analytics' | 'trips')
     } else if (onViewChange) {
-      console.log('Calling onViewChange with view:', view);
       onViewChange(view)
-    } else {
-      console.log('No handler for view:', view);
     }
   }
 
@@ -432,33 +381,11 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
         status: 'scheduled'
       }
 
-      const token = localStorage.getItem('token')
-      const response = await fetch(`${API_BASE_URL}/api/guard-replacement/shifts`, {
+      await fetchJsonOrThrow<any>(`${API_BASE_URL}/api/guard-replacement/shifts`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(payload)
-      })
-
-      if (!response.ok) {
-        let errorMsg = 'Failed to create schedule'
-        try {
-          const errorData = await response.json()
-          errorMsg = errorData.error || errorData.message || errorMsg
-        } catch {
-          // If response is not JSON, try to get text
-          try {
-            const text = await response.text()
-            errorMsg = text || errorMsg
-          } catch {
-            errorMsg = `Server error: ${response.status} ${response.statusText}`
-          }
-        }
-        addNotification('error', 'Schedule Creation Failed', errorMsg)
-        throw new Error(errorMsg)
-      }
+      }, 'Failed to create schedule')
 
       addNotification('success', 'Schedule Created', 'Guard schedule created successfully')
       
@@ -475,7 +402,9 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
       // Refresh shifts list
       await fetchShifts()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create schedule')
+      const message = err instanceof Error ? err.message : 'Failed to create schedule'
+      setError(message)
+      addNotification('error', 'Schedule Creation Failed', message)
     } finally {
       setShiftsLoading(false)
     }
@@ -489,19 +418,11 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
     if (!editingUser) return
 
     try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(`${API_BASE_URL}/api/user/${editingUser.id}`, {
+      await fetchJsonOrThrow<any>(`${API_BASE_URL}/api/user/${editingUser.id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(updatedData),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to update user')
-      }
+      }, 'Failed to update user')
 
       // Refresh user list
       await fetchData()
@@ -518,17 +439,10 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
     }
 
     try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(`${API_BASE_URL}/api/user/${userId}`, {
+      await fetchJsonOrThrow<any>(`${API_BASE_URL}/api/user/${userId}`, {
         method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to delete user')
-      }
+        headers: getAuthHeaders(),
+      }, 'Failed to delete user')
 
       // Refresh user list
       await fetchData()
@@ -570,26 +484,11 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   const handleApprovalAction = async (targetUserId: string, action: 'approve' | 'reject') => {
     try {
       setProcessingApprovalId(targetUserId)
-      const token = localStorage.getItem('token')
-      const response = await fetch(`${API_BASE_URL}/api/users/${targetUserId}/approval`, {
+      await fetchJsonOrThrow<any>(`${API_BASE_URL}/api/users/${targetUserId}/approval`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ action }),
-      })
-
-      if (!response.ok) {
-        let message = `Failed to ${action} account`
-        try {
-          const payload = await response.json()
-          message = payload.error || payload.message || message
-        } catch {
-          // keep fallback message
-        }
-        throw new Error(message)
-      }
+      }, `Failed to ${action} account`)
 
       addNotification(
         'success',
@@ -611,36 +510,31 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   return (
     <>
       <NotificationCenter notifications={notifications} onDismiss={dismissNotification} />
-      <div className="flex min-h-screen lg:h-screen w-full bg-background font-sans">
-        <Sidebar
-          items={navItems}
-          activeView={activeSection}
-          onNavigate={handleNavigate}
-          onLogoClick={() => setActiveSection('dashboard')}
-          onLogout={onLogout}
-          isOpen={mobileMenuOpen}
-          onClose={() => setMobileMenuOpen(false)}
-        />
-
-      <main className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden w-full">
-        <Header
-          title={sectionTitle}
-          badgeLabel={badgeLabel}
-          onLogout={onLogout}
-          onMenuClick={() => setMobileMenuOpen(true)}
-          user={user}
-          onNavigateToProfile={() => onViewChange?.('profile')}
-          rightSlot={
-            <button
-              onClick={handleRefresh}
-              className="px-3 py-2 text-sm font-semibold text-text-primary bg-surface border border-border rounded-lg hover:bg-surface-hover transition-colors hidden md:block"
-            >
-              Refresh
-            </button>
-          }
-        />
-
-        {error && <div className="bg-red-50 text-red-900 px-8 py-3 border border-red-200 rounded mx-8 my-4 font-medium">{error}</div>}
+      <OperationalShell
+        user={user}
+        title={sectionTitle}
+        badgeLabel={badgeLabel}
+        navItems={navItems}
+        activeView={activeSection}
+        onNavigate={handleNavigate}
+        onLogout={onLogout}
+        mobileMenuOpen={mobileMenuOpen}
+        onMenuOpen={() => setMobileMenuOpen(true)}
+        onMenuClose={() => setMobileMenuOpen(false)}
+        onLogoClick={() => {
+          setActiveSection('dashboard')
+          onViewChange?.('dashboard')
+        }}
+        rightSlot={
+          <button
+            onClick={handleRefresh}
+            className="hidden rounded-lg border border-border bg-surface px-3 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-surface-hover md:block"
+          >
+            Refresh
+          </button>
+        }
+        error={error}
+      >
 
         {activeSection === 'dashboard' && loading ? (
           <div className="flex-1 flex items-center justify-center text-center">
@@ -648,52 +542,17 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
           </div>
         ) : activeSection === 'dashboard' ? (
           <div className="flex-1 flex flex-col overflow-hidden p-4 md:p-8 w-full animate-fade-in gap-4 md:gap-6">
-            <SectionPanel
-              title="Security Operations Command Summary"
-              subtitle="Live indicators for staffing, approvals, mission load, and asset readiness"
-              actions={
-                <button
-                  onClick={handleRefresh}
-                  className="rounded-lg border border-border-subtle bg-background px-3 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-surface-hover"
-                >
-                  Refresh Summary
-                </button>
-              }
-            >
-              <OperationalSummaryStrip
-                metrics={[
-                  { label: 'Active Guards On Duty', value: activeGuardsOnDuty, tone: 'success' },
-                  { label: 'Guards Absent Today', value: guardsAbsentToday, tone: guardsAbsentToday > 0 ? 'danger' : 'neutral' },
-                  { label: 'Pending Guard Approvals', value: pendingGuardApprovals, tone: pendingGuardApprovals > 0 ? 'warning' : 'neutral' },
-                  { label: 'Operations Alerts', value: operationsAlerts, tone: operationsAlerts > 0 ? 'warning' : 'neutral' },
-                  { label: 'Active Missions', value: activeMissions, tone: 'info' },
-                  { label: 'Scheduled Shifts', value: scheduledShifts, tone: 'info' },
-                  { label: 'Available Firearms', value: availableFirearms.length, tone: 'neutral' },
-                  { label: 'Available Vehicles', value: availableVehicles.length, tone: 'neutral' },
-                ]}
-              />
-            </SectionPanel>
-
-            <SectionPanel
-              title="Management Quick Actions"
-              subtitle="Jump directly to high-frequency operations"
-              actions={
-                <QuickActionsPanel
-                  actions={[
-                    { label: 'Review Approvals', tone: 'emerald', onClick: () => handleNavigate('approvals') },
-                    { label: 'Assign Shift', tone: 'indigo', onClick: () => handleNavigate('schedule') },
-                    { label: 'Allocate Firearm', tone: 'blue', onClick: () => onViewChange?.('allocation') },
-                    { label: 'Assign Vehicle', tone: 'amber', onClick: () => onViewChange?.('armored-cars') },
-                  ]}
-                />
-              }
-            >
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                <CommandMetricCard label="Total Users" value={stats.totalUsers ?? 0} />
-                <CommandMetricCard label="Administrators" value={stats.admins ?? 0} />
-                <CommandMetricCard label="Guard Workforce" value={stats.guards ?? 0} />
-              </div>
-            </SectionPanel>
+            <CommandCenterDashboard
+              quickActions={[
+                { label: 'Assign Shift', tone: 'indigo', onClick: () => handleNavigate('schedule') },
+                { label: 'Approve Guard', tone: 'emerald', onClick: () => handleNavigate('approvals') },
+                { label: 'Allocate Firearm', tone: 'blue', onClick: () => onViewChange?.('allocation') },
+                { label: 'Assign Vehicle', tone: 'amber', onClick: () => onViewChange?.('armored-cars') },
+                { label: 'Start Trip', tone: 'indigo', onClick: () => handleNavigate('trips') },
+                { label: 'End Trip', tone: 'amber', onClick: () => handleNavigate('trips') },
+                { label: 'Create Mission', tone: 'blue', onClick: () => handleNavigate('missions') },
+              ]}
+            />
 
             <section className="flex flex-col flex-1 min-h-0 w-full bento-card !p-0 overflow-hidden table-glass">
               {/* Table header — static, never scrolls */}
@@ -782,15 +641,21 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                                   </button>
                                 )}
-                                {canDeleteUsers && canEditUserRow(u.role) && u.id !== user.id && (
-                                  <button
-                                    onClick={() => handleDeleteUser(u.id, u.email)}
-                                    title="Delete user"
-                                    className="p-2 rounded-lg text-text-tertiary hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                                  >
-                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                  </button>
-                                )}
+                                <Allowed
+                                  role={user.role}
+                                  permission="manage_users"
+                                  fallback={<DeniedFallback title="Delete blocked" reason="Your role cannot delete this account." />}
+                                >
+                                  {canEditUserRow(u.role) && u.id !== user.id && (
+                                    <button
+                                      onClick={() => handleDeleteUser(u.id, u.email)}
+                                      title="Delete user"
+                                      className="p-2 rounded-lg text-text-tertiary hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                                    >
+                                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                    </button>
+                                  )}
+                                </Allowed>
                               </div>
                             </td>
                           </tr>
@@ -850,6 +715,12 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                             <td className="px-4 py-3 text-text-primary">{new Date(pendingUser.created_at).toLocaleString()}</td>
                             <td className="px-4 py-3">
                               <div className="flex gap-2">
+                                <button
+                                  onClick={() => setSelectedApproval(pendingUser)}
+                                  className="px-3 py-2 bg-slate-600 text-white rounded hover:bg-slate-700 disabled:opacity-60 transition-colors text-sm font-semibold"
+                                >
+                                  Details
+                                </button>
                                 <button
                                   onClick={() => handleApprovalAction(pendingUser.id, 'approve')}
                                   disabled={processingApprovalId === pendingUser.id}
@@ -973,20 +844,16 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                   
                   <form onSubmit={handleScheduleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="md:col-span-2">
-                      <label className="block text-sm font-semibold text-text-primary mb-1">Select Guard</label>
-                      <select
+                      <AssignmentPicker
+                        id="schedule-guard"
+                        label="Select Guard"
                         required
+                        tone="teal"
                         value={scheduleFormData.guard_id}
-                        onChange={(e) => setScheduleFormData({...scheduleFormData, guard_id: e.target.value})}
-                        className="w-full px-4 py-2.5 border-2 border-border/50 rounded-xl bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 transition-all duration-200 hover:border-border [&>option]:py-2 [&>option]:px-2 [&>option:disabled]:text-text-tertiary [&>option:disabled]:italic"
-                      >
-                        <option value="" className="text-text-tertiary italic">-- Select a guard --</option>
-                        {availableGuards.map((guard) => (
-                          <option key={guard.id} value={guard.id}>
-                            {guard.full_name || guard.username}
-                          </option>
-                        ))}
-                      </select>
+                        onChange={(value) => setScheduleFormData({ ...scheduleFormData, guard_id: value })}
+                        placeholder="-- Select a guard --"
+                        options={availableGuards.map((guard) => ({ value: guard.id, label: guard.full_name || guard.username }))}
+                      />
                     </div>
 
                     <div className="md:col-span-2">
@@ -1104,68 +971,38 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-text-primary mb-1">Select Guard</label>
-                  <select
-                    required
-                    value={selectedGuards}
-                    onChange={(e) => setSelectedGuards(e.target.value)}
-                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 transition-all duration-200"
-                  >
-                    <option value="">-- Select a guard --</option>
-                    {availableGuards.length > 0 ? (
-                      availableGuards.map((guard) => (
-                        <option key={guard.id} value={guard.id}>
-                          {guard.full_name || guard.username}
-                        </option>
-                      ))
-                    ) : (
-                      <option disabled>No guards available</option>
-                    )}
-                  </select>
-                </div>
+                <AssignmentPicker
+                  id="mission-guard"
+                  label="Select Guard"
+                  required
+                  tone="teal"
+                  value={selectedGuards}
+                  onChange={setSelectedGuards}
+                  placeholder="-- Select a guard --"
+                  options={availableGuards.map((guard) => ({ value: guard.id, label: guard.full_name || guard.username }))}
+                />
 
-                <div>
-                  <label className="block text-sm font-semibold text-text-primary mb-1">Select Firearm</label>
-                  <select
-                    required
-                    value={selectedFirearms}
-                    onChange={(e) => setSelectedFirearms(e.target.value)}
-                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all duration-200"
-                  >
-                    <option value="">-- Select a firearm --</option>
-                    {availableFirearms.length > 0 ? (
-                      availableFirearms.map((firearm) => (
-                        <option key={firearm.id} value={firearm.id}>
-                          {firearm.serial_number} - {firearm.model} ({firearm.caliber})
-                        </option>
-                      ))
-                    ) : (
-                      <option disabled>No available firearms in inventory</option>
-                    )}
-                  </select>
-                </div>
+                <AssignmentPicker
+                  id="mission-firearm"
+                  label="Select Firearm"
+                  required
+                  tone="indigo"
+                  value={selectedFirearms}
+                  onChange={setSelectedFirearms}
+                  placeholder="-- Select a firearm --"
+                  options={availableFirearms.map((firearm) => ({ value: firearm.id, label: `${firearm.serial_number} - ${firearm.model} (${firearm.caliber})` }))}
+                />
 
-                <div>
-                  <label className="block text-sm font-semibold text-text-primary mb-1">Select Vehicle</label>
-                  <select
-                    required
-                    value={selectedVehicles}
-                    onChange={(e) => setSelectedVehicles(e.target.value)}
-                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all duration-200"
-                  >
-                    <option value="">-- Select a vehicle --</option>
-                    {availableVehicles.length > 0 ? (
-                      availableVehicles.map((vehicle) => (
-                        <option key={vehicle.id} value={vehicle.id}>
-                          {vehicle.model} - {vehicle.license_plate} (Capacity: {vehicle.capacity_kg}kg)
-                        </option>
-                      ))
-                    ) : (
-                      <option disabled>No available vehicles</option>
-                    )}
-                  </select>
-                </div>
+                <AssignmentPicker
+                  id="mission-vehicle"
+                  label="Select Vehicle"
+                  required
+                  tone="amber"
+                  value={selectedVehicles}
+                  onChange={setSelectedVehicles}
+                  placeholder="-- Select a vehicle --"
+                  options={availableVehicles.map((vehicle) => ({ value: vehicle.id, label: `${vehicle.model} - ${vehicle.license_plate} (Capacity: ${vehicle.capacity_kg}kg)` }))}
+                />
 
                 <div>
                   <label className="block text-sm font-semibold text-text-primary mb-1">Date</label>
@@ -1315,8 +1152,51 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
             onDelete={fetchShifts}
           />
         )}
-      </main>
-    </div>
+
+        {selectedApproval && (
+          <div className="fixed inset-0 z-50 flex">
+            <button
+              className="h-full flex-1 bg-black/40"
+              onClick={() => setSelectedApproval(null)}
+              aria-label="Close approval details"
+            />
+            <aside className="h-full w-full max-w-md overflow-y-auto bg-surface p-6 shadow-2xl">
+              <h3 className="text-xl font-bold text-text-primary">Approval Details</h3>
+              <p className="mt-1 text-sm text-text-secondary">Review applicant profile before approval.</p>
+
+              <div className="mt-4 space-y-3 rounded-lg border border-border-subtle bg-background p-4 text-sm">
+                <p><span className="font-semibold">Name:</span> {selectedApproval.full_name || selectedApproval.username}</p>
+                <p><span className="font-semibold">Email:</span> {selectedApproval.email}</p>
+                <p><span className="font-semibold">Phone:</span> {selectedApproval.phone_number || '-'}</p>
+                <p><span className="font-semibold">License:</span> {selectedApproval.license_number || '-'}</p>
+                <p><span className="font-semibold">License Expiry:</span> {selectedApproval.license_expiry_date ? new Date(selectedApproval.license_expiry_date).toLocaleDateString() : '-'}</p>
+                <p><span className="font-semibold">Submitted:</span> {new Date(selectedApproval.created_at).toLocaleString()}</p>
+              </div>
+
+              <div className="mt-5 flex gap-2">
+                <button
+                  onClick={() => handleApprovalAction(selectedApproval.id, 'approve')}
+                  className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+                >
+                  Approve
+                </button>
+                <button
+                  onClick={() => handleApprovalAction(selectedApproval.id, 'reject')}
+                  className="rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-700"
+                >
+                  Reject
+                </button>
+                <button
+                  onClick={() => setSelectedApproval(null)}
+                  className="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-text-primary hover:bg-surface-hover"
+                >
+                  Close
+                </button>
+              </div>
+            </aside>
+          </div>
+        )}
+      </OperationalShell>
     </>
   )
 }

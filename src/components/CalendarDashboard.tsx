@@ -64,11 +64,11 @@ interface MaintenanceEvent {
 
 type CalendarEvent = ShiftEvent | TripEvent | MissionEvent | MaintenanceEvent
 
-const EVENT_COLORS: Record<string, { bg: string; border: string; text: string; dot: string }> = {
-  shift:       { bg: 'bg-blue-900/60',   border: 'border-blue-500',   text: 'text-blue-200',   dot: 'bg-blue-400' },
-  trip:        { bg: 'bg-amber-900/60',  border: 'border-amber-500',  text: 'text-amber-200',  dot: 'bg-amber-400' },
-  mission:     { bg: 'bg-purple-900/60', border: 'border-purple-500', text: 'text-purple-200', dot: 'bg-purple-400' },
-  maintenance: { bg: 'bg-red-900/60',    border: 'border-red-500',    text: 'text-red-200',    dot: 'bg-red-400' },
+const EVENT_COLORS: Record<string, { bg: string; border: string; text: string; dot: string; chip: string }> = {
+  shift:       { bg: 'bg-[color:var(--status-info-bg)]', border: 'border-[color:var(--status-info-border)]', text: 'text-[color:var(--status-info-text)]', dot: 'bg-[color:var(--status-info-text)]', chip: 'soc-chip' },
+  trip:        { bg: 'bg-[color:var(--status-warning-bg)]', border: 'border-[color:var(--status-warning-border)]', text: 'text-[color:var(--status-warning-text)]', dot: 'bg-[color:var(--status-warning-text)]', chip: 'soc-chip status-warning' },
+  mission:     { bg: 'bg-[color:var(--color-surface-elevated)]', border: 'border-[color:var(--color-border-strong)]', text: 'text-[color:var(--color-text-primary)]', dot: 'bg-[color:var(--color-text-primary)]', chip: 'soc-chip status-neutral' },
+  maintenance: { bg: 'bg-[color:var(--status-danger-bg)]', border: 'border-[color:var(--status-danger-border)]', text: 'text-[color:var(--status-danger-text)]', dot: 'bg-[color:var(--status-danger-text)]', chip: 'soc-chip status-danger' },
 }
 
 const TYPE_LABELS: Record<string, string> = {
@@ -353,6 +353,9 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
 
   return (
     <div className="flex h-screen w-screen bg-background overflow-hidden">
+      <a href="#maincontent" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[70] focus:rounded-md focus:bg-background focus:px-3 focus:py-2 focus:text-text-primary focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-[var(--color-focus-ring)]">
+        Skip to main content
+      </a>
       {/* Sidebar */}
       <Sidebar
         items={navItems}
@@ -374,7 +377,7 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
           onNavigateToProfile={onViewChange ? () => onViewChange('profile') : undefined}
         />
 
-        <main className="flex-1 overflow-auto p-3 sm:p-6 bg-background">
+        <main id="maincontent" tabIndex={-1} className="flex-1 overflow-auto p-3 sm:p-6 bg-background">
           {/* Subtitle row */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
             <p className="text-text-secondary text-sm">
@@ -382,14 +385,14 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
             </p>
             <button
               onClick={fetchAllEvents}
-              className="self-start sm:self-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+              className="soc-btn self-start sm:self-auto"
             >
               Refresh
             </button>
           </div>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-900/40 border border-red-500 rounded-lg text-red-300 text-sm">{error}</div>
+            <div className="mb-4 soc-alert-error">{error}</div>
           )}
 
           {/* Security Bento Grid - Mission-Critical Dashboard */}
@@ -416,15 +419,17 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
           </div>
 
           {/* Legend */}
-          <div className="flex flex-wrap gap-3 mb-5">
+          <div className="flex flex-wrap gap-3 mb-5" role="group" aria-label="Calendar event filters">
             {Object.entries(TYPE_LABELS).map(([key, label]) => {
               const c = EVENT_COLORS[key]
+              const isActive = filterType === key || filterType === 'all'
               return (
                 <button
                   key={key}
                   onClick={() => setFilterType(f => f === key ? 'all' : key)}
+                  aria-pressed={isActive}
                   className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
-                    filterType === key || filterType === 'all'
+                    isActive
                       ? `${c.bg} ${c.border} ${c.text}`
                       : 'bg-surface border-border text-text-secondary'
                   }`}
@@ -437,7 +442,7 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
             {filterType !== 'all' && (
               <button
                 onClick={() => setFilterType('all')}
-                className="px-3 py-1.5 rounded-full text-xs font-medium bg-surface border border-border text-text-primary hover:bg-surface-hover"
+                className="soc-btn-neutral text-xs"
               >
                 Show All
               </button>
@@ -448,14 +453,14 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
             {/* Main calendar — hero card (2 cols × 2 rows) */}
             <BentoCard isMain className="!p-0 overflow-hidden">
               {/* Month nav */}
-              <div className="flex items-center justify-between px-6 py-5 bg-gradient-to-r from-blue-900/20 to-purple-900/20 border-b-2 border-blue-500/30">
-                <button onClick={prevMonth} className="p-2 hover:bg-blue-500/20 rounded-lg text-text-secondary hover:text-blue-300 transition-all">
+              <div className="flex items-center justify-between px-6 py-5 bg-gradient-to-r from-[color:var(--color-surface)] to-[color:var(--color-surface-elevated)] border-b border-border-subtle">
+                <button onClick={prevMonth} aria-label="Previous month" className="p-2 hover:bg-surface-hover rounded-lg text-text-secondary hover:text-text-primary transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-focus-ring)]">
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
                 </button>
                 <h2 className="text-text-primary font-bold text-lg sm:text-2xl tracking-tight">
-                  {MONTH_NAMES[currentMonth]} <span className="text-blue-400">{currentYear}</span>
+                  {MONTH_NAMES[currentMonth]} <span className="text-text-secondary">{currentYear}</span>
                 </h2>
-                <button onClick={nextMonth} className="p-2 hover:bg-blue-500/20 rounded-lg text-text-secondary hover:text-blue-300 transition-all">
+                <button onClick={nextMonth} aria-label="Next month" className="p-2 hover:bg-surface-hover rounded-lg text-text-secondary hover:text-text-primary transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-focus-ring)]">
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
                 </button>
               </div>
@@ -488,16 +493,16 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
                         onClick={() => setSelectedDate(dateKey)}
                         className={`h-24 sm:h-28 rounded-lg p-2 text-left transition-all relative border-2
                           ${isToday 
-                            ? 'bg-blue-500/20 border-blue-400 shadow-lg shadow-blue-500/20' 
+                            ? 'bg-[color:var(--status-info-bg)] border-[color:var(--status-info-border)] shadow-lg shadow-black/20' 
                             : isSelected 
-                            ? 'bg-blue-900/30 border-blue-500'
+                            ? 'bg-[color:var(--color-surface-elevated)] border-[color:var(--color-border-strong)]'
                             : 'bg-surface border-border hover:border-blue-400/60 hover:bg-surface-hover/40'
                           }
                         `}
                       >
                         <div className="flex items-center justify-between mb-1.5">
                           <span className={`text-sm sm:text-base font-bold w-7 h-7 flex items-center justify-center rounded-full
-                            ${isToday ? 'bg-blue-500 text-white' : isSelected ? 'bg-blue-400/40 text-blue-200' : 'text-text-primary'}`}>
+                            ${isToday ? 'bg-[color:var(--status-info-border)] text-white' : isSelected ? 'bg-[color:var(--status-info-bg)] text-[color:var(--status-info-text)]' : 'text-text-primary'}`}>
                             {day}
                           </span>
                           {dayEvents.length > 0 && (
@@ -534,7 +539,7 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
             {/* Day detail panel — 2 cols */}
             <BentoCard colSpan={2} className="!p-0 overflow-hidden flex flex-col min-h-[360px]">
               <div className="flex-1 overflow-hidden flex flex-col">
-                <div className="px-6 py-4 bg-gradient-to-r from-blue-900/20 to-purple-900/20 border-b-2 border-blue-500/30">
+                <div className="px-6 py-4 bg-gradient-to-r from-[color:var(--color-surface)] to-[color:var(--color-surface-elevated)] border-b border-border-subtle">
                   <h3 className="text-text-primary font-bold text-lg">{formatDate(selectedDate)}</h3>
                   <p className="text-text-secondary text-sm mt-1">{selectedDateEvents.length} event{selectedDateEvents.length !== 1 ? 's' : ''} scheduled</p>
                 </div>
@@ -567,7 +572,7 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
                                   {TYPE_LABELS[ev.type]}
                                 </div>
                               </div>
-                              <div className={`text-xs mt-2 px-2 py-1 rounded-full bg-white/10 w-fit capitalize font-medium`}>
+                              <div className={`${c.chip} mt-2 w-fit capitalize`}>
                                 {ev.status}
                               </div>
                               {ev.type === 'shift' && (
@@ -595,7 +600,7 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
             {/* Monthly summary — admin only */}
             {isAdmin && (
               <BentoCard colSpan={2}>
-                <h4 className="text-text-primary text-base font-bold mb-4">📊 This Month Summary</h4>
+                <h4 className="text-text-primary text-base font-bold mb-4">This Month Summary</h4>
                 <div className="grid grid-cols-2 gap-3">
                   {Object.entries(TYPE_LABELS).map(([key, label]) => {
                     const c = EVENT_COLORS[key]

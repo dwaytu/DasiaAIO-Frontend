@@ -12,7 +12,8 @@ import { getSidebarNav } from '../config/navigation'
 import { can } from '../utils/permissions'
 import { normalizeRole } from '../types/auth'
 import SectionPanel from './dashboard/SectionPanel'
-import CommandMetricCard from './dashboard/CommandMetricCard'
+import OperationalSummaryStrip from './dashboard/OperationalSummaryStrip'
+import QuickActionsPanel from './dashboard/QuickActionsPanel'
 
 interface User {
   id: string
@@ -659,28 +660,32 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                 </button>
               }
             >
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                <CommandMetricCard label="Active Guards On Duty" value={activeGuardsOnDuty} tone="success" />
-                <CommandMetricCard label="Guards Absent Today" value={guardsAbsentToday} tone={guardsAbsentToday > 0 ? 'danger' : 'neutral'} />
-                <CommandMetricCard label="Pending Guard Approvals" value={pendingGuardApprovals} tone={pendingGuardApprovals > 0 ? 'warning' : 'neutral'} />
-                <CommandMetricCard label="Operations Alerts" value={operationsAlerts} tone={operationsAlerts > 0 ? 'warning' : 'neutral'} />
-                <CommandMetricCard label="Active Missions" value={activeMissions} tone="info" />
-                <CommandMetricCard label="Scheduled Shifts" value={scheduledShifts} tone="info" />
-                <CommandMetricCard label="Available Firearms" value={availableFirearms.length} tone="neutral" />
-                <CommandMetricCard label="Available Vehicles" value={availableVehicles.length} tone="neutral" />
-              </div>
+              <OperationalSummaryStrip
+                metrics={[
+                  { label: 'Active Guards On Duty', value: activeGuardsOnDuty, tone: 'success' },
+                  { label: 'Guards Absent Today', value: guardsAbsentToday, tone: guardsAbsentToday > 0 ? 'danger' : 'neutral' },
+                  { label: 'Pending Guard Approvals', value: pendingGuardApprovals, tone: pendingGuardApprovals > 0 ? 'warning' : 'neutral' },
+                  { label: 'Operations Alerts', value: operationsAlerts, tone: operationsAlerts > 0 ? 'warning' : 'neutral' },
+                  { label: 'Active Missions', value: activeMissions, tone: 'info' },
+                  { label: 'Scheduled Shifts', value: scheduledShifts, tone: 'info' },
+                  { label: 'Available Firearms', value: availableFirearms.length, tone: 'neutral' },
+                  { label: 'Available Vehicles', value: availableVehicles.length, tone: 'neutral' },
+                ]}
+              />
             </SectionPanel>
 
             <SectionPanel
               title="Management Quick Actions"
               subtitle="Jump directly to high-frequency operations"
               actions={
-                <div className="flex flex-wrap gap-2">
-                  <button onClick={() => handleNavigate('approvals')} className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors">Review Approvals</button>
-                  <button onClick={() => handleNavigate('schedule')} className="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700 transition-colors">Assign Shift</button>
-                  <button onClick={() => onViewChange?.('allocation')} className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition-colors">Allocate Firearm</button>
-                  <button onClick={() => onViewChange?.('armored-cars')} className="rounded-lg bg-amber-600 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-700 transition-colors">Assign Vehicle</button>
-                </div>
+                <QuickActionsPanel
+                  actions={[
+                    { label: 'Review Approvals', tone: 'emerald', onClick: () => handleNavigate('approvals') },
+                    { label: 'Assign Shift', tone: 'indigo', onClick: () => handleNavigate('schedule') },
+                    { label: 'Allocate Firearm', tone: 'blue', onClick: () => onViewChange?.('allocation') },
+                    { label: 'Assign Vehicle', tone: 'amber', onClick: () => onViewChange?.('armored-cars') },
+                  ]}
+                />
               }
             >
               <div className="grid grid-cols-1 gap-3 md:grid-cols-3">

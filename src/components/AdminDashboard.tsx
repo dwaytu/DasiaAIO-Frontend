@@ -8,6 +8,10 @@ import Header from './Header'
 import { User as AppUser } from '../App'
 import { getSidebarNav } from '../config/navigation'
 import { can } from '../utils/permissions'
+import { normalizeRole } from '../types/auth'
+import SectionPanel from './dashboard/SectionPanel'
+import OperationalSummaryStrip from './dashboard/OperationalSummaryStrip'
+import QuickActionsPanel from './dashboard/QuickActionsPanel'
 
 interface User {
   id: string
@@ -163,6 +167,13 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
     }
   }
 
+  const activeGuards = users.filter((u: User) => normalizeRole(u.role) === 'guard').length
+  const pendingCount = pendingApprovals.length
+  const activeShifts = shifts.filter((shift: any) => shift.status === 'in_progress').length
+  const absentShifts = shifts.filter((shift: any) => shift.status === 'absent' || shift.status === 'no_show').length
+  const scheduledShifts = shifts.filter((shift: any) => shift.status === 'scheduled').length
+  const opsAlerts = pendingCount + absentShifts
+
   const handleApprovalAction = async (targetUserId: string, action: 'approve' | 'reject') => {
     try {
       setProcessingApprovalId(targetUserId)
@@ -309,6 +320,60 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
           {/* Users Section */}
           {activeSection === 'users' && (
             <>
+              <SectionPanel
+                title="Operations Summary"
+                subtitle="Daily command indicators for staffing and approvals"
+                actions={
+                  <button
+                    onClick={handleRefresh}
+                    className="rounded-lg border border-border-subtle bg-background px-3 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-surface-hover"
+                  >
+                    Refresh Summary
+                  </button>
+                }
+              >
+                <OperationalSummaryStrip
+                  metrics={[
+                    { label: 'Active Guards On Duty', value: activeShifts, tone: 'success' },
+                    { label: 'Guards Absent Today', value: absentShifts, tone: absentShifts > 0 ? 'danger' : 'neutral' },
+                    { label: 'Pending Guard Approvals', value: pendingCount, tone: pendingCount > 0 ? 'warning' : 'neutral' },
+                    { label: 'Scheduled Shifts', value: scheduledShifts, tone: 'info' },
+                    { label: 'Operational Alerts', value: opsAlerts, tone: opsAlerts > 0 ? 'warning' : 'neutral' },
+                    { label: 'Guard Workforce', value: activeGuards, tone: 'neutral' },
+                  ]}
+                />
+              </SectionPanel>
+
+              <SectionPanel
+                title="Quick Actions"
+                subtitle="Jump directly into high-frequency operational tasks"
+                actions={
+                  <QuickActionsPanel
+                    actions={[
+                      { label: 'Review Approvals', tone: 'emerald', onClick: () => handleNavigate('approvals') },
+                      { label: 'Assign Shift', tone: 'indigo', onClick: () => handleNavigate('schedule') },
+                      { label: 'Allocate Firearm', tone: 'blue', onClick: () => onViewChange?.('allocation') },
+                      { label: 'Assign Vehicle', tone: 'amber', onClick: () => onViewChange?.('armored-cars') },
+                    ]}
+                  />
+                }
+              >
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <div className="rounded-xl border border-border-subtle bg-background p-3">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">Users Loaded</p>
+                    <p className="mt-1 text-2xl font-bold text-text-primary">{users.length}</p>
+                  </div>
+                  <div className="rounded-xl border border-border-subtle bg-background p-3">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">Approval Queue</p>
+                    <p className="mt-1 text-2xl font-bold text-text-primary">{pendingCount}</p>
+                  </div>
+                  <div className="rounded-xl border border-border-subtle bg-background p-3">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">Schedules Tracked</p>
+                    <p className="mt-1 text-2xl font-bold text-text-primary">{shifts.length}</p>
+                  </div>
+                </div>
+              </SectionPanel>
+
               {loading && (
                 <div className="text-center py-12 text-text-secondary font-medium">Loading users...</div>
               )}

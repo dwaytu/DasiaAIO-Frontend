@@ -3,6 +3,7 @@ import { API_BASE_URL } from '../config'
 import Sidebar from './Sidebar'
 import Header from './Header'
 import { User } from '../App'
+import { getSidebarNav } from '../config/navigation'
 
 interface Props {
   user: User
@@ -63,22 +64,7 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
   })
 
   const currentView = activeView || 'merit'
-  const navItems = [
-    { view: 'dashboard', label: 'Dashboard', group: 'MAIN MENU' },
-    { view: 'approvals', label: 'Approvals', group: 'MAIN MENU' },
-    { view: 'calendar', label: 'Calendar', group: 'MAIN MENU' },
-    { view: 'analytics', label: 'Analytics', group: 'MAIN MENU' },
-    { view: 'trips', label: 'Trip Management', group: 'OPERATIONS' },
-    { view: 'schedule', label: 'Schedule', group: 'OPERATIONS' },
-    { view: 'missions', label: 'Missions', group: 'OPERATIONS' },
-    { view: 'performance', label: 'Performance', group: 'OPERATIONS' },
-    { view: 'merit', label: 'Merit Scores', group: 'OPERATIONS' },
-    { view: 'firearms', label: 'Firearms', group: 'RESOURCES' },
-    { view: 'allocation', label: 'Allocation', group: 'RESOURCES' },
-    { view: 'permits', label: 'Permits', group: 'RESOURCES' },
-    { view: 'maintenance', label: 'Maintenance', group: 'RESOURCES' },
-    { view: 'armored-cars', label: 'Armored Cars', group: 'RESOURCES' },
-  ]
+  const navItems = getSidebarNav(user.role)
 
   useEffect(() => {
     fetchRankings()

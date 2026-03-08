@@ -6,6 +6,8 @@ import Header from './Header'
 import { User } from '../App'
 import SecurityBentoGrid from './SecurityBentoGrid'
 import BentoGrid, { BentoCard } from './BentoGrid'
+import { isElevatedRole } from '../types/auth'
+import { getSidebarNav } from '../config/navigation'
 
 interface CalendarDashboardProps {
   user: User
@@ -110,7 +112,7 @@ const MONTH_NAMES = ['January','February','March','April','May','June','July','A
 const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
 
 const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewChange, activeView: _activeView }) => {
-  const isAdmin = user.role === 'admin' || user.role === 'superadmin' || user.role === 'supervisor'
+  const isAdmin = isElevatedRole(user.role)
 
   const today = new Date()
   const [currentYear, setCurrentYear] = useState(today.getFullYear())
@@ -123,32 +125,7 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
   const [filterType, setFilterType] = useState<string>('all')
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false)
 
-  // Build nav items matching admin/user dashboard patterns
-  const adminNavItems = [
-    { view: 'dashboard',    label: 'Dashboard',       group: 'MAIN MENU' },
-    { view: 'approvals',    label: 'Approvals',       group: 'MAIN MENU' },
-    { view: 'calendar',     label: 'Calendar',        group: 'MAIN MENU' },
-    { view: 'analytics',    label: 'Analytics',       group: 'MAIN MENU' },
-    { view: 'trips',        label: 'Trip Management', group: 'OPERATIONS' },
-    { view: 'schedule',     label: 'Schedule',        group: 'OPERATIONS' },
-    { view: 'missions',     label: 'Missions',        group: 'OPERATIONS' },
-    { view: 'performance',  label: 'Performance',     group: 'OPERATIONS' },
-    { view: 'merit',        label: 'Merit Scores',    group: 'OPERATIONS' },
-    { view: 'firearms',     label: 'Firearms',        group: 'RESOURCES' },
-    { view: 'allocation',   label: 'Allocation',      group: 'RESOURCES' },
-    { view: 'permits',      label: 'Permits',         group: 'RESOURCES' },
-    { view: 'maintenance',  label: 'Maintenance',     group: 'RESOURCES' },
-    { view: 'armored-cars', label: 'Armored Cars',    group: 'RESOURCES' },
-  ]
-  const userNavItems = [
-    { view: 'dashboard', label: 'Dashboard',  group: 'MAIN MENU' },
-    { view: 'calendar',  label: 'Calendar',   group: 'MAIN MENU' },
-    { view: 'schedule',  label: 'Schedule',   group: 'MAIN MENU' },
-    { view: 'firearms',  label: 'Firearms',   group: 'RESOURCES' },
-    { view: 'permits',   label: 'My Permits', group: 'RESOURCES' },
-    { view: 'support',   label: 'Contacts',   group: 'RESOURCES' },
-  ]
-  const navItems = isAdmin ? adminNavItems : userNavItems
+  const navItems = getSidebarNav(user.role)
 
   const fetchShifts = useCallback(async (): Promise<ShiftEvent[]> => {
     try {

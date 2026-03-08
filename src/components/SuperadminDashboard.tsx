@@ -8,6 +8,11 @@ import Sidebar from './Sidebar'
 import Header from './Header'
 import { API_BASE_URL } from '../config'
 import { User as AppUser } from '../App'
+import { getSidebarNav } from '../config/navigation'
+import { can } from '../utils/permissions'
+import { normalizeRole } from '../types/auth'
+import SectionPanel from './dashboard/SectionPanel'
+import CommandMetricCard from './dashboard/CommandMetricCard'
 
 interface User {
   id: string
@@ -87,35 +92,13 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
     start_time: '',
     end_time: ''
   })
-  const normalizedViewerRole = user.role === 'user' ? 'guard' : user.role
+  const normalizedViewerRole = normalizeRole(user.role)
   const isSuperadminViewer = normalizedViewerRole === 'superadmin'
   const isAdminViewer = normalizedViewerRole === 'admin'
   const isSupervisorViewer = normalizedViewerRole === 'supervisor'
-  const canDeleteUsers = isSuperadminViewer || isAdminViewer
+  const canDeleteUsers = can(user.role, 'manage_users')
+  const navItems = getSidebarNav(user.role)
 
-  const navItems = [
-    { view: 'dashboard', label: 'Dashboard', group: 'MAIN MENU' },
-    { view: 'approvals', label: 'Approvals', group: 'MAIN MENU' },
-    { view: 'calendar', label: 'Calendar', group: 'MAIN MENU' },
-    { view: 'analytics', label: 'Analytics', group: 'MAIN MENU' },
-    { view: 'trips', label: 'Trip Management', group: 'OPERATIONS' },
-    { view: 'schedule', label: 'Schedule', group: 'OPERATIONS' },
-    { view: 'missions', label: 'Missions', group: 'OPERATIONS' },
-    { view: 'performance', label: 'Performance', group: 'OPERATIONS' },
-    { view: 'merit', label: 'Merit Scores', group: 'OPERATIONS' },
-    { view: 'firearms', label: 'Firearms', group: 'RESOURCES' },
-    { view: 'allocation', label: 'Allocation', group: 'RESOURCES' },
-    { view: 'permits', label: 'Permits', group: 'RESOURCES' },
-    { view: 'maintenance', label: 'Maintenance', group: 'RESOURCES' },
-    { view: 'armored-cars', label: 'Armored Cars', group: 'RESOURCES' },
-  ].filter(item => {
-    if (item.view === 'approvals') {
-      return isSuperadminViewer || isAdminViewer || isSupervisorViewer
-    }
-    return true
-  })
-
-  const normalizeRole = (role: string) => role === 'user' ? 'guard' : role
   const canViewUserRow = (targetRoleRaw: string) => {
     const targetRole = normalizeRole(targetRoleRaw)
     if (isSuperadminViewer) return true
@@ -159,7 +142,11 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   useEffect(() => {
     fetchData()
     fetchGuardsAndFirearms()
-    if (activeSection === 'approvals') {
+    if (activeSection === 'dashboard') {
+      fetchPendingApprovals()
+      fetchShifts()
+      fetchMissions()
+    } else if (activeSection === 'approvals') {
       fetchPendingApprovals()
     } else if (activeSection === 'schedule') {
       fetchShifts()
@@ -203,7 +190,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
       const superadminCount = users.filter((u: User) => u.role === 'superadmin').length
       const adminCount = users.filter((u: User) => u.role === 'admin').length
       const supervisorCount = users.filter((u: User) => u.role === 'supervisor').length
-      const guardCount = users.filter((u: User) => u.role === 'guard' || u.role === 'user').length
+      const guardCount = users.filter((u: User) => normalizeRole(u.role) === 'guard').length
       
       setStats({
         totalUsers: users.length,
@@ -291,7 +278,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
         const usersData = await usersResponse.json()
         const allUsers = Array.isArray(usersData) ? usersData : (usersData.users || [])
         // Filter out admin users, only get regular users (guards)
-        const guards = allUsers.filter((u: User) => u.role === 'guard' || u.role === 'user')
+        const guards = allUsers.filter((u: User) => normalizeRole(u.role) === 'guard')
         setAvailableGuards(guards)
       }
 
@@ -572,6 +559,13 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
     }
   }
 
+  const activeGuardsOnDuty = shifts.filter((shift: any) => shift.status === 'in_progress').length
+  const guardsAbsentToday = shifts.filter((shift: any) => shift.status === 'no_show' || shift.status === 'absent').length
+  const pendingGuardApprovals = pendingApprovals.length
+  const activeMissions = missions.filter((mission: any) => mission.status === 'in_progress' || mission.status === 'active').length
+  const scheduledShifts = shifts.filter((shift: any) => shift.status === 'scheduled').length
+  const operationsAlerts = guardsAbsentToday + pendingGuardApprovals
+
   const handleApprovalAction = async (targetUserId: string, action: 'approve' | 'reject') => {
     try {
       setProcessingApprovalId(targetUserId)
@@ -653,48 +647,48 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
           </div>
         ) : activeSection === 'dashboard' ? (
           <div className="flex-1 flex flex-col overflow-hidden p-4 md:p-8 w-full animate-fade-in gap-4 md:gap-6">
-            <section className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 flex-shrink-0">
-              {/* Total Users */}
-              <div className="bento-card flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center flex-shrink-0">
-                  <svg className="w-6 h-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-text-tertiary mb-0.5">Total Users</p>
-                  <p className="text-3xl font-bold text-text-primary">{stats.totalUsers ?? '—'}</p>
-                </div>
+            <SectionPanel
+              title="Security Operations Command Summary"
+              subtitle="Live indicators for staffing, approvals, mission load, and asset readiness"
+              actions={
+                <button
+                  onClick={handleRefresh}
+                  className="rounded-lg border border-border-subtle bg-background px-3 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-surface-hover"
+                >
+                  Refresh Summary
+                </button>
+              }
+            >
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <CommandMetricCard label="Active Guards On Duty" value={activeGuardsOnDuty} tone="success" />
+                <CommandMetricCard label="Guards Absent Today" value={guardsAbsentToday} tone={guardsAbsentToday > 0 ? 'danger' : 'neutral'} />
+                <CommandMetricCard label="Pending Guard Approvals" value={pendingGuardApprovals} tone={pendingGuardApprovals > 0 ? 'warning' : 'neutral'} />
+                <CommandMetricCard label="Operations Alerts" value={operationsAlerts} tone={operationsAlerts > 0 ? 'warning' : 'neutral'} />
+                <CommandMetricCard label="Active Missions" value={activeMissions} tone="info" />
+                <CommandMetricCard label="Scheduled Shifts" value={scheduledShifts} tone="info" />
+                <CommandMetricCard label="Available Firearms" value={availableFirearms.length} tone="neutral" />
+                <CommandMetricCard label="Available Vehicles" value={availableVehicles.length} tone="neutral" />
               </div>
-              {/* Administrators */}
-              <div className="bento-card flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center flex-shrink-0">
-                  <svg className="w-6 h-6 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+            </SectionPanel>
+
+            <SectionPanel
+              title="Management Quick Actions"
+              subtitle="Jump directly to high-frequency operations"
+              actions={
+                <div className="flex flex-wrap gap-2">
+                  <button onClick={() => handleNavigate('approvals')} className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors">Review Approvals</button>
+                  <button onClick={() => handleNavigate('schedule')} className="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700 transition-colors">Assign Shift</button>
+                  <button onClick={() => onViewChange?.('allocation')} className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition-colors">Allocate Firearm</button>
+                  <button onClick={() => onViewChange?.('armored-cars')} className="rounded-lg bg-amber-600 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-700 transition-colors">Assign Vehicle</button>
                 </div>
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-text-tertiary mb-0.5">Administrators</p>
-                  <p className="text-3xl font-bold text-text-primary">{stats.admins ?? '—'}</p>
-                </div>
+              }
+            >
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                <CommandMetricCard label="Total Users" value={stats.totalUsers ?? 0} />
+                <CommandMetricCard label="Administrators" value={stats.admins ?? 0} />
+                <CommandMetricCard label="Guard Workforce" value={stats.guards ?? 0} />
               </div>
-              {/* Active Guards */}
-              <div className="bento-card flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-teal-500/10 flex items-center justify-center flex-shrink-0">
-                  <svg className="w-6 h-6 text-teal-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-text-tertiary mb-0.5">Active Guards</p>
-                  <p className="text-3xl font-bold text-text-primary">{stats.guards ?? '—'}</p>
-                </div>
-              </div>
-              {/* Supervisors */}
-              <div className="bento-card flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center flex-shrink-0">
-                  <svg className="w-6 h-6 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-text-tertiary mb-0.5">Supervisors</p>
-                  <p className="text-3xl font-bold text-text-primary">{stats.supervisors ?? '—'}</p>
-                </div>
-              </div>
-            </section>
+            </SectionPanel>
 
             <section className="flex flex-col flex-1 min-h-0 w-full bento-card !p-0 overflow-hidden table-glass">
               {/* Table header — static, never scrolls */}

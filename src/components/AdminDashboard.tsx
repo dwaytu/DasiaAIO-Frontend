@@ -6,6 +6,8 @@ import { API_BASE_URL } from '../config'
 import Sidebar from './Sidebar'
 import Header from './Header'
 import { User as AppUser } from '../App'
+import { getSidebarNav } from '../config/navigation'
+import { can } from '../utils/permissions'
 
 interface User {
   id: string
@@ -57,22 +59,8 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
   const [processingApprovalId, setProcessingApprovalId] = useState<string | null>(null)
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false)
   const currentView = activeView || activeSection
-  const navItems = [
-    { view: 'users', label: 'Dashboard', group: 'MAIN MENU' },
-    { view: 'approvals', label: 'Approvals', group: 'MAIN MENU' },
-    { view: 'calendar', label: 'Calendar', group: 'MAIN MENU' },
-    { view: 'analytics', label: 'Analytics', group: 'MAIN MENU' },
-    { view: 'trips', label: 'Trip Management', group: 'OPERATIONS' },
-    { view: 'schedule', label: 'Schedule', group: 'OPERATIONS' },
-    { view: 'missions', label: 'Missions', group: 'OPERATIONS' },
-    { view: 'performance', label: 'Performance', group: 'OPERATIONS' },
-    { view: 'merit', label: 'Merit Scores', group: 'OPERATIONS' },
-    { view: 'firearms', label: 'Firearms', group: 'RESOURCES' },
-    { view: 'allocation', label: 'Allocation', group: 'RESOURCES' },
-    { view: 'permits', label: 'Permits', group: 'RESOURCES' },
-    { view: 'maintenance', label: 'Maintenance', group: 'RESOURCES' },
-    { view: 'armored-cars', label: 'Armored Cars', group: 'RESOURCES' }
-  ]
+  const navItems = getSidebarNav(user.role, { homeView: 'users' })
+  const canDeleteUsers = can(user.role, 'manage_users')
 
   useEffect(() => {
     if (activeSection === 'users') {
@@ -359,7 +347,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                                 >
                                   Edit
                                 </button>
-                                {(user.role === 'admin' || user.role === 'superadmin') && (
+                                {canDeleteUsers && (
                                   <button
                                     className="px-3 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-sm font-semibold"
                                     onClick={() => handleDeleteUser(u.id, u.email)}

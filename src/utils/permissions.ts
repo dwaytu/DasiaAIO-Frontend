@@ -51,3 +51,11 @@ export function can(roleInput: unknown, permission: Permission): boolean {
   const role = normalizeRole(roleInput)
   return rolePermissions[role].includes(permission)
 }
+
+export function canAny(roleInput: unknown, permissions: Permission[]): boolean {
+  return permissions.some((permission) => can(roleInput, permission))
+}
+
+export function canAll(roleInput: unknown, permissions: Permission[]): boolean {
+  return permissions.every((permission) => can(roleInput, permission))
+}

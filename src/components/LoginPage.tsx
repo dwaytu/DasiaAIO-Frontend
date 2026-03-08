@@ -60,8 +60,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
   const [licenseIssuedDate, setLicenseIssuedDate] = useState<string>('')
   const [licenseExpiryDate, setLicenseExpiryDate] = useState<string>('')
   const [address, setAddress] = useState<string>('')
-  const [role, setRole] = useState<string>('user')
-  const [adminCode, setAdminCode] = useState<string>('')
+  const [role, setRole] = useState<string>('guard')
   const [error, setError] = useState<string>('')
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const [isRegistering, setIsRegistering] = useState<boolean>(false)
@@ -122,26 +121,14 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
           return
         }
 
-        if (role !== 'admin' && (!licenseNumber || !licenseIssuedDate || !licenseExpiryDate)) {
-          setError('License number, issued date, and expiry date are required for regular users')
+        if (!licenseNumber || !licenseIssuedDate || !licenseExpiryDate) {
+          setError('License number, issued date, and expiry date are required for guard registration')
           setIsLoading(false)
           return
         }
 
         if (!email.endsWith('@gmail.com')) {
           setError('You must use a Gmail account (email must end with @gmail.com)')
-          setIsLoading(false)
-          return
-        }
-
-        if (role === 'admin' && !adminCode) {
-          setError('Admin code is required for admin account')
-          setIsLoading(false)
-          return
-        }
-
-        if (role === 'admin' && adminCode !== '122601') {
-          setError('Invalid admin code')
           setIsLoading(false)
           return
         }
@@ -156,18 +143,15 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
           email, 
           password, 
           username, 
-          role, 
-          adminCode,
+          role,
           fullName,
           phoneNumber
         }
-        
-        if (role !== 'admin') {
-          requestBody.licenseNumber = licenseNumber
-          requestBody.licenseIssuedDate = licenseIssuedDate
-          requestBody.licenseExpiryDate = licenseExpiryDate
-          requestBody.address = address
-        }
+
+        requestBody.licenseNumber = licenseNumber
+        requestBody.licenseIssuedDate = licenseIssuedDate
+        requestBody.licenseExpiryDate = licenseExpiryDate
+        requestBody.address = address
         
         const response = await fetch(`${API_BASE_URL}/api/register`, {
           method: 'POST',
@@ -197,7 +181,6 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
           setLicenseIssuedDate('')
           setLicenseExpiryDate('')
           setAddress('')
-          setAdminCode('')
           setIsLoading(false)
           return
         }
@@ -239,7 +222,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
         setIsLoading(false)
         const user: User = {
           ...data.user,
-          role: data.user.role as 'admin' | 'user' | 'guard'
+          role: data.user.role as 'superadmin' | 'admin' | 'supervisor' | 'guard' | 'user'
         }
         // Store token in localStorage for authentication persistence
         if (data.token) {
@@ -584,29 +567,27 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
             <input id="phoneNumber" type="text" value={phoneNumber} onChange={(e: ChangeEvent<HTMLInputElement>) => setPhoneNumber(formatPhoneNumber(e.target.value))} placeholder="+63-###-###-####" disabled={isLoading} className={inputClass} style={inputStyle} />
           </div>
 
-          {role !== 'admin' && (
-            <>
-              <div>
-                <label htmlFor="licenseNumber" className={labelClass} style={labelStyle}>License Number</label>
-                <input id="licenseNumber" type="text" value={licenseNumber} onChange={(e: ChangeEvent<HTMLInputElement>) => setLicenseNumber(e.target.value)} placeholder="Enter your license number" disabled={isLoading} className={inputClass} style={inputStyle} />
-              </div>
+          <>
+            <div>
+              <label htmlFor="licenseNumber" className={labelClass} style={labelStyle}>License Number</label>
+              <input id="licenseNumber" type="text" value={licenseNumber} onChange={(e: ChangeEvent<HTMLInputElement>) => setLicenseNumber(e.target.value)} placeholder="Enter your license number" disabled={isLoading} className={inputClass} style={inputStyle} />
+            </div>
 
-              <div>
-                <label htmlFor="licenseIssuedDate" className={labelClass} style={labelStyle}>License Issued Date</label>
-                <input id="licenseIssuedDate" type="date" value={licenseIssuedDate} onChange={(e: ChangeEvent<HTMLInputElement>) => setLicenseIssuedDate(e.target.value)} disabled={isLoading} className={inputClass} style={inputStyle} />
-              </div>
+            <div>
+              <label htmlFor="licenseIssuedDate" className={labelClass} style={labelStyle}>License Issued Date</label>
+              <input id="licenseIssuedDate" type="date" value={licenseIssuedDate} onChange={(e: ChangeEvent<HTMLInputElement>) => setLicenseIssuedDate(e.target.value)} disabled={isLoading} className={inputClass} style={inputStyle} />
+            </div>
 
-              <div>
-                <label htmlFor="licenseExpiryDate" className={labelClass} style={labelStyle}>License Expiry Date</label>
-                <input id="licenseExpiryDate" type="date" value={licenseExpiryDate} onChange={(e: ChangeEvent<HTMLInputElement>) => setLicenseExpiryDate(e.target.value)} disabled={isLoading} className={inputClass} style={inputStyle} />
-              </div>
+            <div>
+              <label htmlFor="licenseExpiryDate" className={labelClass} style={labelStyle}>License Expiry Date</label>
+              <input id="licenseExpiryDate" type="date" value={licenseExpiryDate} onChange={(e: ChangeEvent<HTMLInputElement>) => setLicenseExpiryDate(e.target.value)} disabled={isLoading} className={inputClass} style={inputStyle} />
+            </div>
 
-              <div>
-                <label htmlFor="address" className={labelClass} style={labelStyle}>Full Address</label>
-                <textarea id="address" value={address} onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setAddress(e.target.value)} placeholder="Enter your complete address" disabled={isLoading} rows={2} className={inputClass} style={inputStyle} />
-              </div>
-            </>
-          )}
+            <div>
+              <label htmlFor="address" className={labelClass} style={labelStyle}>Full Address</label>
+              <textarea id="address" value={address} onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setAddress(e.target.value)} placeholder="Enter your complete address" disabled={isLoading} rows={2} className={inputClass} style={inputStyle} />
+            </div>
+          </>
 
           <div>
             <label htmlFor="email" className={labelClass} style={labelStyle}>Email</label>
@@ -621,17 +602,12 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
           <div>
             <label htmlFor="role" className={labelClass} style={labelStyle}>Account Type</label>
             <select id="role" value={role} onChange={(e: ChangeEvent<HTMLSelectElement>) => setRole(e.target.value)} disabled={isLoading} className={inputClass} style={{ ...inputStyle, cursor: 'pointer' }}>
-              <option value="user" style={{ background: '#1C1F35' }}>User</option>
-              <option value="admin" style={{ background: '#1C1F35' }}>Admin</option>
+              <option value="guard" style={{ background: '#1C1F35' }}>Guard</option>
             </select>
+            <p className="text-xs mt-2" style={{ color: 'var(--text-secondary)' }}>
+              Admin and supervisor accounts are created internally.
+            </p>
           </div>
-
-          {role === 'admin' && (
-            <div>
-              <label htmlFor="adminCode" className={labelClass} style={labelStyle}>Admin Code</label>
-              <input id="adminCode" type="password" value={adminCode} onChange={(e: ChangeEvent<HTMLInputElement>) => setAdminCode(e.target.value)} placeholder="Enter admin code" disabled={isLoading} className={inputClass} style={inputStyle} />
-            </div>
-          )}
 
           {error && (
             <div className="p-3 rounded-lg text-sm border" style={error.includes('successful') ? { background: 'rgba(34,197,94,0.1)', color: '#4ADE80', borderColor: 'rgba(34,197,94,0.3)' } : { background: 'rgba(239,68,68,0.1)', color: '#FCA5A5', borderColor: 'rgba(239,68,68,0.3)' }}>
@@ -644,7 +620,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
           </button>
 
           <div className="text-center">
-            <button type="button" className="font-semibold transition-colors disabled:opacity-40 text-sm" style={{ color: '#60A5FA' }} onClick={() => { setIsRegistering(false); setError(''); setPassword(''); setAdminCode(''); setIdentifier('') }} disabled={isLoading}>
+            <button type="button" className="font-semibold transition-colors disabled:opacity-40 text-sm" style={{ color: '#60A5FA' }} onClick={() => { setIsRegistering(false); setError(''); setPassword(''); setIdentifier('') }} disabled={isLoading}>
               Already have an account? Login
             </button>
           </div>
@@ -672,7 +648,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
           </button>
 
           <div className="text-center">
-            <button type="button" className="font-semibold transition-colors disabled:opacity-40 text-sm" style={{ color: '#60A5FA' }} onClick={() => { setIsRegistering(true); setError(''); setPassword(''); setAdminCode(''); setIdentifier('') }} disabled={isLoading}>
+            <button type="button" className="font-semibold transition-colors disabled:opacity-40 text-sm" style={{ color: '#60A5FA' }} onClick={() => { setIsRegistering(true); setError(''); setPassword(''); setIdentifier('') }} disabled={isLoading}>
               Don't have an account? Register
             </button>
           </div>

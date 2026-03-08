@@ -16,7 +16,7 @@ export interface User {
   id: string
   email: string
   username: string
-  role: 'admin' | 'user' | 'guard'
+  role: 'superadmin' | 'admin' | 'supervisor' | 'guard' | 'user'
   [key: string]: any
 }
 
@@ -53,14 +53,14 @@ function App() {
   }, [])
 
   const handleLogin = (userData: User) => {
-    const validRoles: Array<'admin' | 'user' | 'guard'> = ['admin', 'user', 'guard']
-    if (!validRoles.includes(userData.role as 'admin' | 'user' | 'guard')) {
+    const validRoles: Array<'superadmin' | 'admin' | 'supervisor' | 'guard' | 'user'> = ['superadmin', 'admin', 'supervisor', 'guard', 'user']
+    if (!validRoles.includes(userData.role as 'superadmin' | 'admin' | 'supervisor' | 'guard' | 'user')) {
       console.error('Invalid role:', userData.role)
       return
     }
     const typedUser: User = {
       ...userData,
-      role: userData.role as 'admin' | 'user' | 'guard'
+      role: userData.role as 'superadmin' | 'admin' | 'supervisor' | 'guard' | 'user'
     }
     console.log('Login successful:', typedUser)
     
@@ -105,12 +105,12 @@ function App() {
   }
 
   return (
-    <div className="h-screen overflow-hidden w-full">
+    <div className="min-h-screen w-full overflow-x-hidden">
       {!isLoggedIn ? (
         <LoginPage onLogin={handleLogin} />
       ) : activeView === 'profile' ? (
         <ProfileDashboard user={user!} onLogout={handleLogout} onBack={() => setActiveView('users')} onProfilePhotoUpdate={handleProfilePhotoUpdate} />
-      ) : user?.role === 'admin' ? (
+      ) : user?.role === 'superadmin' ? (
         activeView === 'calendar' ? (
           <CalendarDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
         ) : activeView === 'performance' ? (
@@ -130,12 +130,34 @@ function App() {
         ) : (
           <SuperadminDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
         )
-      ) : user ? (
+      ) : user?.role === 'admin' || user?.role === 'supervisor' ? (
+        activeView === 'calendar' ? (
+          <CalendarDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
+        ) : activeView === 'performance' ? (
+          <PerformanceDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
+        ) : activeView === 'merit' ? (
+          <MeritScoreDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
+        ) : activeView === 'firearms' ? (
+          <FirearmInventory user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
+        ) : activeView === 'allocation' ? (
+          <FirearmAllocation user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
+        ) : activeView === 'permits' ? (
+          <GuardFirearmPermits user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
+        ) : activeView === 'maintenance' ? (
+          <FirearmMaintenance user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
+        ) : activeView === 'armored-cars' ? (
+          <ArmoredCarDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
+        ) : (
+          <SuperadminDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
+        )
+      ) : user?.role === 'guard' || user?.role === 'user' ? (
         activeView === 'calendar' ? (
           <CalendarDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
         ) : (
           <UserDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
         )
+      ) : user ? (
+        <UserDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
       ) : null}
     </div>
   )

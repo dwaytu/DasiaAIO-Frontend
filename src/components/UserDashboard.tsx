@@ -139,7 +139,10 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
 
   const fetchAttendance = async (guardId: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/attendance/${guardId}`)
+      const token = localStorage.getItem('token')
+      const response = await fetch(`${API_BASE_URL}/api/attendance/${guardId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
       if (response.ok) {
         const data = await response.json()
         setAttendance(data.attendance || [])
@@ -153,7 +156,10 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
 
   const fetchSchedule = async (guardId: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/guard-replacement/guard/${guardId}/shifts`)
+      const token = localStorage.getItem('token')
+      const response = await fetch(`${API_BASE_URL}/api/guard-replacement/guard/${guardId}/shifts`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
       if (response.ok) {
         const data = await response.json()
         setScheduleItems(data.shifts || [])
@@ -165,7 +171,10 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
 
   const fetchFirearms = async (guardId: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/guard-allocations/${guardId}`)
+      const token = localStorage.getItem('token')
+      const response = await fetch(`${API_BASE_URL}/api/guard-allocations/${guardId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
       if (response.ok) {
         const data = await response.json()
         setFirearmItems(data.allocations || [])
@@ -177,7 +186,10 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
 
   const fetchPermits = async (guardId: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/guard-firearm-permits/${guardId}`)
+      const token = localStorage.getItem('token')
+      const response = await fetch(`${API_BASE_URL}/api/guard-firearm-permits/${guardId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
       if (response.ok) {
         const data = await response.json()
         setPermitItems(data.permits || [])
@@ -189,7 +201,10 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
 
   const fetchTickets = async (guardId: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/support-tickets/${guardId}`)
+      const token = localStorage.getItem('token')
+      const response = await fetch(`${API_BASE_URL}/api/support-tickets/${guardId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
       if (response.ok) {
         const data = await response.json()
         setTicketItems(data.tickets || [])
@@ -271,7 +286,10 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
     try {
       const response = await fetch(`${API_BASE_URL}/api/guard-replacement/shifts`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        },
         body: JSON.stringify({
           guard_id: user.id,
           start_time: startLocal.toISOString(),
@@ -323,7 +341,10 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
     try {
       const response = await fetch(`${API_BASE_URL}/api/support-tickets`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        },
         body: JSON.stringify({
           guard_id: user.id,
           subject: ticketForm.subject,
@@ -363,7 +384,10 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
     try {
       const response = await fetch(`${API_BASE_URL}/api/guard-replacement/attendance/check-in`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        },
         body: JSON.stringify({
           guard_id: user.id,
           shift_id: shift.id
@@ -406,7 +430,10 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
     try {
       const response = await fetch(`${API_BASE_URL}/api/guard-replacement/attendance/check-out`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        },
         body: JSON.stringify({
           attendance_id: recentAttendance.id
         })

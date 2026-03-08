@@ -27,6 +27,7 @@ const PerformanceDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeV
   const currentView = activeView || 'performance'
   const navItems = [
     { view: 'dashboard', label: 'Dashboard', group: 'MAIN MENU' },
+    { view: 'approvals', label: 'Approvals', group: 'MAIN MENU' },
     { view: 'calendar', label: 'Calendar', group: 'MAIN MENU' },
     { view: 'analytics', label: 'Analytics', group: 'MAIN MENU' },
     { view: 'trips', label: 'Trip Management', group: 'OPERATIONS' },
@@ -49,7 +50,10 @@ const PerformanceDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeV
     try {
       setLoading(true)
       // Simulated performance data from attendance and allocations
-      const response = await fetch(`${API_BASE_URL}/api/users`)
+      const token = localStorage.getItem('token')
+      const response = await fetch(`${API_BASE_URL}/api/users`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
       if (response.ok) {
         const data = await response.json()
         // Create mock performance data

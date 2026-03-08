@@ -21,39 +21,82 @@ interface User {
   [key: string]: any
 }
 
+interface PendingApprovalUser {
+  id: string
+  email: string
+  username: string
+  role: string
+  full_name?: string
+  phone_number?: string
+  license_number?: string
+  license_issued_date?: string
+  license_expiry_date?: string
+  verified: boolean
+  approval_status: string
+  created_at: string
+}
+
 interface AdminDashboardProps {
   user: AppUser
   onLogout: () => void
+  onViewChange?: (view: string) => void
+  activeView?: string
 }
 
-const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout }) => {
+const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange, activeView }) => {
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string>('')
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [editingShift, setEditingShift] = useState<any | null>(null)
-  const [activeSection, setActiveSection] = useState<'users' | 'schedule'>('users')
+  const [activeSection, setActiveSection] = useState<'users' | 'approvals' | 'schedule'>('users')
   const [shifts, setShifts] = useState<any[]>([])
   const [shiftsLoading, setShiftsLoading] = useState<boolean>(false)
+  const [pendingApprovals, setPendingApprovals] = useState<PendingApprovalUser[]>([])
+  const [approvalsLoading, setApprovalsLoading] = useState<boolean>(false)
+  const [processingApprovalId, setProcessingApprovalId] = useState<string | null>(null)
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false)
+  const currentView = activeView || activeSection
   const navItems = [
-    { view: 'users', label: 'Dashboard' },
-    { view: 'calendar', label: 'Calendar' },
-    { view: 'schedule', label: 'Schedule' },
-    { view: 'merit', label: 'Merit Scores' }
+    { view: 'users', label: 'Dashboard', group: 'MAIN MENU' },
+    { view: 'approvals', label: 'Approvals', group: 'MAIN MENU' },
+    { view: 'calendar', label: 'Calendar', group: 'MAIN MENU' },
+    { view: 'analytics', label: 'Analytics', group: 'MAIN MENU' },
+    { view: 'trips', label: 'Trip Management', group: 'OPERATIONS' },
+    { view: 'schedule', label: 'Schedule', group: 'OPERATIONS' },
+    { view: 'missions', label: 'Missions', group: 'OPERATIONS' },
+    { view: 'performance', label: 'Performance', group: 'OPERATIONS' },
+    { view: 'merit', label: 'Merit Scores', group: 'OPERATIONS' },
+    { view: 'firearms', label: 'Firearms', group: 'RESOURCES' },
+    { view: 'allocation', label: 'Allocation', group: 'RESOURCES' },
+    { view: 'permits', label: 'Permits', group: 'RESOURCES' },
+    { view: 'maintenance', label: 'Maintenance', group: 'RESOURCES' },
+    { view: 'armored-cars', label: 'Armored Cars', group: 'RESOURCES' }
   ]
 
   useEffect(() => {
-    fetchUsers()
-    if (activeSection === 'schedule') {
+    if (activeSection === 'users') {
+      fetchUsers()
+    } else if (activeSection === 'approvals') {
+      fetchPendingApprovals()
+    } else if (activeSection === 'schedule') {
       fetchShifts()
     }
   }, [activeSection])
 
+  useEffect(() => {
+    if (activeView === 'users' || activeView === 'approvals' || activeView === 'schedule') {
+      setActiveSection(activeView)
+    }
+  }, [activeView])
+
   const fetchUsers = async () => {
     try {
       setLoading(true)
-      const response = await fetch(`${API_BASE_URL}/api/users`)
+      const token = localStorage.getItem('token')
+      const response = await fetch(`${API_BASE_URL}/api/users`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
       if (!response.ok) {
         throw new Error('Failed to fetch users')
       }
@@ -71,7 +114,10 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout }) => {
   const fetchShifts = async () => {
     try {
       setShiftsLoading(true)
-      const response = await fetch(`${API_BASE_URL}/api/guard-replacement/shifts`)
+      const token = localStorage.getItem('token')
+      const response = await fetch(`${API_BASE_URL}/api/guard-replacement/shifts`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
       if (!response.ok) {
         throw new Error('Failed to fetch shifts')
       }
@@ -85,15 +131,81 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout }) => {
     }
   }
 
+  const fetchPendingApprovals = async () => {
+    try {
+      setApprovalsLoading(true)
+      const token = localStorage.getItem('token')
+      const response = await fetch(`${API_BASE_URL}/api/users/pending-approvals`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (!response.ok) {
+        throw new Error('Failed to fetch pending approvals')
+      }
+      const data = await response.json()
+      const approvalList = Array.isArray(data) ? data : (data.users || data || [])
+      setPendingApprovals(approvalList)
+      setError('')
+    } catch (err) {
+      setError('Error loading pending approvals: ' + (err instanceof Error ? err.message : String(err)))
+    } finally {
+      setApprovalsLoading(false)
+    }
+  }
+
   const handleLogout = () => {
     onLogout()
+  }
+
+  const handleNavigate = (view: string) => {
+    if (view === 'users' || view === 'approvals' || view === 'schedule') {
+      setActiveSection(view as 'users' | 'approvals' | 'schedule')
+      onViewChange?.(view)
+      return
+    }
+    onViewChange?.(view)
   }
 
   const handleRefresh = () => {
     if (activeSection === 'users') {
       fetchUsers()
+    } else if (activeSection === 'approvals') {
+      fetchPendingApprovals()
     } else {
       fetchShifts()
+    }
+  }
+
+  const handleApprovalAction = async (targetUserId: string, action: 'approve' | 'reject') => {
+    try {
+      setProcessingApprovalId(targetUserId)
+      const token = localStorage.getItem('token')
+      const response = await fetch(`${API_BASE_URL}/api/users/${targetUserId}/approval`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ action }),
+      })
+
+      if (!response.ok) {
+        let message = `Failed to ${action} account`
+        try {
+          const payload = await response.json()
+          message = payload.error || payload.message || message
+        } catch {
+          // keep fallback
+        }
+        throw new Error(message)
+      }
+
+      await fetchPendingApprovals()
+      await fetchUsers()
+      setError('')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : `Failed to ${action} account`)
+    } finally {
+      setProcessingApprovalId(null)
     }
   }
 
@@ -105,10 +217,12 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout }) => {
     if (!editingUser) return
 
     try {
+      const token = localStorage.getItem('token')
       const response = await fetch(`${API_BASE_URL}/api/user/${editingUser.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(updatedData),
       })
@@ -132,8 +246,12 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout }) => {
     }
 
     try {
+      const token = localStorage.getItem('token')
       const response = await fetch(`${API_BASE_URL}/api/user/${userId}`, {
         method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       })
 
       if (!response.ok) {
@@ -152,9 +270,12 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout }) => {
     <div className="flex min-h-screen w-screen bg-background font-sans">
       <Sidebar
         items={navItems}
-        activeView={activeSection}
-        onNavigate={(view) => setActiveSection(view as 'users' | 'schedule')}
-        onLogoClick={() => setActiveSection('users')}
+        activeView={currentView}
+        onNavigate={handleNavigate}
+        onLogoClick={() => {
+          setActiveSection('users')
+          onViewChange?.('users')
+        }}
         onLogout={handleLogout}
         isOpen={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}
@@ -162,12 +283,24 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout }) => {
 
       <main className="flex-1 flex flex-col overflow-hidden w-full">
         <Header
-          title={activeSection === 'users' ? 'User Management' : 'Guard Schedules'}
-          badgeLabel={activeSection === 'users' ? 'Users' : 'Schedule'}
+          title={
+            activeSection === 'users'
+              ? 'User Management'
+              : activeSection === 'approvals'
+                ? 'Guard Approvals'
+                : 'Guard Schedules'
+          }
+          badgeLabel={
+            activeSection === 'users'
+              ? 'Users'
+              : activeSection === 'approvals'
+                ? 'Approvals'
+                : 'Schedule'
+          }
           onLogout={handleLogout}
           onMenuClick={() => setMobileMenuOpen(true)}
           user={user}
-          onNavigateToProfile={() => window.location.reload()}
+          onNavigateToProfile={onViewChange ? () => onViewChange('profile') : undefined}
           rightSlot={
             <button
               onClick={handleRefresh}
@@ -226,13 +359,15 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout }) => {
                                 >
                                   Edit
                                 </button>
-                                <button
-                                  className="px-3 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-sm font-semibold"
-                                  onClick={() => handleDeleteUser(u.id, u.email)}
-                                  title="Delete user"
-                                >
-                                  Delete
-                                </button>
+                                {(user.role === 'admin' || user.role === 'superadmin') && (
+                                  <button
+                                    className="px-3 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-sm font-semibold"
+                                    onClick={() => handleDeleteUser(u.id, u.email)}
+                                    title="Delete user"
+                                  >
+                                    Delete
+                                  </button>
+                                )}
                               </td>
                             </tr>
                           ))}
@@ -241,6 +376,79 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout }) => {
                     </div>
                   ) : (
                     <p className="text-text-secondary text-center py-8">No users found</p>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Approvals Section */}
+          {activeSection === 'approvals' && (
+            <>
+              {approvalsLoading && (
+                <div className="text-center py-12 text-text-secondary font-medium">Loading pending approvals...</div>
+              )}
+
+              {!approvalsLoading && (
+                <div className="bg-surface rounded-lg shadow-md p-6">
+                  <h2 className="text-xl font-bold text-text-primary mb-6 pb-3 border-b border-border">Pending Guard Registrations</h2>
+                  {pendingApprovals.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full min-w-[800px]">
+                        <thead className="bg-surface-hover border-b border-border">
+                          <tr>
+                            <th className="text-left px-4 py-3 text-sm font-semibold text-text-primary uppercase tracking-wider">Applicant</th>
+                            <th className="text-left px-4 py-3 text-sm font-semibold text-text-primary uppercase tracking-wider">Contact</th>
+                            <th className="text-left px-4 py-3 text-sm font-semibold text-text-primary uppercase tracking-wider">License</th>
+                            <th className="text-left px-4 py-3 text-sm font-semibold text-text-primary uppercase tracking-wider">Submitted</th>
+                            <th className="text-left px-4 py-3 text-sm font-semibold text-text-primary uppercase tracking-wider">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {pendingApprovals.map((pendingUser) => (
+                            <tr key={pendingUser.id} className="border-b border-border hover:bg-surface-hover transition-colors">
+                              <td className="px-4 py-3 text-text-primary">
+                                <div className="font-medium">{pendingUser.full_name || pendingUser.username}</div>
+                                <div className="text-xs text-text-tertiary">{pendingUser.username}</div>
+                              </td>
+                              <td className="px-4 py-3 text-text-primary">
+                                <div>{pendingUser.email}</div>
+                                <div className="text-xs text-text-tertiary">{pendingUser.phone_number || '-'}</div>
+                              </td>
+                              <td className="px-4 py-3 text-text-primary">
+                                <div>{pendingUser.license_number || '-'}</div>
+                                <div className="text-xs text-text-tertiary">
+                                  Exp: {pendingUser.license_expiry_date ? new Date(pendingUser.license_expiry_date).toLocaleDateString() : '-'}
+                                </div>
+                              </td>
+                              <td className="px-4 py-3 text-text-primary">
+                                {new Date(pendingUser.created_at).toLocaleString()}
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => handleApprovalAction(pendingUser.id, 'approve')}
+                                    disabled={processingApprovalId === pendingUser.id}
+                                    className="px-3 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 disabled:opacity-60 transition-colors text-sm font-semibold"
+                                  >
+                                    Approve
+                                  </button>
+                                  <button
+                                    onClick={() => handleApprovalAction(pendingUser.id, 'reject')}
+                                    disabled={processingApprovalId === pendingUser.id}
+                                    className="px-3 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-60 transition-colors text-sm font-semibold"
+                                  >
+                                    Reject
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <p className="text-text-secondary text-center py-8">No pending guard approvals</p>
                   )}
                 </div>
               )}

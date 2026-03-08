@@ -61,7 +61,10 @@ const ProfileDashboard: FC<ProfileDashboardProps> = ({ user, onLogout, onBack, o
           // Upload to backend
           const response = await fetch(`${API_BASE_URL}/api/user/${user.id}/profile-photo`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${localStorage.getItem('token')}`
+            },
             body: JSON.stringify({ profilePhoto: base64String })
           })
 
@@ -109,7 +112,10 @@ const ProfileDashboard: FC<ProfileDashboardProps> = ({ user, onLogout, onBack, o
     try {
       const response = await fetch(`${API_BASE_URL}/api/user/${user.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        },
         body: JSON.stringify({
           fullName: formData.fullName,
           phoneNumber: formData.phoneNumber,
@@ -146,7 +152,7 @@ const ProfileDashboard: FC<ProfileDashboardProps> = ({ user, onLogout, onBack, o
     return user.username.substring(0, 2).toUpperCase()
   }
 
-  const navItems = user.role === 'admin' ? [
+  const navItems = user.role === 'admin' || user.role === 'superadmin' || user.role === 'supervisor' ? [
     { view: 'dashboard', label: 'Dashboard', group: 'MAIN MENU' },
     { view: 'analytics', label: 'Analytics', group: 'MAIN MENU' },
     { view: 'schedule', label: 'Schedule', group: 'OPERATIONS' },
@@ -254,7 +260,10 @@ const ProfileDashboard: FC<ProfileDashboardProps> = ({ user, onLogout, onBack, o
                         onClick={async () => {
                           try {
                             await fetch(`${API_BASE_URL}/api/user/${user.id}/profile-photo`, {
-                              method: 'DELETE'
+                              method: 'DELETE',
+                              headers: {
+                                Authorization: `Bearer ${localStorage.getItem('token')}`
+                              }
                             })
                             setProfilePhoto('')
                             setMessage('Profile photo removed')

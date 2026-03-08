@@ -28,6 +28,7 @@ const GuardFirearmPermits: FC<Props> = ({ user, onLogout, onViewChange, activeVi
   const currentView = activeView || 'permits'
   const navItems = [
     { view: 'dashboard', label: 'Dashboard', group: 'MAIN MENU' },
+    { view: 'approvals', label: 'Approvals', group: 'MAIN MENU' },
     { view: 'calendar', label: 'Calendar', group: 'MAIN MENU' },
     { view: 'analytics', label: 'Analytics', group: 'MAIN MENU' },
     { view: 'trips', label: 'Trip Management', group: 'OPERATIONS' },
@@ -49,7 +50,10 @@ const GuardFirearmPermits: FC<Props> = ({ user, onLogout, onViewChange, activeVi
   const fetchPermits = async () => {
     try {
       setLoading(true)
-      const response = await fetch(`${API_BASE_URL}/api/guard-firearm-permits`)
+      const token = localStorage.getItem('token')
+      const response = await fetch(`${API_BASE_URL}/api/guard-firearm-permits`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
       if (response.ok) {
         const data = await response.json()
         setPermits(data.permits || [])

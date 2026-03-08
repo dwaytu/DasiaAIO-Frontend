@@ -126,15 +126,22 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
   const initializeData = async () => {
     setLoading(true)
     try {
+      const token = localStorage.getItem('token')
       // Fetch cars first, since maintenance fetch depends on it
-      const carsData = await fetchJsonOrThrow<ArmoredCar[]>(`${API_BASE_URL}/api/armored-cars`, undefined, 'Failed to fetch cars')
+      const carsData = await fetchJsonOrThrow<ArmoredCar[]>(
+        `${API_BASE_URL}/api/armored-cars`,
+        { headers: { Authorization: `Bearer ${token}` } },
+        'Failed to fetch cars'
+      )
       setCars(carsData)
 
       // Then fetch maintenance records for each car
       if (carsData.length > 0) {
         let allMaintenance: CarMaintenance[] = []
         for (const car of carsData) {
-          const mainResponse = await fetch(`${API_BASE_URL}/api/car-maintenance/${car.id}`)
+          const mainResponse = await fetch(`${API_BASE_URL}/api/car-maintenance/${car.id}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          })
           if (mainResponse.ok) {
             const mainData = await parseResponseBody(mainResponse)
             // Extract records from the API response (handles both array and {value: []} format)
@@ -159,7 +166,12 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
 
   const fetchAllocations = async () => {
     try {
-      const data = await fetchJsonOrThrow<CarAllocation[]>(`${API_BASE_URL}/api/car-allocations/active`, undefined, 'Failed to fetch allocations')
+      const token = localStorage.getItem('token')
+      const data = await fetchJsonOrThrow<CarAllocation[]>(
+        `${API_BASE_URL}/api/car-allocations/active`,
+        { headers: { Authorization: `Bearer ${token}` } },
+        'Failed to fetch allocations'
+      )
       setAllocations(data)
     } catch (err) {
       console.error('Failed to fetch allocations:', err)
@@ -168,9 +180,12 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
 
   const fetchMaintenance = async () => {
     try {
+      const token = localStorage.getItem('token')
       // Fetch maintenance for all cars
       for (const car of cars) {
-        const response = await fetch(`${API_BASE_URL}/api/car-maintenance/${car.id}`)
+        const response = await fetch(`${API_BASE_URL}/api/car-maintenance/${car.id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
         if (response.ok) {
           const data = await parseResponseBody(response)
           setMaintenance((prev) => [...prev, ...data])
@@ -184,7 +199,12 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
   const fetchCars = async () => {
     setLoading(true)
     try {
-      const data = await fetchJsonOrThrow<ArmoredCar[]>(`${API_BASE_URL}/api/armored-cars`, undefined, 'Failed to fetch cars')
+      const token = localStorage.getItem('token')
+      const data = await fetchJsonOrThrow<ArmoredCar[]>(
+        `${API_BASE_URL}/api/armored-cars`,
+        { headers: { Authorization: `Bearer ${token}` } },
+        'Failed to fetch cars'
+      )
       setCars(data)
       setError('')
     } catch (err) {
@@ -196,7 +216,12 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
 
   const fetchTrips = async () => {
     try {
-      const data = await fetchJsonOrThrow<Trip[]>(`${API_BASE_URL}/api/trips`, undefined, 'Failed to fetch trips')
+      const token = localStorage.getItem('token')
+      const data = await fetchJsonOrThrow<Trip[]>(
+        `${API_BASE_URL}/api/trips`,
+        { headers: { Authorization: `Bearer ${token}` } },
+        'Failed to fetch trips'
+      )
       setTrips(data)
     } catch (err) {
       console.error('Failed to fetch trips:', err)
@@ -207,9 +232,13 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
     e.preventDefault()
     setLoading(true)
     try {
+      const token = localStorage.getItem('token')
       const response = await fetch(`${API_BASE_URL}/api/armored-cars`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(newCar),
       })
       if (!response.ok) throw new Error('Failed to add car')
@@ -227,9 +256,13 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
     e.preventDefault()
     setLoading(true)
     try {
+      const token = localStorage.getItem('token')
       const response = await fetch(`${API_BASE_URL}/api/car-allocation/issue`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           carId: newAllocation.car_id,
           clientId: newAllocation.client_id,
@@ -253,9 +286,13 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
     e.preventDefault()
     setLoading(true)
     try {
+      const token = localStorage.getItem('token')
       const response = await fetch(`${API_BASE_URL}/api/car-maintenance/schedule`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           carId: newMaintenance.car_id,
           maintenanceType: newMaintenance.maintenance_type,
@@ -282,6 +319,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
   const currentView = activeView || 'armored-cars'
   const navItems = [
     { view: 'dashboard', label: 'Dashboard', group: 'MAIN MENU' },
+    { view: 'approvals', label: 'Approvals', group: 'MAIN MENU' },
     { view: 'calendar', label: 'Calendar', group: 'MAIN MENU' },
     { view: 'analytics', label: 'Analytics', group: 'MAIN MENU' },
     { view: 'trips', label: 'Trip Management', group: 'OPERATIONS' },

@@ -30,6 +30,7 @@ const BugReportButton: React.FC<BugReportButtonProps> = ({ userId }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
         body: JSON.stringify({
           guard_id: userId,

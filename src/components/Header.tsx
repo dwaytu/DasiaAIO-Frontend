@@ -16,6 +16,16 @@ interface HeaderProps {
 }
 
 const Header: FC<HeaderProps> = ({ title, badgeLabel, onLogout, rightSlot, onMenuClick, user, onNavigateToProfile }) => {
+  const refreshControl = rightSlot ?? (
+    <button
+      onClick={() => window.location.reload()}
+      className="px-3 py-2 text-sm font-semibold text-text-primary bg-surface border border-border rounded-lg hover:bg-surface-hover transition-colors"
+      title="Refresh dashboard"
+    >
+      Refresh
+    </button>
+  )
+
   return (
     <header className="px-4 md:px-8 py-4 md:py-5 flex justify-between items-center bg-surface border-b border-border">
       <div className="flex items-center gap-3">
@@ -34,7 +44,7 @@ const Header: FC<HeaderProps> = ({ title, badgeLabel, onLogout, rightSlot, onMen
       </div>
       <div className="flex items-center gap-2 md:gap-3">
         <ThemeToggleButton className="hidden md:flex" />
-        {rightSlot}
+        {refreshControl}
         <NotificationPanel userId={user.id} />
         <AccountManager user={user} onLogout={onLogout} onNavigateToProfile={onNavigateToProfile} />
       </div>

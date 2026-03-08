@@ -65,6 +65,7 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
   const currentView = activeView || 'merit'
   const navItems = [
     { view: 'dashboard', label: 'Dashboard', group: 'MAIN MENU' },
+    { view: 'approvals', label: 'Approvals', group: 'MAIN MENU' },
     { view: 'calendar', label: 'Calendar', group: 'MAIN MENU' },
     { view: 'analytics', label: 'Analytics', group: 'MAIN MENU' },
     { view: 'trips', label: 'Trip Management', group: 'OPERATIONS' },
@@ -86,7 +87,10 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
   const fetchRankings = async () => {
     try {
       setLoading(true)
-      const response = await fetch(`${API_BASE_URL}/api/merit/rankings/all`)
+      const token = localStorage.getItem('token')
+      const response = await fetch(`${API_BASE_URL}/api/merit/rankings/all`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
       if (response.ok) {
         const data = await response.json()
         setRankings(data.rankings || [])
@@ -104,7 +108,10 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
 
   const fetchGuardDetails = async (guardId: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/merit/${guardId}`)
+      const token = localStorage.getItem('token')
+      const response = await fetch(`${API_BASE_URL}/api/merit/${guardId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
       if (response.ok) {
         const data = await response.json()
         setSelectedGuard(data)
@@ -117,7 +124,10 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
 
   const fetchEvaluations = async (guardId: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/merit/evaluations/${guardId}`)
+      const token = localStorage.getItem('token')
+      const response = await fetch(`${API_BASE_URL}/api/merit/evaluations/${guardId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
       if (response.ok) {
         const data = await response.json()
         setEvaluations(data.evaluations || [])
@@ -131,9 +141,13 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
     if (!selectedGuard) return
 
     try {
+      const token = localStorage.getItem('token')
       const response = await fetch(`${API_BASE_URL}/api/merit/evaluations/submit`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           guardId: selectedGuard.guardId,
           evaluatorName: evaluationData.evaluatorName,

@@ -53,7 +53,7 @@ const EditScheduleModal: FC<EditScheduleModalProps> = ({ shift, onClose, onSave,
       if (!response.ok) throw new Error('Failed to fetch guards')
       
       const data = await response.json()
-      setGuards(data.users.filter((u: User) => u.role === 'user'))
+      setGuards(data.users.filter((u: User) => u.role === 'guard' || u.role === 'user'))
     } catch (err) {
       console.error('Error fetching guards:', err)
     }

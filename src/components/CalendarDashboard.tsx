@@ -110,7 +110,7 @@ const MONTH_NAMES = ['January','February','March','April','May','June','July','A
 const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
 
 const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewChange, activeView: _activeView }) => {
-  const isAdmin = user.role === 'admin'
+  const isAdmin = user.role === 'admin' || user.role === 'superadmin' || user.role === 'supervisor'
 
   const today = new Date()
   const [currentYear, setCurrentYear] = useState(today.getFullYear())
@@ -126,6 +126,7 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
   // Build nav items matching admin/user dashboard patterns
   const adminNavItems = [
     { view: 'dashboard',    label: 'Dashboard',       group: 'MAIN MENU' },
+    { view: 'approvals',    label: 'Approvals',       group: 'MAIN MENU' },
     { view: 'calendar',     label: 'Calendar',        group: 'MAIN MENU' },
     { view: 'analytics',    label: 'Analytics',       group: 'MAIN MENU' },
     { view: 'trips',        label: 'Trip Management', group: 'OPERATIONS' },
@@ -151,10 +152,13 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
 
   const fetchShifts = useCallback(async (): Promise<ShiftEvent[]> => {
     try {
+      const token = localStorage.getItem('token')
       const url = isAdmin
         ? `${API_BASE_URL}/api/guard-replacement/shifts`
         : `${API_BASE_URL}/api/guard-replacement/guard/${user.id}/shifts`
-      const res = await fetch(url)
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
       if (!res.ok) return []
       const data = await parseResponseBody(res)
       const shifts: any[] = data.shifts || (Array.isArray(data) ? data : [])
@@ -183,7 +187,10 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
 
   const fetchTrips = useCallback(async (): Promise<TripEvent[]> => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/trips`)
+      const token = localStorage.getItem('token')
+      const res = await fetch(`${API_BASE_URL}/api/trips`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
       if (!res.ok) return []
       const data = await parseResponseBody(res)
       const trips: any[] = Array.isArray(data) ? data : (data.trips || [])
@@ -211,7 +218,10 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
 
   const fetchMissions = useCallback(async (): Promise<MissionEvent[]> => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/missions`)
+      const token = localStorage.getItem('token')
+      const res = await fetch(`${API_BASE_URL}/api/missions`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
       if (!res.ok) return []
       const data = await parseResponseBody(res)
       const missions: any[] = data.missions || (Array.isArray(data) ? data : [])
@@ -238,7 +248,10 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
 
   const fetchMaintenanceEvents = useCallback(async (): Promise<MaintenanceEvent[]> => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/firearm-maintenance/pending`)
+      const token = localStorage.getItem('token')
+      const res = await fetch(`${API_BASE_URL}/api/firearm-maintenance/pending`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
       if (!res.ok) return []
       const data = await parseResponseBody(res)
       const items: any[] = Array.isArray(data) ? data : []
@@ -269,7 +282,7 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
       const results = await Promise.allSettled([
         fetchShifts(),
         fetchTrips(),
-        fetchMissions(),
+        isAdmin ? fetchMissions() : Promise.resolve([]),
         isAdmin ? fetchMaintenanceEvents() : Promise.resolve([]),
       ])
       const all: CalendarEvent[] = []

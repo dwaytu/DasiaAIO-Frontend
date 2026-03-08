@@ -28,6 +28,7 @@ const FirearmMaintenance: FC<Props> = ({ user, onLogout, onViewChange, activeVie
   const currentView = activeView || 'maintenance'
   const navItems = [
     { view: 'dashboard', label: 'Dashboard', group: 'MAIN MENU' },
+    { view: 'approvals', label: 'Approvals', group: 'MAIN MENU' },
     { view: 'calendar', label: 'Calendar', group: 'MAIN MENU' },
     { view: 'analytics', label: 'Analytics', group: 'MAIN MENU' },
     { view: 'trips', label: 'Trip Management', group: 'OPERATIONS' },
@@ -49,7 +50,10 @@ const FirearmMaintenance: FC<Props> = ({ user, onLogout, onViewChange, activeVie
   const fetchMaintenances = async () => {
     try {
       setLoading(true)
-      const response = await fetch(`${API_BASE_URL}/api/firearm-maintenance`)
+      const token = localStorage.getItem('token')
+      const response = await fetch(`${API_BASE_URL}/api/firearm-maintenance`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
       if (response.ok) {
         const data = await response.json()
         setMaintenances(data.maintenances || [])

@@ -39,7 +39,10 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ userId }) => {
   // Fetch notifications
   const fetchNotifications = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/users/${userId}/notifications`, {});
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/api/users/${userId}/notifications`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (response.ok) {
         const data = await response.json();
         setNotifications(data.notifications || []);
@@ -53,7 +56,10 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ userId }) => {
   // Fetch unread count
   const fetchUnreadCount = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/users/${userId}/notifications/unread-count`);
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/api/users/${userId}/notifications/unread-count`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (response.ok) {
         const data = await response.json();
         setUnreadCount(data.unreadCount || 0);
@@ -66,8 +72,10 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ userId }) => {
   // Mark notification as read
   const markAsRead = async (notificationId: string) => {
     try {
+      const token = localStorage.getItem('token');
       const response = await fetch(`${API_BASE_URL}/api/notifications/${notificationId}/read`, {
         method: 'PUT',
+        headers: { Authorization: `Bearer ${token}` },
       });
       if (response.ok) {
         setNotifications(prev =>
@@ -85,8 +93,10 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ userId }) => {
   // Mark all as read
   const markAllAsRead = async () => {
     try {
+      const token = localStorage.getItem('token');
       const response = await fetch(`${API_BASE_URL}/api/users/${userId}/notifications/mark-all-read`, {
         method: 'PUT',
+        headers: { Authorization: `Bearer ${token}` },
       });
       if (response.ok) {
         setNotifications(prev => prev.map(notif => ({ ...notif, read: true })));
@@ -101,9 +111,13 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ userId }) => {
   const acceptReplacement = async (notificationId: string, shiftId: string) => {
     try {
       setLoading(true);
+      const token = localStorage.getItem('token');
       const response = await fetch(`${API_BASE_URL}/api/guard-replacement/accept-replacement`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           guardId: userId,
           shiftId: shiftId,
@@ -129,8 +143,10 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ userId }) => {
   // Delete notification
   const deleteNotification = async (notificationId: string) => {
     try {
+      const token = localStorage.getItem('token');
       const response = await fetch(`${API_BASE_URL}/api/notifications/${notificationId}`, {
         method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
       });
       if (response.ok) {
         setNotifications(prev => prev.filter(notif => notif.id !== notificationId));

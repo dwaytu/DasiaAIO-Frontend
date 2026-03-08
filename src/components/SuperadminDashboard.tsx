@@ -23,6 +23,21 @@ interface User {
   [key: string]: any
 }
 
+interface PendingApprovalUser {
+  id: string
+  email: string
+  username: string
+  role: string
+  full_name?: string
+  phone_number?: string
+  license_number?: string
+  license_issued_date?: string
+  license_expiry_date?: string
+  verified: boolean
+  approval_status: string
+  created_at: string
+}
+
 interface SuperadminDashboardProps {
   user: AppUser
   onLogout: () => void
@@ -37,11 +52,14 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [editingShift, setEditingShift] = useState<any | null>(null)
   const [error, setError] = useState<string>('')
-  const [activeSection, setActiveSection] = useState<'dashboard' | 'schedule' | 'missions' | 'analytics' | 'trips'>('dashboard')
+  const [activeSection, setActiveSection] = useState<'dashboard' | 'approvals' | 'schedule' | 'missions' | 'analytics' | 'trips'>('dashboard')
   const [shifts, setShifts] = useState<any[]>([])
   const [shiftsLoading, setShiftsLoading] = useState<boolean>(false)
   const [missions, setMissions] = useState<any[]>([])
   const [missionsLoading, setMissionsLoading] = useState<boolean>(false)
+  const [pendingApprovals, setPendingApprovals] = useState<PendingApprovalUser[]>([])
+  const [approvalsLoading, setApprovalsLoading] = useState<boolean>(false)
+  const [processingApprovalId, setProcessingApprovalId] = useState<string | null>(null)
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false)
   const [missionFormData, setMissionFormData] = useState({
     mission_name: '',
@@ -69,8 +87,15 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
     start_time: '',
     end_time: ''
   })
+  const normalizedViewerRole = user.role === 'user' ? 'guard' : user.role
+  const isSuperadminViewer = normalizedViewerRole === 'superadmin'
+  const isAdminViewer = normalizedViewerRole === 'admin'
+  const isSupervisorViewer = normalizedViewerRole === 'supervisor'
+  const canDeleteUsers = isSuperadminViewer || isAdminViewer
+
   const navItems = [
     { view: 'dashboard', label: 'Dashboard', group: 'MAIN MENU' },
+    { view: 'approvals', label: 'Approvals', group: 'MAIN MENU' },
     { view: 'calendar', label: 'Calendar', group: 'MAIN MENU' },
     { view: 'analytics', label: 'Analytics', group: 'MAIN MENU' },
     { view: 'trips', label: 'Trip Management', group: 'OPERATIONS' },
@@ -83,15 +108,38 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
     { view: 'permits', label: 'Permits', group: 'RESOURCES' },
     { view: 'maintenance', label: 'Maintenance', group: 'RESOURCES' },
     { view: 'armored-cars', label: 'Armored Cars', group: 'RESOURCES' },
-  ]
+  ].filter(item => {
+    if (item.view === 'approvals') {
+      return isSuperadminViewer || isAdminViewer || isSupervisorViewer
+    }
+    return true
+  })
+
+  const normalizeRole = (role: string) => role === 'user' ? 'guard' : role
+  const canViewUserRow = (targetRoleRaw: string) => {
+    const targetRole = normalizeRole(targetRoleRaw)
+    if (isSuperadminViewer) return true
+    if (isAdminViewer) return targetRole !== 'superadmin'
+    if (isSupervisorViewer) return targetRole === 'guard'
+    return false
+  }
+  const canEditUserRow = (targetRoleRaw: string) => {
+    const targetRole = normalizeRole(targetRoleRaw)
+    if (isSuperadminViewer) return true
+    if (isAdminViewer) return targetRole !== 'superadmin'
+    if (isSupervisorViewer) return targetRole === 'guard'
+    return false
+  }
   const sectionTitle =
     activeSection === 'dashboard' ? 'Dashboard' :
+    activeSection === 'approvals' ? 'Guard Approvals' :
     activeSection === 'schedule' ? 'Guard Schedules' :
     activeSection === 'missions' ? 'Mission Assignment' :
     activeSection === 'analytics' ? 'Analytics & Reports' :
     activeSection === 'trips' ? 'Trip Management' : 'Dashboard'
   const badgeLabel =
     activeSection === 'dashboard' ? 'Overview' :
+    activeSection === 'approvals' ? 'Approvals' :
     activeSection === 'trips' ? 'Trips' :
     activeSection.replace('-', ' ')
 
@@ -111,7 +159,9 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   useEffect(() => {
     fetchData()
     fetchGuardsAndFirearms()
-    if (activeSection === 'schedule') {
+    if (activeSection === 'approvals') {
+      fetchPendingApprovals()
+    } else if (activeSection === 'schedule') {
       fetchShifts()
     } else if (activeSection === 'missions') {
       fetchMissions()
@@ -120,9 +170,10 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
 
   useEffect(() => {
     if (!activeView) return
-    const viewToSection: Record<string, 'dashboard' | 'schedule' | 'missions' | 'analytics' | 'trips'> = {
+    const viewToSection: Record<string, 'dashboard' | 'approvals' | 'schedule' | 'missions' | 'analytics' | 'trips'> = {
       users: 'dashboard',
       dashboard: 'dashboard',
+      approvals: 'approvals',
       schedule: 'schedule',
       missions: 'missions',
       analytics: 'analytics',
@@ -137,7 +188,10 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   const fetchData = async () => {
     try {
       setLoading(true)
-      const response = await fetch(`${API_BASE_URL}/api/users`)
+      const token = localStorage.getItem('token')
+      const response = await fetch(`${API_BASE_URL}/api/users`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
       if (!response.ok) {
         throw new Error('Failed to fetch users')
       }
@@ -146,15 +200,17 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
       setUsers(users)
       
       // Calculate stats
+      const superadminCount = users.filter((u: User) => u.role === 'superadmin').length
       const adminCount = users.filter((u: User) => u.role === 'admin').length
-      const guardCount = users.filter((u: User) => u.role === 'guard').length
-      const userCount = users.filter((u: User) => u.role === 'user').length
+      const supervisorCount = users.filter((u: User) => u.role === 'supervisor').length
+      const guardCount = users.filter((u: User) => u.role === 'guard' || u.role === 'user').length
       
       setStats({
         totalUsers: users.length,
+        superadmins: superadminCount,
         admins: adminCount,
+        supervisors: supervisorCount,
         guards: guardCount,
-        regularUsers: userCount
       })
     } catch (err) {
       console.error('Error fetching data:', err)
@@ -166,7 +222,10 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   const fetchShifts = async () => {
     try {
       setShiftsLoading(true)
-      const response = await fetch(`${API_BASE_URL}/api/guard-replacement/shifts`)
+      const token = localStorage.getItem('token')
+      const response = await fetch(`${API_BASE_URL}/api/guard-replacement/shifts`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
       if (!response.ok) {
         throw new Error('Failed to fetch shifts')
       }
@@ -200,20 +259,46 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
     }
   }
 
+  const fetchPendingApprovals = async () => {
+    try {
+      setApprovalsLoading(true)
+      const token = localStorage.getItem('token')
+      const response = await fetch(`${API_BASE_URL}/api/users/pending-approvals`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (!response.ok) {
+        throw new Error('Failed to fetch pending approvals')
+      }
+      const data = await response.json()
+      const pendingList = Array.isArray(data) ? data : (data.users || data || [])
+      setPendingApprovals(pendingList)
+      setError('')
+    } catch (err) {
+      setError('Error loading pending approvals: ' + (err instanceof Error ? err.message : String(err)))
+    } finally {
+      setApprovalsLoading(false)
+    }
+  }
+
   const fetchGuardsAndFirearms = async () => {
     try {
       // Fetch all users (all users are guards)
-      const usersResponse = await fetch(`${API_BASE_URL}/api/users`)
+      const token = localStorage.getItem('token')
+      const usersResponse = await fetch(`${API_BASE_URL}/api/users`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
       if (usersResponse.ok) {
         const usersData = await usersResponse.json()
         const allUsers = Array.isArray(usersData) ? usersData : (usersData.users || [])
         // Filter out admin users, only get regular users (guards)
-        const guards = allUsers.filter((u: User) => u.role !== 'admin')
+        const guards = allUsers.filter((u: User) => u.role === 'guard' || u.role === 'user')
         setAvailableGuards(guards)
       }
 
       // Fetch firearms (backend returns array directly)
-      const firearmsResponse = await fetch(`${API_BASE_URL}/api/firearms`)
+      const firearmsResponse = await fetch(`${API_BASE_URL}/api/firearms`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
       if (firearmsResponse.ok) {
         const firearmsData = await firearmsResponse.json()
         // Backend returns array directly, handle both formats for compatibility
@@ -224,7 +309,9 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
       }
 
       // Fetch armored cars (vehicles)
-      const vehiclesResponse = await fetch(`${API_BASE_URL}/api/armored-cars`)
+      const vehiclesResponse = await fetch(`${API_BASE_URL}/api/armored-cars`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
       if (vehiclesResponse.ok) {
         const vehiclesData = await vehiclesResponse.json()
         const vehicles = Array.isArray(vehiclesData) ? vehiclesData : (vehiclesData.armored_cars || vehiclesData.vehicles || [])
@@ -328,9 +415,9 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
 
   const handleNavigate = (view: string) => {
     console.log('handleNavigate called with view:', view);
-    if (view === 'schedule' || view === 'dashboard' || view === 'missions' || view === 'analytics' || view === 'trips') {
+    if (view === 'approvals' || view === 'schedule' || view === 'dashboard' || view === 'missions' || view === 'analytics' || view === 'trips') {
       console.log('Setting activeSection to:', view);
-      setActiveSection(view as 'dashboard' | 'schedule' | 'missions' | 'analytics' | 'trips')
+      setActiveSection(view as 'dashboard' | 'approvals' | 'schedule' | 'missions' | 'analytics' | 'trips')
     } else if (onViewChange) {
       console.log('Calling onViewChange with view:', view);
       onViewChange(view)
@@ -414,10 +501,12 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
     if (!editingUser) return
 
     try {
+      const token = localStorage.getItem('token')
       const response = await fetch(`${API_BASE_URL}/api/user/${editingUser.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(updatedData),
       })
@@ -441,8 +530,12 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
     }
 
     try {
+      const token = localStorage.getItem('token')
       const response = await fetch(`${API_BASE_URL}/api/user/${userId}`, {
         method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       })
 
       if (!response.ok) {
@@ -457,7 +550,9 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
     }
   }
 
-  const filteredUsers = users.filter(u =>
+  const roleScopedUsers = users.filter(u => canViewUserRow(u.role))
+
+  const filteredUsers = roleScopedUsers.filter(u =>
     !searchQuery ||
     u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
     u.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -466,6 +561,9 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
 
   const handleRefresh = () => {
     fetchData()
+    if (activeSection === 'approvals') {
+      fetchPendingApprovals()
+    }
     if (activeSection === 'schedule') {
       fetchShifts()
     }
@@ -474,10 +572,51 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
     }
   }
 
+  const handleApprovalAction = async (targetUserId: string, action: 'approve' | 'reject') => {
+    try {
+      setProcessingApprovalId(targetUserId)
+      const token = localStorage.getItem('token')
+      const response = await fetch(`${API_BASE_URL}/api/users/${targetUserId}/approval`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ action }),
+      })
+
+      if (!response.ok) {
+        let message = `Failed to ${action} account`
+        try {
+          const payload = await response.json()
+          message = payload.error || payload.message || message
+        } catch {
+          // keep fallback message
+        }
+        throw new Error(message)
+      }
+
+      addNotification(
+        'success',
+        action === 'approve' ? 'Guard Approved' : 'Guard Rejected',
+        action === 'approve' ? 'Guard account approved successfully' : 'Guard account rejected successfully'
+      )
+      await fetchPendingApprovals()
+      await fetchData()
+      setError('')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : `Failed to ${action} account`
+      setError(message)
+      addNotification('error', 'Approval Action Failed', message)
+    } finally {
+      setProcessingApprovalId(null)
+    }
+  }
+
   return (
     <>
       <NotificationCenter notifications={notifications} onDismiss={dismissNotification} />
-      <div className="flex h-screen w-screen bg-background font-sans">
+      <div className="flex min-h-screen lg:h-screen w-full bg-background font-sans">
         <Sidebar
           items={navItems}
           activeView={activeSection}
@@ -488,7 +627,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
           onClose={() => setMobileMenuOpen(false)}
         />
 
-      <main className="flex-1 flex flex-col overflow-hidden w-full">
+      <main className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden w-full">
         <Header
           title={sectionTitle}
           badgeLabel={badgeLabel}
@@ -545,14 +684,14 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                   <p className="text-3xl font-bold text-text-primary">{stats.guards ?? '—'}</p>
                 </div>
               </div>
-              {/* Regular Users */}
+              {/* Supervisors */}
               <div className="bento-card flex items-center gap-4">
                 <div className="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center flex-shrink-0">
                   <svg className="w-6 h-6 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                 </div>
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-text-tertiary mb-0.5">Regular Users</p>
-                  <p className="text-3xl font-bold text-text-primary">{stats.regularUsers ?? '—'}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-text-tertiary mb-0.5">Supervisors</p>
+                  <p className="text-3xl font-bold text-text-primary">{stats.supervisors ?? '—'}</p>
                 </div>
               </div>
             </section>
@@ -596,15 +735,18 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                     <tbody className="divide-y divide-border-subtle">
                       {filteredUsers.map((u: User) => {
                         const initial = (u.full_name || u.username || '?').charAt(0).toUpperCase()
-                        // Admin gets purple, all others (users/guards) get teal
-                        const avatarColor = u.role === 'admin'
+                        const normalizedRole = u.role === 'user' ? 'guard' : u.role
+                        const avatarColor = normalizedRole === 'superadmin' || normalizedRole === 'admin'
                           ? 'bg-purple-500/20 text-purple-300'
-                          : 'bg-teal-500/20 text-teal-300'
-                        const rolePill = u.role === 'admin'
+                          : normalizedRole === 'supervisor'
+                            ? 'bg-amber-500/20 text-amber-300'
+                            : 'bg-teal-500/20 text-teal-300'
+                        const rolePill = normalizedRole === 'superadmin' || normalizedRole === 'admin'
                           ? 'bg-purple-500/15 text-purple-300 ring-1 ring-purple-500/30'
-                          : 'bg-teal-500/15 text-teal-300 ring-1 ring-teal-500/30'
-                        // Display 'guard' for all non-admin users
-                        const displayRole = u.role === 'admin' ? 'admin' : 'guard'
+                          : normalizedRole === 'supervisor'
+                            ? 'bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30'
+                            : 'bg-teal-500/15 text-teal-300 ring-1 ring-teal-500/30'
+                        const displayRole = normalizedRole
                         return (
                           <tr key={u.id} className="hover:bg-surface-hover/50 transition-colors">
                             <td className="px-5 py-3.5">
@@ -632,20 +774,24 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                             </td>
                             <td className="px-5 py-3.5">
                               <div className="flex items-center justify-end gap-1">
-                                <button
-                                  onClick={() => handleEditUser(u)}
-                                  title="Edit user"
-                                  className="p-2 rounded-lg text-text-tertiary hover:text-indigo-400 hover:bg-indigo-500/10 transition-colors"
-                                >
-                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteUser(u.id, u.email)}
-                                  title="Delete user"
-                                  className="p-2 rounded-lg text-text-tertiary hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                                >
-                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                </button>
+                                {canEditUserRow(u.role) && (
+                                  <button
+                                    onClick={() => handleEditUser(u)}
+                                    title="Edit user"
+                                    className="p-2 rounded-lg text-text-tertiary hover:text-indigo-400 hover:bg-indigo-500/10 transition-colors"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                                  </button>
+                                )}
+                                {canDeleteUsers && canEditUserRow(u.role) && u.id !== user.id && (
+                                  <button
+                                    onClick={() => handleDeleteUser(u.id, u.email)}
+                                    title="Delete user"
+                                    className="p-2 rounded-lg text-text-tertiary hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                  </button>
+                                )}
                               </div>
                             </td>
                           </tr>
@@ -665,6 +811,72 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                 </div>
               </div>
             </section>
+          </div>
+        ) : activeSection === 'approvals' ? (
+          <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in">
+            {approvalsLoading ? (
+              <div className="text-center py-12 text-text-secondary font-medium">Loading pending approvals...</div>
+            ) : (
+              <section className="w-full table-glass rounded-2xl p-6 md:p-8">
+                <h2 className="text-2xl font-bold text-text-primary mb-6">Pending Guard Registrations</h2>
+                {pendingApprovals.length > 0 ? (
+                  <div className="overflow-auto">
+                    <table className="w-full border-collapse min-w-[820px]">
+                      <thead className="thead-glass">
+                        <tr>
+                          <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Applicant</th>
+                          <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Contact</th>
+                          <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">License</th>
+                          <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Submitted</th>
+                          <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pendingApprovals.map((pendingUser) => (
+                          <tr key={pendingUser.id} className="border-b border-border hover:bg-surface-hover">
+                            <td className="px-4 py-3 text-text-primary">
+                              <div className="font-medium">{pendingUser.full_name || pendingUser.username}</div>
+                              <div className="text-xs text-text-tertiary">{pendingUser.username}</div>
+                            </td>
+                            <td className="px-4 py-3 text-text-primary">
+                              <div>{pendingUser.email}</div>
+                              <div className="text-xs text-text-tertiary">{pendingUser.phone_number || '-'}</div>
+                            </td>
+                            <td className="px-4 py-3 text-text-primary">
+                              <div>{pendingUser.license_number || '-'}</div>
+                              <div className="text-xs text-text-tertiary">
+                                Exp: {pendingUser.license_expiry_date ? new Date(pendingUser.license_expiry_date).toLocaleDateString() : '-'}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-text-primary">{new Date(pendingUser.created_at).toLocaleString()}</td>
+                            <td className="px-4 py-3">
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => handleApprovalAction(pendingUser.id, 'approve')}
+                                  disabled={processingApprovalId === pendingUser.id}
+                                  className="px-3 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 disabled:opacity-60 transition-colors text-sm font-semibold"
+                                >
+                                  Approve
+                                </button>
+                                <button
+                                  onClick={() => handleApprovalAction(pendingUser.id, 'reject')}
+                                  disabled={processingApprovalId === pendingUser.id}
+                                  className="px-3 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-60 transition-colors text-sm font-semibold"
+                                >
+                                  Reject
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="text-center text-text-secondary py-8 italic text-sm md:text-base">No pending guard approvals</p>
+                )}
+              </section>
+            )}
           </div>
         ) : activeSection === 'schedule' ? (
           <div className="flex-1 flex flex-col p-4 md:p-8 overflow-hidden w-full animate-fade-in">

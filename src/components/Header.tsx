@@ -42,7 +42,7 @@ const Header: FC<HeaderProps> = ({ title, badgeLabel, onLogout, rightSlot, onMen
           </svg>
         </button>
         <div className="hidden lg:block">
-          <SentinelLogo size="sm" />
+          <SentinelLogo size={30} variant="IconOnly" animated />
         </div>
         <div>
           <h1 className="m-0 text-xl font-bold uppercase tracking-wide text-text-primary md:text-2xl">{title}</h1>

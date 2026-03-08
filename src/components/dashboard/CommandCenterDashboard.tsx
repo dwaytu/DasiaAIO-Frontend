@@ -6,6 +6,7 @@ import OpsTableWidget from './OpsTableWidget'
 import OpsAlertFeed from './OpsAlertFeed'
 import QuickActionsPanel, { QuickActionItem } from './QuickActionsPanel'
 import OperationalSummaryStrip from './OperationalSummaryStrip'
+import SentinelLogo from '../SentinelLogo'
 import { useOpsSummary } from '../../hooks/useOpsSummary'
 import { getOpsAlerts } from '../../hooks/useOpsAlerts'
 import { useOpsShifts } from '../../hooks/useOpsShifts'
@@ -49,7 +50,7 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
       <SectionPanel
         title="Security Operations Command Center"
         subtitle="Real-time situational overview for daily security operations"
-        icon={<span aria-hidden="true">SOC</span>}
+        icon={<SentinelLogo size={22} variant="IconOnly" className="shrink-0" animated />}
         actions={<QuickActionsPanel actions={quickActions} />}
         collapsible
       >

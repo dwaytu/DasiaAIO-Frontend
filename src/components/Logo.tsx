@@ -9,6 +9,12 @@ interface LogoProps {
   forceDark?: boolean
 }
 
+const sizeToPixels: Record<'sm' | 'md' | 'lg', number> = {
+  sm: 32,
+  md: 40,
+  lg: 56,
+}
+
 const Logo: FC<LogoProps> = ({ onClick, size = 'md', horizontal = true, logoOnly = false }) => {
   return (
     <div
@@ -23,7 +29,7 @@ const Logo: FC<LogoProps> = ({ onClick, size = 'md', horizontal = true, logoOnly
         }
       } : undefined}
     >
-      <SentinelLogo size={size} stacked={!horizontal} showText={!logoOnly} />
+      <SentinelLogo size={sizeToPixels[size]} variant={logoOnly ? 'IconOnly' : 'FullLogo'} className={!horizontal ? '' : 'items-center'} animated />
     </div>
   )
 }

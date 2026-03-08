@@ -14,6 +14,7 @@ import Allowed from './rbac/Allowed'
 import DeniedFallback from './rbac/DeniedFallback'
 import OperationalShell from './layout/OperationalShell'
 import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
+import { can } from '../utils/permissions'
 
 interface User {
   id: string
@@ -98,6 +99,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   const isSuperadminViewer = normalizedViewerRole === 'superadmin'
   const isAdminViewer = normalizedViewerRole === 'admin'
   const isSupervisorViewer = normalizedViewerRole === 'supervisor'
+  const canManageUsers = can(normalizedViewerRole, 'manage_users')
   const navItems = getSidebarNav(user.role)
 
   const canViewUserRow = (targetRoleRaw: string) => {
@@ -137,7 +139,19 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   }
 
   useEffect(() => {
-    fetchData()
+    if (canManageUsers) {
+      fetchData()
+    } else {
+      setLoading(false)
+      setUsers([])
+      setStats({
+        totalUsers: 0,
+        superadmins: 0,
+        admins: 0,
+        supervisors: 0,
+        guards: 0,
+      })
+    }
     fetchGuardsAndFirearms()
     if (activeSection === 'dashboard') {
       fetchPendingApprovals()
@@ -150,7 +164,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
     } else if (activeSection === 'missions') {
       fetchMissions()
     }
-  }, [activeSection])
+  }, [activeSection, canManageUsers])
 
   useEffect(() => {
     if (!activeView) return
@@ -254,12 +268,17 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
 
   const fetchGuardsAndFirearms = async () => {
     try {
-      const [usersData, firearmsData, vehiclesData] = await Promise.all([
-        fetchJsonOrThrow<any>(
-          `${API_BASE_URL}/api/users`,
-          { headers: getAuthHeaders() },
-          'Failed to fetch users',
-        ),
+      const sources: Promise<any>[] = []
+      if (canManageUsers) {
+        sources.push(
+          fetchJsonOrThrow<any>(
+            `${API_BASE_URL}/api/users`,
+            { headers: getAuthHeaders() },
+            'Failed to fetch users',
+          ),
+        )
+      }
+      sources.push(
         fetchJsonOrThrow<any>(
           `${API_BASE_URL}/api/firearms`,
           { headers: getAuthHeaders() },
@@ -270,21 +289,27 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
           { headers: getAuthHeaders() },
           'Failed to fetch armored cars',
         ),
-      ])
+      )
 
-      const allUsers = Array.isArray(usersData) ? usersData : (usersData.users || [])
+      const results = await Promise.all(sources)
+
+      const usersData = canManageUsers ? results[0] : []
+      const firearmsData = canManageUsers ? results[1] : results[0]
+      const vehiclesData = canManageUsers ? results[2] : results[1]
+
+      const allUsers = Array.isArray(usersData) ? usersData : (usersData?.users || [])
       const guards = allUsers.filter((u: User) => normalizeRole(u.role) === 'guard')
       setAvailableGuards(guards)
 
-      const firearms = Array.isArray(firearmsData) ? firearmsData : (firearmsData.firearms || [])
+      const firearms = Array.isArray(firearmsData) ? firearmsData : (firearmsData?.firearms || [])
       setAvailableFirearms(firearms.filter((f: any) => f.status === 'available'))
 
       const vehicles = Array.isArray(vehiclesData)
         ? vehiclesData
-        : (vehiclesData.armored_cars || vehiclesData.vehicles || [])
+        : (vehiclesData?.armored_cars || vehiclesData?.vehicles || [])
       setAvailableVehicles(vehicles.filter((v: any) => v.status === 'available'))
     } catch (err) {
-      console.error('Error fetching guards, firearms, and vehicles:', err)
+      console.error('Error fetching assignment resources:', err)
     }
   }
 

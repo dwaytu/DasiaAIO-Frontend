@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import LoginPage from './components/LoginPage'
-import AdminDashboard from './components/AdminDashboard'
 import SuperadminDashboard from './components/SuperadminDashboard'
 import UserDashboard from './components/UserDashboard'
 import PerformanceDashboard from './components/PerformanceDashboard'
@@ -41,7 +40,6 @@ function App() {
           parsedUser.role = normalizeRole(parsedUser.role)
           setUser(parsedUser)
           setIsLoggedIn(true)
-          console.log('Authentication restored from localStorage')
         }
       } catch (error) {
         console.error('Failed to restore authentication:', error)
@@ -65,14 +63,13 @@ function App() {
       ...userData,
       role: normalizeRole(userData.role)
     }
-    console.log('Login successful:', typedUser)
-    
+
     // Store user data in localStorage for persistence
     localStorage.setItem('user', JSON.stringify(typedUser))
     
     setUser(typedUser)
     setIsLoggedIn(true)
-    setActiveView(typedUser.role === 'superadmin' ? 'dashboard' : typedUser.role === 'guard' ? 'overview' : 'users')
+    setActiveView(typedUser.role === 'guard' ? 'overview' : 'dashboard')
   }
 
   const handleLogout = () => {
@@ -93,8 +90,6 @@ function App() {
       })
     }
   }
-
-  console.log('App rendering, isLoggedIn:', isLoggedIn, 'user:', user, 'isLoading:', isLoading)
 
   const normalizedRole = normalizeRole(user?.role)
 
@@ -159,12 +154,7 @@ function App() {
     if (role === 'guard') {
       return 'overview'
     }
-
-    if (role === 'superadmin') {
-      return 'dashboard'
-    }
-
-    return 'users'
+    return 'dashboard'
   }
 
   const canView = (view: string, role: Role): boolean => {
@@ -177,20 +167,9 @@ function App() {
   }
 
   const renderHome = (role: Role, currentUser: User): JSX.Element => {
-    if (role === 'superadmin') {
+    if (role === 'superadmin' || role === 'admin' || role === 'supervisor') {
       return (
         <SuperadminDashboard
-          user={currentUser}
-          onLogout={handleLogout}
-          onViewChange={setActiveView}
-          activeView={activeView}
-        />
-      )
-    }
-
-    if (role === 'admin' || role === 'supervisor') {
-      return (
-        <AdminDashboard
           user={currentUser}
           onLogout={handleLogout}
           onViewChange={setActiveView}

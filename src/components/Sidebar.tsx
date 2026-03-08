@@ -64,7 +64,7 @@ const Sidebar: FC<SidebarProps> = ({ items, activeView, onNavigate, onLogout, on
           
           <div className="mb-6 flex-shrink-0 rounded-xl border border-border-subtle bg-surface-elevated p-3" style={{ borderBottom: '1px solid var(--border-color)' }}>
             <button type="button" onClick={onLogoClick} className="w-full text-left" aria-label="Go to dashboard">
-              <SentinelLogo size="sm" />
+              <SentinelLogo size={36} variant="FullLogo" animated />
             </button>
           </div>
 

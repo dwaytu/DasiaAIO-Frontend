@@ -1,4 +1,4 @@
-import { useState, FC, FormEvent, ChangeEvent } from 'react'
+import { useState, useEffect, FC, FormEvent, ChangeEvent } from 'react'
 import SentinelLogo from './SentinelLogo'
 import ParticleBackground from './ParticleBackground'
 import { User } from '../App'
@@ -72,6 +72,18 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
   const [resetCode, setResetCode] = useState<string>('')
   const [newPassword, setNewPassword] = useState<string>('')
   const [confirmPassword, setConfirmPassword] = useState<string>('')
+  const [monitoringNodes, setMonitoringNodes] = useState<number>(48)
+
+  useEffect(() => {
+    const values = [48, 49, 48]
+    let idx = 0
+    const ticker = window.setInterval(() => {
+      idx = (idx + 1) % values.length
+      setMonitoringNodes(values[idx])
+    }, 7000)
+
+    return () => window.clearInterval(ticker)
+  }, [])
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -643,7 +655,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
             </div>
           )}
 
-          <button type="submit" disabled={isLoading} className="w-full text-white font-bold py-3 rounded-lg transition-all disabled:opacity-50" style={{ background: 'var(--accent)', boxShadow: '0 0 20px rgba(59,130,246,0.25)' }}>
+          <button type="submit" disabled={isLoading} className="terminal-login-btn w-full py-3 font-bold disabled:opacity-50">
             {isLoading ? 'Processing...' : 'Login'}
           </button>
 
@@ -690,11 +702,15 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
           <ParticleBackground particleCount={65} color="56, 189, 248" connectDistance={120} mouseRadius={120} />
         </div>
 
+        <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+          <div className="login-radar-sweep" />
+        </div>
+
         <div className="relative z-10 grid min-h-screen grid-cols-1 lg:grid-cols-[1.1fr_0.9fr]">
           <main id="auth-main" className="flex items-center justify-center px-4 py-10 sm:px-6 lg:px-10">
             <section className="w-full max-w-xl rounded-2xl border border-border-elevated bg-surface/85 p-6 shadow-modal backdrop-blur-md sm:p-8" aria-labelledby="auth-title">
               <div className="mb-6 flex justify-center">
-                <SentinelLogo size="lg" stacked showText />
+                <SentinelLogo size={62} variant="FullLogo" animated />
               </div>
 
               {!requiresVerification && !isRegistering && (
@@ -724,7 +740,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
 
           <aside className="hidden border-l border-border-subtle bg-surface-elevated/70 p-10 lg:flex lg:flex-col lg:justify-between">
             <div>
-              <SentinelLogo size="md" showText />
+              <SentinelLogo size={42} variant="FullLogo" animated />
               <p className="mt-5 max-w-md text-sm text-text-secondary">
                 Real-time protection platform for mission planning, personnel readiness, and critical asset oversight.
               </p>
@@ -734,13 +750,54 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
               <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-text-tertiary">System Status</h2>
               <div className="grid gap-3">
                 {[
-                  { label: 'System Status', value: 'Operational', tone: 'success' },
-                  { label: 'Network', value: 'Secure', tone: 'info' },
-                  { label: 'Monitoring Nodes', value: 'Active', tone: 'warning' },
+                  {
+                    label: 'System Status',
+                    value: 'Operational',
+                    tone: 'success',
+                    icon: (
+                      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                        <path d="M12 3l7 3v6c0 5-3.4 8.9-7 10-3.6-1.1-7-5-7-10V6l7-3z" />
+                        <path d="M9.5 12.5l1.7 1.7 3.3-3.3" />
+                      </svg>
+                    ),
+                    live: true,
+                  },
+                  {
+                    label: 'Network',
+                    value: 'Secure Link',
+                    tone: 'info',
+                    icon: (
+                      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                        <circle cx="5" cy="12" r="2" />
+                        <circle cx="12" cy="6" r="2" />
+                        <circle cx="19" cy="12" r="2" />
+                        <path d="M7 11l3.5-3M13.5 8l3.5 3M7 13l3.5 3M13.5 16l3.5-3" />
+                      </svg>
+                    ),
+                  },
+                  {
+                    label: 'Monitoring Nodes',
+                    value: `Active: ${monitoringNodes}`,
+                    tone: 'warning',
+                    icon: (
+                      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                        <circle cx="12" cy="12" r="2" />
+                        <path d="M4.5 12a7.5 7.5 0 0115 0" />
+                        <path d="M2 12a10 10 0 0120 0" />
+                      </svg>
+                    ),
+                    ticker: true,
+                  },
                 ].map((item) => (
-                  <div key={item.label} className={`bento-card ${item.tone === 'success' ? 'status-bar-success' : item.tone === 'warning' ? 'status-bar-warning' : 'status-bar-info'}`}>
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-tertiary">{item.label}</p>
-                    <p className="mt-1 text-lg font-bold text-text-primary">{item.value}</p>
+                  <div key={item.label} className={`status-live-card ${item.tone === 'success' ? 'status-bar-success' : item.tone === 'warning' ? 'status-bar-warning' : item.tone === 'danger' ? 'status-bar-critical' : 'status-bar-info'}`}>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-text-secondary">{item.icon}</span>
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-tertiary">{item.label}</p>
+                      </div>
+                      <span className={`status-light ${item.tone === 'success' ? 'status-light-success' : item.tone === 'warning' ? 'status-light-warning' : item.tone === 'danger' ? 'status-light-danger' : 'status-light-info'} ${item.live ? 'status-light-pulse' : ''}`} aria-hidden="true" />
+                    </div>
+                    <p className="mt-2 text-lg font-bold text-text-primary" aria-live={item.ticker ? 'polite' : undefined}>{item.value}</p>
                   </div>
                 ))}
               </div>

@@ -385,6 +385,95 @@
     text-transform: uppercase;
     letter-spacing: 0.08em;
   }
+
+  .login-radar-sweep {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 180vmax;
+    height: 180vmax;
+    transform: translate(-50%, -50%);
+    border-radius: 999px;
+    background:
+      radial-gradient(circle at center, rgba(34, 211, 238, 0.05) 0%, rgba(34, 211, 238, 0) 62%),
+      conic-gradient(from 0deg, rgba(34, 211, 238, 0.05) 0deg, rgba(34, 211, 238, 0) 72deg, rgba(34, 211, 238, 0) 360deg);
+    animation: radar-sweep 12s linear infinite;
+    will-change: transform;
+    opacity: 0.55;
+  }
+
+  .status-live-card {
+    border-radius: 0.75rem;
+    border: 1px solid var(--color-border-subtle);
+    background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+    box-shadow: var(--shadow-bento);
+    padding: 0.9rem;
+    transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+  }
+
+  .status-live-card:hover {
+    transform: translateY(-1px);
+    border-color: var(--color-border-elevated);
+    box-shadow: var(--shadow-bento-hover);
+  }
+
+  .status-light {
+    height: 0.55rem;
+    width: 0.55rem;
+    border-radius: 999px;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1);
+  }
+
+  .status-light-success {
+    background: #22c55e;
+    box-shadow: 0 0 10px rgba(34, 197, 94, 0.55);
+  }
+
+  .status-light-info {
+    background: #38bdf8;
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.55);
+  }
+
+  .status-light-warning {
+    background: #eab308;
+    box-shadow: 0 0 10px rgba(234, 179, 8, 0.52);
+  }
+
+  .status-light-danger {
+    background: #ef4444;
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.52);
+  }
+
+  .status-light-pulse {
+    animation: status-pulse 2.4s ease-in-out infinite;
+  }
+
+  .terminal-login-btn {
+    border-radius: 0.65rem;
+    border: 1px solid color-mix(in srgb, var(--color-info) 52%, white 12%);
+    background: linear-gradient(140deg, #0ea5e9 0%, #2563eb 55%, #0ea5e9 100%);
+    color: #ffffff;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    box-shadow: 0 0 0 rgba(14, 165, 233, 0), 0 8px 18px rgba(37, 99, 235, 0.28);
+    transition: transform 160ms ease, box-shadow 200ms ease, filter 180ms ease;
+  }
+
+  .terminal-login-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 0 18px rgba(34, 211, 238, 0.36), 0 14px 24px rgba(14, 165, 233, 0.25);
+    filter: brightness(1.03);
+  }
+
+  .terminal-login-btn:active {
+    transform: scale(0.985);
+    box-shadow: 0 0 26px rgba(34, 211, 238, 0.5), 0 0 10px rgba(14, 165, 233, 0.45);
+  }
+
+  .terminal-login-btn:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--color-info) 68%, white 20%);
+    outline-offset: 2px;
+  }
 }
 
 @keyframes pulse-critical {
@@ -405,6 +494,27 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes radar-sweep {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+@keyframes status-pulse {
+  0%,
+  100% {
+    opacity: 0.72;
+    transform: scale(0.95);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
   }
 }
 
@@ -437,5 +547,12 @@
 
   .critical-glow {
     box-shadow: inset 4px 0 0 0 Highlight;
+  }
+
+  .terminal-login-btn {
+    border-color: ButtonBorder;
+    background: Highlight;
+    color: HighlightText;
+    box-shadow: none;
   }
 }

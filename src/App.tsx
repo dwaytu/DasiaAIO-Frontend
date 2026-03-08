@@ -11,12 +11,14 @@ import ArmoredCarDashboard from './components/ArmoredCarDashboard'
 import ProfileDashboard from './components/ProfileDashboard'
 import MeritScoreDashboard from './components/MeritScoreDashboard'
 import CalendarDashboard from './components/CalendarDashboard'
+import { normalizeRole, isLegacyRole, Role } from './types/auth'
+import { can } from './utils/permissions'
 
 export interface User {
   id: string
   email: string
   username: string
-  role: 'superadmin' | 'admin' | 'supervisor' | 'guard' | 'user'
+  role: Role
   [key: string]: any
 }
 
@@ -35,6 +37,7 @@ function App() {
         
         if (storedUser && storedToken) {
           const parsedUser = JSON.parse(storedUser)
+          parsedUser.role = normalizeRole(parsedUser.role)
           setUser(parsedUser)
           setIsLoggedIn(true)
           console.log('Authentication restored from localStorage')
@@ -53,14 +56,13 @@ function App() {
   }, [])
 
   const handleLogin = (userData: User) => {
-    const validRoles: Array<'superadmin' | 'admin' | 'supervisor' | 'guard' | 'user'> = ['superadmin', 'admin', 'supervisor', 'guard', 'user']
-    if (!validRoles.includes(userData.role as 'superadmin' | 'admin' | 'supervisor' | 'guard' | 'user')) {
+    if (!isLegacyRole(userData.role)) {
       console.error('Invalid role:', userData.role)
       return
     }
     const typedUser: User = {
       ...userData,
-      role: userData.role as 'superadmin' | 'admin' | 'supervisor' | 'guard' | 'user'
+      role: normalizeRole(userData.role)
     }
     console.log('Login successful:', typedUser)
     
@@ -93,6 +95,8 @@ function App() {
 
   console.log('App rendering, isLoggedIn:', isLoggedIn, 'user:', user, 'isLoading:', isLoading)
 
+  const normalizedRole = normalizeRole(user?.role)
+
   if (isLoading) {
     return (
       <div className="h-screen overflow-hidden w-full flex items-center justify-center" style={{ background: 'var(--bg-primary)' }}>
@@ -110,51 +114,51 @@ function App() {
         <LoginPage onLogin={handleLogin} />
       ) : activeView === 'profile' ? (
         <ProfileDashboard user={user!} onLogout={handleLogout} onBack={() => setActiveView('users')} onProfilePhotoUpdate={handleProfilePhotoUpdate} />
-      ) : user?.role === 'superadmin' ? (
+      ) : normalizedRole === 'superadmin' ? (
         activeView === 'calendar' ? (
-          <CalendarDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
+          <CalendarDashboard user={user!} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
         ) : activeView === 'performance' ? (
-          <PerformanceDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
+          <PerformanceDashboard user={user!} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
         ) : activeView === 'merit' ? (
-          <MeritScoreDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
+          <MeritScoreDashboard user={user!} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
         ) : activeView === 'firearms' ? (
-          <FirearmInventory user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
+          <FirearmInventory user={user!} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
         ) : activeView === 'allocation' ? (
-          <FirearmAllocation user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
+          <FirearmAllocation user={user!} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
         ) : activeView === 'permits' ? (
-          <GuardFirearmPermits user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
+          <GuardFirearmPermits user={user!} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
         ) : activeView === 'maintenance' ? (
-          <FirearmMaintenance user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
+          <FirearmMaintenance user={user!} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
         ) : activeView === 'armored-cars' ? (
-          <ArmoredCarDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
+          <ArmoredCarDashboard user={user!} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
         ) : (
-          <SuperadminDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
+          <SuperadminDashboard user={user!} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
         )
-      ) : user?.role === 'admin' || user?.role === 'supervisor' ? (
+      ) : can(normalizedRole, 'view_analytics') ? (
         activeView === 'calendar' ? (
-          <CalendarDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
+          <CalendarDashboard user={user!} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
         ) : activeView === 'performance' ? (
-          <PerformanceDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
+          <PerformanceDashboard user={user!} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
         ) : activeView === 'merit' ? (
-          <MeritScoreDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
+          <MeritScoreDashboard user={user!} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
         ) : activeView === 'firearms' ? (
-          <FirearmInventory user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
+          <FirearmInventory user={user!} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
         ) : activeView === 'allocation' ? (
-          <FirearmAllocation user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
+          <FirearmAllocation user={user!} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
         ) : activeView === 'permits' ? (
-          <GuardFirearmPermits user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
+          <GuardFirearmPermits user={user!} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
         ) : activeView === 'maintenance' ? (
-          <FirearmMaintenance user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
+          <FirearmMaintenance user={user!} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
         ) : activeView === 'armored-cars' ? (
-          <ArmoredCarDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
+          <ArmoredCarDashboard user={user!} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
         ) : (
-          <SuperadminDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
+          <SuperadminDashboard user={user!} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
         )
-      ) : user?.role === 'guard' || user?.role === 'user' ? (
+      ) : normalizedRole === 'guard' ? (
         activeView === 'calendar' ? (
-          <CalendarDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
+          <CalendarDashboard user={user!} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
         ) : (
-          <UserDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
+          <UserDashboard user={user!} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />
         )
       ) : user ? (
         <UserDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} activeView={activeView} />

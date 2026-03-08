@@ -1,4 +1,4 @@
-import { useState, useEffect, FC } from 'react'
+import { useState, useEffect, useMemo, useCallback, FC } from 'react'
 import { API_BASE_URL } from '../config'
 import { parseResponseBody } from '../utils/api'
 import Sidebar from './Sidebar'
@@ -80,8 +80,16 @@ function isoToDateKey(iso: string): string {
   return iso.slice(0, 10)
 }
 
+function safeIsoToDateKey(value: unknown): string | null {
+  if (typeof value !== 'string' || value.trim().length === 0) return null
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return null
+  return isoToDateKey(parsed.toISOString())
+}
+
 function formatTime(iso: string): string {
   const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return 'Invalid time'
   return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })
 }
 
@@ -141,11 +149,120 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
   ]
   const navItems = isAdmin ? adminNavItems : userNavItems
 
-  useEffect(() => {
-    fetchAllEvents()
-  }, [user.id])
+  const fetchShifts = useCallback(async (): Promise<ShiftEvent[]> => {
+    try {
+      const url = isAdmin
+        ? `${API_BASE_URL}/api/guard-replacement/shifts`
+        : `${API_BASE_URL}/api/guard-replacement/guard/${user.id}/shifts`
+      const res = await fetch(url)
+      if (!res.ok) return []
+      const data = await parseResponseBody(res)
+      const shifts: any[] = data.shifts || (Array.isArray(data) ? data : [])
+      return shifts.flatMap((s: any): ShiftEvent[] => {
+        const startTime = typeof s.start_time === 'string' ? s.start_time : ''
+        const date = safeIsoToDateKey(startTime)
+        if (!date || !s.id) return []
+        return [{
+          id: String(s.id),
+          type: 'shift',
+          title: s.client_site || 'Guard Shift',
+          date,
+          startTime,
+          endTime: typeof s.end_time === 'string' ? s.end_time : '',
+          clientSite: s.client_site || 'Unknown Site',
+          guardName: s.guard_name,
+          guardId: s.guard_id,
+          status: s.status || 'scheduled',
+        }]
+      })
+    } catch (err) {
+      console.error('Failed to fetch shifts:', err)
+      return []
+    }
+  }, [isAdmin, user.id])
 
-  const fetchAllEvents = async () => {
+  const fetchTrips = useCallback(async (): Promise<TripEvent[]> => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/trips`)
+      if (!res.ok) return []
+      const data = await parseResponseBody(res)
+      const trips: any[] = Array.isArray(data) ? data : (data.trips || [])
+      return trips.flatMap((t: any): TripEvent[] => {
+        const startTime = t.start_time || t.created_at
+        const date = safeIsoToDateKey(startTime)
+        if (!date || !t.id) return []
+        return [{
+          id: String(t.id),
+          type: 'trip',
+          title: `Armored Car: ${t.end_location || t.start_location || 'Trip'}`,
+          date,
+          startTime,
+          carModel: t.car_model,
+          carPlate: t.license_plate,
+          destination: t.end_location || t.start_location,
+          status: t.status || 'in_progress',
+        }]
+      })
+    } catch (err) {
+      console.error('Failed to fetch trips:', err)
+      return []
+    }
+  }, [])
+
+  const fetchMissions = useCallback(async (): Promise<MissionEvent[]> => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/missions`)
+      if (!res.ok) return []
+      const data = await parseResponseBody(res)
+      const missions: any[] = data.missions || (Array.isArray(data) ? data : [])
+      return missions.flatMap((m: any): MissionEvent[] => {
+        const startTime = m.start_date || m.scheduled_date || m.created_at
+        const date = safeIsoToDateKey(startTime)
+        if (!date || !m.id) return []
+        return [{
+          id: String(m.id),
+          type: 'mission',
+          title: m.mission_name || m.name || 'Mission',
+          date,
+          startTime,
+          location: m.location,
+          clientName: m.client_name,
+          status: m.status || 'scheduled',
+        }]
+      })
+    } catch (err) {
+      console.error('Failed to fetch missions:', err)
+      return []
+    }
+  }, [])
+
+  const fetchMaintenanceEvents = useCallback(async (): Promise<MaintenanceEvent[]> => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/firearm-maintenance/pending`)
+      if (!res.ok) return []
+      const data = await parseResponseBody(res)
+      const items: any[] = Array.isArray(data) ? data : []
+      return items.flatMap((m: any): MaintenanceEvent[] => {
+        const startTime = m.scheduledDate || m.scheduled_date
+        const date = safeIsoToDateKey(startTime)
+        if (!date || !m.id) return []
+        return [{
+          id: String(m.id),
+          type: 'maintenance',
+          title: `Maintenance: ${m.maintenanceType || m.maintenance_type || 'Firearm'}`,
+          date,
+          startTime,
+          firearmId: m.firearmId || m.firearm_id,
+          status: m.status || 'pending',
+        }]
+      })
+    } catch (err) {
+      console.error('Failed to fetch maintenance events:', err)
+      return []
+    }
+  }, [])
+
+  const fetchAllEvents = useCallback(async () => {
     setLoading(true)
     setError('')
     try {
@@ -161,96 +278,52 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
           all.push(...r.value)
         }
       })
+      all.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
       setEvents(all)
+
+      const failedCount = results.filter(r => r.status === 'rejected').length
+      if (failedCount > 0) {
+        setError(`Loaded with ${failedCount} source${failedCount === 1 ? '' : 's'} unavailable`)
+      }
     } catch (e) {
       setError('Failed to load calendar data')
     } finally {
       setLoading(false)
     }
-  }
+  }, [fetchMaintenanceEvents, fetchMissions, fetchShifts, fetchTrips, isAdmin])
 
-  const fetchShifts = async (): Promise<ShiftEvent[]> => {
-    const url = isAdmin
-      ? `${API_BASE_URL}/api/guard-replacement/shifts`
-      : `${API_BASE_URL}/api/guard-replacement/guard/${user.id}/shifts`
-    const res = await fetch(url)
-    if (!res.ok) return []
-    const data = await parseResponseBody(res)
-    const shifts: any[] = data.shifts || (Array.isArray(data) ? data : [])
-    return shifts.map((s: any): ShiftEvent => ({
-      id: s.id,
-      type: 'shift',
-      title: s.client_site || 'Guard Shift',
-      date: isoToDateKey(s.start_time),
-      startTime: s.start_time,
-      endTime: s.end_time,
-      clientSite: s.client_site || 'Unknown Site',
-      guardName: s.guard_name,
-      guardId: s.guard_id,
-      status: s.status || 'scheduled',
-    }))
-  }
+  useEffect(() => {
+    fetchAllEvents()
+  }, [fetchAllEvents])
 
-  const fetchTrips = async (): Promise<TripEvent[]> => {
-    const res = await fetch(`${API_BASE_URL}/api/trips`)
-    if (!res.ok) return []
-    const data = await parseResponseBody(res)
-    const trips: any[] = Array.isArray(data) ? data : (data.trips || [])
-    return trips.map((t: any): TripEvent => ({
-      id: t.id,
-      type: 'trip',
-      title: `Armored Car: ${t.end_location || t.start_location || 'Trip'}`,
-      date: isoToDateKey(t.start_time || t.created_at),
-      startTime: t.start_time || t.created_at,
-      carModel: t.car_model,
-      carPlate: t.license_plate,
-      destination: t.end_location || t.start_location,
-      status: t.status || 'in_progress',
-    }))
-  }
-
-  const fetchMissions = async (): Promise<MissionEvent[]> => {
-    const res = await fetch(`${API_BASE_URL}/api/missions`)
-    if (!res.ok) return []
-    const data = await parseResponseBody(res)
-    const missions: any[] = data.missions || (Array.isArray(data) ? data : [])
-    return missions.map((m: any): MissionEvent => ({
-      id: m.id,
-      type: 'mission',
-      title: m.mission_name || m.name || 'Mission',
-      date: isoToDateKey(m.start_date || m.scheduled_date || m.created_at),
-      startTime: m.start_date || m.scheduled_date || m.created_at,
-      location: m.location,
-      clientName: m.client_name,
-      status: m.status || 'scheduled',
-    }))
-  }
-
-  const fetchMaintenanceEvents = async (): Promise<MaintenanceEvent[]> => {
-    const res = await fetch(`${API_BASE_URL}/api/firearm-maintenance/pending`)
-    if (!res.ok) return []
-    const data = await parseResponseBody(res)
-    const items: any[] = Array.isArray(data) ? data : []
-    return items.map((m: any): MaintenanceEvent => ({
-      id: m.id,
-      type: 'maintenance',
-      title: `Maintenance: ${m.maintenanceType || m.maintenance_type || 'Firearm'}`,
-      date: isoToDateKey(m.scheduledDate || m.scheduled_date),
-      startTime: m.scheduledDate || m.scheduled_date,
-      firearmId: m.firearmId || m.firearm_id,
-      status: m.status || 'pending',
-    }))
-  }
-
-  // Group events by date
-  const eventsByDate = events.reduce<Record<string, CalendarEvent[]>>((acc, ev) => {
+  const eventsByDate = useMemo(() => events.reduce<Record<string, CalendarEvent[]>>((acc, ev) => {
     if (!acc[ev.date]) acc[ev.date] = []
     acc[ev.date].push(ev)
     return acc
-  }, {})
+  }, {}), [events])
 
-  const selectedDateEvents = (eventsByDate[selectedDate] || [])
-    .filter(e => filterType === 'all' || e.type === filterType)
+  const filteredEventsByDate = useMemo(() => {
+    if (filterType === 'all') return eventsByDate
+    const filtered: Record<string, CalendarEvent[]> = {}
+    Object.entries(eventsByDate).forEach(([dateKey, dateEvents]) => {
+      const subset = dateEvents.filter(e => e.type === filterType)
+      if (subset.length > 0) filtered[dateKey] = subset
+    })
+    return filtered
+  }, [eventsByDate, filterType])
+
+  const eventStats = useMemo(() => {
+    const counts: Record<string, number> = { shift: 0, trip: 0, mission: 0, maintenance: 0 }
+    events.forEach(e => {
+      counts[e.type] += 1
+    })
+    return counts
+  }, [events])
+
+  const selectedDateEvents = useMemo(
+    () => filteredEventsByDate[selectedDate] || [],
+    [filteredEventsByDate, selectedDate],
+  )
 
   const prevMonth = () => {
     if (currentMonth === 0) { setCurrentMonth(11); setCurrentYear(y => y - 1) }
@@ -416,7 +489,7 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
                       return <div key={`empty-${idx}`} className="h-24 sm:h-28 rounded-lg bg-surface/20" />
                     }
                     const dateKey = getDateKey(day)
-                    const dayEvents = (eventsByDate[dateKey] || []).filter(e => filterType === 'all' || e.type === filterType)
+                    const dayEvents = filteredEventsByDate[dateKey] || []
                     const isToday = dateKey === todayKey
                     const isSelected = dateKey === selectedDate
                     return (
@@ -536,7 +609,7 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
                 <div className="grid grid-cols-2 gap-3">
                   {Object.entries(TYPE_LABELS).map(([key, label]) => {
                     const c = EVENT_COLORS[key]
-                    const count = events.filter(e => e.type === key).length
+                    const count = eventStats[key] || 0
                     return (
                       <div key={key} className={`p-4 rounded-lg border-2 transition-all hover:shadow-lg ${c.bg} border ${c.border}`}>
                         <div className={`text-2xl font-black ${c.text} mb-1`}>{count}</div>

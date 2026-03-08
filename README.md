@@ -31,6 +31,37 @@ All information about installation, features, API endpoints, and deployment can 
 
 ---
 
+## Quality and Performance Updates
+
+Recent updates focused on performance, validation, and reliability:
+
+- Refactored `src/components/CalendarDashboard.tsx` to reduce repeated filtering and counting work by using memoized indexed event data.
+- Added safer event normalization to skip invalid records instead of crashing UI rendering.
+- Added partial-source failure handling so the calendar can still render if one API source fails.
+- Improved API utility error handling in `src/utils/api.ts`:
+	- non-JSON response fallback parsing,
+	- request timeout support (`fetchJsonOrThrow(..., timeoutMs)`),
+	- consistent user-facing error behavior.
+- Added unit tests for API utility behavior in `src/__tests__/api.test.ts`.
+
+---
+
+## Verification Commands
+
+Run from `DasiaAIO-Frontend/`:
+
+```bash
+npm test -- --runInBand
+npm run build
+```
+
+Expected outcome:
+
+- Jest test suite passes.
+- Vite production build succeeds.
+
+---
+
 **Complete documentation is available at:** [`https://cloudyrowdyyy.github.io/capstone-1.0`](https://cloudyrowdyyy.github.io/capstone-1.0)
 
 The documentation site includes:

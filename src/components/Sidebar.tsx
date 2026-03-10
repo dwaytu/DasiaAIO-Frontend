@@ -77,7 +77,8 @@ const Sidebar: FC<SidebarProps> = ({ items, activeView, onNavigate, onLogout, on
                 grouped[g].push(item)
               })
               const groupOrder = ['MAIN MENU', 'OPERATIONS', 'RESOURCES', '']
-              return groupOrder.filter(g => grouped[g]?.length).map(groupName => (
+              const visibleGroups = groupOrder.filter(g => grouped[g]?.length)
+              return visibleGroups.map((groupName, index) => (
                 <div key={groupName || 'other'} className="mb-4">
                   {groupName && (
                     <p className="px-3 pb-2 pt-1 text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: 'var(--text-tertiary)', opacity: 0.8 }}>
@@ -106,6 +107,9 @@ const Sidebar: FC<SidebarProps> = ({ items, activeView, onNavigate, onLogout, on
                       </button>
                     ))}
                   </div>
+                  {index < visibleGroups.length - 1 && (
+                    <div className="mt-3 border-t border-border-subtle" aria-hidden="true" />
+                  )}
                 </div>
               ))
             })()}

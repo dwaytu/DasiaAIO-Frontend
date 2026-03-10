@@ -359,70 +359,66 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
               {!approvalsLoading && (
                 <div className="bg-surface rounded-lg shadow-md p-6">
                   <h2 className="text-xl font-bold text-text-primary mb-6 pb-3 border-b border-border">Pending Guard Registrations</h2>
-                  {pendingApprovals.length > 0 ? (
-                    <div className="overflow-x-auto">
-                      <table className="w-full min-w-[800px]">
-                        <thead className="bg-surface-hover border-b border-border">
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[800px]">
+                      <thead className="bg-surface-hover border-b border-border">
+                        <tr>
+                          <th className="text-left px-4 py-3 text-sm font-semibold text-text-primary uppercase tracking-wider">Guard Name</th>
+                          <th className="text-left px-4 py-3 text-sm font-semibold text-text-primary uppercase tracking-wider">Requested Role</th>
+                          <th className="text-left px-4 py-3 text-sm font-semibold text-text-primary uppercase tracking-wider">Submitted Date</th>
+                          <th className="text-left px-4 py-3 text-sm font-semibold text-text-primary uppercase tracking-wider">Status</th>
+                          <th className="text-left px-4 py-3 text-sm font-semibold text-text-primary uppercase tracking-wider">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pendingApprovals.length === 0 ? (
                           <tr>
-                            <th className="text-left px-4 py-3 text-sm font-semibold text-text-primary uppercase tracking-wider">Applicant</th>
-                            <th className="text-left px-4 py-3 text-sm font-semibold text-text-primary uppercase tracking-wider">Contact</th>
-                            <th className="text-left px-4 py-3 text-sm font-semibold text-text-primary uppercase tracking-wider">License</th>
-                            <th className="text-left px-4 py-3 text-sm font-semibold text-text-primary uppercase tracking-wider">Submitted</th>
-                            <th className="text-left px-4 py-3 text-sm font-semibold text-text-primary uppercase tracking-wider">Actions</th>
+                            <td className="px-4 py-10 text-center text-text-secondary" colSpan={5}>No pending guard approvals.</td>
                           </tr>
-                        </thead>
-                        <tbody>
-                          {pendingApprovals.map((pendingUser) => (
+                        ) : (
+                          pendingApprovals.map((pendingUser) => (
                             <tr key={pendingUser.id} className="border-b border-border hover:bg-surface-hover transition-colors">
                               <td className="px-4 py-3 text-text-primary">
                                 <div className="font-medium">{pendingUser.full_name || pendingUser.username}</div>
-                                <div className="text-xs text-text-tertiary">{pendingUser.username}</div>
+                                <div className="text-xs text-text-tertiary">{pendingUser.email}</div>
                               </td>
-                              <td className="px-4 py-3 text-text-primary">
-                                <div>{pendingUser.email}</div>
-                                <div className="text-xs text-text-tertiary">{pendingUser.phone_number || '-'}</div>
-                              </td>
-                              <td className="px-4 py-3 text-text-primary">
-                                <div>{pendingUser.license_number || '-'}</div>
-                                <div className="text-xs text-text-tertiary">
-                                  Exp: {pendingUser.license_expiry_date ? new Date(pendingUser.license_expiry_date).toLocaleDateString() : '-'}
-                                </div>
-                              </td>
-                              <td className="px-4 py-3 text-text-primary">
-                                {new Date(pendingUser.created_at).toLocaleString()}
+                              <td className="px-4 py-3 text-text-primary uppercase">{pendingUser.role}</td>
+                              <td className="px-4 py-3 text-text-primary">{new Date(pendingUser.created_at).toLocaleString()}</td>
+                              <td className="px-4 py-3">
+                                <span className={`soc-chip ${pendingUser.verified ? 'status-bar-warning text-warning-text' : 'status-bar-critical text-danger-text'}`}>
+                                  {pendingUser.verified ? 'Pending Approval' : 'Pending Verification'}
+                                </span>
                               </td>
                               <td className="px-4 py-3">
-                                <div className="flex gap-2">
+                                <div className="flex flex-wrap gap-2">
                                   <button
                                     onClick={() => setSelectedApproval(pendingUser)}
-                                    className="px-3 py-2 bg-slate-600 text-white rounded hover:bg-slate-700 transition-colors text-sm font-semibold"
+                                    className="soc-btn soc-btn-neutral"
                                   >
                                     Details
                                   </button>
                                   <button
                                     onClick={() => handleApprovalAction(pendingUser.id, 'approve')}
                                     disabled={processingApprovalId === pendingUser.id}
-                                    className="px-3 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 disabled:opacity-60 transition-colors text-sm font-semibold"
+                                    className="soc-btn soc-btn-success disabled:opacity-60"
                                   >
                                     Approve
                                   </button>
                                   <button
                                     onClick={() => handleApprovalAction(pendingUser.id, 'reject')}
                                     disabled={processingApprovalId === pendingUser.id}
-                                    className="px-3 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-60 transition-colors text-sm font-semibold"
+                                    className="soc-btn soc-btn-danger disabled:opacity-60"
                                   >
                                     Reject
                                   </button>
                                 </div>
                               </td>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <p className="text-text-secondary text-center py-8">No pending guard approvals</p>
-                  )}
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
             </>

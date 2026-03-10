@@ -1,4 +1,4 @@
-import { FC, ReactNode } from 'react'
+import { FC, ReactNode, useState } from 'react'
 import SectionBadge from './SectionBadge'
 import AccountManager from './AccountManager'
 import NotificationPanel from './NotificationPanel'
@@ -17,12 +17,22 @@ interface HeaderProps {
 }
 
 const Header: FC<HeaderProps> = ({ title, badgeLabel, onLogout, rightSlot, onMenuClick, user, onNavigateToProfile }) => {
+  const [refreshing, setRefreshing] = useState(false)
+
   const refreshControl = rightSlot ?? (
     <button
-      onClick={() => window.location.reload()}
-      className="px-3 py-2 text-sm font-semibold text-text-primary bg-surface border border-border rounded-lg hover:bg-surface-hover transition-colors"
+      onClick={() => {
+        setRefreshing(true)
+        window.setTimeout(() => setRefreshing(false), 700)
+        window.location.reload()
+      }}
+      className="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold text-text-primary bg-surface border border-border rounded-lg hover:bg-surface-hover transition-colors"
       title="Refresh dashboard"
     >
+      <svg className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+        <path d="M21 12a9 9 0 10-3.2 6.9" />
+        <path d="M21 3v6h-6" />
+      </svg>
       Refresh
     </button>
   )

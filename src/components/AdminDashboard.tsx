@@ -885,7 +885,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                 <div className="bg-surface rounded-lg shadow-md p-6">
                   <h2 className="text-xl font-bold text-text-primary mb-6 pb-3 border-b border-border">Pending Guard Registrations</h2>
                   <div className="overflow-x-auto">
-                    <table className="w-full min-w-[800px]">
+                    <table className="hidden w-full min-w-[800px] md:table">
                       <thead className="bg-surface-hover border-b border-border">
                         <tr>
                           <th className="text-left px-4 py-3 text-sm font-semibold text-text-primary uppercase tracking-wider">Guard Name</th>
@@ -943,6 +943,51 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                         )}
                       </tbody>
                     </table>
+
+                    <div className="space-y-3 md:hidden" data-mobile-stack="cards">
+                      {pendingApprovals.length === 0 ? (
+                        <p className="rounded-lg border border-border-subtle bg-background p-4 text-center text-sm text-text-secondary">No pending guard approvals.</p>
+                      ) : (
+                        pendingApprovals.map((pendingUser) => (
+                          <article key={`pending-mobile-${pendingUser.id}`} className="rounded-xl border border-border-subtle bg-background p-4">
+                            <h3 className="text-sm font-semibold text-text-primary">{pendingUser.full_name || pendingUser.username}</h3>
+                            <p className="mt-0.5 text-xs text-text-tertiary">{pendingUser.email}</p>
+                            <dl className="mt-3 grid grid-cols-1 gap-2 text-xs text-text-secondary">
+                              <div>
+                                <dt className="text-text-tertiary">Requested Role</dt>
+                                <dd className="font-medium uppercase text-text-primary">{pendingUser.role}</dd>
+                              </div>
+                              <div>
+                                <dt className="text-text-tertiary">Submitted Date</dt>
+                                <dd className="font-medium text-text-primary">{new Date(pendingUser.created_at).toLocaleString()}</dd>
+                              </div>
+                            </dl>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              <button
+                                onClick={() => setSelectedApproval(pendingUser)}
+                                className="soc-btn soc-btn-neutral"
+                              >
+                                Details
+                              </button>
+                              <button
+                                onClick={() => handleApprovalAction(pendingUser.id, 'approve')}
+                                disabled={processingApprovalId === pendingUser.id}
+                                className="soc-btn soc-btn-success disabled:opacity-60"
+                              >
+                                Approve
+                              </button>
+                              <button
+                                onClick={() => handleApprovalAction(pendingUser.id, 'reject')}
+                                disabled={processingApprovalId === pendingUser.id}
+                                className="soc-btn soc-btn-danger disabled:opacity-60"
+                              >
+                                Reject
+                              </button>
+                            </div>
+                          </article>
+                        ))
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
@@ -961,7 +1006,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                   <h2 className="text-xl font-bold text-text-primary mb-6 pb-3 border-b border-border">All Guard Schedules</h2>
                   {shifts.length > 0 ? (
                     <div className="overflow-x-auto">
-                      <table className="w-full min-w-[600px]">
+                      <table className="hidden w-full min-w-[600px] md:table">
                         <thead className="bg-surface-hover border-b border-border">
                           <tr>
                             <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary uppercase tracking-wider">Guard</th>
@@ -1007,6 +1052,40 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                           ))}
                         </tbody>
                       </table>
+
+                      <div className="space-y-3 md:hidden" data-mobile-stack="cards">
+                        {shifts.map((shift: any) => (
+                          <article key={`schedule-mobile-${shift.id}`} className="rounded-xl border border-border-subtle bg-background p-4">
+                            <h3 className="text-sm font-semibold text-text-primary">{shift.guard_name || shift.guard_username}</h3>
+                            <p className="mt-0.5 text-xs text-text-tertiary">{shift.client_site}</p>
+                            <dl className="mt-3 grid grid-cols-2 gap-2 text-xs text-text-secondary">
+                              <div>
+                                <dt className="text-text-tertiary">Date</dt>
+                                <dd className="font-medium text-text-primary">{new Date(shift.start_time).toLocaleDateString()}</dd>
+                              </div>
+                              <div>
+                                <dt className="text-text-tertiary">Status</dt>
+                                <dd className="font-medium uppercase text-text-primary">{shift.status}</dd>
+                              </div>
+                              <div>
+                                <dt className="text-text-tertiary">Start</dt>
+                                <dd className="font-medium text-text-primary">{new Date(shift.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</dd>
+                              </div>
+                              <div>
+                                <dt className="text-text-tertiary">End</dt>
+                                <dd className="font-medium text-text-primary">{new Date(shift.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</dd>
+                              </div>
+                            </dl>
+                            <button
+                              className="mt-3 rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-indigo-700"
+                              onClick={() => setEditingShift(shift)}
+                              title="Edit shift"
+                            >
+                              Edit
+                            </button>
+                          </article>
+                        ))}
+                      </div>
                     </div>
                   ) : (
                     <p className="text-text-secondary text-center py-8">No schedules found</p>

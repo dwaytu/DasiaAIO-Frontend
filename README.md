@@ -55,6 +55,32 @@ npm test -- --runInBand
 npm run build
 ```
 
+## Cross-Platform Builds
+
+SENTINEL now ships from one frontend source to web, Android, and desktop wrappers.
+
+- Build web bundle:
+	- `npm run build:web`
+- Build Android web assets and sync to Capacitor project:
+	- `npm run build:android`
+- Build desktop web assets and package with Tauri:
+	- `npm run build:desktop`
+
+Platform wrappers are located at:
+
+- `../apps/android-capacitor`
+- `../apps/desktop-tauri`
+
+Environment files are mode-specific:
+
+- `.env.web`
+- `.env.mobile`
+- `.env.desktop`
+
+Important Android note: update `.env.mobile` to use your machine LAN IP (not localhost), for example:
+
+- `VITE_API_BASE_URL=http://192.168.1.25:5000`
+
 Expected outcome:
 
 - Jest test suite passes.

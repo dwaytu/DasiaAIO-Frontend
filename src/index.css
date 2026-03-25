@@ -212,6 +212,16 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
+  body.platform-mobile {
+    min-height: 100dvh;
+    padding-top: env(safe-area-inset-top, 0);
+    padding-right: env(safe-area-inset-right, 0);
+    padding-bottom: env(safe-area-inset-bottom, 0);
+    padding-left: env(safe-area-inset-left, 0);
+    overscroll-behavior-y: contain;
+    touch-action: manipulation;
+  }
+
   .dark body {
     background: radial-gradient(circle at 12% -5%, rgba(34, 211, 238, 0.13), transparent 32%), linear-gradient(165deg, #0b1220 0%, #0f172a 62%, #111827 100%);
   }
@@ -932,6 +942,31 @@
 
 .animate-fade-in {
   animation: fade-in-up 260ms ease-out;
+}
+
+@media (max-width: 768px) {
+  .platform-mobile .bento-card,
+  .platform-mobile .soc-dashboard-card,
+  .platform-mobile .command-panel,
+  .platform-mobile .soc-surface {
+    padding: calc(var(--space-unit) * 1.5);
+  }
+
+  .platform-mobile .soc-page-title {
+    font-size: 20px;
+  }
+
+  .platform-mobile .soc-section-title {
+    font-size: 14px;
+  }
+
+  .platform-mobile .table-glass {
+    border-radius: 0.75rem;
+  }
+
+  .platform-mobile [data-mobile-stack='cards'] {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 @media (forced-colors: active) {

@@ -1,19 +1,28 @@
 /**
  * API Configuration
  * For production on Railway, add `?api_host=https://backend-service:port` to the frontend URL
- * Or set VITE_API_URL environment variable
+ * Or set VITE_API_BASE_URL environment variable
  */
 
+const trimTrailingSlash = (url: string) => url.replace(/\/+$/, '')
+
+const getEnvApiUrl = (): string | null => {
+  const apiUrl = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL
+  if (!apiUrl || typeof apiUrl !== 'string') return null
+  return trimTrailingSlash(apiUrl)
+}
+
 function getDefaultAPIURL(): string {
-  // Build-time: VITE_API_URL is baked in by Vite from the ARG in Dockerfile / Railway build variable
-  if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL
+  // Build-time: mode-specific .env values are baked by Vite
+  const envApiUrl = getEnvApiUrl()
+  if (envApiUrl) {
+    return envApiUrl
   }
 
   if (typeof window !== 'undefined') {
     // Allow runtime override via query param (e.g. for testing)
     const apiHostParam = new URLSearchParams(window.location.search).get('api_host')
-    if (apiHostParam) return apiHostParam
+    if (apiHostParam) return trimTrailingSlash(apiHostParam)
 
     const { hostname, protocol } = window.location
 
@@ -30,7 +39,7 @@ function getDefaultAPIURL(): string {
     }
   }
 
-  return 'http://localhost:5000'
+  return 'http://127.0.0.1:5000'
 }
 
 export const API_BASE_URL = getDefaultAPIURL()

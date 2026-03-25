@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Bell, X, Check, CheckCheck } from 'lucide-react';
 import { API_BASE_URL } from '../config';
+import { logError } from '../utils/logger';
 
 interface Notification {
   id: string;
@@ -49,7 +50,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ userId }) => {
         setUnreadCount(data.unreadCount || 0);
       }
     } catch (error) {
-      console.error('Failed to fetch notifications:', error);
+      logError('Failed to fetch notifications:', error);
     }
   };
 
@@ -65,7 +66,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ userId }) => {
         setUnreadCount(data.unreadCount || 0);
       }
     } catch (error) {
-      console.error('Failed to fetch unread count:', error);
+      logError('Failed to fetch unread count:', error);
     }
   };
 
@@ -86,7 +87,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ userId }) => {
         setUnreadCount(prev => Math.max(0, prev - 1));
       }
     } catch (error) {
-      console.error('Failed to mark notification as read:', error);
+      logError('Failed to mark notification as read:', error);
     }
   };
 
@@ -103,7 +104,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ userId }) => {
         setUnreadCount(0);
       }
     } catch (error) {
-      console.error('Failed to mark all as read:', error);
+      logError('Failed to mark all as read:', error);
     }
   };
 
@@ -133,7 +134,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ userId }) => {
         alert(error.error || 'Failed to accept replacement');
       }
     } catch (error) {
-      console.error('Failed to accept replacement:', error);
+      logError('Failed to accept replacement:', error);
       alert('Failed to accept replacement');
     } finally {
       setLoading(false);
@@ -153,7 +154,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ userId }) => {
         fetchUnreadCount();
       }
     } catch (error) {
-      console.error('Failed to delete notification:', error);
+      logError('Failed to delete notification:', error);
     }
   };
 

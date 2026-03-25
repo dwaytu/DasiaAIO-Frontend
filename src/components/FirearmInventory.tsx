@@ -1,5 +1,6 @@
 import { useState, useEffect, FC } from 'react'
 import { API_BASE_URL } from '../config'
+import { logError } from '../utils/logger'
 import Sidebar from './Sidebar'
 import Header from './Header'
 
@@ -68,7 +69,7 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
         setFirearms(firearmsList)
       }
     } catch (err) {
-      console.error('Error fetching firearms:', err)
+      logError('Error fetching firearms:', err)
     } finally {
       setLoading(false)
     }

@@ -1,5 +1,6 @@
 import { useState, useEffect, FC } from 'react'
 import { API_BASE_URL } from '../config'
+import { logError } from '../utils/logger'
 import Sidebar from './Sidebar'
 import Header from './Header'
 
@@ -74,7 +75,7 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
         fetchFirearms()
       ])
     } catch (err) {
-      console.error('Error initializing data:', err)
+      logError('Error initializing data:', err)
     } finally {
       setLoading(false)
     }
@@ -94,7 +95,7 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
       setError('')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch allocations')
-      console.error('Error fetching allocations:', err)
+      logError('Error fetching allocations:', err)
     }
   }
 
@@ -114,7 +115,7 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
       setError('')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch guards')
-      console.error('Error fetching guards:', err)
+      logError('Error fetching guards:', err)
     }
   }
 
@@ -134,7 +135,7 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
       setError('')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch firearms')
-      console.error('Error fetching firearms:', err)
+      logError('Error fetching firearms:', err)
     }
   }
 

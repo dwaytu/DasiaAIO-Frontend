@@ -6,8 +6,13 @@ import Header from './Header'
 import { User } from '../App'
 import SecurityBentoGrid from './SecurityBentoGrid'
 import BentoGrid, { BentoCard } from './BentoGrid'
+import SectionHeader from './dashboard/ui/SectionHeader'
+import Timeline from './dashboard/ui/Timeline'
+import StatCard from './dashboard/ui/StatCard'
+import StatusBadge from './dashboard/ui/StatusBadge'
 import { isElevatedRole } from '../types/auth'
 import { getSidebarNav } from '../config/navigation'
+import { logError } from '../utils/logger'
 
 interface CalendarDashboardProps {
   user: User
@@ -65,10 +70,10 @@ interface MaintenanceEvent {
 type CalendarEvent = ShiftEvent | TripEvent | MissionEvent | MaintenanceEvent
 
 const EVENT_COLORS: Record<string, { bg: string; border: string; text: string; dot: string; chip: string }> = {
-  shift:       { bg: 'bg-[color:var(--status-info-bg)]', border: 'border-[color:var(--status-info-border)]', text: 'text-[color:var(--status-info-text)]', dot: 'bg-[color:var(--status-info-text)]', chip: 'soc-chip' },
-  trip:        { bg: 'bg-[color:var(--status-warning-bg)]', border: 'border-[color:var(--status-warning-border)]', text: 'text-[color:var(--status-warning-text)]', dot: 'bg-[color:var(--status-warning-text)]', chip: 'soc-chip status-warning' },
-  mission:     { bg: 'bg-[color:var(--color-surface-elevated)]', border: 'border-[color:var(--color-border-strong)]', text: 'text-[color:var(--color-text-primary)]', dot: 'bg-[color:var(--color-text-primary)]', chip: 'soc-chip status-neutral' },
-  maintenance: { bg: 'bg-[color:var(--status-danger-bg)]', border: 'border-[color:var(--status-danger-border)]', text: 'text-[color:var(--status-danger-text)]', dot: 'bg-[color:var(--status-danger-text)]', chip: 'soc-chip status-danger' },
+  shift:       { bg: 'bg-[color:var(--color-info-bg)]', border: 'border-[color:var(--color-info-border)]', text: 'text-[color:var(--color-info-text)]', dot: 'bg-[color:var(--color-info-text)]', chip: 'soc-chip status-info' },
+  trip:        { bg: 'bg-[color:var(--color-warning-bg)]', border: 'border-[color:var(--color-warning-border)]', text: 'text-[color:var(--color-warning-text)]', dot: 'bg-[color:var(--color-warning-text)]', chip: 'soc-chip status-warning' },
+  mission:     { bg: 'bg-[color:var(--color-surface-elevated)]', border: 'border-[color:var(--color-border-elevated)]', text: 'text-[color:var(--color-text-primary)]', dot: 'bg-[color:var(--color-text-primary)]', chip: 'soc-chip status-neutral' },
+  maintenance: { bg: 'bg-[color:var(--color-danger-bg)]', border: 'border-[color:var(--color-danger-border)]', text: 'text-[color:var(--color-danger-text)]', dot: 'bg-[color:var(--color-danger-text)]', chip: 'soc-chip status-danger' },
 }
 
 const TYPE_LABELS: Record<string, string> = {
@@ -157,7 +162,7 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
         }]
       })
     } catch (err) {
-      console.error('Failed to fetch shifts:', err)
+      logError('Failed to fetch shifts:', err)
       return []
     }
   }, [isAdmin, user.id])
@@ -188,7 +193,7 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
         }]
       })
     } catch (err) {
-      console.error('Failed to fetch trips:', err)
+      logError('Failed to fetch trips:', err)
       return []
     }
   }, [])
@@ -218,7 +223,7 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
         }]
       })
     } catch (err) {
-      console.error('Failed to fetch missions:', err)
+      logError('Failed to fetch missions:', err)
       return []
     }
   }, [])
@@ -247,7 +252,7 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
         }]
       })
     } catch (err) {
-      console.error('Failed to fetch maintenance events:', err)
+      logError('Failed to fetch maintenance events:', err)
       return []
     }
   }, [])
@@ -315,6 +320,59 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
     [filteredEventsByDate, selectedDate],
   )
 
+  const timelineItems = useMemo(() => {
+    return events.slice(0, 8).map((ev) => ({
+      id: ev.id,
+      title: ev.title,
+      startLabel: formatTime(ev.startTime),
+      endLabel: 'endTime' in ev && ev.endTime ? formatTime(ev.endTime) : undefined,
+      type: ev.type,
+      intensity: ev.type === 'mission' ? 88 : ev.type === 'maintenance' ? 76 : 62,
+    }))
+  }, [events])
+
+  const bentoMetrics = useMemo(() => {
+    const shifts = events.filter((event): event is ShiftEvent => event.type === 'shift')
+    const maintenance = events.filter((event): event is MaintenanceEvent => event.type === 'maintenance')
+
+    const activeGuardsCount = shifts.filter((shift) => (shift.status || '').toLowerCase() === 'in_progress').length
+    const activeGuardsTotal = shifts.length
+
+    const pendingAlertsCount = events.filter((event) => {
+      const status = (event.status || '').toLowerCase()
+      return status.includes('pending') || status.includes('no_show') || status.includes('failed') || status.includes('critical')
+    }).length
+
+    const pendingAlertsLevel: 'info' | 'warning' | 'danger' =
+      pendingAlertsCount >= 5 ? 'danger' : pendingAlertsCount > 0 ? 'warning' : 'info'
+
+    const pendingMaintenanceCount = maintenance.filter((item) => {
+      const status = (item.status || '').toLowerCase()
+      return status === 'pending' || status === 'scheduled'
+    }).length
+
+    const equipmentHealthPercentage = Math.max(0, Math.min(100, 100 - (pendingMaintenanceCount * 5)))
+    const equipmentHealthStatus: 'operational' | 'degraded' | 'critical' =
+      equipmentHealthPercentage >= 95 ? 'operational' : equipmentHealthPercentage >= 85 ? 'degraded' : 'critical'
+
+    return {
+      activeGuardsCount,
+      activeGuardsTotal,
+      pendingAlertsCount,
+      pendingAlertsLevel,
+      equipmentHealthPercentage,
+      equipmentHealthStatus,
+    }
+  }, [events])
+
+  const mobileAgendaEvents = useMemo(() => {
+    const now = new Date().getTime()
+    return events
+      .filter((ev) => filterType === 'all' || ev.type === filterType)
+      .filter((ev) => new Date(ev.startTime).getTime() >= now)
+      .slice(0, 10)
+  }, [events, filterType])
+
   const prevMonth = () => {
     if (currentMonth === 0) { setCurrentMonth(11); setCurrentYear(y => y - 1) }
     else setCurrentMonth(m => m - 1)
@@ -378,18 +436,26 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
         />
 
         <main id="maincontent" tabIndex={-1} className="flex-1 overflow-auto p-3 sm:p-6 bg-background">
-          {/* Subtitle row */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
-            <p className="text-text-secondary text-sm">
-              {isAdmin ? 'View all shifts, trips, missions & maintenance' : 'Your upcoming shifts and assignments'}
-            </p>
-            <button
-              onClick={fetchAllEvents}
-              className="soc-btn self-start sm:self-auto"
-            >
-              Refresh
-            </button>
-          </div>
+          <section className="soc-surface mb-6 p-4 md:p-5">
+            <SectionHeader
+              title="Operations Calendar"
+              subtitle={isAdmin ? 'View all shifts, trips, missions and maintenance windows in one timeline.' : 'Track your upcoming shifts and assignments in a single schedule view.'}
+              actions={
+                <button
+                  onClick={fetchAllEvents}
+                  className="soc-btn self-start sm:self-auto"
+                >
+                  Refresh
+                </button>
+              }
+            />
+            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <StatCard label="Guard Shifts" value={eventStats.shift} tone="guard" />
+              <StatCard label="Vehicle Trips" value={eventStats.trip} tone="vehicle" />
+              <StatCard label="Missions" value={eventStats.mission} tone="mission" />
+              <StatCard label="Maintenance" value={eventStats.maintenance} tone="maintenance" />
+            </div>
+          </section>
 
           {error && (
             <div className="mb-4 soc-alert-error">{error}</div>
@@ -399,17 +465,10 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
           <div className="mb-8">
             <SecurityBentoGrid
               loading={loading}
-              data={{
-                activeGuardsCount: 24,
-                activeGuardsTotal: 32,
-                pendingAlertsCount: 3,
-                pendingAlertsLevel: 'warning',
-                equipmentHealthPercentage: 97,
-                equipmentHealthStatus: 'operational',
-              }}
+              data={bentoMetrics}
               activityMapContent={
-                <div className="h-64 bg-surface-elevated rounded-lg flex items-center justify-center">
-                  <p className="text-text-secondary text-sm">Activity Timeline - Mission Data</p>
+                <div className="h-64 overflow-y-auto rounded-lg border border-border-subtle bg-surface p-3">
+                  <Timeline title="Activity Timeline" items={timelineItems} />
                 </div>
               }
               onActiveGuardsClick={() => onViewChange?.('users')}
@@ -478,7 +537,8 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
               {loading ? (
                 <div className="flex items-center justify-center py-16 text-text-secondary text-sm">Loading events&hellip;</div>
               ) : (
-                <div className="grid grid-cols-7 gap-1 p-3 bg-gradient-to-br from-background to-surface/30">
+                <>
+                  <div className="hidden grid-cols-7 gap-1 p-3 bg-gradient-to-br from-background to-surface/30 md:grid">
                   {calendarCells.map((day, idx) => {
                     if (day === null) {
                       return <div key={`empty-${idx}`} className="h-24 sm:h-28 rounded-lg bg-surface/20" />
@@ -493,16 +553,16 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
                         onClick={() => setSelectedDate(dateKey)}
                         className={`h-24 sm:h-28 rounded-lg p-2 text-left transition-all relative border-2
                           ${isToday 
-                            ? 'bg-[color:var(--status-info-bg)] border-[color:var(--status-info-border)] shadow-lg shadow-black/20' 
+                            ? 'bg-[color:var(--color-info-bg)] border-[color:var(--color-info-border)] shadow-lg shadow-black/20' 
                             : isSelected 
-                            ? 'bg-[color:var(--color-surface-elevated)] border-[color:var(--color-border-strong)]'
+                            ? 'bg-[color:var(--color-surface-elevated)] border-[color:var(--color-border-elevated)]'
                             : 'bg-surface border-border hover:border-blue-400/60 hover:bg-surface-hover/40'
                           }
                         `}
                       >
                         <div className="flex items-center justify-between mb-1.5">
                           <span className={`text-sm sm:text-base font-bold w-7 h-7 flex items-center justify-center rounded-full
-                            ${isToday ? 'bg-[color:var(--status-info-border)] text-white' : isSelected ? 'bg-[color:var(--status-info-bg)] text-[color:var(--status-info-text)]' : 'text-text-primary'}`}>
+                            ${isToday ? 'bg-[color:var(--color-info-border)] text-white' : isSelected ? 'bg-[color:var(--color-info-bg)] text-[color:var(--color-info-text)]' : 'text-text-primary'}`}>
                             {day}
                           </span>
                           {dayEvents.length > 0 && (
@@ -532,7 +592,39 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
                       </button>
                     )
                   })}
-                </div>
+                  </div>
+                  <div className="space-y-2 p-3 md:hidden">
+                    <h3 className="soc-card-title">Mobile Agenda</h3>
+                    {mobileAgendaEvents.length === 0 ? (
+                      <p className="soc-empty-state">No upcoming events.</p>
+                    ) : (
+                      mobileAgendaEvents.map((ev) => {
+                        const c = EVENT_COLORS[ev.type]
+                        return (
+                          <button
+                            key={`mobile-${ev.id}`}
+                            onClick={() => {
+                              setSelectedDate(ev.date)
+                              setSelectedEvent(ev)
+                            }}
+                            className={`w-full rounded-lg border p-3 text-left ${c.bg} ${c.border}`}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <p className={`truncate text-sm font-semibold ${c.text}`}>{ev.title}</p>
+                              <span className="text-xs text-text-secondary">{formatTime(ev.startTime)}</span>
+                            </div>
+                            <div className="mt-2">
+                              <StatusBadge
+                                label={TYPE_LABELS[ev.type]}
+                                tone={ev.type === 'shift' ? 'guard' : ev.type === 'trip' ? 'vehicle' : ev.type === 'mission' ? 'mission' : 'maintenance'}
+                              />
+                            </div>
+                          </button>
+                        )
+                      })
+                    )}
+                  </div>
+                </>
               )}
             </BentoCard>
 
@@ -572,8 +664,11 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
                                   {TYPE_LABELS[ev.type]}
                                 </div>
                               </div>
-                              <div className={`${c.chip} mt-2 w-fit capitalize`}>
-                                {ev.status}
+                              <div className="mt-2">
+                                <StatusBadge
+                                  label={ev.status}
+                                  tone={ev.status === 'completed' ? 'success' : ev.status === 'cancelled' ? 'danger' : 'warning'}
+                                />
                               </div>
                               {ev.type === 'shift' && (
                                 <div className="text-text-secondary text-xs mt-2 truncate">
@@ -603,13 +698,14 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
                 <h4 className="text-text-primary text-base font-bold mb-4">This Month Summary</h4>
                 <div className="grid grid-cols-2 gap-3">
                   {Object.entries(TYPE_LABELS).map(([key, label]) => {
-                    const c = EVENT_COLORS[key]
                     const count = eventStats[key] || 0
                     return (
-                      <div key={key} className={`p-4 rounded-lg border-2 transition-all hover:shadow-lg ${c.bg} border ${c.border}`}>
-                        <div className={`text-2xl font-black ${c.text} mb-1`}>{count}</div>
-                        <div className="text-text-secondary text-xs font-semibold uppercase tracking-wide">{label}s</div>
-                      </div>
+                      <StatCard
+                        key={key}
+                        label={`${label}s`}
+                        value={count}
+                        tone={key === 'shift' ? 'guard' : key === 'trip' ? 'vehicle' : key === 'mission' ? 'mission' : 'maintenance'}
+                      />
                     )
                   })}
                 </div>

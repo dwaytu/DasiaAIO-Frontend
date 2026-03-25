@@ -4,6 +4,7 @@ import Sidebar from './Sidebar'
 import Header from './Header'
 import { User } from '../App'
 import { getSidebarNav } from '../config/navigation'
+import { logError } from '../utils/logger'
 
 interface Props {
   user: User
@@ -86,7 +87,7 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
       }
     } catch (err) {
       setError('Error loading merit scores. Make sure backend is running.')
-      console.error('Error fetching rankings:', err)
+      logError('Error fetching rankings:', err)
     } finally {
       setLoading(false)
     }
@@ -104,7 +105,7 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
         await fetchEvaluations(guardId)
       }
     } catch (err) {
-      console.error('Error fetching guard details:', err)
+      logError('Error fetching guard details:', err)
     }
   }
 
@@ -119,7 +120,7 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
         setEvaluations(data.evaluations || [])
       }
     } catch (err) {
-      console.error('Error fetching evaluations:', err)
+      logError('Error fetching evaluations:', err)
     }
   }
 
@@ -150,7 +151,7 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
         alert('Evaluation submitted successfully')
       }
     } catch (err) {
-      console.error('Error submitting evaluation:', err)
+      logError('Error submitting evaluation:', err)
       alert('Failed to submit evaluation')
     }
   }
@@ -183,6 +184,9 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
 
   return (
     <div className="flex h-screen w-screen bg-background font-sans">
+      <a href="#maincontent" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[70] focus:rounded-md focus:bg-background focus:px-3 focus:py-2 focus:text-text-primary focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-[var(--color-focus-ring)]">
+        Skip to main content
+      </a>
       <Sidebar
         items={navItems}
         activeView={currentView}
@@ -193,7 +197,7 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
         onClose={() => setMobileMenuOpen(false)}
       />
 
-      <main className="flex-1 flex flex-col overflow-hidden w-full">
+      <main id="maincontent" tabIndex={-1} className="flex-1 flex flex-col overflow-hidden w-full">
         <Header
           title="Merit Score System"
           badgeLabel="Performance"
@@ -209,6 +213,12 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
           </div>
         ) : (
           <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in">
+            <section className="soc-surface mb-6 p-4 md:p-5">
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-text-tertiary">Merit Intelligence</p>
+              <h1 className="text-2xl font-black uppercase tracking-wide text-text-primary">Guard Merit and Evaluation Center</h1>
+              <p className="mt-1 text-sm text-text-secondary">Review rankings, inspect score drivers, and submit structured client evaluations.</p>
+            </section>
+
             {error && (
               <div className="mb-4 soc-alert-error">
                 {error}
@@ -261,7 +271,7 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
                   </div>
 
                   {/* Performance Stats */}
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8 command-panel p-6">
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8 command-panel p-6">
                     <div>
                       <p className="text-sm text-text-secondary">Total Shifts</p>
                       <p className="text-2xl font-bold text-text-primary">{selectedGuard.stats.totalShifts}</p>

@@ -1,3 +1,22 @@
+let authExpiryNotified = false
+
+function notifyAuthExpired(message: string): void {
+  if (authExpiryNotified) return
+  authExpiryNotified = true
+
+  try {
+    window.dispatchEvent(new CustomEvent('auth:token-expired', { detail: { message } }))
+  } catch {
+    // Ignore environments without window support.
+  }
+}
+
+function isAuthExpired(response: Response, message: string): boolean {
+  if (response.status === 401 || response.status === 403) return true
+  const normalized = message.toLowerCase()
+  return normalized.includes('invalidtoken') || normalized.includes('invalid or expired token') || normalized.includes('expired token')
+}
+
 export async function parseResponseBody(response: Response): Promise<any> {
   const raw = await response.text()
   if (!raw) return {}
@@ -48,6 +67,10 @@ export async function fetchJsonOrThrow<T>(
 
   if (!response.ok) {
     const message = await getApiErrorMessage(response, fallbackError)
+    if (isAuthExpired(response, message)) {
+      notifyAuthExpired(message)
+      throw new Error('Session expired. Please log in again.')
+    }
     throw new Error(message)
   }
 

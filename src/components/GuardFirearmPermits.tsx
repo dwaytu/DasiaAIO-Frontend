@@ -1,5 +1,6 @@
 import { useState, useEffect, FC } from 'react'
 import { API_BASE_URL } from '../config'
+import { logError } from '../utils/logger'
 import Sidebar from './Sidebar'
 import Header from './Header'
 
@@ -59,7 +60,7 @@ const GuardFirearmPermits: FC<Props> = ({ user, onLogout, onViewChange, activeVi
         setPermits(data.permits || [])
       }
     } catch (err) {
-      console.error('Error fetching permits:', err)
+      logError('Error fetching permits:', err)
     } finally {
       setLoading(false)
     }

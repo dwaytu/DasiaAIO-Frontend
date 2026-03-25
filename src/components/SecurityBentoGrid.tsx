@@ -28,21 +28,21 @@ export interface SecurityBentoGridData {
   activityMapContent?: ReactNode;
   
   /** Number of active guards */
-  activeGuardsCount?: number;
-  activeGuardsTotal?: number;
+  activeGuardsCount: number;
+  activeGuardsTotal: number;
   
   /** Number of pending alerts */
-  pendingAlertsCount?: number;
-  pendingAlertsLevel?: 'info' | 'warning' | 'danger';
+  pendingAlertsCount: number;
+  pendingAlertsLevel: 'info' | 'warning' | 'danger';
   
   /** Equipment health percentage (0-100) */
-  equipmentHealthPercentage?: number;
-  equipmentHealthStatus?: 'operational' | 'degraded' | 'critical';
+  equipmentHealthPercentage: number;
+  equipmentHealthStatus: 'operational' | 'degraded' | 'critical';
 }
 
 interface SecurityBentoGridProps {
   /** Dashboard data */
-  data?: SecurityBentoGridData;
+  data: SecurityBentoGridData;
   
   /** Custom activity map content */
   activityMapContent?: ReactNode;
@@ -115,13 +115,12 @@ export const SecurityBentoGrid = ({
   loading = false,
   className = '',
 }: SecurityBentoGridProps) => {
-  // Default mock data for demonstration
-  const activeGuardsCount = data?.activeGuardsCount ?? 24;
-  const activeGuardsTotal = data?.activeGuardsTotal ?? 32;
-  const pendingAlertsCount = data?.pendingAlertsCount ?? 3;
-  const pendingAlertsLevel = data?.pendingAlertsLevel ?? 'warning';
-  const equipmentHealthPercentage = data?.equipmentHealthPercentage ?? 97;
-  const equipmentHealthStatus = data?.equipmentHealthStatus ?? 'operational';
+  const activeGuardsCount = data.activeGuardsCount;
+  const activeGuardsTotal = data.activeGuardsTotal;
+  const pendingAlertsCount = data.pendingAlertsCount;
+  const pendingAlertsLevel = data.pendingAlertsLevel;
+  const equipmentHealthPercentage = data.equipmentHealthPercentage;
+  const equipmentHealthStatus = data.equipmentHealthStatus;
 
   const activityContent = activityMapContent ?? (
     <div className="h-64 bg-surface-elevated rounded-lg flex items-center justify-center">

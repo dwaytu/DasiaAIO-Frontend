@@ -1,5 +1,6 @@
 import { useState, useEffect, FC } from 'react'
 import { API_BASE_URL } from '../config'
+import { logError } from '../utils/logger'
 
 interface Shift {
   id: string
@@ -55,7 +56,7 @@ const EditScheduleModal: FC<EditScheduleModalProps> = ({ shift, onClose, onSave,
       const data = await response.json()
       setGuards(data.users.filter((u: User) => u.role === 'guard' || u.role === 'user'))
     } catch (err) {
-      console.error('Error fetching guards:', err)
+      logError('Error fetching guards:', err)
     }
   }
 

@@ -1,5 +1,6 @@
-import { FC } from 'react'
-import SentinelLogo from './SentinelLogo'
+import { FC, useEffect, useMemo, useRef } from 'react'
+import SidebarBrand from './SidebarBrand'
+import { useServiceHealth } from '../hooks/useServiceHealth'
 
 export interface SidebarItem {
   view: string
@@ -17,8 +18,74 @@ interface SidebarProps {
   onClose?: () => void
 }
 
+const navGlyphs: Record<string, string> = {
+  dashboard: 'DG',
+  overview: 'DG',
+  approvals: 'AP',
+  calendar: 'CL',
+  analytics: 'AN',
+  'audit-log': 'AL',
+  trips: 'TR',
+  schedule: 'SC',
+  missions: 'MS',
+  performance: 'PF',
+  merit: 'MR',
+  firearms: 'FA',
+  allocation: 'AS',
+  permits: 'PM',
+  maintenance: 'MT',
+  'armored-cars': 'AC',
+  support: 'CT',
+}
+
 const Sidebar: FC<SidebarProps> = ({ items, activeView, onNavigate, onLogout, onLogoClick, isOpen = true, onClose }) => {
+  const asideRef = useRef<HTMLElement | null>(null)
+  const navRef = useRef<HTMLElement | null>(null)
+  const scrollStorageKey = 'dasi.sidebar.scrollTop'
+  const { services } = useServiceHealth()
+
+  const systemStatus = useMemo<'operational' | 'degraded' | 'critical'>(() => {
+    const statuses = [
+      services.database,
+      services.apiGateway,
+      services.monitoringNodes,
+      services.vehicleTelemetry,
+      services.authenticationService,
+    ]
+    const offlineCount = statuses.filter((status) => status === 'offline').length
+
+    if (offlineCount >= 3) return 'critical'
+    if (offlineCount >= 1) return 'degraded'
+    return 'operational'
+  }, [services])
+
+  useEffect(() => {
+    const savedScroll = window.sessionStorage.getItem(scrollStorageKey)
+    const target = navRef.current || asideRef.current
+    if (!target || !savedScroll) return
+
+    target.scrollTop = Number(savedScroll) || 0
+  }, [])
+
+  useEffect(() => {
+    const el = navRef.current || asideRef.current
+    if (!el) return
+
+    const handleScroll = () => {
+      window.sessionStorage.setItem(scrollStorageKey, String(el.scrollTop))
+    }
+
+    el.addEventListener('scroll', handleScroll)
+    return () => {
+      el.removeEventListener('scroll', handleScroll)
+    }
+  }, [])
+
   const handleNavigate = (view: string) => {
+    const target = navRef.current || asideRef.current
+    if (target) {
+      window.sessionStorage.setItem(scrollStorageKey, String(target.scrollTop))
+    }
     onNavigate(view)
     // Close sidebar on mobile after navigation
     if (onClose) {
@@ -39,11 +106,12 @@ const Sidebar: FC<SidebarProps> = ({ items, activeView, onNavigate, onLogout, on
       {/* Sidebar */}
       <aside className={`
         fixed lg:relative inset-y-0 left-0 z-50
-        w-72 flex flex-col shadow-2xl
+        w-72 flex flex-col overflow-y-auto shadow-2xl
+        lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto
         transform transition-transform duration-300 ease-in-out
         lg:transform-none
         ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-      `} style={{ background: 'var(--bg-surface)', borderRight: '1px solid var(--border-color)' }}>
+      `} style={{ background: 'var(--bg-surface)', borderRight: '1px solid var(--border-color)' }} ref={asideRef}>
         {/* Top accent line */}
         <div className="h-1 w-full" style={{ background: 'linear-gradient(90deg, var(--color-info), var(--color-accent))' }} />
 
@@ -62,13 +130,15 @@ const Sidebar: FC<SidebarProps> = ({ items, activeView, onNavigate, onLogout, on
             </button>
           )}
           
-          <div className="mb-6 flex-shrink-0 rounded-xl border border-border-subtle bg-surface-elevated p-3" style={{ borderBottom: '1px solid var(--border-color)' }}>
-            <button type="button" onClick={onLogoClick} className="w-full text-left" aria-label="Go to dashboard">
-              <SentinelLogo size={36} variant="FullLogo" animated />
-            </button>
+          <div className="mb-5 flex-shrink-0 border-b border-border-subtle pb-4">
+            <SidebarBrand
+              onClick={onLogoClick}
+              compact={false}
+              status={systemStatus}
+            />
           </div>
 
-          <nav className="flex-1 flex flex-col overflow-y-auto min-h-0">
+          <nav className="flex-1 flex flex-col overflow-y-auto min-h-0" ref={navRef}>
             {(() => {
               const grouped: Record<string, SidebarItem[]> = {}
               items.forEach(item => {
@@ -103,7 +173,12 @@ const Sidebar: FC<SidebarProps> = ({ items, activeView, onNavigate, onLogout, on
                         onClick={() => handleNavigate(view)}
                         type="button"
                       >
-                        {label}
+                        <span className="flex items-center gap-2">
+                          <span className="inline-flex h-5 w-5 items-center justify-center rounded-md border border-border-subtle bg-surface-elevated text-[9px] font-bold tracking-wide text-text-tertiary" aria-hidden="true">
+                            {navGlyphs[view] || 'NV'}
+                          </span>
+                          <span>{label}</span>
+                        </span>
                       </button>
                     ))}
                   </div>

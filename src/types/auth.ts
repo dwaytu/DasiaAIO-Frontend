@@ -3,16 +3,24 @@ export const ROLES = ['superadmin', 'admin', 'supervisor', 'guard', 'user'] as c
 export type LegacyRole = typeof ROLES[number]
 export type Role = Exclude<LegacyRole, 'user'>
 
+function normalizeRoleInput(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  const normalized = value.trim().toLowerCase()
+  return normalized.length > 0 ? normalized : null
+}
+
 export function isLegacyRole(value: unknown): value is LegacyRole {
-  return typeof value === 'string' && (ROLES as readonly string[]).includes(value)
+  const normalized = normalizeRoleInput(value)
+  return normalized != null && (ROLES as readonly string[]).includes(normalized)
 }
 
 export function normalizeRole(role: unknown): Role {
-  if (!isLegacyRole(role)) {
+  const normalized = normalizeRoleInput(role)
+  if (normalized == null || !(ROLES as readonly string[]).includes(normalized)) {
     return 'guard'
   }
 
-  return role === 'user' ? 'guard' : role
+  return normalized === 'user' ? 'guard' : (normalized as Role)
 }
 
 export function isElevatedRole(role: unknown): boolean {

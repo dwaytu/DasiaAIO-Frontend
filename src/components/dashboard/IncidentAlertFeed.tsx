@@ -24,11 +24,11 @@ const IncidentAlertFeed: FC<IncidentAlertFeedProps> = ({ alerts, nowLabel }) => 
         {alerts.length === 0 ? (
           <p className="rounded-lg border border-border-subtle bg-surface-elevated p-3 text-sm text-text-secondary">No active incidents. Monitoring remains stable.</p>
         ) : (
-          alerts.map((alert) => (
-            <article key={alert.id} className={`rounded-lg border p-3 ${toneClass[alert.severity]}`}>
+          alerts.map((alert, index) => (
+            <article key={alert.id} className={`soc-animated-entry rounded-lg border p-3 ${toneClass[alert.severity]}`} style={{ animationDelay: `${index * 60}ms` }}>
               <div className="flex items-start justify-between gap-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em]">{alert.severity}</p>
-                <span className="text-[11px] font-semibold uppercase tracking-wide opacity-90">{nowLabel}</span>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em]">Severity: {alert.severity}</p>
+                <span className="text-[11px] font-semibold uppercase tracking-wide opacity-90">Observed {nowLabel}</span>
               </div>
               <p className="mt-1 text-sm font-semibold text-text-primary">{alert.title}</p>
               <p className="mt-1 text-xs opacity-90">{alert.detail}</p>

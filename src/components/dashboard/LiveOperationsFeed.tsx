@@ -77,10 +77,11 @@ const LiveOperationsFeed: FC<LiveOperationsFeedProps> = ({ items }) => {
         {items.length === 0 ? (
           <p className="rounded-lg border border-border-subtle bg-surface-elevated p-3 text-sm text-text-secondary">No live operations at this time.</p>
         ) : (
-          items.map((item) => (
+          items.map((item, index) => (
             <article
               key={item.id}
-              className={`animate-fade-in rounded-lg border p-3 ${categoryStyles[item.category]}`}
+              className={`soc-timeline-item soc-animated-entry rounded-lg border p-3 ${categoryStyles[item.category]}`}
+              style={{ animationDelay: `${index * 70}ms` }}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-2">
@@ -90,6 +91,7 @@ const LiveOperationsFeed: FC<LiveOperationsFeedProps> = ({ items }) => {
                 <time className="text-[11px] font-semibold uppercase tracking-wide opacity-90">{item.timestamp}</time>
               </div>
               <p className="mt-1.5 text-sm font-semibold text-text-primary">{item.description}</p>
+              <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.16em] opacity-85">Operational event stream</p>
             </article>
           ))
         )}

@@ -37,7 +37,7 @@ const OperationalShell: FC<OperationalShellProps> = ({
   children,
 }) => {
   return (
-    <div className="flex min-h-screen w-full bg-background font-sans">
+    <div className="flex h-screen w-full overflow-hidden bg-background font-sans">
       <a href="#maincontent" className="skip-link">Skip to main content</a>
       <Sidebar
         items={navItems}

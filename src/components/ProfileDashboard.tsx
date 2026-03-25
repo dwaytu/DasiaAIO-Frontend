@@ -3,6 +3,8 @@ import { User } from '../App'
 import { API_BASE_URL } from '../config'
 import Sidebar from './Sidebar'
 import Header from './Header'
+import { getSidebarNav } from '../config/navigation'
+import { logError } from '../utils/logger'
 
 interface ProfileDashboardProps {
   user: User
@@ -27,6 +29,7 @@ const ProfileDashboard: FC<ProfileDashboardProps> = ({ user, onLogout, onBack, o
   })
   const [saving, setSaving] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const isErrorMessage = /failed|error|invalid/i.test(message)
 
   const handlePhotoClick = () => {
     fileInputRef.current?.click()
@@ -81,7 +84,7 @@ const ProfileDashboard: FC<ProfileDashboardProps> = ({ user, onLogout, onBack, o
           setTimeout(() => setMessage(''), 3000)
           setUploading(false)
         } catch (error) {
-          console.error('Error uploading photo:', error)
+          logError('Error uploading photo:', error)
           setMessage('Failed to upload photo. Please try again.')
           setUploading(false)
         }
@@ -94,7 +97,7 @@ const ProfileDashboard: FC<ProfileDashboardProps> = ({ user, onLogout, onBack, o
 
       reader.readAsDataURL(file)
     } catch (error) {
-      console.error('Error reading file:', error)
+      logError('Error reading file:', error)
       setMessage('Failed to read image file. Please try again.')
       setUploading(false)
     }
@@ -134,7 +137,7 @@ const ProfileDashboard: FC<ProfileDashboardProps> = ({ user, onLogout, onBack, o
       setMessage('Profile updated successfully!')
       setTimeout(() => setMessage(''), 3000)
     } catch (error) {
-      console.error('Error updating profile:', error)
+      logError('Error updating profile:', error)
       setMessage('Failed to update profile. Please try again.')
     } finally {
       setSaving(false)
@@ -152,22 +155,7 @@ const ProfileDashboard: FC<ProfileDashboardProps> = ({ user, onLogout, onBack, o
     return user.username.substring(0, 2).toUpperCase()
   }
 
-  const navItems = user.role === 'admin' || user.role === 'superadmin' || user.role === 'supervisor' ? [
-    { view: 'dashboard', label: 'Dashboard', group: 'MAIN MENU' },
-    { view: 'analytics', label: 'Analytics', group: 'MAIN MENU' },
-    { view: 'schedule', label: 'Schedule', group: 'OPERATIONS' },
-    { view: 'firearms', label: 'Firearms', group: 'RESOURCES' },
-    { view: 'allocation', label: 'Allocation', group: 'RESOURCES' },
-    { view: 'permits', label: 'Permits', group: 'RESOURCES' },
-    { view: 'maintenance', label: 'Maintenance', group: 'RESOURCES' },
-    { view: 'armored-cars', label: 'Armored Cars', group: 'RESOURCES' },
-  ] : [
-    { view: 'overview', label: 'Dashboard', group: 'MAIN MENU' },
-    { view: 'schedule', label: 'Schedule', group: 'MAIN MENU' },
-    { view: 'firearms', label: 'Firearms', group: 'RESOURCES' },
-    { view: 'permits', label: 'My Permits', group: 'RESOURCES' },
-    { view: 'support', label: 'Support', group: 'RESOURCES' },
-  ]
+  const navItems = getSidebarNav(user.role, { homeView: user.role === 'guard' ? 'overview' : 'dashboard' })
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background">
@@ -203,21 +191,27 @@ const ProfileDashboard: FC<ProfileDashboardProps> = ({ user, onLogout, onBack, o
 
         <div className="flex-1 overflow-y-auto p-4 md:p-8">
           <div className="max-w-4xl mx-auto">
+            <section className="soc-surface mb-6 p-4 md:p-5">
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-text-tertiary">Profile Control</p>
+              <h1 className="text-2xl font-black uppercase tracking-wide text-text-primary">Account Settings</h1>
+              <p className="mt-1 text-sm text-text-secondary">Manage identity details, contact data, and profile media used across operational dashboards.</p>
+            </section>
+
             {/* Success/Error Message */}
             {message && (
-              <div className={`mb-6 p-4 rounded-lg ${message.includes('success') ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
+              <div className={`mb-6 p-4 rounded-lg ${isErrorMessage ? 'soc-alert-error' : 'soc-alert-success'}`}>
                 {message}
               </div>
             )}
 
             {/* Profile Photo Section */}
-            <div className="bg-surface rounded-xl shadow-md p-6 md:p-8 mb-6">
+            <div className="command-panel p-6 md:p-8 mb-6">
               <h2 className="text-2xl font-bold text-text-primary mb-6">Profile Photo</h2>
               
               <div className="flex flex-col md:flex-row items-center gap-6">
                 {/* Photo Preview */}
                 <div className="relative group">
-                  <div className="w-32 h-32 rounded-full overflow-hidden bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-lg">
+                  <div className="w-32 h-32 rounded-full overflow-hidden bg-gradient-to-br from-cyan-500 to-blue-700 flex items-center justify-center text-white shadow-lg">
                     {profilePhoto ? (
                       <img src={profilePhoto} alt="Profile" className="w-full h-full object-cover" />
                     ) : (
@@ -250,7 +244,7 @@ const ProfileDashboard: FC<ProfileDashboardProps> = ({ user, onLogout, onBack, o
                     <button
                       onClick={handlePhotoClick}
                       disabled={uploading}
-                      className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-semibold rounded-lg transition-colors"
+                      className="soc-btn"
                     >
                       {uploading ? 'Uploading...' : 'Choose Photo'}
                     </button>
@@ -283,7 +277,7 @@ const ProfileDashboard: FC<ProfileDashboardProps> = ({ user, onLogout, onBack, o
             </div>
 
             {/* Account Information */}
-            <div className="bg-surface rounded-xl shadow-md p-6 md:p-8">
+            <div className="command-panel p-6 md:p-8">
               <h2 className="text-2xl font-bold text-text-primary mb-6">Account Information</h2>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -408,7 +402,7 @@ const ProfileDashboard: FC<ProfileDashboardProps> = ({ user, onLogout, onBack, o
                 <button
                   onClick={handleSaveProfile}
                   disabled={saving}
-                  className="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-semibold rounded-lg transition-colors shadow-md hover:shadow-lg"
+                  className="soc-btn"
                 >
                   {saving ? 'Saving...' : 'Save Changes'}
                 </button>

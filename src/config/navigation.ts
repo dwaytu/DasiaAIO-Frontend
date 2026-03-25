@@ -13,6 +13,7 @@ const ELEVATED_NAV: NavItem[] = [
   { view: 'approvals', label: 'Approvals', group: 'MAIN MENU', permission: 'approve_guards' },
   { view: 'calendar', label: 'Calendar', group: 'MAIN MENU' },
   { view: 'analytics', label: 'Analytics', group: 'MAIN MENU', permission: 'view_analytics' },
+  { view: 'audit-log', label: 'System Audit Log', group: 'MAIN MENU', permission: 'manage_users' },
   { view: 'trips', label: 'Trip Management', group: 'OPERATIONS' },
   { view: 'schedule', label: 'Schedule', group: 'OPERATIONS' },
   { view: 'missions', label: 'Missions', group: 'OPERATIONS' },

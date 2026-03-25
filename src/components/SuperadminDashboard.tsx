@@ -1,4 +1,4 @@
-import { useState, useEffect, FC } from 'react'
+import { useState, useEffect, useMemo, FC } from 'react'
 import EditUserModal from './EditUserModal'
 import EditScheduleModal from './EditScheduleModal'
 import AnalyticsDashboard from './AnalyticsDashboard'
@@ -15,12 +15,16 @@ import DeniedFallback from './rbac/DeniedFallback'
 import OperationalShell from './layout/OperationalShell'
 import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
 import { can } from '../utils/permissions'
+import { getTrackingAccuracyMode, setTrackingAccuracyMode, TrackingAccuracyMode } from '../utils/trackingPolicy'
+import AuditLogViewer from './AuditLogViewer'
+import { logError } from '../utils/logger'
 
 interface User {
   id: string
   email: string
   username: string
   role: string
+  last_seen_at?: string
   full_name?: string
   phone_number?: string
   license_number?: string
@@ -28,6 +32,119 @@ interface User {
   license_expiry_date?: string
   address?: string
   [key: string]: any
+}
+
+const ONLINE_WINDOW_MS = 3 * 60 * 1000
+
+const isUserOnline = (lastSeenAt?: string) => {
+  if (!lastSeenAt) return false
+  const lastSeen = new Date(lastSeenAt).getTime()
+  if (Number.isNaN(lastSeen)) return false
+  return Date.now() - lastSeen <= ONLINE_WINDOW_MS
+}
+
+const truncateText = (value: string, maxChars: number) => {
+  if (value.length <= maxChars) return value
+  return `${value.slice(0, maxChars)}...`
+}
+
+type UserDerivedStatus = 'active' | 'inactive' | 'pending' | 'suspended'
+
+const getRelativeLastLogin = (lastSeenAt?: string) => {
+  if (!lastSeenAt) return 'Never'
+  const ts = new Date(lastSeenAt).getTime()
+  if (Number.isNaN(ts)) return 'Unknown'
+
+  const diffMs = Date.now() - ts
+  if (diffMs < 0) return 'Just now'
+  const minuteMs = 60 * 1000
+  const hourMs = 60 * minuteMs
+  const dayMs = 24 * hourMs
+
+  if (diffMs < minuteMs) return 'Just now'
+  if (diffMs < hourMs) return `${Math.floor(diffMs / minuteMs)} minutes ago`
+  if (diffMs < dayMs) return `${Math.floor(diffMs / hourMs)} hours ago`
+  if (diffMs < 2 * dayMs) return 'Yesterday'
+  if (diffMs < 7 * dayMs) return `${Math.floor(diffMs / dayMs)} days ago`
+  return new Date(ts).toLocaleDateString()
+}
+
+const getUserDerivedStatus = (user: User, pendingIds: Set<string>): UserDerivedStatus => {
+  if (pendingIds.has(user.id)) return 'pending'
+  if (user.suspended === true || user.status === 'suspended' || user.verified === false) return 'suspended'
+  return isUserOnline(user.last_seen_at) ? 'active' : 'inactive'
+}
+
+const UserAvatar: FC<{ user: User }> = ({ user }) => {
+  const normalizedRole = user.role === 'user' ? 'guard' : normalizeRole(user.role)
+  const initial = (user.full_name || user.username || '?').charAt(0).toUpperCase()
+  const avatarColor = normalizedRole === 'superadmin' || normalizedRole === 'admin'
+    ? 'bg-purple-500/20 text-purple-300'
+    : normalizedRole === 'supervisor'
+      ? 'bg-amber-500/20 text-amber-300'
+      : 'bg-teal-500/20 text-teal-300'
+
+  return (
+    <div className={`h-9 w-9 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${avatarColor}`} aria-hidden="true">
+      {initial}
+    </div>
+  )
+}
+
+const RoleBadge: FC<{ roleRaw: string }> = ({ roleRaw }) => {
+  const role = normalizeRole(roleRaw)
+  const rolePill = role === 'superadmin' || role === 'admin'
+    ? 'bg-purple-500/15 text-purple-300 ring-1 ring-purple-500/30'
+    : role === 'supervisor'
+      ? 'bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30'
+      : 'bg-teal-500/15 text-teal-300 ring-1 ring-teal-500/30'
+
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold uppercase tracking-wide ${rolePill}`}>
+      <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <path d="M10 2a4 4 0 110 8 4 4 0 010-8zM3 16a7 7 0 0114 0v1H3v-1z" />
+      </svg>
+      {role}
+    </span>
+  )
+}
+
+const StatusIndicator: FC<{ status: UserDerivedStatus }> = ({ status }) => {
+  const statusConfig: Record<UserDerivedStatus, { dot: string; glow: string; label: string; pill: string }> = {
+    active: {
+      dot: 'bg-emerald-400',
+      glow: '0 0 6px rgba(52,211,153,0.7)',
+      label: 'Active',
+      pill: 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30',
+    },
+    inactive: {
+      dot: 'bg-zinc-400',
+      glow: '0 0 6px rgba(161,161,170,0.7)',
+      label: 'Inactive',
+      pill: 'bg-zinc-500/15 text-zinc-300 ring-1 ring-zinc-500/30',
+    },
+    pending: {
+      dot: 'bg-amber-400',
+      glow: '0 0 6px rgba(251,191,36,0.7)',
+      label: 'Pending',
+      pill: 'bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30',
+    },
+    suspended: {
+      dot: 'bg-red-400',
+      glow: '0 0 6px rgba(248,113,113,0.7)',
+      label: 'Suspended',
+      pill: 'bg-red-500/15 text-red-300 ring-1 ring-red-500/30',
+    },
+  }
+
+  const current = statusConfig[status]
+
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${current.pill}`}>
+      <span className={`h-1.5 w-1.5 rounded-full ${current.dot}`} style={{ boxShadow: current.glow }} aria-hidden="true" />
+      {current.label}
+    </span>
+  )
 }
 
 interface PendingApprovalUser {
@@ -59,7 +176,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [editingShift, setEditingShift] = useState<any | null>(null)
   const [error, setError] = useState<string>('')
-  const [activeSection, setActiveSection] = useState<'dashboard' | 'approvals' | 'schedule' | 'missions' | 'analytics' | 'trips'>('dashboard')
+  const [activeSection, setActiveSection] = useState<'dashboard' | 'approvals' | 'schedule' | 'missions' | 'analytics' | 'trips' | 'audit-log'>('dashboard')
   const [shifts, setShifts] = useState<any[]>([])
   const [shiftsLoading, setShiftsLoading] = useState<boolean>(false)
   const [missions, setMissions] = useState<any[]>([])
@@ -81,6 +198,12 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   const [missionResponse, setMissionResponse] = useState<any>(null)
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [searchQuery, setSearchQuery] = useState<string>('')
+  const [trackingAccuracyMode, setTrackingAccuracyModeState] = useState<TrackingAccuracyMode>(getTrackingAccuracyMode())
+  const [roleFilter, setRoleFilter] = useState<'all' | 'superadmin' | 'admin' | 'supervisor' | 'guard'>('all')
+  const [statusFilter, setStatusFilter] = useState<'all' | UserDerivedStatus>('all')
+  const [filterMenuOpen, setFilterMenuOpen] = useState<boolean>(false)
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([])
+  const [bulkProcessing, setBulkProcessing] = useState<boolean>(false)
   const [availableGuards, setAvailableGuards] = useState<User[]>([])
   const [availableFirearms, setAvailableFirearms] = useState<any[]>([])
   const [availableVehicles, setAvailableVehicles] = useState<any[]>([])
@@ -123,11 +246,13 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
     activeSection === 'schedule' ? 'Guard Schedules' :
     activeSection === 'missions' ? 'Mission Assignment' :
     activeSection === 'analytics' ? 'Analytics & Reports' :
-    activeSection === 'trips' ? 'Trip Management' : 'Dashboard'
+    activeSection === 'trips' ? 'Trip Management' :
+    activeSection === 'audit-log' ? 'System Audit Log' : 'Dashboard'
   const badgeLabel =
     activeSection === 'dashboard' ? 'Overview' :
     activeSection === 'approvals' ? 'Approvals' :
     activeSection === 'trips' ? 'Trips' :
+    activeSection === 'audit-log' ? 'Audit Log' :
     activeSection.replace('-', ' ')
 
   const addNotification = (type: 'success' | 'error' | 'info' | 'warning', title: string, message: string) => {
@@ -169,14 +294,15 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
 
   useEffect(() => {
     if (!activeView) return
-    const viewToSection: Record<string, 'dashboard' | 'approvals' | 'schedule' | 'missions' | 'analytics' | 'trips'> = {
+    const viewToSection: Record<string, 'dashboard' | 'approvals' | 'schedule' | 'missions' | 'analytics' | 'trips' | 'audit-log'> = {
       users: 'dashboard',
       dashboard: 'dashboard',
       approvals: 'approvals',
       schedule: 'schedule',
       missions: 'missions',
       analytics: 'analytics',
-      trips: 'trips'
+      trips: 'trips',
+      'audit-log': 'audit-log'
     }
     const nextSection = viewToSection[activeView]
     if (nextSection && nextSection !== activeSection) {
@@ -209,7 +335,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
         guards: guardCount,
       })
     } catch (err) {
-      console.error('Error fetching data:', err)
+      logError('Error fetching data:', err)
     } finally {
       setLoading(false)
     }
@@ -310,7 +436,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
         : (vehiclesData?.armored_cars || vehiclesData?.vehicles || [])
       setAvailableVehicles(vehicles.filter((v: any) => v.status === 'available'))
     } catch (err) {
-      console.error('Error fetching assignment resources:', err)
+      logError('Error fetching assignment resources:', err)
     }
   }
 
@@ -382,8 +508,8 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   }
 
   const handleNavigate = (view: string) => {
-    if (view === 'approvals' || view === 'schedule' || view === 'dashboard' || view === 'missions' || view === 'analytics' || view === 'trips') {
-      setActiveSection(view as 'dashboard' | 'approvals' | 'schedule' | 'missions' | 'analytics' | 'trips')
+    if (view === 'approvals' || view === 'schedule' || view === 'dashboard' || view === 'missions' || view === 'analytics' || view === 'trips' || view === 'audit-log') {
+      setActiveSection(view as 'dashboard' | 'approvals' | 'schedule' | 'missions' | 'analytics' | 'trips' | 'audit-log')
     } else if (onViewChange) {
       onViewChange(view)
     }
@@ -478,14 +604,160 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
     }
   }
 
+  const rolePriority: Record<'superadmin' | 'admin' | 'supervisor' | 'guard', number> = {
+    superadmin: 0,
+    admin: 1,
+    supervisor: 2,
+    guard: 3,
+  }
+
   const roleScopedUsers = users.filter(u => canViewUserRow(u.role))
 
-  const filteredUsers = roleScopedUsers.filter(u =>
+  const pendingApprovalIds = useMemo(() => new Set(pendingApprovals.map(p => p.id)), [pendingApprovals])
+
+  const userStatusById = useMemo(() => {
+    const map = new Map<string, UserDerivedStatus>()
+    for (const userRow of roleScopedUsers) {
+      map.set(userRow.id, getUserDerivedStatus(userRow, pendingApprovalIds))
+    }
+    return map
+  }, [roleScopedUsers, pendingApprovalIds])
+
+  const filteredUsers = roleScopedUsers
+    .filter((u) => {
+      if (roleFilter === 'all') return true
+      return normalizeRole(u.role) === roleFilter
+    })
+    .filter((u) => {
+      if (statusFilter === 'all') return true
+      return userStatusById.get(u.id) === statusFilter
+    })
+    .filter(u =>
     !searchQuery ||
     u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
     u.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (u.full_name || '').toLowerCase().includes(searchQuery.toLowerCase())
-  )
+    )
+    .sort((a, b) => {
+      const roleA = normalizeRole(a.role)
+      const roleB = normalizeRole(b.role)
+      const roleDelta = rolePriority[roleA] - rolePriority[roleB]
+      if (roleDelta !== 0) return roleDelta
+
+      const nameA = (a.full_name || a.username || a.email || '').toLowerCase()
+      const nameB = (b.full_name || b.username || b.email || '').toLowerCase()
+      return nameA.localeCompare(nameB)
+    })
+
+  const totalVisibleUsers = filteredUsers.length
+  const summaryStats = useMemo(() => {
+    const active = roleScopedUsers.filter(u => getUserDerivedStatus(u, pendingApprovalIds) === 'active').length
+    const pending = roleScopedUsers.filter(u => getUserDerivedStatus(u, pendingApprovalIds) === 'pending').length
+    const supervisors = roleScopedUsers.filter(u => normalizeRole(u.role) === 'supervisor').length
+    return {
+      total: roleScopedUsers.length,
+      active,
+      pending,
+      supervisors,
+    }
+  }, [roleScopedUsers, pendingApprovalIds])
+
+  const selectableUserIds = filteredUsers
+    .filter(u => canEditUserRow(u.role) && u.id !== user.id)
+    .map(u => u.id)
+
+  const allSelectableChecked = selectableUserIds.length > 0 && selectableUserIds.every(id => selectedUserIds.includes(id))
+
+  const toggleUserSelection = (targetId: string) => {
+    setSelectedUserIds((prev) => prev.includes(targetId) ? prev.filter(id => id !== targetId) : [...prev, targetId])
+  }
+
+  const toggleSelectAllVisible = () => {
+    if (allSelectableChecked) {
+      setSelectedUserIds((prev) => prev.filter(id => !selectableUserIds.includes(id)))
+      return
+    }
+    setSelectedUserIds((prev) => Array.from(new Set([...prev, ...selectableUserIds])))
+  }
+
+  const handleResetPasswordAction = (targetUser: User) => {
+    addNotification(
+      'warning',
+      'Reset Password Unavailable',
+      `No admin reset endpoint is configured for ${targetUser.email}. Use the standard forgot-password flow.`
+    )
+  }
+
+  const handleSuspendAction = (targetUser: User) => {
+    addNotification(
+      'warning',
+      'Suspend Unavailable',
+      `Suspension endpoint is not configured yet for ${targetUser.email}.`
+    )
+  }
+
+  const handleApproveIfPending = async (targetUser: User) => {
+    if (!pendingApprovalIds.has(targetUser.id)) return
+    await handleApprovalAction(targetUser.id, 'approve')
+  }
+
+  const handleBulkApproveSelected = async () => {
+    const pendingSelected = selectedUserIds.filter(id => pendingApprovalIds.has(id))
+    if (pendingSelected.length === 0) {
+      addNotification('info', 'No Pending Accounts Selected', 'Select at least one pending account to approve.')
+      return
+    }
+
+    try {
+      setBulkProcessing(true)
+      await Promise.all(pendingSelected.map((id) => handleApprovalAction(id, 'approve')))
+      addNotification('success', 'Bulk Approval Complete', `${pendingSelected.length} account(s) approved.`)
+      setSelectedUserIds((prev) => prev.filter(id => !pendingSelected.includes(id)))
+    } finally {
+      setBulkProcessing(false)
+    }
+  }
+
+  const handleBulkDeleteSelected = async () => {
+    const deletableUsers = filteredUsers.filter(u => selectedUserIds.includes(u.id) && canEditUserRow(u.role) && u.id !== user.id)
+    if (deletableUsers.length === 0) {
+      addNotification('info', 'No Deletable Users Selected', 'Select users you are allowed to remove.')
+      return
+    }
+
+    if (!window.confirm(`Delete ${deletableUsers.length} selected user account(s)? This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      setBulkProcessing(true)
+      await Promise.all(
+        deletableUsers.map((targetUser) =>
+          fetchJsonOrThrow<any>(`${API_BASE_URL}/api/user/${targetUser.id}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders(),
+          }, `Failed to delete ${targetUser.email}`)
+        )
+      )
+      addNotification('success', 'Bulk Delete Complete', `${deletableUsers.length} account(s) deleted.`)
+      await fetchData()
+      setSelectedUserIds([])
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Bulk delete failed'
+      setError(message)
+      addNotification('error', 'Bulk Delete Failed', message)
+    } finally {
+      setBulkProcessing(false)
+    }
+  }
+
+  const handleBulkSuspendSelected = () => {
+    addNotification(
+      'warning',
+      'Bulk Suspend Unavailable',
+      'Suspend endpoint is not configured yet. Add backend suspend support to enable this action.'
+    )
+  }
 
   const handleRefresh = async () => {
     try {
@@ -592,6 +864,23 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                   <p className="text-xs text-text-tertiary mt-0.5">Manage system users, permissions, and security roles</p>
                 </div>
                 <div className="flex items-center gap-2">
+                  <label className="flex items-center gap-2 rounded-lg border border-border-subtle bg-background px-2 py-2 text-xs font-semibold text-text-secondary" htmlFor="tracking-accuracy-mode">
+                    Accuracy
+                    <select
+                      id="tracking-accuracy-mode"
+                      value={trackingAccuracyMode}
+                      onChange={(e) => {
+                        const mode = e.target.value as TrackingAccuracyMode
+                        setTrackingAccuracyModeState(mode)
+                        setTrackingAccuracyMode(mode)
+                        addNotification('info', 'Tracking Accuracy Updated', `Mode set to ${mode}. Refresh active sessions for full effect.`)
+                      }}
+                      className="rounded-md border border-border-subtle bg-surface px-2 py-1 text-xs font-semibold text-text-primary"
+                    >
+                      <option value="strict">Strict</option>
+                      <option value="balanced">Balanced</option>
+                    </select>
+                  </label>
                   <div className="relative">
                     <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-tertiary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                     <input
@@ -602,85 +891,239 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                       className="pl-9 pr-4 py-2 text-sm bg-background border border-border-subtle rounded-lg text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-indigo-500 w-44"
                     />
                   </div>
-                  <button className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium bg-background border border-border-subtle rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors">
+                  <button
+                    type="button"
+                    onClick={() => setFilterMenuOpen((prev) => !prev)}
+                    aria-expanded={filterMenuOpen}
+                    aria-controls="user-role-filter-menu"
+                    className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium bg-background border border-border-subtle rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors"
+                  >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" /></svg>
-                    Filter
+                    Filter: {roleFilter === 'all' ? 'All Roles' : roleFilter}
                   </button>
+                  <label htmlFor="user-status-filter" className="sr-only">Filter by user status</label>
+                  <select
+                    id="user-status-filter"
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value as 'all' | UserDerivedStatus)}
+                    className="rounded-lg border border-border-subtle bg-background px-3 py-2 text-sm font-medium text-text-secondary hover:text-text-primary"
+                  >
+                    <option value="all">All Statuses</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                    <option value="pending">Pending</option>
+                    <option value="suspended">Suspended</option>
+                  </select>
                 </div>
               </div>
+              <div className="grid grid-cols-2 gap-3 border-b border-border-subtle px-5 py-4 md:grid-cols-4">
+                <div className="rounded-xl border border-border-subtle bg-background px-3 py-3">
+                  <div className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">Total Users</div>
+                  <div className="mt-1 text-xl font-bold text-text-primary">{summaryStats.total}</div>
+                </div>
+                <div className="rounded-xl border border-border-subtle bg-background px-3 py-3">
+                  <div className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">Active</div>
+                  <div className="mt-1 text-xl font-bold text-emerald-300">{summaryStats.active}</div>
+                </div>
+                <div className="rounded-xl border border-border-subtle bg-background px-3 py-3">
+                  <div className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">Pending</div>
+                  <div className="mt-1 text-xl font-bold text-amber-300">{summaryStats.pending}</div>
+                </div>
+                <div className="rounded-xl border border-border-subtle bg-background px-3 py-3">
+                  <div className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">Supervisors</div>
+                  <div className="mt-1 text-xl font-bold text-indigo-300">{summaryStats.supervisors}</div>
+                </div>
+              </div>
+              {filterMenuOpen ? (
+                <div id="user-role-filter-menu" className="px-5 py-3 border-b border-border-subtle">
+                  <div className="flex flex-wrap items-center gap-2" role="group" aria-label="User role filters">
+                    {([
+                      { key: 'all', label: 'All Roles' },
+                      { key: 'superadmin', label: 'Superadmins' },
+                      { key: 'admin', label: 'Admins' },
+                      { key: 'supervisor', label: 'Supervisors' },
+                      { key: 'guard', label: 'Guards' },
+                    ] as const).map((item) => (
+                      <button
+                        key={item.key}
+                        type="button"
+                        onClick={() => {
+                          setRoleFilter(item.key)
+                          setFilterMenuOpen(false)
+                        }}
+                        className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                          roleFilter === item.key
+                            ? 'bg-info-bg text-info-text ring-1 ring-info-border'
+                            : 'bg-background text-text-secondary ring-1 ring-border-subtle'
+                        }`}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              {selectedUserIds.length > 0 ? (
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle bg-background px-5 py-3">
+                  <p className="text-sm font-medium text-text-secondary">
+                    {selectedUserIds.length} user{selectedUserIds.length === 1 ? '' : 's'} selected
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleBulkApproveSelected}
+                      disabled={bulkProcessing}
+                      className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-300 disabled:opacity-60"
+                    >
+                      Approve Selected
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleBulkSuspendSelected}
+                      disabled={bulkProcessing}
+                      className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-xs font-semibold text-amber-300 disabled:opacity-60"
+                    >
+                      Suspend Selected
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleBulkDeleteSelected}
+                      disabled={bulkProcessing}
+                      className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-300 disabled:opacity-60"
+                    >
+                      Delete Selected
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedUserIds([])}
+                      disabled={bulkProcessing}
+                      className="rounded-lg border border-border-subtle bg-background px-3 py-1.5 text-xs font-semibold text-text-secondary disabled:opacity-60"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+              ) : null}
               {filteredUsers.length > 0 ? (
                 <div className="flex-1 min-h-0 overflow-auto">
-                  <table className="w-full min-w-[700px]">
+                  <table className="hidden w-full min-w-[980px] md:table">
                     <thead className="thead-glass">
                       <tr className="border-b border-border">
-                        <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">User Details</th>
+                        <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">
+                          <label className="inline-flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={allSelectableChecked}
+                              onChange={toggleSelectAllVisible}
+                              className="h-4 w-4 rounded border-border-subtle bg-background"
+                              aria-label="Select all visible users"
+                            />
+                            <span>Select</span>
+                          </label>
+                        </th>
+                        <th className="sticky top-0 z-10 px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary bg-surface">User Details</th>
                         <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Username</th>
                         <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Role</th>
                         <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Status</th>
+                        <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Last Login</th>
                         <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-text-tertiary">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border-subtle">
                       {filteredUsers.map((u: User) => {
-                        const initial = (u.full_name || u.username || '?').charAt(0).toUpperCase()
-                        const normalizedRole = u.role === 'user' ? 'guard' : u.role
-                        const avatarColor = normalizedRole === 'superadmin' || normalizedRole === 'admin'
-                          ? 'bg-purple-500/20 text-purple-300'
-                          : normalizedRole === 'supervisor'
-                            ? 'bg-amber-500/20 text-amber-300'
-                            : 'bg-teal-500/20 text-teal-300'
-                        const rolePill = normalizedRole === 'superadmin' || normalizedRole === 'admin'
-                          ? 'bg-purple-500/15 text-purple-300 ring-1 ring-purple-500/30'
-                          : normalizedRole === 'supervisor'
-                            ? 'bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30'
-                            : 'bg-teal-500/15 text-teal-300 ring-1 ring-teal-500/30'
-                        const displayRole = normalizedRole
+                        const derivedStatus = userStatusById.get(u.id) || 'inactive'
+                        const rowSelected = selectedUserIds.includes(u.id)
+                        const canEdit = canEditUserRow(u.role)
+                        const canDelete = canEditUserRow(u.role) && u.id !== user.id
+                        const pendingApproval = pendingApprovalIds.has(u.id)
                         return (
-                          <tr key={u.id} className="hover:bg-surface-hover/50 transition-colors">
+                          <tr key={u.id} className="transition-colors hover:bg-surface-hover/50">
+                            <td className="px-5 py-3.5 align-top">
+                              <input
+                                type="checkbox"
+                                checked={rowSelected}
+                                onChange={() => toggleUserSelection(u.id)}
+                                className="h-4 w-4 rounded border-border-subtle bg-background"
+                                aria-label={`Select ${u.full_name || u.username || u.email}`}
+                              />
+                            </td>
                             <td className="px-5 py-3.5">
                               <div className="flex items-center gap-3">
-                                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${avatarColor}`}>
-                                  {initial}
-                                </div>
+                                <UserAvatar user={u} />
                                 <div className="min-w-0">
-                                  <div className="text-sm font-medium text-text-primary truncate">{u.full_name || u.username}</div>
-                                  <div className="text-xs text-text-tertiary truncate">{u.email}</div>
+                                  <div
+                                    className="text-sm font-medium text-text-primary truncate"
+                                    title={u.full_name || u.username}
+                                  >
+                                    {truncateText(u.full_name || u.username, 26)}
+                                  </div>
+                                  <div className="text-xs text-text-tertiary truncate" title={u.email}>{truncateText(u.email, 30)}</div>
                                 </div>
                               </div>
                             </td>
-                            <td className="px-5 py-3.5 text-sm text-text-secondary">{u.username}</td>
+                            <td className="px-5 py-3.5 text-sm text-text-secondary" title={u.username}>{truncateText(u.username, 22)}</td>
                             <td className="px-5 py-3.5">
-                              <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wide ${rolePill}`}>
-                                {displayRole}
-                              </span>
+                              <RoleBadge roleRaw={u.role} />
                             </td>
                             <td className="px-5 py-3.5">
-                              <div className="flex items-center gap-1.5">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" style={{ boxShadow: '0 0 6px rgba(52,211,153,0.7)' }} />
-                                <span className="text-xs text-text-secondary">Online</span>
-                              </div>
+                              <StatusIndicator status={derivedStatus} />
                             </td>
+                            <td className="px-5 py-3.5 text-xs text-text-secondary">{getRelativeLastLogin(u.last_seen_at)}</td>
                             <td className="px-5 py-3.5">
                               <div className="flex items-center justify-end gap-1">
-                                {canEditUserRow(u.role) && (
+                                {pendingApproval && (
+                                  <button
+                                    onClick={() => handleApproveIfPending(u)}
+                                    title="Approve pending user"
+                                    aria-label={`Approve ${u.full_name || u.username || u.email}`}
+                                    className="rounded-lg p-2 text-text-tertiary transition-colors hover:bg-emerald-500/10 hover:text-emerald-300"
+                                  >
+                                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                  </button>
+                                )}
+                                {canEdit && (
                                   <button
                                     onClick={() => handleEditUser(u)}
                                     title="Edit user"
-                                    className="p-2 rounded-lg text-text-tertiary hover:text-indigo-400 hover:bg-indigo-500/10 transition-colors"
+                                    aria-label={`Edit ${u.full_name || u.username || u.email}`}
+                                    className="rounded-lg p-2 text-text-tertiary transition-colors hover:bg-indigo-500/10 hover:text-indigo-400"
                                   >
                                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                                   </button>
                                 )}
+                                <button
+                                  onClick={() => handleResetPasswordAction(u)}
+                                  title="Reset password"
+                                  aria-label={`Reset password for ${u.full_name || u.username || u.email}`}
+                                  className="rounded-lg p-2 text-text-tertiary transition-colors hover:bg-sky-500/10 hover:text-sky-300"
+                                >
+                                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 11V7m0 0l-3 3m3-3l3 3M5 12a7 7 0 1114 0v5a2 2 0 01-2 2H7a2 2 0 01-2-2v-5z" />
+                                  </svg>
+                                </button>
+                                <button
+                                  onClick={() => handleSuspendAction(u)}
+                                  title="Suspend user"
+                                  aria-label={`Suspend ${u.full_name || u.username || u.email}`}
+                                  className="rounded-lg p-2 text-text-tertiary transition-colors hover:bg-amber-500/10 hover:text-amber-300"
+                                >
+                                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 5.636l-12.728 12.728M8 7h8a2 2 0 012 2v6a2 2 0 01-2 2H8a2 2 0 01-2-2V9a2 2 0 012-2z" />
+                                  </svg>
+                                </button>
                                 <Allowed
                                   role={user.role}
                                   permission="manage_users"
                                   fallback={<DeniedFallback title="Delete blocked" reason="Your role cannot delete this account." />}
                                 >
-                                  {canEditUserRow(u.role) && u.id !== user.id && (
+                                  {canDelete && (
                                     <button
                                       onClick={() => handleDeleteUser(u.id, u.email)}
                                       title="Delete user"
-                                      className="p-2 rounded-lg text-text-tertiary hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                                      aria-label={`Delete ${u.full_name || u.username || u.email}`}
+                                      className="rounded-lg p-2 text-text-tertiary transition-colors hover:bg-red-500/10 hover:text-red-400"
                                     >
                                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                     </button>
@@ -693,12 +1136,93 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                       })}
                     </tbody>
                   </table>
+                  <div className="space-y-3 p-4 md:hidden">
+                    {filteredUsers.map((u: User) => {
+                      const derivedStatus = userStatusById.get(u.id) || 'inactive'
+                      const rowSelected = selectedUserIds.includes(u.id)
+                      const pendingApproval = pendingApprovalIds.has(u.id)
+                      const canDelete = canEditUserRow(u.role) && u.id !== user.id
+
+                      return (
+                        <article key={`mobile-${u.id}`} className="rounded-xl border border-border-subtle bg-background p-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <input
+                                type="checkbox"
+                                checked={rowSelected}
+                                onChange={() => toggleUserSelection(u.id)}
+                                className="h-4 w-4 rounded border-border-subtle bg-background"
+                                aria-label={`Select ${u.full_name || u.username || u.email}`}
+                              />
+                              <UserAvatar user={u} />
+                              <div className="min-w-0">
+                                <h3 className="truncate text-sm font-semibold text-text-primary">{u.full_name || u.username}</h3>
+                                <p className="truncate text-xs text-text-tertiary">{u.email}</p>
+                              </div>
+                            </div>
+                            <StatusIndicator status={derivedStatus} />
+                          </div>
+                          <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                            <div>
+                              <p className="text-text-tertiary">Role</p>
+                              <div className="mt-1"><RoleBadge roleRaw={u.role} /></div>
+                            </div>
+                            <div>
+                              <p className="text-text-tertiary">Last Login</p>
+                              <p className="mt-1 font-medium text-text-secondary">{getRelativeLastLogin(u.last_seen_at)}</p>
+                            </div>
+                          </div>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {pendingApproval ? (
+                              <button
+                                type="button"
+                                onClick={() => handleApproveIfPending(u)}
+                                className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1.5 text-xs font-semibold text-emerald-300"
+                              >
+                                Approve
+                              </button>
+                            ) : null}
+                            <button
+                              type="button"
+                              onClick={() => handleEditUser(u)}
+                              className="rounded-md border border-indigo-500/40 bg-indigo-500/10 px-2.5 py-1.5 text-xs font-semibold text-indigo-300"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleResetPasswordAction(u)}
+                              className="rounded-md border border-sky-500/40 bg-sky-500/10 px-2.5 py-1.5 text-xs font-semibold text-sky-300"
+                            >
+                              Reset
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleSuspendAction(u)}
+                              className="rounded-md border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 text-xs font-semibold text-amber-300"
+                            >
+                              Suspend
+                            </button>
+                            {canDelete ? (
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteUser(u.id, u.email)}
+                                className="rounded-md border border-red-500/40 bg-red-500/10 px-2.5 py-1.5 text-xs font-semibold text-red-300"
+                              >
+                                Delete
+                              </button>
+                            ) : null}
+                          </div>
+                        </article>
+                      )
+                    })}
+                  </div>
                 </div>
               ) : (
                 <p className="text-center text-text-secondary py-12 italic text-sm">No users found</p>
               )}
               <div className="flex items-center justify-between px-5 py-3 border-t border-border-subtle">
-                <p className="text-xs text-text-tertiary">Showing {filteredUsers.length} of {users.length} users</p>
+                <p className="text-xs text-text-tertiary">Showing {totalVisibleUsers} of {users.length} users</p>
                 <div className="flex gap-2">
                   <button className="px-3 py-1.5 text-xs font-medium text-text-secondary bg-background border border-border-subtle rounded-lg hover:bg-surface-hover transition-colors">Previous</button>
                   <button className="px-3 py-1.5 text-xs font-medium text-text-secondary bg-background border border-border-subtle rounded-lg hover:bg-surface-hover transition-colors">Next</button>
@@ -1162,6 +1686,8 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
           <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in">
             <TripManagement />
           </div>
+        ) : activeSection === 'audit-log' ? (
+          <AuditLogViewer />
         ) : null}
 
         {editingUser && (

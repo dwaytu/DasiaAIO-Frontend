@@ -1,22 +1,36 @@
 import { FC, useEffect, useMemo, useState } from 'react'
+import { Activity, ShieldAlert, Siren, TimerReset } from 'lucide-react'
 import SectionPanel from './SectionPanel'
-import OpsMetricCard from './OpsMetricCard'
-import OpsSectionGrid from './OpsSectionGrid'
-import OpsTableWidget from './OpsTableWidget'
 import QuickActionsPanel, { QuickActionItem } from './QuickActionsPanel'
 import OperationalSummaryStrip from './OperationalSummaryStrip'
-import LiveOperationsFeed, { LiveFeedItem } from './LiveOperationsFeed'
-import SystemInfrastructureStatus, { ServiceHealthItem } from './SystemInfrastructureStatus'
-import MissionTimelinePanel, { MissionTimelineItem } from './MissionTimelinePanel'
-import OperationalMapPlaceholder from './OperationalMapPlaceholder'
-import IncidentAlertFeed from './IncidentAlertFeed'
+import OperationalMap from './OperationalMap'
 import GuardDeploymentOverview from './GuardDeploymentOverview'
+import LiveOperationsFeed, { LiveFeedItem } from './LiveOperationsFeed'
+import IncidentAlertFeed from './IncidentAlertFeed'
+import PredictiveAlertsPanel from './PredictiveAlertsPanel'
+import GuardAbsencePredictionPanel from './GuardAbsencePredictionPanel'
+import ReplacementSuggestionPanel from './ReplacementSuggestionPanel'
+import VehicleMaintenancePredictionPanel from './VehicleMaintenancePredictionPanel'
+import IncidentSeverityMonitoringPanel from './IncidentSeverityMonitoringPanel'
+import IncidentSeverityClassifier from './IncidentSeverityClassifier'
+import IncidentSummaryGenerator from './IncidentSummaryGenerator'
+import TodaysShiftOperations from './TodaysShiftOperations'
+import FirearmsStatusPanel from './FirearmsStatusPanel'
+import SystemStatusBanner from './SystemStatusBanner'
 import SentinelLogo from '../SentinelLogo'
+import SectionHeader from './ui/SectionHeader'
+import StatCard from './ui/StatCard'
+import StatusBadge from './ui/StatusBadge'
 import { useOpsSummary } from '../../hooks/useOpsSummary'
 import { getOpsAlerts } from '../../hooks/useOpsAlerts'
 import { useOpsShifts } from '../../hooks/useOpsShifts'
 import { useOpsAssets } from '../../hooks/useOpsAssets'
 import { useServiceHealth } from '../../hooks/useServiceHealth'
+import { useIncidents } from '../../hooks/useIncidents'
+import { usePredictiveAlerts } from '../../hooks/usePredictiveAlerts'
+import { useGuardAbsencePrediction } from '../../hooks/useGuardAbsencePrediction'
+import { useReplacementSuggestions } from '../../hooks/useReplacementSuggestions'
+import { useVehicleMaintenancePrediction } from '../../hooks/useVehicleMaintenancePrediction'
 
 interface CommandCenterDashboardProps {
   quickActions: QuickActionItem[]
@@ -27,8 +41,12 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
   const shiftsState = useOpsShifts()
   const assetsState = useOpsAssets()
   const serviceState = useServiceHealth()
+  const incidentsState = useIncidents()
+  const predictiveAlertsState = usePredictiveAlerts()
+  const guardAbsencePredictionState = useGuardAbsencePrediction()
+  const replacementSuggestionsState = useReplacementSuggestions()
+  const vehicleMaintenancePredictionState = useVehicleMaintenancePrediction()
   const [clock, setClock] = useState(() => new Date())
-  const [storyTicks, setStoryTicks] = useState(0)
 
   const summary = summaryState.summary
   const alerts = useMemo(() => getOpsAlerts(summary), [summary])
@@ -45,17 +63,26 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
       summaryState.refresh()
       shiftsState.refresh()
       assetsState.refresh()
-      setStoryTicks((value) => value + 1)
+      incidentsState.refresh()
+      predictiveAlertsState.refresh()
+      guardAbsencePredictionState.refresh()
+      replacementSuggestionsState.refresh()
+      vehicleMaintenancePredictionState.refresh()
     }, 15000)
 
     return () => window.clearInterval(refresher)
-  }, [summaryState.refresh, shiftsState.refresh, assetsState.refresh])
+  }, [summaryState.refresh, shiftsState.refresh, assetsState.refresh, incidentsState.refresh, predictiveAlertsState.refresh, guardAbsencePredictionState.refresh, replacementSuggestionsState.refresh, vehicleMaintenancePredictionState.refresh])
 
   const systemStatus = alerts.some((alert) => alert.severity === 'critical')
     ? 'Critical'
     : alerts.some((alert) => alert.severity === 'warning')
       ? 'Warning'
       : 'Operational'
+  const systemHealthState = systemStatus.toLowerCase() as 'operational' | 'warning' | 'critical'
+  const activeIncidents = incidentsState.activeCount > 0
+    ? incidentsState.activeCount
+    : alerts.filter((alert) => alert.severity === 'critical' || alert.severity === 'warning').length
+  const guardsCapacity = Math.max(summary.activeGuardsOnDuty + summary.guardsAbsentToday, 1)
   const threatLevel = alerts.length >= 3 || summary.guardsAbsentToday > 0
     ? 'High'
     : alerts.length > 0 || summary.pendingGuardApprovals > 0
@@ -64,157 +91,216 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
   const systemTone = systemStatus === 'Critical' ? 'danger' : systemStatus === 'Warning' ? 'warning' : 'success'
   const threatTone = threatLevel === 'High' ? 'danger' : threatLevel === 'Medium' ? 'warning' : 'info'
 
-  const liveFeed = useMemo<LiveFeedItem[]>(() => {
-    const events: LiveFeedItem[] = []
-    const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  const formatTime = (value: Date | string) =>
+    new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 
-    shiftsState.shifts
-      .filter((shift: any) => shift.status === 'in_progress' || shift.status === 'scheduled')
-      .slice(0, 4)
-      .forEach((shift: any, index: number) => {
-        const guardName = shift.guard_name || shift.guard_username || 'Guard'
-        const site = shift.client_site || 'field post'
-        events.push({
-          id: `shift-${shift.id || index}-${storyTicks}`,
+  const usingMockData =
+    shiftsState.shifts.length === 0 &&
+    incidentsState.incidents.length === 0 &&
+    assetsState.vehicles.length === 0
+
+  const mockShifts = useMemo(
+    () => [
+      { id: 'mock-shift-1', guard_name: 'R. Dela Cruz', client_site: 'North Gate', status: 'in_progress', start_time: new Date().toISOString() },
+      { id: 'mock-shift-2', guard_name: 'M. Santos', client_site: 'Operations Lobby', status: 'scheduled', start_time: new Date().toISOString() },
+      { id: 'mock-shift-3', guard_name: 'A. Villanueva', client_site: 'Vault Corridor', status: 'scheduled', start_time: new Date().toISOString() },
+    ],
+    [],
+  )
+
+  const mockIncidents = useMemo(
+    () => [
+      {
+        id: 'mock-incident-1',
+        title: 'Unauthorized perimeter movement',
+        description: 'Motion sensors detected repeated movement near perimeter sector C.',
+        location: 'Sector C Fence Line',
+        reported_by: 'system',
+        status: 'investigating' as const,
+        priority: 'high' as const,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      {
+        id: 'mock-incident-2',
+        title: 'Control room camera signal drop',
+        description: 'Camera feed CCT-12 dropped for 90 seconds and recovered.',
+        location: 'Control Room',
+        reported_by: 'system',
+        status: 'open' as const,
+        priority: 'medium' as const,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+    ],
+    [],
+  )
+
+  const displayShifts = shiftsState.shifts.length > 0 ? shiftsState.shifts : usingMockData ? mockShifts : []
+  const displayIncidents = incidentsState.incidents.length > 0 ? incidentsState.incidents : usingMockData ? mockIncidents : []
+
+  const displayGuardPredictions = guardAbsencePredictionState.predictions.length > 0
+    ? guardAbsencePredictionState.predictions
+    : usingMockData
+      ? [{
+          guardId: 'mock-guard-1',
+          guardName: 'R. Dela Cruz',
+          riskScore: 0.42,
+          riskLevel: 'MEDIUM' as const,
+          previousAbsences: 1,
+          lateCheckins: 2,
+          recentLeaveRequests: 0,
+          formula: 'AbsenceRisk = (1*0.5)+(2*0.3)+(0*0.2)',
+          calculatedAt: new Date().toISOString(),
+        }]
+      : []
+
+  const displayReplacementSuggestions = replacementSuggestionsState.suggestions.length > 0
+    ? replacementSuggestionsState.suggestions
+    : usingMockData
+      ? [{
+          guardId: 'mock-repl-1',
+          guardName: 'M. Santos',
+          reliabilityScore: 93.4,
+          distanceKm: 1.7,
+          availability: true,
+          permitValid: true,
+          distanceScore: 88.1,
+          replacementScore: 91.2,
+          formula: 'ReplacementScore = (reliability*0.4)+(availability*0.3)+(distance*0.3)',
+          generatedAt: new Date().toISOString(),
+        }]
+      : []
+
+  const displayVehiclePredictions = vehicleMaintenancePredictionState.predictions.length > 0
+    ? vehicleMaintenancePredictionState.predictions
+    : usingMockData
+      ? [{
+          vehicleId: 'mock-vehicle-1',
+          licensePlate: 'SOC-2147',
+          riskScore: 0.68,
+          riskLevel: 'HIGH' as const,
+          mileageSinceService: 9620,
+          daysSinceService: 73,
+          maintenanceHistoryCount: 4,
+          recommendedAction: 'Schedule preventive maintenance within 24 hours before next mission.',
+          formula: 'MaintenanceRisk = (mileage*0.5)+(days*0.5)',
+          calculatedAt: new Date().toISOString(),
+        }]
+      : []
+
+  const liveOperationsItems = useMemo<LiveFeedItem[]>(() => {
+    const items: LiveFeedItem[] = []
+
+    displayShifts.slice(0, 4).forEach((shift: any, index: number) => {
+      const guardName = shift.guard_name || shift.guard_username || 'Guard'
+      const site = shift.client_site || 'assigned post'
+      const status = (shift.status || '').toLowerCase()
+
+      if (status === 'in_progress') {
+        items.push({
+          id: `shift-in-${shift.id || index}`,
           category: 'guard',
-          timestamp: currentTime,
-          description: `${guardName} ${shift.status === 'in_progress' ? 'started shift' : 'scheduled deployment'} at ${site}`,
+          timestamp: formatTime(shift.updated_at || clock),
+          description: `${guardName} is currently deployed at ${site}.`,
         })
-      })
+      } else if (status === 'scheduled') {
+        items.push({
+          id: `shift-sch-${shift.id || index}`,
+          category: 'guard',
+          timestamp: formatTime(shift.start_time || clock),
+          description: `${guardName} scheduled for ${site}.`,
+        })
+      }
+    })
 
-    assetsState.vehicles.slice(0, 2).forEach((vehicle: any, index: number) => {
-      const plate = vehicle.license_plate || vehicle.id || `V${index + 1}`
-      const destination = vehicle.model || 'assigned route'
-      events.push({
-        id: `vehicle-${vehicle.id || index}-${storyTicks}`,
-        category: 'vehicle',
-        timestamp: currentTime,
-        description: `Vehicle ${plate} dispatched for ${destination}`,
+    assetsState.vehicles.slice(0, 3).forEach((vehicle: any, index: number) => {
+      const status = (vehicle.status || '').toLowerCase()
+      const plate = vehicle.license_plate || vehicle.id || `Fleet-${index + 1}`
+      if (status === 'dispatched' || status === 'on_mission' || status === 'active') {
+        items.push({
+          id: `veh-active-${vehicle.id || index}`,
+          category: 'vehicle',
+          timestamp: formatTime(clock),
+          description: `Armored vehicle ${plate} is active in field operations.`,
+        })
+      }
+    })
+
+    displayIncidents.slice(0, 4).forEach((incident) => {
+      items.push({
+        id: `incident-${incident.id}`,
+        category: incident.status === 'resolved' ? 'system' : 'mission',
+        timestamp: formatTime(incident.created_at),
+        description: `${incident.title} reported at ${incident.location}.`,
       })
     })
 
-    if (summary.firearmsCurrentlyIssued > 0) {
-      events.push({
-        id: `equipment-${summary.firearmsCurrentlyIssued}-${storyTicks}`,
-        category: 'equipment',
-        timestamp: currentTime,
-        description: `${summary.firearmsCurrentlyIssued} firearm allocations currently active`,
-      })
-    }
-
-    events.push({
-      id: `mission-active-${summary.activeArmoredCarTrips}-${storyTicks}`,
-      category: 'mission',
-      timestamp: currentTime,
-      description: summary.activeArmoredCarTrips > 0
-        ? `Active mission tracking ${summary.activeArmoredCarTrips} armored trip unit(s)`
-        : 'No active mission movement detected',
+    assetsState.firearms.slice(0, 2).forEach((firearm: any, index: number) => {
+      if ((firearm.status || '').toLowerCase() === 'issued') {
+        items.push({
+          id: `firearm-issued-${firearm.id || index}`,
+          category: 'equipment',
+          timestamp: formatTime(clock),
+          description: `Firearm ${firearm.serial_number || firearm.id || 'asset'} is currently issued.`,
+        })
+      }
     })
 
-    if (summary.pendingGuardApprovals > 0 || summary.overdueFirearmReturns > 0) {
-      events.push({
-        id: `system-alert-${summary.pendingGuardApprovals}-${summary.overdueFirearmReturns}-${storyTicks}`,
-        category: 'system',
-        timestamp: currentTime,
-        description: `System alert: ${summary.pendingGuardApprovals} pending approvals, ${summary.overdueFirearmReturns} overdue returns`,
-      })
-    }
+    return items.slice(0, 12)
+  }, [assetsState.firearms, assetsState.vehicles, clock, displayIncidents, displayShifts])
 
-    return events.slice(0, 10)
-  }, [shiftsState.shifts, assetsState.vehicles, summary.firearmsCurrentlyIssued, summary.activeArmoredCarTrips, summary.pendingGuardApprovals, summary.overdueFirearmReturns, storyTicks])
+  const incidentAlerts = useMemo(() => {
+    const incidentDriven = displayIncidents
+      .filter((incident) => incident.status !== 'resolved')
+      .slice(0, 4)
+      .map((incident) => ({
+        id: `incident-alert-${incident.id}`,
+        severity: (incident.priority === 'critical'
+          ? 'critical'
+          : incident.priority === 'high'
+            ? 'warning'
+            : 'info') as 'critical' | 'warning' | 'info',
+        title: incident.title,
+        detail: `${incident.location} • ${incident.status.toUpperCase()}`,
+      }))
 
-  const serviceHealth = useMemo<ServiceHealthItem[]>(() => {
-    return [
-      {
-        name: 'Database',
-        status: serviceState.services.database,
-        detail: serviceState.services.database === 'online' ? 'Database endpoint reachable' : 'Database endpoint unreachable',
-      },
-      {
-        name: 'API Gateway',
-        status: serviceState.services.apiGateway,
-        detail: serviceState.services.apiGateway === 'online' ? 'Gateway responding to probes' : 'Gateway not responding',
-      },
-      {
-        name: 'Monitoring Nodes',
-        status: serviceState.services.monitoringNodes,
-        detail: serviceState.services.monitoringNodes === 'online' ? 'Shift telemetry route reachable' : 'Shift telemetry route unreachable',
-      },
-      {
-        name: 'Vehicle Telemetry',
-        status: serviceState.services.vehicleTelemetry,
-        detail: serviceState.services.vehicleTelemetry === 'online' ? 'Vehicle endpoint responding' : 'Vehicle endpoint unavailable',
-      },
-      {
-        name: 'Authentication Service',
-        status: serviceState.services.authenticationService,
-        detail: serviceState.services.authenticationService === 'online' ? 'Auth-protected route reachable' : 'Auth route unavailable',
-      },
-    ]
-  }, [serviceState.services])
-
-  const missionTimeline = useMemo<MissionTimelineItem[]>(() => {
-    const timeline: MissionTimelineItem[] = [
-      {
-        id: `mission-start-${storyTicks}`,
-        title: 'Mission cycle started',
-        detail: summary.activeArmoredCarTrips > 0
-          ? `${summary.activeArmoredCarTrips} active trip unit(s) currently in the field.`
-          : 'Mission unit is in standby preparation.',
-        time: clock.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-        state: summary.activeArmoredCarTrips > 0 ? 'active' : 'queued',
-      },
-      {
-        id: `guard-stage-${summary.activeGuardsOnDuty}`,
-        title: 'Guard deployment checkpoint',
-        detail: `${summary.activeGuardsOnDuty} guards on-duty. ${summary.guardsAbsentToday} marked absent/no-show.`,
-        time: staleNote,
-        state: summary.guardsAbsentToday > 0 ? 'active' : 'completed',
-      },
-      {
-        id: `equipment-stage-${summary.firearmsCurrentlyIssued}`,
-        title: 'Equipment allocation sync',
-        detail: `${summary.firearmsCurrentlyIssued} issued firearm(s) and ${summary.overdueFirearmReturns} overdue return(s).`,
-        time: staleNote,
-        state: summary.overdueFirearmReturns > 0 ? 'active' : 'completed',
-      },
-      {
-        id: `mission-end-${summary.pendingGuardApprovals}`,
-        title: 'Mission cycle completed',
-        detail: summary.pendingGuardApprovals > 0
-          ? `${summary.pendingGuardApprovals} pending guard approval task(s) queued post-mission.`
-          : 'No pending approval tasks after completion cycle.',
-        time: clock.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        state: summary.pendingGuardApprovals > 0 ? 'queued' : 'completed',
-      },
-    ]
-
-    return timeline
-  }, [storyTicks, summary.activeArmoredCarTrips, summary.activeGuardsOnDuty, summary.guardsAbsentToday, summary.firearmsCurrentlyIssued, summary.overdueFirearmReturns, summary.pendingGuardApprovals, staleNote, clock])
-
-  const shiftRows = shiftsState.shifts.slice(0, 8).map((shift: any) => [
-    shift.guard_name || shift.guard_username || 'Unknown guard',
-    shift.client_site || 'Unknown site',
-    shift.status || 'scheduled',
-  ])
-
-  const firearmRows = assetsState.firearms.slice(0, 8).map((firearm: any) => [
-    firearm.serial_number || firearm.id || 'N/A',
-    firearm.model || 'Unknown model',
-    firearm.status || 'unknown',
-  ])
-
-  const vehicleRows = assetsState.vehicles.slice(0, 8).map((vehicle: any) => [
-    vehicle.license_plate || vehicle.id || 'N/A',
-    vehicle.model || 'Unknown model',
-    vehicle.status || 'unknown',
-  ])
+    return [...incidentDriven, ...alerts].slice(0, 6)
+  }, [alerts, displayIncidents])
 
   return (
-    <div className="space-y-6">
+    <main className="space-y-6" aria-label="Security operations command center overview">
+      <section className="soc-surface p-4 md:p-5" aria-labelledby="command-center-title">
+        <SectionHeader
+          title="Security Operations Command Center"
+          subtitle="Unified tactical view for incidents, deployments, and predictive risk activity."
+          actions={
+            <div className="flex items-center gap-2">
+              <StatusBadge label={`System ${systemStatus}`} tone={systemTone === 'danger' ? 'danger' : systemTone === 'warning' ? 'warning' : 'success'} />
+              <StatusBadge label={`Threat ${threatLevel}`} tone={threatTone === 'danger' ? 'danger' : threatTone === 'warning' ? 'warning' : 'analytics'} />
+            </div>
+          }
+        />
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <StatCard label="System" value={systemStatus} tone="analytics" hint={staleNote} />
+          <StatCard label="Threat" value={threatLevel} tone={threatLevel === 'High' ? 'maintenance' : threatLevel === 'Medium' ? 'vehicle' : 'guard'} hint={staleNote} />
+          <StatCard label="Incidents" value={activeIncidents} tone="mission" hint="Open or active incident threads" />
+          <StatCard label="Clock" value={clock.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} tone="default" hint="Command time" />
+        </div>
+      </section>
+
+      <SystemStatusBanner
+        status={systemHealthState}
+        guardsActive={summary.activeGuardsOnDuty}
+        guardsCapacity={guardsCapacity}
+        activeIncidents={activeIncidents}
+        firearmsCheckedOut={summary.firearmsCurrentlyIssued}
+        vehiclesDeployed={summary.activeArmoredCarTrips}
+      />
+
       <SectionPanel
-        title="Security Operations Command Center"
-        subtitle="Real-time situational overview for daily security operations"
+        title="System Status"
+        subtitle="Operational Summary, quick action controls, and current command posture"
         icon={<SentinelLogo size={22} variant="IconOnly" className="shrink-0" animated />}
         actions={<QuickActionsPanel actions={quickActions} />}
         collapsible
@@ -231,60 +317,104 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
         />
       </SectionPanel>
 
-      <section className="grid grid-cols-1 gap-6 2xl:grid-cols-12">
-        <div className="space-y-6 2xl:col-span-4">
-          <LiveOperationsFeed items={liveFeed} />
-          <MissionTimelinePanel items={missionTimeline} />
-          <SystemInfrastructureStatus services={serviceHealth} />
-          <IncidentAlertFeed alerts={alerts} nowLabel={clock.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })} />
+      <SectionPanel
+        title="Tactical View"
+        subtitle="Live geospatial operations map and guard deployment grid"
+        icon={<Activity className="h-4 w-4" aria-hidden="true" />}
+      >
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+          <OperationalMap activeTrips={summary.activeArmoredCarTrips} activeGuards={summary.activeGuardsOnDuty} />
+          <GuardDeploymentOverview shifts={displayShifts} />
         </div>
+      </SectionPanel>
 
-        <div className="space-y-6 2xl:col-span-8">
-          <OperationalMapPlaceholder activeTrips={summary.activeArmoredCarTrips} activeGuards={summary.activeGuardsOnDuty} />
-
-          <GuardDeploymentOverview shifts={shiftsState.shifts} />
-
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <OpsMetricCard label="Pending Guard Approvals" value={summary.pendingGuardApprovals} severity={summary.pendingGuardApprovals > 0 ? 'warning' : 'normal'} updatedAt={staleNote} />
-            <OpsMetricCard label="Firearms Issued" value={summary.firearmsCurrentlyIssued} severity="info" updatedAt={staleNote} />
-            <OpsMetricCard label="Overdue Returns" value={summary.overdueFirearmReturns} severity={summary.overdueFirearmReturns > 0 ? 'critical' : 'normal'} updatedAt={staleNote} />
-            <OpsMetricCard label="Vehicles Maintenance" value={summary.vehiclesInMaintenance} severity={summary.vehiclesInMaintenance > 0 ? 'warning' : 'normal'} updatedAt={staleNote} />
-          </div>
-
-          <OpsTableWidget
-            title="Operations: Today's Shifts"
-            subtitle={shiftsState.loading ? 'Loading shift activity...' : staleNote}
-            headers={['Guard', 'Site', 'Status']}
-            rows={shiftRows}
-            emptyMessage="No shifts found."
+      <SectionPanel
+        title="Live Operations"
+        subtitle="Streaming feed, incident escalation, and AI-assisted incident triage"
+        icon={<Siren className="h-4 w-4" aria-hidden="true" />}
+      >
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+          <LiveOperationsFeed items={liveOperationsItems} />
+          <IncidentAlertFeed
+            alerts={incidentAlerts}
+            nowLabel={clock.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
           />
         </div>
-      </section>
+        <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-4">
+          <IncidentSeverityMonitoringPanel
+            incidents={displayIncidents}
+            loading={incidentsState.loading}
+            error={incidentsState.error}
+            lastUpdated={incidentsState.lastUpdated || staleNote}
+          />
+          <PredictiveAlertsPanel
+            alerts={predictiveAlertsState.alerts}
+            loading={predictiveAlertsState.loading}
+            error={predictiveAlertsState.error}
+            lastUpdated={predictiveAlertsState.lastUpdated || staleNote}
+            title="AI Operational Insights"
+            subtitle="Model-driven alerts and emerging risk vectors"
+          />
+          <IncidentSeverityClassifier incidents={displayIncidents} />
+          <IncidentSummaryGenerator incidents={displayIncidents} />
+        </div>
+      </SectionPanel>
 
-      <OpsSectionGrid>
-        <OpsTableWidget
-          title="Assets: Firearm Status"
-          subtitle={assetsState.loading ? 'Loading firearm inventory...' : staleNote}
-          headers={['Serial', 'Model', 'Status']}
-          rows={firearmRows}
-          emptyMessage="No firearms found."
-        />
+      <SectionPanel
+        title="Operations Management"
+        subtitle="Shift execution and staffing resilience with predictive staffing support"
+        icon={<TimerReset className="h-4 w-4" aria-hidden="true" />}
+      >
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+          <TodaysShiftOperations
+            shifts={displayShifts}
+            loading={shiftsState.loading}
+            error={shiftsState.error}
+            lastUpdated={shiftsState.lastUpdated || staleNote}
+          />
+          <GuardAbsencePredictionPanel
+            predictions={displayGuardPredictions}
+            loading={guardAbsencePredictionState.loading}
+            error={guardAbsencePredictionState.error}
+            lastUpdated={guardAbsencePredictionState.lastUpdated || staleNote}
+          />
+          <ReplacementSuggestionPanel
+            postName={replacementSuggestionsState.postName}
+            suggestions={displayReplacementSuggestions}
+            loading={replacementSuggestionsState.loading}
+            error={replacementSuggestionsState.error}
+            lastUpdated={replacementSuggestionsState.lastUpdated || staleNote}
+          />
+        </div>
+      </SectionPanel>
 
-        <OpsTableWidget
-          title="Assets: Vehicle Fleet Status"
-          subtitle={assetsState.loading ? 'Loading vehicle fleet...' : staleNote}
-          headers={['Plate', 'Model', 'Status']}
-          rows={vehicleRows}
-          emptyMessage="No vehicles found."
-        />
-      </OpsSectionGrid>
+      <SectionPanel
+        title="Asset Monitoring"
+        subtitle="Maintenance outlook and firearm readiness across active operations"
+        icon={<ShieldAlert className="h-4 w-4" aria-hidden="true" />}
+      >
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+          <VehicleMaintenancePredictionPanel
+            predictions={displayVehiclePredictions}
+            loading={vehicleMaintenancePredictionState.loading}
+            error={vehicleMaintenancePredictionState.error}
+            lastUpdated={vehicleMaintenancePredictionState.lastUpdated || staleNote}
+          />
+          <FirearmsStatusPanel
+            firearms={assetsState.firearms}
+            loading={assetsState.loading}
+            error={assetsState.error}
+            lastUpdated={assetsState.lastUpdated || staleNote}
+          />
+        </div>
+      </SectionPanel>
 
       {(summaryState.error || shiftsState.error || assetsState.error) && (
         <div className="rounded-lg border border-amber-400/40 bg-amber-500/10 p-3 text-sm text-amber-100">
           Command center loaded with partial data. Last service check: {serviceState.services.lastChecked}.
         </div>
       )}
-    </div>
+    </main>
   )
 }
 

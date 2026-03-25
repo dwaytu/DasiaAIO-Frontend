@@ -3,6 +3,8 @@ import { API_BASE_URL } from '../config'
 import Sidebar from './Sidebar'
 import Header from './Header'
 import { User as AppUser } from '../App'
+import { getSidebarNav } from '../config/navigation'
+import { logError } from '../utils/logger'
 
 interface Props {
   user: AppUser
@@ -25,22 +27,7 @@ const PerformanceDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeV
   const [loading, setLoading] = useState<boolean>(true)
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false)
   const currentView = activeView || 'performance'
-  const navItems = [
-    { view: 'dashboard', label: 'Dashboard', group: 'MAIN MENU' },
-    { view: 'approvals', label: 'Approvals', group: 'MAIN MENU' },
-    { view: 'calendar', label: 'Calendar', group: 'MAIN MENU' },
-    { view: 'analytics', label: 'Analytics', group: 'MAIN MENU' },
-    { view: 'trips', label: 'Trip Management', group: 'OPERATIONS' },
-    { view: 'schedule', label: 'Schedule', group: 'OPERATIONS' },
-    { view: 'missions', label: 'Missions', group: 'OPERATIONS' },
-    { view: 'performance', label: 'Performance', group: 'OPERATIONS' },
-    { view: 'merit', label: 'Merit Scores', group: 'OPERATIONS' },
-    { view: 'firearms', label: 'Firearms', group: 'RESOURCES' },
-    { view: 'allocation', label: 'Allocation', group: 'RESOURCES' },
-    { view: 'permits', label: 'Permits', group: 'RESOURCES' },
-    { view: 'maintenance', label: 'Maintenance', group: 'RESOURCES' },
-    { view: 'armored-cars', label: 'Armored Cars', group: 'RESOURCES' },
-  ]
+  const navItems = getSidebarNav(user.role)
 
   useEffect(() => {
     fetchPerformance()
@@ -68,7 +55,7 @@ const PerformanceDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeV
         setPerformance(perf)
       }
     } catch (err) {
-      console.error('Error fetching performance:', err)
+      logError('Error fetching performance:', err)
     } finally {
       setLoading(false)
     }
@@ -79,6 +66,12 @@ const PerformanceDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeV
       onViewChange(view)
     }
   }
+
+  const averageAttendance = performance.length > 0
+    ? Math.round(performance.reduce((sum, row) => sum + row.attendanceRate, 0) / performance.length)
+    : 0
+  const totalAllocations = performance.reduce((sum, row) => sum + row.allocationsCompleted, 0)
+  const totalMaintenance = performance.reduce((sum, row) => sum + row.maintenanceCompleted, 0)
 
   return (
     <div className="flex h-screen w-screen bg-background font-sans">
@@ -104,6 +97,16 @@ const PerformanceDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeV
           </div>
         ) : (
           <div className="flex-1 flex flex-col p-4 md:p-8 overflow-hidden w-full animate-fade-in">
+            <section className="soc-surface mb-4 p-4 md:p-5">
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-text-tertiary">Performance Operations</p>
+              <h2 className="text-2xl font-black uppercase tracking-wide text-text-primary">Guard Reliability Overview</h2>
+              <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
+                <div className="soc-kpi"><p className="soc-kpi-label">Avg Attendance</p><p className="soc-kpi-value">{averageAttendance}%</p></div>
+                <div className="soc-kpi"><p className="soc-kpi-label">Allocations Closed</p><p className="soc-kpi-value">{totalAllocations}</p></div>
+                <div className="soc-kpi"><p className="soc-kpi-label">Maintenance Tasks</p><p className="soc-kpi-value">{totalMaintenance}</p></div>
+              </div>
+            </section>
+
             <section className="flex flex-col flex-1 min-h-0 rounded-2xl overflow-hidden table-glass">
               <div className="flex-shrink-0 px-6 py-5 border-b border-border-subtle bg-gradient-to-r from-[color:var(--color-surface)] to-[color:var(--color-surface-elevated)]">
                 <h2 className="text-xl font-bold text-text-primary">Guard Performance</h2>

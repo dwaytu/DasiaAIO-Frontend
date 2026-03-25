@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { User } from '../App'
 import { API_BASE_URL } from '../config'
 import { fetchJsonOrThrow, parseResponseBody } from '../utils/api'
+import { logError } from '../utils/logger'
 import Sidebar from './Sidebar'
 import Header from './Header'
 
@@ -174,7 +175,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
       )
       setAllocations(data)
     } catch (err) {
-      console.error('Failed to fetch allocations:', err)
+      logError('Failed to fetch allocations:', err)
     }
   }
 
@@ -192,7 +193,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
         }
       }
     } catch (err) {
-      console.error('Failed to fetch maintenance:', err)
+      logError('Failed to fetch maintenance:', err)
     }
   }
 
@@ -224,7 +225,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
       )
       setTrips(data)
     } catch (err) {
-      console.error('Failed to fetch trips:', err)
+      logError('Failed to fetch trips:', err)
     }
   }
 
@@ -340,15 +341,20 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
 
   return (
     <div className="flex h-screen w-screen bg-background font-sans">
+      <a href="#maincontent" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[70] focus:rounded-md focus:bg-background focus:px-3 focus:py-2 focus:text-text-primary focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-[var(--color-focus-ring)]">
+        Skip to main content
+      </a>
       <Sidebar
         items={navItems}
         activeView={currentView}
-        onNavigate={onViewChange}        onLogoClick={() => onViewChange?.('dashboard')}        onLogout={onLogout}
+        onNavigate={onViewChange}
+        onLogoClick={() => onViewChange?.('dashboard')}
+        onLogout={onLogout}
         isOpen={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}
       />
 
-      <main className="flex-1 flex flex-col overflow-hidden w-full">
+      <main id="maincontent" tabIndex={-1} className="flex-1 flex flex-col overflow-hidden w-full">
         <Header title="Armored Car Management" badgeLabel="Armored Cars" onLogout={onLogout} onMenuClick={() => setMobileMenuOpen(true)} user={user} onNavigateToProfile={() => onViewChange('profile')} />
 
         {error && (
@@ -375,39 +381,45 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
         )}
 
         <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in">
+          <section className="soc-surface mb-6 p-4 md:p-5">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-text-tertiary">Fleet Command</p>
+            <h1 className="text-2xl font-black uppercase tracking-wide text-text-primary">Armored Fleet Operations</h1>
+            <p className="mt-1 text-sm text-text-secondary">Manage inventory, active allocations, maintenance scheduling, and convoy trip visibility.</p>
+          </section>
+
           {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-4 mb-8">
-            <div className="bento-card status-bar-info">
-              <div className="text-text-secondary text-sm font-semibold uppercase tracking-wider mb-2">Total Vehicles</div>
-              <p className="text-4xl font-bold text-indigo-600">{cars.length}</p>
+            <div className="soc-kpi status-bar-info">
+              <div className="soc-kpi-label">Total Vehicles</div>
+              <p className="soc-kpi-value">{cars.length}</p>
             </div>
-            <div className="bento-card status-bar-success">
-              <div className="text-text-secondary text-sm font-semibold uppercase tracking-wider mb-2">Available</div>
-              <p className="text-4xl font-bold text-green-600">{availableCars}</p>
+            <div className="soc-kpi status-bar-success">
+              <div className="soc-kpi-label">Available</div>
+              <p className="soc-kpi-value">{availableCars}</p>
             </div>
-            <div className="bento-card status-bar-warning">
-              <div className="text-text-secondary text-sm font-semibold uppercase tracking-wider mb-2">Allocated</div>
-              <p className="text-4xl font-bold text-amber-600">{allocatedCars}</p>
+            <div className="soc-kpi status-bar-warning">
+              <div className="soc-kpi-label">Allocated</div>
+              <p className="soc-kpi-value">{allocatedCars}</p>
             </div>
-            <div className="bento-card status-bar-critical">
-              <div className="text-text-secondary text-sm font-semibold uppercase tracking-wider mb-2">In Maintenance</div>
-              <p className="text-4xl font-bold text-red-600">{maintenanceCars}</p>
+            <div className="soc-kpi status-bar-critical">
+              <div className="soc-kpi-label">In Maintenance</div>
+              <p className="soc-kpi-value">{maintenanceCars}</p>
             </div>
-            <div className="bento-card status-bar-info">
-              <div className="text-text-secondary text-sm font-semibold uppercase tracking-wider mb-2">Active Trips</div>
-              <p className="text-4xl font-bold text-blue-600">{activeTrips}</p>
+            <div className="soc-kpi status-bar-info">
+              <div className="soc-kpi-label">Active Trips</div>
+              <p className="soc-kpi-value">{activeTrips}</p>
             </div>
           </div>
 
           {/* Tabs */}
-          <div className="flex gap-2 mb-6 border-b border-border bg-surface rounded-t-lg">
+          <div className="mb-6 flex flex-wrap gap-2 rounded-lg border border-border-subtle bg-surface p-2">
             {['inventory', 'allocation', 'maintenance', 'trips'].map((tab) => (
               <button
                 key={tab}
-                className={`px-6 py-3 font-semibold text-base whitespace-nowrap transition-all duration-300 ${
+                className={`rounded-md px-4 py-2 text-sm font-semibold uppercase tracking-wide whitespace-nowrap transition-all duration-300 ${
                   activeTab === tab
-                    ? 'text-indigo-600 border-b-2 border-indigo-600 -mb-px'
-                    : 'text-text-secondary hover:text-text-primary'
+                    ? 'bg-[color:var(--color-info-bg)] text-[color:var(--color-info-text)] border border-[color:var(--color-info-border)]'
+                    : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover'
                 }`}
                 onClick={() => setActiveTab(tab)}
               >
@@ -421,7 +433,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
 
           {/* Inventory Tab */}
           {activeTab === 'inventory' && (
-            <div className="grid grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8">
               {/* Add New Vehicle Form */}
               <div className="command-panel p-6">
                 <h2 className="text-lg md:text-xl font-bold text-text-primary mb-4 md:mb-6 pb-3 border-b border-border">Add New Armored Vehicle</h2>

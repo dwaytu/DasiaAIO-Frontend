@@ -1,5 +1,6 @@
 import { useState, useEffect, FC } from 'react'
 import { API_BASE_URL } from '../config'
+import { logError } from '../utils/logger'
 import Sidebar from './Sidebar'
 import Header from './Header'
 
@@ -59,7 +60,7 @@ const FirearmMaintenance: FC<Props> = ({ user, onLogout, onViewChange, activeVie
         setMaintenances(data.maintenances || [])
       }
     } catch (err) {
-      console.error('Error fetching maintenance records:', err)
+      logError('Error fetching maintenance records:', err)
     } finally {
       setLoading(false)
     }

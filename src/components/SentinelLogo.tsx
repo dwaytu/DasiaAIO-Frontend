@@ -57,31 +57,32 @@ const ReticleEyeIcon: FC<{ size: number; className?: string; animated?: boolean 
 
       {animated && (
         <>
-          <circle cx="50" cy="50" r="12" stroke="var(--logo-beam-start)" strokeWidth="1.5" fill="none" opacity="0.42">
-            <animate attributeName="r" values="12;27" dur="3.2s" repeatCount="indefinite" />
-            <animate attributeName="opacity" values="0.42;0" dur="3.2s" repeatCount="indefinite" />
-          </circle>
-          <circle cx="50" cy="50" r="18" stroke="var(--logo-beam-end)" strokeWidth="1.25" fill="none" opacity="0.36">
-            <animate attributeName="r" values="18;32" dur="3.2s" begin="1.1s" repeatCount="indefinite" />
-            <animate attributeName="opacity" values="0.36;0" dur="3.2s" begin="1.1s" repeatCount="indefinite" />
-          </circle>
+          <circle
+            cx="50"
+            cy="50"
+            r="12"
+            stroke="var(--logo-beam-start)"
+            strokeWidth="1.5"
+            fill="none"
+            opacity="0.42"
+            className="sentinel-scan-ring sentinel-scan-ring-1"
+          />
+          <circle
+            cx="50"
+            cy="50"
+            r="18"
+            stroke="var(--logo-beam-end)"
+            strokeWidth="1.25"
+            fill="none"
+            opacity="0.36"
+            className="sentinel-scan-ring sentinel-scan-ring-2"
+          />
 
           <g opacity="0.68" className="dark:opacity-95" filter={`url(#${beamGlowId})`}>
-            <g>
-              <path d="M50 50 L50 18 A32 32 0 0 1 76 32 Z" fill={`url(#${beamId})`} transform="rotate(-12 50 50)" opacity="0.2" />
-              <path d="M50 50 L50 18 A32 32 0 0 1 76 32 Z" fill={`url(#${beamId})`} transform="rotate(-7 50 50)" opacity="0.34" />
-              <path d="M50 50 L50 18 A32 32 0 0 1 76 32 Z" fill={`url(#${beamId})`} opacity="0.84" />
-              <animateTransform
-                attributeName="transform"
-                type="rotate"
-                values="0 50 50;120 50 50;240 50 50;360 50 50"
-                keyTimes="0;0.33;0.66;1"
-                calcMode="spline"
-                keySplines="0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1"
-                dur="3s"
-                repeatCount="indefinite"
-              />
-              <animate attributeName="opacity" values="0.58;0.8;0.64;0.58" dur="3s" repeatCount="indefinite" />
+            <path d="M50 50 L50 18 A32 32 0 0 1 76 32 Z" fill={`url(#${beamId})`} transform="rotate(-18 50 50)" opacity="0.2" />
+            <path d="M50 50 L50 18 A32 32 0 0 1 76 32 Z" fill={`url(#${beamId})`} transform="rotate(-9 50 50)" opacity="0.34" />
+            <g className="sentinel-beam-sweep" style={{ transformOrigin: '50px 50px' }}>
+              <path d="M50 50 L50 18 A32 32 0 0 1 76 32 Z" fill={`url(#${beamId})`} opacity="0.96" />
             </g>
           </g>
         </>
@@ -115,16 +116,27 @@ const ReticleEyeIcon: FC<{ size: number; className?: string; animated?: boolean 
         fill="rgba(255,255,255,0.06)"
       />
 
-      <circle cx="50" cy="50" r="10" fill={`url(#${irisId})`} filter={`url(#${eyeGlowId})`}>
-        {animated && <animate attributeName="opacity" values="0.85;1;0.86" dur="4.2s" repeatCount="indefinite" />}
-      </circle>
+      <circle
+        cx="50"
+        cy="50"
+        r="10"
+        fill={`url(#${irisId})`}
+        filter={`url(#${eyeGlowId})`}
+        className={animated ? 'sentinel-iris-pulse' : ''}
+      />
       <circle cx="50" cy="50" r="4.2" fill="#0f172a" />
       <circle cx="47.2" cy="47.2" r="1.6" fill="#ffffff" />
       {animated && (
-        <circle cx="50" cy="50" r="6" fill="none" stroke="var(--logo-beam-start)" strokeWidth="1.2" opacity="0.45">
-          <animate attributeName="r" values="6;11;6" dur="3.2s" repeatCount="indefinite" />
-          <animate attributeName="opacity" values="0.45;0.1;0.45" dur="3.2s" repeatCount="indefinite" />
-        </circle>
+        <circle
+          cx="50"
+          cy="50"
+          r="6"
+          fill="none"
+          stroke="var(--logo-beam-start)"
+          strokeWidth="1.2"
+          opacity="0.45"
+          className="sentinel-focus-ring-pulse"
+        />
       )}
     </svg>
   )

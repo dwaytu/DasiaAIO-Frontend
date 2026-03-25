@@ -3,6 +3,8 @@ import { API_BASE_URL } from '../config'
 import Sidebar from './Sidebar'
 import Header from './Header'
 import { User as AppUser } from '../App'
+import { getRequiredAccuracyMeters, getTrackingAccuracyMode } from '../utils/trackingPolicy'
+import { logError } from '../utils/logger'
 
 interface UserDashboardProps {
   user: AppUser
@@ -83,6 +85,10 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
   const [elapsedTime, setElapsedTime] = useState<{ [key: string]: string }>({})
   const [checkInTimes, setCheckInTimes] = useState<{ [key: string]: Date }>({})
   const [checkInSubmitting, setCheckInSubmitting] = useState<{ [key: string]: boolean }>({})
+  const [locationTrackingEnabled, setLocationTrackingEnabled] = useState<boolean>(false)
+  const [locationTrackingMessage, setLocationTrackingMessage] = useState<string>('')
+  const [locationPermissionState, setLocationPermissionState] = useState<'unknown' | 'prompt' | 'granted' | 'denied'>('unknown')
+  const [locationAccuracyMeters, setLocationAccuracyMeters] = useState<number | null>(null)
   const navItems = [
     { view: 'overview', label: 'Dashboard', group: 'MAIN MENU' },
     { view: 'calendar', label: 'Calendar', group: 'MAIN MENU' },
@@ -100,6 +106,157 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
     fetchPermits(user.id)
     fetchTickets(user.id)
   }, [user?.id])
+
+  useEffect(() => {
+    const stored = localStorage.getItem('dasi.guardLocationTrackingEnabled')
+    setLocationTrackingEnabled(stored === 'true')
+  }, [])
+
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !('permissions' in navigator)) {
+      return
+    }
+
+    navigator.permissions
+      .query({ name: 'geolocation' as PermissionName })
+      .then((result) => {
+        setLocationPermissionState(result.state as 'prompt' | 'granted' | 'denied')
+        result.onchange = () => {
+          setLocationPermissionState(result.state as 'prompt' | 'granted' | 'denied')
+        }
+      })
+      .catch(() => {
+        setLocationPermissionState('unknown')
+      })
+  }, [])
+
+  useEffect(() => {
+    if (!locationTrackingEnabled) return
+    if (!navigator.geolocation) {
+      setLocationTrackingMessage('Geolocation is not supported on this device/browser.')
+      setLocationTrackingEnabled(false)
+      localStorage.setItem('dasi.guardLocationTrackingEnabled', 'false')
+      return
+    }
+
+    const token = localStorage.getItem('token')
+    if (!token) return
+
+    let lastSent = 0
+    const isMobileClient = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+    const trackingMode = getTrackingAccuracyMode()
+    const REQUIRED_ACCURACY_METERS = getRequiredAccuracyMeters(isMobileClient, trackingMode)
+    const watchId = navigator.geolocation.watchPosition(
+      async (position) => {
+        const now = Date.now()
+        if (now - lastSent < 15000) return
+        lastSent = now
+
+        try {
+          const accuracyMeters = position.coords.accuracy
+          setLocationAccuracyMeters(accuracyMeters)
+
+          if (accuracyMeters > REQUIRED_ACCURACY_METERS) {
+            setLocationTrackingMessage(
+              isMobileClient
+                ? 'Location fix is too broad to plot accurately. Move to an open area and wait for stronger GPS.'
+                : 'Desktop location is often Wi-Fi/IP based and may drift. For reliable tracking, open this dashboard on your phone with GPS enabled.'
+            )
+            return
+          }
+
+          const status = 'active'
+          const response = await fetch(`${API_BASE_URL}/api/tracking/heartbeat`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              entityType: 'guard',
+              entityId: user.id,
+              label: user.fullName || user.full_name || user.username,
+              status,
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+              heading: position.coords.heading,
+              speedKph: position.coords.speed != null ? position.coords.speed * 3.6 : null,
+              accuracyMeters,
+            }),
+          })
+
+          if (!response.ok) {
+            const body = await response.json().catch(() => ({}))
+            setLocationTrackingMessage(body.error || 'Unable to send location heartbeat.')
+          } else {
+            setLocationTrackingMessage('Live location tracking is active.')
+          }
+        } catch {
+          setLocationTrackingMessage('Location heartbeat failed. Check your connection.')
+        }
+      },
+      () => {
+        setLocationPermissionState('denied')
+        setLocationTrackingMessage('Location permission denied. Enable device location permissions to track in real time.')
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 0,
+        timeout: 20000,
+      },
+    )
+
+    return () => {
+      navigator.geolocation.clearWatch(watchId)
+    }
+  }, [locationTrackingEnabled, user.id, user.username, user.fullName, user.full_name])
+
+  const requestLocationPermission = () => {
+    if (!navigator.geolocation) {
+      setLocationTrackingMessage('Geolocation is not supported on this device/browser.')
+      return
+    }
+
+    setLocationTrackingMessage('Requesting location access...')
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLocationPermissionState('granted')
+        setLocationAccuracyMeters(position.coords.accuracy)
+        setLocationTrackingMessage('Location access granted. Live tracking is active.')
+      },
+      () => {
+        setLocationPermissionState('denied')
+        setLocationTrackingMessage('Location access was denied. Please allow location to enable live tracking.')
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 0,
+        timeout: 20000,
+      },
+    )
+  }
+
+  const toggleLocationTracking = () => {
+    const next = !locationTrackingEnabled
+    setLocationTrackingEnabled(next)
+    localStorage.setItem('dasi.guardLocationTrackingEnabled', String(next))
+    if (next) {
+      requestLocationPermission()
+    } else {
+      setLocationTrackingMessage('Live location tracking is turned off.')
+      setLocationAccuracyMeters(null)
+    }
+  }
+
+  const locationAccuracyQuality =
+    locationAccuracyMeters == null
+      ? 'unknown'
+      : locationAccuracyMeters <= 15
+        ? 'high'
+        : locationAccuracyMeters <= 40
+          ? 'medium'
+          : 'low'
 
   // Filter today's shifts
   useEffect(() => {
@@ -148,7 +305,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
         setAttendance(data.attendance || [])
       }
     } catch (err) {
-      console.error('Error fetching attendance:', err)
+      logError('Error fetching attendance:', err)
     } finally {
       setLoading(false)
     }
@@ -165,7 +322,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
         setScheduleItems(data.shifts || [])
       }
     } catch (err) {
-      console.error('Error fetching schedule:', err)
+      logError('Error fetching schedule:', err)
     }
   }
 
@@ -180,7 +337,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
         setFirearmItems(data.allocations || [])
       }
     } catch (err) {
-      console.error('Error fetching firearms:', err)
+      logError('Error fetching firearms:', err)
     }
   }
 
@@ -195,7 +352,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
         setPermitItems(data.permits || [])
       }
     } catch (err) {
-      console.error('Error fetching permits:', err)
+      logError('Error fetching permits:', err)
     }
   }
 
@@ -210,7 +367,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
         setTicketItems(data.tickets || [])
       }
     } catch (err) {
-      console.error('Error fetching tickets:', err)
+      logError('Error fetching tickets:', err)
     }
   }
 
@@ -396,7 +553,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
 
       if (!response.ok) {
         const data = await response.json()
-        console.error('Check-in failed:', data)
+        logError('Check-in failed:', data)
         return
       }
 
@@ -405,7 +562,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
       setCheckInTimes(prev => ({ ...prev, [shift.id]: new Date() }))
       console.log('Check-in successful:', data.attendanceId)
     } catch (err) {
-      console.error('Check-in error:', err)
+      logError('Check-in error:', err)
     } finally {
       setCheckInSubmitting(prev => ({ ...prev, [shift.id]: false }))
     }
@@ -421,7 +578,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
     )
 
     if (!recentAttendance) {
-      console.error('No active check-in found')
+      logError('No active check-in found', 'missing_recent_attendance')
       return
     }
 
@@ -441,7 +598,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
 
       if (!response.ok) {
         const data = await response.json()
-        console.error('Check-out failed:', data)
+        logError('Check-out failed:', data)
         return
       }
 
@@ -464,7 +621,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
 
       console.log('Check-out successful')
     } catch (err) {
-      console.error('Check-out error:', err)
+      logError('Check-out error:', err)
     } finally {
       setCheckInSubmitting(prev => ({ ...prev, [shift.id]: false }))
     }
@@ -596,6 +753,65 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                   )}
                 </div>
               </div>
+              </section>
+            )}
+
+            {activeSection === 'overview' && (
+              <section className="bg-surface rounded-lg shadow-md p-6">
+                <h2 className="text-xl font-bold text-text-primary mb-6 pb-3 border-b border-border">Live Location Tracking</h2>
+                <div className="rounded-lg border border-border-subtle bg-surface-elevated p-4">
+                  <p className="text-sm text-text-secondary">
+                    Use your device location permission for real-time guard tracking. For best accuracy, keep GPS enabled and allow precise location.
+                  </p>
+                  <div className="mt-4 flex flex-wrap items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={toggleLocationTracking}
+                      className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
+                        locationTrackingEnabled
+                          ? 'bg-red-600 text-white hover:bg-red-700'
+                          : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                      }`}
+                    >
+                      {locationTrackingEnabled ? 'Turn Off Live Location' : 'Turn On Live Location'}
+                    </button>
+                    <span
+                      className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
+                        locationTrackingEnabled
+                          ? 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30'
+                          : 'bg-slate-500/15 text-slate-300 ring-1 ring-slate-500/30'
+                      }`}
+                    >
+                      {locationTrackingEnabled ? 'Tracking Enabled' : 'Tracking Disabled'}
+                    </span>
+                    <span
+                      className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
+                        locationPermissionState === 'granted'
+                          ? 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30'
+                          : locationPermissionState === 'denied'
+                            ? 'bg-red-500/15 text-red-300 ring-1 ring-red-500/30'
+                            : 'bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30'
+                      }`}
+                    >
+                      Permission: {locationPermissionState}
+                    </span>
+                  </div>
+                  <div className="mt-3 rounded-md border border-border-subtle bg-background px-3 py-2">
+                    <p className="text-xs font-semibold text-text-secondary">Location Accuracy Meter</p>
+                    <p className="text-sm font-bold text-text-primary">
+                      {locationAccuracyMeters != null ? `${Math.round(locationAccuracyMeters)} m` : 'No fix yet'}
+                    </p>
+                    <p className="text-xs text-text-secondary">
+                      Quality: {locationAccuracyQuality === 'high' ? 'High (GPS-level)' : locationAccuracyQuality === 'medium' ? 'Moderate' : locationAccuracyQuality === 'low' ? 'Low, may drift' : 'Waiting for position'}
+                    </p>
+                    {locationAccuracyQuality === 'low' ? (
+                      <p className="mt-1 text-xs font-semibold text-danger-text" role="status">
+                        Warning: location accuracy is low. Keep precise location enabled for better map precision.
+                      </p>
+                    ) : null}
+                  </div>
+                  {locationTrackingMessage ? <p className="mt-3 text-xs text-text-secondary">{locationTrackingMessage}</p> : null}
+                </div>
               </section>
             )}
 

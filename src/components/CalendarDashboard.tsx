@@ -10,6 +10,7 @@ import SectionHeader from './dashboard/ui/SectionHeader'
 import Timeline from './dashboard/ui/Timeline'
 import StatCard from './dashboard/ui/StatCard'
 import StatusBadge from './dashboard/ui/StatusBadge'
+import LiveFreshnessPill from './dashboard/ui/LiveFreshnessPill'
 import { isElevatedRole } from '../types/auth'
 import { getSidebarNav } from '../config/navigation'
 import { logError } from '../utils/logger'
@@ -83,6 +84,50 @@ const TYPE_LABELS: Record<string, string> = {
   maintenance: 'Maintenance',
 }
 
+type OperationalState = 'scheduled' | 'active' | 'attention' | 'completed'
+
+const EVENT_STATE_META: Record<OperationalState, { label: string; tone: 'success' | 'warning' | 'danger' | 'analytics' }> = {
+  scheduled: { label: 'Scheduled', tone: 'analytics' },
+  active: { label: 'In Progress', tone: 'success' },
+  attention: { label: 'Needs Attention', tone: 'danger' },
+  completed: { label: 'Completed', tone: 'warning' },
+}
+
+const ATTENTION_STATUS_TOKENS = ['absent', 'no_show', 'failed', 'overdue', 'cancelled', 'critical']
+
+function getOperationalState(event: CalendarEvent, todayKey: string): OperationalState {
+  const status = (event.status || '').toLowerCase()
+
+  if (status === 'completed' || status === 'resolved') return 'completed'
+  if (status === 'in_progress' || status === 'active' || status === 'ongoing') return 'active'
+
+  const isOverdue = event.date < todayKey && status !== 'completed' && status !== 'resolved'
+  if (isOverdue || ATTENTION_STATUS_TOKENS.some((token) => status.includes(token))) {
+    return 'attention'
+  }
+
+  return 'scheduled'
+}
+
+function getEventAction(event: CalendarEvent, state: OperationalState): string {
+  if (state === 'attention') {
+    if (event.type === 'maintenance') return 'Escalate to maintenance supervisor and block assignment until cleared.'
+    if (event.type === 'shift') return 'Confirm guard replacement and notify the command desk.'
+    if (event.type === 'trip') return 'Verify vehicle condition and route clearance before dispatch.'
+    return 'Review mission constraints and issue an operator update.'
+  }
+
+  if (state === 'active') {
+    return 'Continue live monitoring and keep comms channel open for updates.'
+  }
+
+  if (state === 'completed') {
+    return 'Archive event outcome and prepare follow-up notes if needed.'
+  }
+
+  return 'Keep staffing, assets, and timing confirmed before start.'
+}
+
 function isoToDateKey(iso: string): string {
   return iso.slice(0, 10)
 }
@@ -129,6 +174,8 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
   const [filterType, setFilterType] = useState<string>('all')
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false)
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState<boolean>(false)
+  const [lastRefreshAt, setLastRefreshAt] = useState<number>(() => Date.now())
 
   const navItems = getSidebarNav(user.role)
 
@@ -275,6 +322,7 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
       })
       all.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
       setEvents(all)
+      setLastRefreshAt(Date.now())
 
       const failedCount = results.filter(r => r.status === 'rejected').length
       if (failedCount > 0) {
@@ -392,6 +440,10 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
   while (calendarCells.length % 7 !== 0) calendarCells.push(null)
 
   const todayKey = today.toISOString().slice(0, 10)
+  const selectedDateAttentionCount = useMemo(
+    () => selectedDateEvents.filter((event) => getOperationalState(event, todayKey) === 'attention').length,
+    [selectedDateEvents, todayKey],
+  )
 
   const getDateKey = (day: number) =>
     `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
@@ -441,12 +493,15 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
               title="Operations Calendar"
               subtitle={isAdmin ? 'View all shifts, trips, missions and maintenance windows in one timeline.' : 'Track your upcoming shifts and assignments in a single schedule view.'}
               actions={
-                <button
-                  onClick={fetchAllEvents}
-                  className="soc-btn self-start sm:self-auto"
-                >
-                  Refresh
-                </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <LiveFreshnessPill updatedAt={lastRefreshAt} label="Calendar feed" />
+                  <button
+                    onClick={fetchAllEvents}
+                    className="soc-btn self-start sm:self-auto"
+                  >
+                    Refresh
+                  </button>
+                </div>
               }
             />
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -478,34 +533,60 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
           </div>
 
           {/* Legend */}
-          <div className="flex flex-wrap gap-3 mb-5" role="group" aria-label="Calendar event filters">
-            {Object.entries(TYPE_LABELS).map(([key, label]) => {
-              const c = EVENT_COLORS[key]
-              const isActive = filterType === key || filterType === 'all'
-              return (
-                <button
-                  key={key}
-                  onClick={() => setFilterType(f => f === key ? 'all' : key)}
-                  aria-pressed={isActive}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
-                    isActive
-                      ? `${c.bg} ${c.border} ${c.text}`
-                      : 'bg-surface border-border text-text-secondary'
-                  }`}
-                >
-                  <span className={`w-2 h-2 rounded-full ${c.dot}`} />
-                  {label}
-                </button>
-              )
-            })}
-            {filterType !== 'all' && (
+          <div className="mb-5 space-y-3">
+            <div className="flex items-center justify-between gap-2 md:hidden">
               <button
-                onClick={() => setFilterType('all')}
+                type="button"
+                onClick={() => setMobileFiltersOpen((prev) => !prev)}
+                aria-expanded={mobileFiltersOpen}
+                aria-controls="calendar-filter-legend"
                 className="soc-btn-neutral text-xs"
               >
-                Show All
+                {mobileFiltersOpen ? 'Hide filters' : 'Show filters'}
               </button>
-            )}
+              <StatusBadge label={`Attention ${selectedDateAttentionCount}`} tone={selectedDateAttentionCount > 0 ? 'danger' : 'success'} />
+            </div>
+
+            <div
+              id="calendar-filter-legend"
+              className={`${mobileFiltersOpen ? 'flex' : 'hidden'} flex-col gap-3 md:flex`}
+            >
+              <div className="flex flex-wrap gap-3" role="group" aria-label="Calendar event filters">
+                {Object.entries(TYPE_LABELS).map(([key, label]) => {
+                  const c = EVENT_COLORS[key]
+                  const isActive = filterType === key || filterType === 'all'
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => setFilterType(f => f === key ? 'all' : key)}
+                      aria-pressed={isActive}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                        isActive
+                          ? `${c.bg} ${c.border} ${c.text}`
+                          : 'bg-surface border-border text-text-secondary'
+                      }`}
+                    >
+                      <span className={`w-2 h-2 rounded-full ${c.dot}`} />
+                      {label}
+                    </button>
+                  )
+                })}
+                {filterType !== 'all' && (
+                  <button
+                    onClick={() => setFilterType('all')}
+                    className="soc-btn-neutral text-xs"
+                  >
+                    Show All
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Operational state legend">
+                <StatusBadge label="Scheduled" tone="analytics" />
+                <StatusBadge label="In Progress" tone="success" />
+                <StatusBadge label="Needs Attention" tone="danger" />
+                <StatusBadge label="Completed" tone="warning" />
+              </div>
+            </div>
           </div>
 
           <BentoGrid className="items-start">
@@ -547,6 +628,7 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
                     const dayEvents = filteredEventsByDate[dateKey] || []
                     const isToday = dateKey === todayKey
                     const isSelected = dateKey === selectedDate
+                    const dayHasAttention = dayEvents.some((event) => getOperationalState(event, todayKey) === 'attention')
                     return (
                       <button
                         key={dateKey}
@@ -556,6 +638,8 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
                             ? 'bg-[color:var(--color-info-bg)] border-[color:var(--color-info-border)] shadow-lg shadow-black/20' 
                             : isSelected 
                             ? 'bg-[color:var(--color-surface-elevated)] border-[color:var(--color-border-elevated)]'
+                            : dayHasAttention
+                            ? 'bg-surface border-[color:var(--color-danger-border)] hover:border-[color:var(--color-danger-border)] hover:bg-surface-hover/40'
                             : 'bg-surface border-border hover:border-blue-400/60 hover:bg-surface-hover/40'
                           }
                         `}
@@ -618,6 +702,12 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
                                 label={TYPE_LABELS[ev.type]}
                                 tone={ev.type === 'shift' ? 'guard' : ev.type === 'trip' ? 'vehicle' : ev.type === 'mission' ? 'mission' : 'maintenance'}
                               />
+                              <div className="mt-1">
+                                <StatusBadge
+                                  label={EVENT_STATE_META[getOperationalState(ev, todayKey)].label}
+                                  tone={EVENT_STATE_META[getOperationalState(ev, todayKey)].tone}
+                                />
+                              </div>
                             </div>
                           </button>
                         )
@@ -634,6 +724,10 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
                 <div className="px-6 py-4 bg-gradient-to-r from-[color:var(--color-surface)] to-[color:var(--color-surface-elevated)] border-b border-border-subtle">
                   <h3 className="text-text-primary font-bold text-lg">{formatDate(selectedDate)}</h3>
                   <p className="text-text-secondary text-sm mt-1">{selectedDateEvents.length} event{selectedDateEvents.length !== 1 ? 's' : ''} scheduled</p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <StatusBadge label={`Attention ${selectedDateAttentionCount}`} tone={selectedDateAttentionCount > 0 ? 'danger' : 'success'} />
+                    <StatusBadge label={`Filter ${filterType === 'all' ? 'All Types' : TYPE_LABELS[filterType]}`} tone="analytics" />
+                  </div>
                 </div>
                 <div className="flex-1 overflow-y-auto p-4 space-y-3">
                   {selectedDateEvents.length === 0 ? (
@@ -647,6 +741,8 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
                   ) : (
                     selectedDateEvents.map(ev => {
                       const c = EVENT_COLORS[ev.type]
+                      const operationalState = getOperationalState(ev, todayKey)
+                      const operationalMeta = EVENT_STATE_META[operationalState]
                       return (
                         <button
                           key={ev.id}
@@ -665,11 +761,15 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
                                 </div>
                               </div>
                               <div className="mt-2">
-                                <StatusBadge
-                                  label={ev.status}
-                                  tone={ev.status === 'completed' ? 'success' : ev.status === 'cancelled' ? 'danger' : 'warning'}
-                                />
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <StatusBadge
+                                    label={ev.status}
+                                    tone={ev.status === 'completed' ? 'success' : ev.status === 'cancelled' ? 'danger' : 'warning'}
+                                  />
+                                  <StatusBadge label={operationalMeta.label} tone={operationalMeta.tone} />
+                                </div>
                               </div>
+                              <p className="mt-2 text-xs text-text-secondary">{getEventAction(ev, operationalState)}</p>
                               {ev.type === 'shift' && (
                                 <div className="text-text-secondary text-xs mt-2 truncate">
                                   📍 {(ev as ShiftEvent).clientSite}

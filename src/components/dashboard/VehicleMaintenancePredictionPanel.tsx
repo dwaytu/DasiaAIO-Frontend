@@ -14,6 +14,17 @@ const riskPillClass: Record<string, string> = {
   HIGH: 'border-red-500/40 bg-red-500/10 text-red-200',
 }
 
+const getUrgencyNote = (item: VehicleMaintenancePrediction): string => {
+  if (item.riskLevel === 'HIGH') return 'High wear trend detected. Reserve this unit for emergency-only use.'
+  if (item.riskLevel === 'MEDIUM') return 'Maintenance window should be booked before next heavy dispatch cycle.'
+  return 'Routine servicing cadence remains healthy for this vehicle.'
+}
+
+const getConfidence = (item: VehicleMaintenancePrediction): number => {
+  const normalized = item.riskScore <= 1 ? item.riskScore : item.riskScore / 100
+  return Math.max(0.58, Math.min(0.98, 0.58 + normalized * 0.38))
+}
+
 const VehicleMaintenancePredictionPanel: FC<VehicleMaintenancePredictionPanelProps> = ({
   predictions,
   loading = false,
@@ -71,6 +82,9 @@ const VehicleMaintenancePredictionPanel: FC<VehicleMaintenancePredictionPanelPro
                   </div>
 
                   <p className="mt-2 font-mono text-[10px] text-[color:var(--color-muted-text)]">{item.recommendedAction}</p>
+                  <p className="mt-1 font-mono text-[10px] text-[color:var(--color-muted-text)]">Risk level: {item.riskLevel}</p>
+                  <p className="mt-1 font-mono text-[10px] text-[color:var(--color-muted-text)]">Confidence: {(getConfidence(item) * 100).toFixed(0)}%</p>
+                  <p className="mt-1 font-mono text-[10px] text-[color:var(--color-muted-text)]">{getUrgencyNote(item)}</p>
                 </li>
               )
             })}

@@ -6,13 +6,48 @@
 
 const trimTrailingSlash = (url: string) => url.replace(/\/+$/, '')
 
+type RuntimePlatform = 'web' | 'capacitor' | 'tauri'
+
+const detectRuntimePlatform = (): RuntimePlatform => {
+  if (typeof window === 'undefined') return 'web'
+
+  const runtimeWindow = window as typeof window & {
+    Capacitor?: { isNativePlatform?: () => boolean }
+    __TAURI__?: unknown
+    __TAURI_INTERNALS__?: unknown
+  }
+
+  if (runtimeWindow.Capacitor?.isNativePlatform?.()) return 'capacitor'
+  if (runtimeWindow.__TAURI__ || runtimeWindow.__TAURI_INTERNALS__) return 'tauri'
+  return 'web'
+}
+
 const getEnvApiUrl = (): string | null => {
   const apiUrl = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL
   if (!apiUrl || typeof apiUrl !== 'string') return null
   return trimTrailingSlash(apiUrl)
 }
 
+const getPlatformEnvApiUrl = (platform: RuntimePlatform): string | null => {
+  const envMap: Record<RuntimePlatform, string | undefined> = {
+    web: import.meta.env.VITE_API_BASE_URL_WEB,
+    tauri: import.meta.env.VITE_API_BASE_URL_DESKTOP,
+    capacitor: import.meta.env.VITE_API_BASE_URL_MOBILE,
+  }
+
+  const candidate = envMap[platform]
+  if (!candidate || typeof candidate !== 'string') return null
+  return trimTrailingSlash(candidate)
+}
+
 function getDefaultAPIURL(): string {
+  const platform = detectRuntimePlatform()
+
+  const platformEnvApiUrl = getPlatformEnvApiUrl(platform)
+  if (platformEnvApiUrl) {
+    return platformEnvApiUrl
+  }
+
   // Build-time: mode-specific .env values are baked by Vite
   const envApiUrl = getEnvApiUrl()
   if (envApiUrl) {
@@ -25,6 +60,19 @@ function getDefaultAPIURL(): string {
     if (apiHostParam) return trimTrailingSlash(apiHostParam)
 
     const { hostname, protocol } = window.location
+
+    const runtimeOverride = (window as typeof window & { __SENTINEL_API_BASE_URL__?: string }).__SENTINEL_API_BASE_URL__
+    if (runtimeOverride) {
+      return trimTrailingSlash(runtimeOverride)
+    }
+
+    if (platform === 'capacitor') {
+      // Android emulator cannot reach host loopback directly.
+      if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        return 'http://10.0.2.2:5000'
+      }
+      return `${protocol}//${hostname}:5000`
+    }
 
     // Local development
     if (hostname === 'localhost' || hostname === '127.0.0.1' ||

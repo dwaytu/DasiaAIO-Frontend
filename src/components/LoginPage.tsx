@@ -3,20 +3,18 @@ import SentinelLogo from './SentinelLogo'
 import ParticleBackground from './ParticleBackground'
 import { User } from '../App'
 import { API_BASE_URL } from '../config'
+import { parseResponseBody, storeAuthSession } from '../utils/api'
 
 interface LoginPageProps {
   onLogin: (user: User) => void
 }
 
-async function parseResponseBody(response: Response): Promise<any> {
-  const raw = await response.text()
-  if (!raw) return {}
-
-  try {
-    return JSON.parse(raw)
-  } catch {
-    return { error: raw }
-  }
+function isStrongPassword(password: string): boolean {
+  if (password.length < 12) return false
+  if (!/[a-z]/.test(password)) return false
+  if (!/[A-Z]/.test(password)) return false
+  if (!/\d/.test(password)) return false
+  return /[^A-Za-z0-9]/.test(password)
 }
 
 // Format phone number to +63-###-###-####
@@ -145,8 +143,8 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
           return
         }
 
-        if (password.length < 6) {
-          setError('Password must be at least 6 characters')
+        if (!isStrongPassword(password)) {
+          setError('Password must be at least 12 characters and include uppercase, lowercase, number, and special character')
           setIsLoading(false)
           return
         }
@@ -236,9 +234,8 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
           ...data.user,
           role: data.user.role as 'superadmin' | 'admin' | 'supervisor' | 'guard' | 'user'
         }
-        // Store token in localStorage for authentication persistence
         if (data.token) {
-          localStorage.setItem('token', data.token)
+          storeAuthSession(data.token, data.refreshToken)
         }
         onLogin(user)
       }
@@ -311,8 +308,8 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
           return
         }
 
-        if (newPassword.length < 6) {
-          setError('Password must be at least 6 characters')
+        if (!isStrongPassword(newPassword)) {
+          setError('Password must be at least 12 characters and include uppercase, lowercase, number, and special character')
           setIsLoading(false)
           return
         }

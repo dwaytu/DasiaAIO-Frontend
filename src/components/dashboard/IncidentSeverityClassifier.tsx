@@ -8,7 +8,11 @@ interface IncidentSeverityClassifierProps {
 }
 
 interface ClassifyResult {
+  riskLevel: string
   severity: string
+  confidence: number
+  explanation: string
+  suggestedActions: string[]
 }
 
 const severityTone: Record<string, string> = {
@@ -21,7 +25,7 @@ const severityTone: Record<string, string> = {
 const IncidentSeverityClassifier: FC<IncidentSeverityClassifierProps> = ({ incidents }) => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [result, setResult] = useState<string>('')
+  const [result, setResult] = useState<ClassifyResult | null>(null)
 
   const candidateIncident = useMemo(
     () => incidents.find((item) => item.status !== 'resolved') || incidents[0],
@@ -52,7 +56,7 @@ const IncidentSeverityClassifier: FC<IncidentSeverityClassifierProps> = ({ incid
         'Failed to classify incident severity',
       )
 
-      setResult((data?.severity || '').toLowerCase())
+      setResult(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to classify incident severity')
     } finally {
@@ -60,7 +64,9 @@ const IncidentSeverityClassifier: FC<IncidentSeverityClassifierProps> = ({ incid
     }
   }
 
-  const tone = severityTone[result] || 'border-[color:var(--color-border)] text-[color:var(--color-text)]'
+  const severity = (result?.severity || '').toLowerCase()
+  const riskLevel = (result?.riskLevel || severity || '').toLowerCase()
+  const tone = severityTone[severity] || 'border-[color:var(--color-border)] text-[color:var(--color-text)]'
 
   return (
     <section className="command-panel rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-surface)]" aria-label="Incident severity classifier">
@@ -89,9 +95,17 @@ const IncidentSeverityClassifier: FC<IncidentSeverityClassifierProps> = ({ incid
         )}
 
         {result && (
-          <p className={`inline-flex rounded-full border px-2 py-1 font-mono text-[10px] uppercase ${tone}`}>
-            Severity: {result}
-          </p>
+          <div className="space-y-1 rounded-md border border-[color:var(--color-border)]/60 bg-[color:var(--color-bg)]/30 px-3 py-2">
+            <p className={`inline-flex rounded-full border px-2 py-1 font-mono text-[10px] uppercase ${tone}`}>
+              Severity: {severity}
+            </p>
+            <p className="font-mono text-[10px] text-[color:var(--color-muted-text)]">Risk level: {riskLevel || 'unknown'}</p>
+            <p className="font-mono text-[10px] text-[color:var(--color-muted-text)]">Confidence: {Math.round((result.confidence || 0) * 100)}%</p>
+            <p className="font-mono text-[10px] text-[color:var(--color-muted-text)]">Explanation: {result.explanation || 'No explanation returned.'}</p>
+            <p className="font-mono text-[10px] text-[color:var(--color-muted-text)]">
+              Suggested actions: {(Array.isArray(result.suggestedActions) ? result.suggestedActions : []).slice(0, 3).join(' | ') || 'No actions suggested.'}
+            </p>
+          </div>
         )}
 
         {error && (

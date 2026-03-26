@@ -6,6 +6,15 @@ import IncidentReportForm from './IncidentReportForm'
 import { API_BASE_URL } from '../../config'
 import { fetchJsonOrThrow } from '../../utils/api'
 
+interface IncidentSummaryPreview {
+  riskLevel: string
+  confidence: number
+  explanation: string
+  suggestedActions: string[]
+  summary: string
+  keyPhrases: string[]
+}
+
 const PRIORITY_BADGE: Record<
   Incident['priority'],
   { label: string; cls: string }
@@ -35,7 +44,7 @@ const IncidentPanel: FC = () => {
   const [updateError, setUpdateError] = useState('')
   const [summaryError, setSummaryError] = useState('')
   const [summarizingId, setSummarizingId] = useState<string | null>(null)
-  const [summaryByIncidentId, setSummaryByIncidentId] = useState<Record<string, string>>({})
+  const [summaryByIncidentId, setSummaryByIncidentId] = useState<Record<string, IncidentSummaryPreview>>({})
   const [filter, setFilter] = useState<'all' | Incident['status']>('all')
 
   const userRole = normalizeRole(localStorage.getItem('role'))
@@ -64,7 +73,7 @@ const IncidentPanel: FC = () => {
       setSummaryError('')
 
       const token = localStorage.getItem('token')
-      const response = await fetchJsonOrThrow<{ summary: string }>(
+      const response = await fetchJsonOrThrow<IncidentSummaryPreview>(
         `${API_BASE_URL}/api/ai/summarize-incident`,
         {
           method: 'POST',
@@ -79,7 +88,14 @@ const IncidentPanel: FC = () => {
 
       setSummaryByIncidentId((prev) => ({
         ...prev,
-        [incident.id]: response.summary || 'No summary generated.',
+        [incident.id]: {
+          riskLevel: (response.riskLevel || '').toLowerCase(),
+          confidence: typeof response.confidence === 'number' ? response.confidence : 0,
+          explanation: response.explanation || 'No explanation returned.',
+          suggestedActions: Array.isArray(response.suggestedActions) ? response.suggestedActions : [],
+          summary: response.summary || 'No summary generated.',
+          keyPhrases: Array.isArray(response.keyPhrases) ? response.keyPhrases : [],
+        },
       }))
     } catch (err) {
       setSummaryError(err instanceof Error ? err.message : 'Failed to generate incident summary')
@@ -259,9 +275,15 @@ const IncidentPanel: FC = () => {
                           </button>
                         </div>
                         {summaryByIncidentId[incident.id] && (
-                          <p className="max-w-[380px] whitespace-normal font-mono text-[10px] text-[color:var(--color-muted-text)]">
-                            {summaryByIncidentId[incident.id]}
-                          </p>
+                          <div className="max-w-[380px] whitespace-normal rounded border border-[color:var(--color-border)] px-2 py-1 font-mono text-[10px] text-[color:var(--color-muted-text)]">
+                            <p>{summaryByIncidentId[incident.id].summary}</p>
+                            <p className="mt-1">Risk level: {summaryByIncidentId[incident.id].riskLevel || 'unknown'}</p>
+                            <p className="mt-1">Confidence: {Math.round(summaryByIncidentId[incident.id].confidence * 100)}%</p>
+                            <p className="mt-1">Explanation: {summaryByIncidentId[incident.id].explanation}</p>
+                            <p className="mt-1">
+                              Suggested actions: {summaryByIncidentId[incident.id].suggestedActions.slice(0, 2).join(' | ') || 'No actions suggested.'}
+                            </p>
+                          </div>
                         )}
                       </div>
                     </td>

@@ -21,6 +21,11 @@ export interface CreateIncidentPayload {
   priority: 'low' | 'medium' | 'high' | 'critical'
 }
 
+interface IncidentListResponse {
+  incidents?: Incident[]
+  total?: number
+}
+
 export function useIncidents() {
   const [incidents, setIncidents] = useState<Incident[]>([])
   const [loading, setLoading] = useState(true)
@@ -31,12 +36,17 @@ export function useIncidents() {
     try {
       setLoading(true)
       const token = localStorage.getItem('token')
-      const data = await fetchJsonOrThrow<Incident[]>(
-        `${API_BASE_URL}/api/incidents/active`,
+      const data = await fetchJsonOrThrow<Incident[] | IncidentListResponse>(
+        `${API_BASE_URL}/api/incidents/active?page=1&page_size=50`,
         { headers: { Authorization: `Bearer ${token}` } },
         'Failed to load incidents',
       )
-      setIncidents(Array.isArray(data) ? data : [])
+      const normalized = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.incidents)
+          ? data.incidents
+          : []
+      setIncidents(normalized)
       setError('')
       setLastUpdated(new Date().toLocaleTimeString())
     } catch (err) {

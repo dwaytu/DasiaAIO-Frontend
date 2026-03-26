@@ -22,6 +22,14 @@ const SEVERITY_TO_PRIORITY: Record<string, Incident['priority']> = {
   CRITICAL: 'critical',
 }
 
+interface ClassifyIncidentSuggestion {
+  riskLevel: string
+  severity: string
+  confidence: number
+  explanation: string
+  suggestedActions: string[]
+}
+
 const IncidentReportForm: FC<IncidentReportFormProps> = ({ onSubmit, onCancel }) => {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -31,6 +39,10 @@ const IncidentReportForm: FC<IncidentReportFormProps> = ({ onSubmit, onCancel })
   const [submitError, setSubmitError] = useState('')
   const [success, setSuccess] = useState(false)
   const [aiSuggestedSeverity, setAiSuggestedSeverity] = useState<'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' | ''>('')
+  const [aiRiskLevel, setAiRiskLevel] = useState('')
+  const [aiConfidence, setAiConfidence] = useState(0)
+  const [aiExplanation, setAiExplanation] = useState('')
+  const [aiSuggestedActions, setAiSuggestedActions] = useState<string[]>([])
   const [classifying, setClassifying] = useState(false)
 
   // Client-side field validation state
@@ -65,6 +77,10 @@ const IncidentReportForm: FC<IncidentReportFormProps> = ({ onSubmit, onCancel })
     const text = `${title} ${description}`.trim()
     if (text.length < 3) {
       setAiSuggestedSeverity('')
+      setAiRiskLevel('')
+      setAiConfidence(0)
+      setAiExplanation('')
+      setAiSuggestedActions([])
       return
     }
 
@@ -76,7 +92,7 @@ const IncidentReportForm: FC<IncidentReportFormProps> = ({ onSubmit, onCancel })
     const timeout = window.setTimeout(async () => {
       try {
         setClassifying(true)
-        const response = await fetchJsonOrThrow<{ severity: string }>(
+        const response = await fetchJsonOrThrow<ClassifyIncidentSuggestion>(
           `${API_BASE_URL}/api/ai/classify-incident`,
           {
             method: 'POST',
@@ -90,12 +106,21 @@ const IncidentReportForm: FC<IncidentReportFormProps> = ({ onSubmit, onCancel })
         )
 
         const severity = (response?.severity || '').toUpperCase()
+        setAiRiskLevel((response?.riskLevel || '').toUpperCase())
+        setAiConfidence(typeof response?.confidence === 'number' ? response.confidence : 0)
+        setAiExplanation(response?.explanation || '')
+        setAiSuggestedActions(Array.isArray(response?.suggestedActions) ? response.suggestedActions : [])
+
         if (severity in SEVERITY_TO_PRIORITY) {
           setAiSuggestedSeverity(severity as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL')
           setPriority(SEVERITY_TO_PRIORITY[severity])
         }
       } catch {
         // Keep manual priority fallback when classifier is unavailable.
+        setAiRiskLevel('')
+        setAiConfidence(0)
+        setAiExplanation('')
+        setAiSuggestedActions([])
       } finally {
         setClassifying(false)
       }
@@ -240,6 +265,14 @@ const IncidentReportForm: FC<IncidentReportFormProps> = ({ onSubmit, onCancel })
             </span>
           )}
         </div>
+        {(aiRiskLevel || aiExplanation || aiSuggestedActions.length > 0) && (
+          <div className="rounded border border-[color:var(--color-border)]/70 bg-[color:var(--color-bg)]/30 px-2 py-2 font-mono text-[10px] text-[color:var(--color-muted-text)]">
+            <p>Risk level: {aiRiskLevel || 'unknown'}</p>
+            <p className="mt-1">Confidence: {Math.round(aiConfidence * 100)}%</p>
+            <p className="mt-1">Explanation: {aiExplanation || 'No explanation returned.'}</p>
+            <p className="mt-1">Suggested actions: {aiSuggestedActions.slice(0, 2).join(' | ') || 'No actions suggested.'}</p>
+          </div>
+        )}
         <select
           id="incident-priority"
           value={priority}

@@ -14,6 +14,30 @@ const availabilityClass: Record<string, string> = {
   unavailable: 'border-red-500/40 bg-red-500/10 text-red-200',
 }
 
+const getRecommendationReason = (item: ReplacementSuggestion): string => {
+  if (!item.availability) return 'Candidate currently unavailable despite score profile.'
+  if (!item.permitValid) return 'Permit check failed; candidate should not be deployed.'
+  if (item.distanceKm <= 2) return 'Close proximity and strong reliability make this candidate deployable quickly.'
+  return 'Balanced reliability and route distance support this replacement recommendation.'
+}
+
+const getSuggestedAction = (item: ReplacementSuggestion): string => {
+  if (!item.availability) return 'Keep as reserve and continue searching for active alternatives.'
+  if (!item.permitValid) return 'Request permit renewal verification before assignment.'
+  return 'Contact this guard first for immediate replacement confirmation.'
+}
+
+const getRiskLevel = (item: ReplacementSuggestion): 'LOW' | 'MEDIUM' | 'HIGH' => {
+  if (!item.availability || !item.permitValid) return 'HIGH'
+  if (item.replacementScore < 80 || item.distanceKm > 8) return 'MEDIUM'
+  return 'LOW'
+}
+
+const getConfidence = (item: ReplacementSuggestion): number => {
+  const normalized = item.replacementScore > 1 ? item.replacementScore / 100 : item.replacementScore
+  return Math.max(0.6, Math.min(0.97, normalized))
+}
+
 const ReplacementSuggestionPanel: FC<ReplacementSuggestionPanelProps> = ({
   postName,
   suggestions,
@@ -84,6 +108,10 @@ const ReplacementSuggestionPanel: FC<ReplacementSuggestionPanelProps> = ({
                       Rank #{index + 1}
                     </span>
                   </div>
+                  <p className="mt-2 font-mono text-[10px] text-[color:var(--color-muted-text)]">Reason: {getRecommendationReason(item)}</p>
+                  <p className="mt-1 font-mono text-[10px] text-[color:var(--color-muted-text)]">Risk level: {getRiskLevel(item)}</p>
+                  <p className="mt-1 font-mono text-[10px] text-[color:var(--color-muted-text)]">Confidence: {(getConfidence(item) * 100).toFixed(0)}%</p>
+                  <p className="mt-1 font-mono text-[10px] text-[color:var(--color-muted-text)]">Suggested action: {getSuggestedAction(item)}</p>
                 </li>
               )
             })}

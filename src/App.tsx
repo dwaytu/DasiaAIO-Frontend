@@ -15,6 +15,7 @@ import { API_BASE_URL } from './config'
 import { normalizeRole, isLegacyRole, Role } from './types/auth'
 import { can, Permission } from './utils/permissions'
 import { getRequiredAccuracyMeters, getTrackingAccuracyMode } from './utils/trackingPolicy'
+import { clearAuthSession, getAuthToken, getRefreshToken, hydrateAuthSession } from './utils/api'
 
 export interface User {
   id: string
@@ -34,10 +35,11 @@ function App() {
 
   // Restore authentication from localStorage on component mount
   useEffect(() => {
-    const restoreAuth = () => {
+    const restoreAuth = async () => {
       try {
+        await hydrateAuthSession()
         const storedUser = localStorage.getItem('user')
-        const storedToken = localStorage.getItem('token')
+        const storedToken = getAuthToken()
         
         if (storedUser && storedToken) {
           const parsedUser = JSON.parse(storedUser)
@@ -48,20 +50,20 @@ function App() {
       } catch (error) {
         console.error('Failed to restore authentication:', error)
         // Clear potentially corrupted data
+        clearAuthSession()
         localStorage.removeItem('user')
-        localStorage.removeItem('token')
       } finally {
         setIsLoading(false)
       }
     }
 
-    restoreAuth()
+    void restoreAuth()
   }, [])
 
   useEffect(() => {
     const handleTokenExpiry = () => {
+      clearAuthSession()
       localStorage.removeItem('user')
-      localStorage.removeItem('token')
       setUser(null)
       setIsLoggedIn(false)
       setActiveView('users')
@@ -92,9 +94,18 @@ function App() {
   }
 
   const handleLogout = () => {
+    const refreshToken = getRefreshToken()
+    if (refreshToken) {
+      void fetch(`${API_BASE_URL}/api/logout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+      })
+    }
+
     // Clear authentication from localStorage
+    clearAuthSession()
     localStorage.removeItem('user')
-    localStorage.removeItem('token')
     
     setUser(null)
     setIsLoggedIn(false)
@@ -179,9 +190,6 @@ function App() {
     if (!isLoggedIn || !user) return
     if (!navigator.geolocation) return
 
-    const token = localStorage.getItem('token')
-    if (!token) return
-
     let lastSent = 0
     const isMobileClient = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
     const trackingMode = getTrackingAccuracyMode()
@@ -197,6 +205,10 @@ function App() {
         return
       }
       const status = 'active'
+      const token = getAuthToken()
+      if (!token) {
+        return
+      }
 
       try {
         await fetch(`${API_BASE_URL}/api/tracking/heartbeat`, {

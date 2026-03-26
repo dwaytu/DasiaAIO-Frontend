@@ -10,6 +10,7 @@ import { getSidebarNav } from '../config/navigation'
 import { normalizeRole } from '../types/auth'
 import CommandCenterDashboard from './dashboard/CommandCenterDashboard'
 import AssignmentPicker from './dashboard/AssignmentPicker'
+import LiveFreshnessPill from './dashboard/ui/LiveFreshnessPill'
 import Allowed from './rbac/Allowed'
 import DeniedFallback from './rbac/DeniedFallback'
 import OperationalShell from './layout/OperationalShell'
@@ -67,6 +68,17 @@ const getRelativeLastLogin = (lastSeenAt?: string) => {
   if (diffMs < 2 * dayMs) return 'Yesterday'
   if (diffMs < 7 * dayMs) return `${Math.floor(diffMs / dayMs)} days ago`
   return new Date(ts).toLocaleDateString()
+}
+
+const getPreciseLastSeen = (lastSeenAt?: string) => {
+  if (!lastSeenAt) return 'No signal'
+  const ts = new Date(lastSeenAt).getTime()
+  if (Number.isNaN(ts)) return 'Unknown'
+
+  const diffMs = Math.max(Date.now() - ts, 0)
+  if (diffMs < 60 * 1000) return `${Math.round(diffMs / 1000)}s ago`
+  if (diffMs < 60 * 60 * 1000) return `${Math.round(diffMs / (60 * 1000))}m ago`
+  return `${Math.round(diffMs / (60 * 60 * 1000))}h ago`
 }
 
 const getUserDerivedStatus = (user: User, pendingIds: Set<string>): UserDerivedStatus => {
@@ -212,6 +224,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   const [selectedVehicles, setSelectedVehicles] = useState<string>('')
   const [showAddScheduleForm, setShowAddScheduleForm] = useState<boolean>(false)
   const [refreshing, setRefreshing] = useState<boolean>(false)
+  const [lastUserSyncAt, setLastUserSyncAt] = useState<number>(() => Date.now())
   const [scheduleFormData, setScheduleFormData] = useState({
     guard_id: '',
     client_site: '',
@@ -320,6 +333,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
       )
       const users = Array.isArray(data) ? data : (data.users || data || [])
       setUsers(users)
+      setLastUserSyncAt(Date.now())
       
       // Calculate stats
       const superadminCount = users.filter((u: User) => u.role === 'superadmin').length
@@ -350,6 +364,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
         'Failed to fetch shifts',
       )
       setShifts(data.shifts || [])
+      setLastUserSyncAt(Date.now())
       setError('')
     } catch (err) {
       setError('Error loading shifts: ' + (err instanceof Error ? err.message : String(err)))
@@ -385,6 +400,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
       )
       const pendingList = Array.isArray(data) ? data : (data.users || data || [])
       setPendingApprovals(pendingList)
+      setLastUserSyncAt(Date.now())
       setError('')
     } catch (err) {
       setError('Error loading pending approvals: ' + (err instanceof Error ? err.message : String(err)))
@@ -864,6 +880,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                   <p className="text-xs text-text-tertiary mt-0.5">Manage system users, permissions, and security roles</p>
                 </div>
                 <div className="flex items-center gap-2">
+                  <LiveFreshnessPill updatedAt={lastUserSyncAt} label="Roster sync" />
                   <label className="flex items-center gap-2 rounded-lg border border-border-subtle bg-background px-2 py-2 text-xs font-semibold text-text-secondary" htmlFor="tracking-accuracy-mode">
                     Accuracy
                     <select
@@ -1068,7 +1085,12 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                             <td className="px-5 py-3.5">
                               <StatusIndicator status={derivedStatus} />
                             </td>
-                            <td className="px-5 py-3.5 text-xs text-text-secondary">{getRelativeLastLogin(u.last_seen_at)}</td>
+                            <td className="px-5 py-3.5 text-xs text-text-secondary">
+                              <div className="flex flex-col gap-0.5">
+                                <span>{getRelativeLastLogin(u.last_seen_at)}</span>
+                                <span className="text-[11px] text-text-tertiary">Signal {getPreciseLastSeen(u.last_seen_at)}</span>
+                              </div>
+                            </td>
                             <td className="px-5 py-3.5">
                               <div className="flex items-center justify-end gap-1">
                                 {pendingApproval && (
@@ -1170,6 +1192,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                             <div>
                               <p className="text-text-tertiary">Last Login</p>
                               <p className="mt-1 font-medium text-text-secondary">{getRelativeLastLogin(u.last_seen_at)}</p>
+                              <p className="mt-1 text-[11px] text-text-tertiary">Signal {getPreciseLastSeen(u.last_seen_at)}</p>
                             </div>
                           </div>
                           <div className="mt-3 flex flex-wrap gap-2">

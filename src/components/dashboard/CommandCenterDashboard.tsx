@@ -21,6 +21,7 @@ import SentinelLogo from '../SentinelLogo'
 import SectionHeader from './ui/SectionHeader'
 import StatCard from './ui/StatCard'
 import StatusBadge from './ui/StatusBadge'
+import LiveFreshnessPill from './ui/LiveFreshnessPill'
 import { useOpsSummary } from '../../hooks/useOpsSummary'
 import { getOpsAlerts } from '../../hooks/useOpsAlerts'
 import { useOpsShifts } from '../../hooks/useOpsShifts'
@@ -47,6 +48,7 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
   const replacementSuggestionsState = useReplacementSuggestions()
   const vehicleMaintenancePredictionState = useVehicleMaintenancePrediction()
   const [clock, setClock] = useState(() => new Date())
+  const [lastRefreshAt, setLastRefreshAt] = useState<number>(() => Date.now())
 
   const summary = summaryState.summary
   const alerts = useMemo(() => getOpsAlerts(summary), [summary])
@@ -68,6 +70,7 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
       guardAbsencePredictionState.refresh()
       replacementSuggestionsState.refresh()
       vehicleMaintenancePredictionState.refresh()
+      setLastRefreshAt(Date.now())
     }, 15000)
 
     return () => window.clearInterval(refresher)
@@ -276,6 +279,7 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
           subtitle="Unified tactical view for incidents, deployments, and predictive risk activity."
           actions={
             <div className="flex items-center gap-2">
+              <LiveFreshnessPill updatedAt={lastRefreshAt} label="SOC stream" />
               <StatusBadge label={`System ${systemStatus}`} tone={systemTone === 'danger' ? 'danger' : systemTone === 'warning' ? 'warning' : 'success'} />
               <StatusBadge label={`Threat ${threatLevel}`} tone={threatTone === 'danger' ? 'danger' : threatTone === 'warning' ? 'warning' : 'analytics'} />
             </div>

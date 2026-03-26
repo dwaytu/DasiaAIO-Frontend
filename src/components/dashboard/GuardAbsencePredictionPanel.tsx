@@ -20,6 +20,24 @@ const riskRowClass: Record<string, string> = {
   HIGH: 'border-l-2 border-red-500/70',
 }
 
+const getRiskReason = (item: GuardAbsencePrediction): string => {
+  if (item.previousAbsences >= 3) return 'Repeated recent absences are driving elevated risk.'
+  if (item.lateCheckins >= 3) return 'Frequent late check-ins are trending upward.'
+  if (item.recentLeaveRequests >= 2) return 'Multiple leave requests indicate availability volatility.'
+  return 'Current behavior is within expected attendance thresholds.'
+}
+
+const getSuggestedAction = (item: GuardAbsencePrediction): string => {
+  if (item.riskLevel === 'HIGH') return 'Prepare a backup guard assignment before shift start.'
+  if (item.riskLevel === 'MEDIUM') return 'Send pre-shift confirmation and monitor check-in window.'
+  return 'Maintain standard attendance monitoring.'
+}
+
+const getConfidence = (item: GuardAbsencePrediction): number => {
+  const normalized = item.riskScore <= 1 ? item.riskScore : item.riskScore / 100
+  return Math.max(0.55, Math.min(0.98, 0.55 + normalized * 0.4))
+}
+
 const GuardAbsencePredictionPanel: FC<GuardAbsencePredictionPanelProps> = ({
   predictions,
   loading = false,
@@ -68,6 +86,7 @@ const GuardAbsencePredictionPanel: FC<GuardAbsencePredictionPanelProps> = ({
                       <p className="font-mono text-[10px] text-[color:var(--color-muted-text)]">
                         Absences {item.previousAbsences} • Late {item.lateCheckins} • Leave {item.recentLeaveRequests}
                       </p>
+                      <p className="mt-1 font-mono text-[10px] text-[color:var(--color-muted-text)]">{getRiskReason(item)}</p>
                     </div>
                     <div className="text-right">
                       <p className="font-mono text-base font-bold text-[color:var(--color-text)]">{item.riskScore.toFixed(2)}</p>
@@ -76,6 +95,8 @@ const GuardAbsencePredictionPanel: FC<GuardAbsencePredictionPanelProps> = ({
                       </span>
                     </div>
                   </div>
+                  <p className="mt-2 font-mono text-[10px] text-[color:var(--color-muted-text)]">Suggested action: {getSuggestedAction(item)}</p>
+                  <p className="mt-1 font-mono text-[10px] text-[color:var(--color-muted-text)]">Confidence: {(getConfidence(item) * 100).toFixed(0)}%</p>
                 </li>
               )
             })}

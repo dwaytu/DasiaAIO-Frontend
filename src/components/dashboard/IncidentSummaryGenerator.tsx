@@ -8,6 +8,10 @@ interface IncidentSummaryGeneratorProps {
 }
 
 interface SummaryResult {
+  riskLevel: string
+  confidence: number
+  explanation: string
+  suggestedActions: string[]
   summary: string
   keyPhrases: string[]
 }
@@ -15,6 +19,10 @@ interface SummaryResult {
 const IncidentSummaryGenerator: FC<IncidentSummaryGeneratorProps> = ({ incidents }) => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [riskLevel, setRiskLevel] = useState('')
+  const [confidence, setConfidence] = useState(0)
+  const [explanation, setExplanation] = useState('')
+  const [suggestedActions, setSuggestedActions] = useState<string[]>([])
   const [summary, setSummary] = useState('')
   const [keyPhrases, setKeyPhrases] = useState<string[]>([])
 
@@ -46,6 +54,10 @@ const IncidentSummaryGenerator: FC<IncidentSummaryGeneratorProps> = ({ incidents
 
       setSummary(data?.summary || '')
       setKeyPhrases(Array.isArray(data?.keyPhrases) ? data.keyPhrases : [])
+      setRiskLevel((data?.riskLevel || '').toLowerCase())
+      setConfidence(typeof data?.confidence === 'number' ? data.confidence : 0)
+      setExplanation(data?.explanation || '')
+      setSuggestedActions(Array.isArray(data?.suggestedActions) ? data.suggestedActions : [])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate incident summary')
     } finally {
@@ -82,6 +94,12 @@ const IncidentSummaryGenerator: FC<IncidentSummaryGeneratorProps> = ({ incidents
         {summary && (
           <div className="rounded-md border border-[color:var(--color-border)]/60 bg-[color:var(--color-bg)]/30 px-3 py-2">
             <p className="font-mono text-[11px] text-[color:var(--color-text)]">{summary}</p>
+            <p className="mt-1 font-mono text-[10px] text-[color:var(--color-muted-text)]">Risk level: {riskLevel || 'unknown'}</p>
+            <p className="mt-1 font-mono text-[10px] text-[color:var(--color-muted-text)]">Confidence: {Math.round(confidence * 100)}%</p>
+            <p className="mt-1 font-mono text-[10px] text-[color:var(--color-muted-text)]">Explanation: {explanation || 'No explanation returned.'}</p>
+            <p className="mt-1 font-mono text-[10px] text-[color:var(--color-muted-text)]">
+              Suggested actions: {suggestedActions.slice(0, 3).join(' | ') || 'No actions suggested.'}
+            </p>
             {keyPhrases.length > 0 && (
               <p className="mt-1 font-mono text-[10px] text-[color:var(--color-muted-text)]">
                 Key: {keyPhrases.slice(0, 4).join(', ')}

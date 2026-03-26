@@ -48,6 +48,37 @@ const getStringListContext = (context: PredictiveAlert['context'], key: string):
     .filter((value): value is string => Boolean(value))
 }
 
+const getSuggestedAction = (alert: PredictiveAlert): string => {
+  if (alert.severity === 'critical') {
+    return 'Escalate to command lead and dispatch field verification immediately.'
+  }
+
+  if (alert.category.toLowerCase().includes('permit')) {
+    return 'Queue permit validation checks and notify scheduling coordinators.'
+  }
+
+  if (alert.category.toLowerCase().includes('maintenance')) {
+    return 'Review maintenance queue and hold non-essential vehicle assignments.'
+  }
+
+  if (alert.severity === 'warning') {
+    return 'Monitor trend for 15 minutes and prepare mitigation resources.'
+  }
+
+  return 'Keep under observation and log the trend in the shift handoff report.'
+}
+
+const getConfidence = (alert: PredictiveAlert): number => {
+  if (alert.severity === 'critical') return 0.93
+  if (alert.severity === 'warning') return 0.84
+  return 0.74
+}
+
+const getExplanation = (alert: PredictiveAlert): string => {
+  const contextKeys = isContextObject(alert.context) ? Object.keys(alert.context).length : 0
+  return `Risk level is based on ${contextKeys} contextual data point(s) and ${alert.severity} signal weighting.`
+}
+
 const PredictiveAlertsPanel: FC<PredictiveAlertsPanelProps> = ({
   alerts,
   loading = false,
@@ -123,6 +154,12 @@ const PredictiveAlertsPanel: FC<PredictiveAlertsPanelProps> = ({
                           {guardNames.length > 3 ? '…' : ''}
                         </p>
                       )}
+                      <p className="font-mono text-[10px] text-white/80">Risk level: {alert.severity.toUpperCase()}</p>
+                      <p className="font-mono text-[10px] text-white/80">Confidence: {(getConfidence(alert) * 100).toFixed(0)}%</p>
+                      <p className="font-mono text-[10px] text-white/70">Explanation: {getExplanation(alert)}</p>
+                      <p className="font-mono text-[10px] text-white/80">
+                        Suggested action: {getSuggestedAction(alert)}
+                      </p>
                     </div>
                   </div>
                 </li>

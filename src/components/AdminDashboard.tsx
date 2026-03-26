@@ -10,6 +10,7 @@ import Allowed from './rbac/Allowed'
 import DeniedFallback from './rbac/DeniedFallback'
 import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
 import CommandCenterDashboard from './dashboard/CommandCenterDashboard'
+import LiveFreshnessPill from './dashboard/ui/LiveFreshnessPill'
 import { normalizeRole } from '../types/auth'
 
 interface User {
@@ -54,6 +55,16 @@ const getRelativeLastLogin = (lastSeenAt?: string) => {
   if (diffMs < 48 * 60 * 60 * 1000) return 'Yesterday'
   if (diffMs < 7 * 24 * 60 * 60 * 1000) return `${Math.floor(diffMs / (24 * 60 * 60 * 1000))} days ago`
   return new Date(ts).toLocaleDateString()
+}
+
+const getPreciseLastSeen = (lastSeenAt?: string) => {
+  if (!lastSeenAt) return 'No signal'
+  const ts = new Date(lastSeenAt).getTime()
+  if (Number.isNaN(ts)) return 'Unknown'
+  const diffMs = Math.max(Date.now() - ts, 0)
+  if (diffMs < 60 * 1000) return `${Math.round(diffMs / 1000)}s ago`
+  if (diffMs < 60 * 60 * 1000) return `${Math.round(diffMs / (60 * 1000))}m ago`
+  return `${Math.round(diffMs / (60 * 60 * 1000))}h ago`
 }
 
 const getUserDerivedStatus = (user: User, pendingIds: Set<string>): UserDerivedStatus => {
@@ -174,6 +185,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
   const [filterMenuOpen, setFilterMenuOpen] = useState<boolean>(false)
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([])
   const [bulkProcessing, setBulkProcessing] = useState<boolean>(false)
+  const [lastUserSyncAt, setLastUserSyncAt] = useState<number>(() => Date.now())
   const currentView = activeView || activeSection
   const navItems = getSidebarNav(user.role, { homeView: 'users' })
   const normalizedViewerRole = normalizeRole(user.role)
@@ -221,6 +233,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
       )
       const users = Array.isArray(data) ? data : (data.users || data || [])
       setUsers(users)
+      setLastUserSyncAt(Date.now())
       setError('')
     } catch (err) {
       setError('Error loading users: ' + (err instanceof Error ? err.message : String(err)))
@@ -238,6 +251,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
         'Failed to fetch shifts',
       )
       setShifts(data.shifts || [])
+      setLastUserSyncAt(Date.now())
       setError('')
     } catch (err) {
       setError('Error loading shifts: ' + (err instanceof Error ? err.message : String(err)))
@@ -256,6 +270,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
       )
       const approvalList = Array.isArray(data) ? data : (data.users || data || [])
       setPendingApprovals(approvalList)
+      setLastUserSyncAt(Date.now())
       setError('')
     } catch (err) {
       setError('Error loading pending approvals: ' + (err instanceof Error ? err.message : String(err)))
@@ -565,6 +580,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                       <p className="mt-0.5 text-xs text-text-tertiary">Manage system users, approvals, and roles</p>
                     </div>
                     <div className="flex items-center gap-2">
+                      <LiveFreshnessPill updatedAt={lastUserSyncAt} label="Roster sync" />
                       <div className="relative">
                         <svg className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                         <input
@@ -749,7 +765,12 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                                 <td className="px-5 py-3.5 text-sm text-text-secondary" title={u.username}>{truncateText(u.username, 22)}</td>
                                 <td className="px-5 py-3.5"><RoleBadge roleRaw={u.role} /></td>
                                 <td className="px-5 py-3.5"><StatusIndicator status={derivedStatus} /></td>
-                                <td className="px-5 py-3.5 text-xs text-text-secondary">{getRelativeLastLogin(u.last_seen_at)}</td>
+                                <td className="px-5 py-3.5 text-xs text-text-secondary">
+                                  <div className="flex flex-col gap-0.5">
+                                    <span>{getRelativeLastLogin(u.last_seen_at)}</span>
+                                    <span className="text-[11px] text-text-tertiary">Signal {getPreciseLastSeen(u.last_seen_at)}</span>
+                                  </div>
+                                </td>
                                 <td className="px-5 py-3.5">
                                   <div className="flex items-center justify-end gap-1">
                                     {pendingApproval && (
@@ -840,6 +861,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                                 <div>
                                   <p className="text-text-tertiary">Last Login</p>
                                   <p className="mt-1 font-medium text-text-secondary">{getRelativeLastLogin(u.last_seen_at)}</p>
+                                  <p className="mt-1 text-[11px] text-text-tertiary">Signal {getPreciseLastSeen(u.last_seen_at)}</p>
                                 </div>
                               </div>
                               <div className="mt-3 flex flex-wrap gap-2">

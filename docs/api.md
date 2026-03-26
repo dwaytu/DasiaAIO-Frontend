@@ -6,29 +6,38 @@ permalink: /api/
 
 # API Reference
 
-Base URL: `http://localhost:5000/api`
+Base URL (local): `http://localhost:5000/api`
+
+Most routes require a valid access token and are guarded by role-based middleware.
 
 ---
 
 ## Authentication Endpoints
 
 ### Register
-```
+```http
 POST /api/register
 Content-Type: application/json
 
 {
   "email": "user@gmail.com",
   "password": "password123",
-  "username": "username",
+  "username": "guard_001",
   "full_name": "Full Name",
   "phone_number": "+63-555-123-4567",
-  "role": "user"
+  "role": "guard",
+  "licenseIssuedDate": "2026-01-01",
+  "licenseExpiryDate": "2027-01-01"
 }
 ```
 
+Notes:
+
+- Public registration is intended for guard onboarding.
+- Approval is required before account activation.
+
 ### Login
-```
+```http
 POST /api/login
 Content-Type: application/json
 
@@ -36,17 +45,10 @@ Content-Type: application/json
   "email": "user@gmail.com",
   "password": "password123"
 }
-
-Response:
-{
-  "id": "uuid",
-  "email": "user@gmail.com",
-  "role": "user"
-}
 ```
 
 ### Verify Email
-```
+```http
 POST /api/verify
 Content-Type: application/json
 
@@ -56,110 +58,126 @@ Content-Type: application/json
 }
 ```
 
+Additional auth routes:
+
+- `POST /api/resend-code`
+- `POST /api/forgot-password`
+- `POST /api/verify-reset-code`
+- `POST /api/reset-password`
+- `POST /api/refresh`
+- `POST /api/logout`
+
+Equivalent `/api/auth/*` aliases are also supported.
+
 ---
 
 ## User Management
 
 ### Get All Users
-```
+```http
 GET /api/users
 ```
 
-### Get User by ID
-```
-GET /api/user/:id
-```
+### Approval Workflow
 
-### Update User
-```
-PUT /api/user/:id
-Content-Type: application/json
+- `GET /api/users/pending-approvals`
+- `PUT /api/users/:id/approval`
 
-{
-  "full_name": "New Name",
-  "phone_number": "+63-555-999-9999"
-}
-```
+### User CRUD
 
-### Delete User
-```
-DELETE /api/user/:id
-```
+- `GET /api/user/:id`
+- `PUT /api/user/:id`
+- `DELETE /api/user/:id`
+- `GET /api/users/:id` (alias)
 
 ---
 
 ## Firearm Management
 
 ### Get All Firearms
-```
+```http
 GET /api/firearms
 ```
 
 ### Add Firearm
-```
+```http
 POST /api/firearms
 Content-Type: application/json
 
 {
-  "serialNumber": "SN123456",
+  "serial_number": "SN123456",
   "model": "Glock 19",
   "type": "Pistol",
   "status": "available"
 }
 ```
 
-### Update Firearm
-```
-PUT /api/firearms/:id
-Content-Type: application/json
+### Allocation and Maintenance
 
-{
-  "status": "maintenance"
-}
-```
+- `POST /api/firearm-allocation/issue`
+- `POST /api/firearm-allocation/return`
+- `GET /api/firearm-allocations/active`
+- `GET /api/firearm-allocations/overdue`
+- `POST /api/firearm-maintenance/schedule`
+- `GET /api/firearm-maintenance/pending`
 
-### Delete Firearm
-```
-DELETE /api/firearms/:id
-```
+### Permits and Training
+
+- `GET /api/guard-firearm-permits`
+- `GET /api/guard-firearm-permits/expiring`
+- `POST /api/training-records`
+- `GET /api/training-records/expiring`
 
 ---
 
-## Allocations
+## Operations, Tracking, and AI
 
-### Issue Firearm
-```
-POST /api/firearm-allocation/issue
-Content-Type: application/json
+### Core Operations
 
-{
-  "guardId": "uuid",
-  "firearmId": "uuid"
-}
-```
+- `GET /api/analytics`
+- `GET /api/alerts/predictive`
+- `POST /api/incidents`
+- `GET /api/incidents/active`
+- `GET /api/tracking/map-data`
+- `GET /api/tracking/ws` (websocket)
 
-### Return Firearm
-```
-POST /api/firearm-allocation/return
-Content-Type: application/json
+### AI Endpoints
 
-{
-  "allocationId": "uuid"
-}
-```
+- `GET /api/ai/guard-absence-risk`
+- `GET /api/ai/replacement-suggestions`
+- `GET /api/ai/vehicle-maintenance-risk`
+- `POST /api/ai/classify-incident`
+- `POST /api/ai/summarize-incident`
 
-### Get Active Allocations
-```
-GET /api/firearm-allocations/active
-```
+### Vehicle and Trip Management
+
+- `GET /api/armored-cars`
+- `POST /api/car-allocation/issue`
+- `POST /api/car-allocation/return`
+- `POST /api/trips`
+- `GET /api/trip-management/active`
 
 ---
 
 ## Health Check
-```
+```http
 GET /api/health
 ```
 
+System health:
+
+- `GET /api/health/system`
+
 ---
 
-[← Back to Home](/)
+## RBAC Notes
+
+Core hierarchy:
+
+- `superadmin > admin > supervisor > guard`
+
+Authorization is enforced per route using backend middleware.
+
+---
+
+[← Back to Home]({{ '/' | relative_url }})

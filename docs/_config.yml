@@ -1,5 +1,5 @@
-title: DASIA AIO Management System
-description: Comprehensive Asset Management & Operations Platform
+title: SENTINEL Security Operations Platform
+description: Security operations, asset, personnel, and mission management platform
 baseurl: /capstone-1.0
 url: https://cloudyrowdyyy.github.io
 remote_theme: pages-themes/cayman@v0.2.0
@@ -22,4 +22,4 @@ navigation:
 # Jekyll configuration
 markdown: kramdown
 highlighter: rouge
-author: DASIA AIO Team
+author: SENTINEL Team

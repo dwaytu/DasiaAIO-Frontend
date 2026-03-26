@@ -9,56 +9,61 @@ permalink: /docs/
 ## Architecture Overview
 
 ```
-Frontend (React)         Backend (Rust)          Database (PostgreSQL)
-├── User Interface       ├── API Server          ├── Users
-├── API Client          ├── Business Logic       ├── Firearms
-└── State Mgmt          └── Authentication       └── Allocations
+Frontend (React + Vite)          Backend (Rust + Axum)         Database (PostgreSQL)
+├── Web UI                        ├── API routes                 ├── Users and roles
+├── Shared platform build         ├── AuthZ + audit middleware   ├── Firearms and permits
+├── Desktop/mobile wrappers       ├── Analytics + AI handlers    ├── Tracking and incidents
+└── Real-time map modules         └── Websocket tracking         └── Vehicles and trips
 ```
 
 ---
 
-## 🔐 User Roles
+## User Roles
 
 | Role | Permissions |
 |------|------------|
-| **Superadmin** | Full system access, user management |
-| **Admin** | Inventory, allocations, permits, maintenance |
-| **Guard** | View assignments, request replacements |
-| **User** | View attendance, personal metrics |
+| **Superadmin** | Full platform administration and elevated management actions |
+| **Admin** | Operations, inventory, permits, schedules, analytics |
+| **Supervisor** | Shift supervision, attendance, replacements, reporting |
+| **Guard** | Assigned operations, check-in/out, self-service requests |
 
 ---
 
-## 📦 Core Modules
+## Core Modules
 
 ### Firearm Inventory Management
-Track and manage firearm assets with detailed specifications.
-- Add/edit/delete firearms
-- Serial number tracking
-- Status management (available, in-use, maintenance)
+Track and manage firearm assets with status, maintenance, and allocation context.
 
 ### Firearm Allocation System
-Assign and track firearm distribution to authorized personnel.
-- Issue firearms to guards
-- Return firearms with tracking
-- Active allocation dashboard
+Issue and return workflows with active and overdue allocation visibility.
 
 ### Maintenance Tracking
-Schedule and monitor regular maintenance logs.
-- Log maintenance events
-- Track maintenance history
-- Schedule future maintenance
+Schedule and complete maintenance for firearms and armored vehicles.
 
 ### Guard Permitting
-Manage guard firearm permits with expiration tracking.
-- Create permits
-- Track expiry dates
-- Alert on expiring permits
+Manage permit lifecycle including expiring and auto-expire workflows.
+
+### Trip and Vehicle Operations
+Armored car assignment, driver management, trip lifecycle, and maintenance tracking.
+
+### Incidents and Notifications
+Incident creation/status workflows and user notification delivery.
 
 ### Performance Analytics
-Real-time dashboards with metrics and insights.
-- Attendance rates
-- Allocation statistics
-- Performance metrics
+Analytics, trend views, predictive alerts, and AI-assisted incident intelligence.
+
+### Real-Time Tracking
+Live operational map, client site management, and websocket-based tracking feeds.
+
+---
+
+## Platform Packaging
+
+SENTINEL uses one frontend source with platform wrappers:
+
+- Web app deployment
+- Desktop wrapper via Tauri (`apps/desktop-tauri`)
+- Android wrapper via Capacitor (`apps/android-capacitor`)
 
 ---
 
@@ -70,10 +75,15 @@ Real-time dashboards with metrics and insights.
 3. Verify database exists
 
 ### Frontend can't reach backend
-1. Check `VITE_API_URL` in config
+1. Check `VITE_API_BASE_URL` in mode file
 2. Verify backend is running on port 5000
-3. Check browser console (F12) for CORS errors
+3. Check browser console for CORS or auth errors
+
+### Android app cannot connect to local backend
+1. Use LAN IP in `.env.mobile`
+2. Ensure phone and backend host are on the same network
+3. Confirm backend allows configured CORS origin
 
 ---
 
-[← Back to Home](/)
+[← Back to Home]({{ '/' | relative_url }})

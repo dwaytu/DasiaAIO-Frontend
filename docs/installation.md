@@ -8,10 +8,10 @@ permalink: /installation/
 
 ## Prerequisites
 
-- **Node.js** 20+ (for frontend)
-- **Rust** 1.70+ (for backend)  
-- **PostgreSQL** 13+ (database)
-- **Git** (version control)
+- Node.js 20+
+- Rust 1.70+
+- PostgreSQL 12+
+- Git
 
 ---
 
@@ -23,38 +23,73 @@ git clone https://github.com/Cloudyrowdyyy/capstone-1.0.git
 cd capstone-1.0
 ```
 
-### 2. Frontend Setup
+### 2. Install Dependencies
 ```bash
 npm install
-npm run dev
+npm install --prefix DasiaAIO-Frontend
 ```
-Runs on `http://localhost:5173`
 
-### 3. Backend Setup
+### 3. Configure and Run Backend
 ```bash
-cd backend-rust
+cd DasiaAIO-Backend
+cp .env.example .env
 cargo run
 ```
-Runs on `http://localhost:5000`
+
+Backend default URL: `http://localhost:5000`
 
 ### 4. Database Setup
 ```bash
 psql -U postgres -c "CREATE DATABASE guard_firearm_system;"
 ```
 
+### 5. Run Frontend
+```bash
+npm run dev --prefix DasiaAIO-Frontend
+```
+
+Frontend default URL: `http://localhost:5173`
+
 ---
 
 ## Environment Configuration
 
-Create `.env` in project root:
-```
-VITE_API_URL=http://localhost:5000
+Create frontend mode files in `DasiaAIO-Frontend/` as needed:
+
+```env
+# .env.web
+VITE_API_BASE_URL=http://localhost:5000
 ```
 
-Create `.env` in `backend-rust/`:
+```env
+# .env.mobile (use LAN IP when testing on phone)
+VITE_API_BASE_URL=http://192.168.1.25:5000
 ```
+
+```env
+# .env.desktop
+VITE_API_BASE_URL=http://localhost:5000
+```
+
+Create backend `.env` in `DasiaAIO-Backend/`:
+
+```env
+SERVER_HOST=0.0.0.0
+SERVER_PORT=5000
 DATABASE_URL=postgresql://postgres:password@localhost:5432/guard_firearm_system
 ADMIN_CODE=122601
+```
+
+---
+
+## Platform Build Commands
+
+Run from repository root:
+
+```bash
+npm run build:web
+npm run build:desktop
+npm run build:android
 ```
 
 ---
@@ -62,27 +97,22 @@ ADMIN_CODE=122601
 ## Troubleshooting
 
 ### "Port already in use"
-```bash
-# Kill process on port 5173
-lsof -ti:5173 | xargs kill -9
-
-# Kill process on port 5000
-lsof -ti:5000 | xargs kill -9
+```powershell
+Get-NetTCPConnection -LocalPort 5173 -State Listen | Select-Object -First 1 -ExpandProperty OwningProcess | ForEach-Object { Stop-Process -Id $_ -Force }
+Get-NetTCPConnection -LocalPort 5000 -State Listen | Select-Object -First 1 -ExpandProperty OwningProcess | ForEach-Object { Stop-Process -Id $_ -Force }
 ```
 
 ### "Database connection failed"
 ```bash
-# Test PostgreSQL
 psql postgresql://postgres:password@localhost/guard_firearm_system
 ```
 
 ### "Build fails"
 ```bash
-# Clear cache and reinstall
-rm -rf node_modules
 npm install
+npm install --prefix DasiaAIO-Frontend
 ```
 
 ---
 
-[← Back to Home](/)
+[← Back to Home]({{ '/' | relative_url }})

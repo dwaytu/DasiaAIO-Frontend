@@ -2,60 +2,40 @@
 layout: default
 ---
 
-# DASIA AIO Management System
+# SENTINEL Security Operations Platform
 
-> **Comprehensive Asset Management & Operations Platform**
+SENTINEL is a full-stack security operations platform for personnel, firearms, permits, missions, armored vehicles, incidents, and analytics.
 
-## 🚀 Quick Start
+## Platform Overview
 
-**DASIA AIO** is a modern, full-stack web application designed to streamline asset allocation, inventory management, and scheduling operations.
+- Frontend: React + TypeScript + Vite
+- Backend: Rust + Axum
+- Database: PostgreSQL
+- Web app: Railway-hosted deployment
+- Desktop wrapper: Tauri
+- Mobile wrapper: Capacitor (Android)
 
-- **Frontend**: React 18 + TypeScript
-- **Backend**: Rust + Axum  
-- **Database**: PostgreSQL
-- **Deployment**: Railway
-- **Live Demo**: [https://dasiaaio.up.railway.app](https://dasiaaio.up.railway.app)
+Live application: [https://dasiaaio.up.railway.app](https://dasiaaio.up.railway.app)
 
----
+## Start Here
 
-## 📚 Documentation
+- [Installation](installation/) - Local setup and prerequisites
+- [System Documentation](docs/) - Architecture, modules, and operations
+- [API Reference](api/) - Core routes and auth model
+- [Deployment Guide](deployment/) - Web, desktop, and Android release flow
 
-Choose where to get started:
+## What Is Current In This Release
 
-### For Users
-- [Getting Started](installation/) - Installation & setup instructions
-- [Features Overview](docs/) - Core features & modules
+- Shared frontend build for web, desktop, and Android wrappers
+- Guard approval workflow for self-registration
+- Expanded role-aware API authorization and audit logging
+- AI-assisted analytics endpoints for risk and incident workflows
+- Real-time operational map and tracking endpoints
 
-### For Developers
-- [API Reference](api/) - Complete API documentation
-- [Architecture](docs/#architecture-overview) - System design
-- [Deployment Guide](deployment/) - Deploy to Railway or locally
+## Repository
 
-### For Operations
-- [Database Setup](installation/#database-setup) - PostgreSQL configuration
-- [Troubleshooting](docs/#troubleshooting) - Common issues & solutions
+- GitHub: [https://github.com/Cloudyrowdyyy/capstone-1.0](https://github.com/Cloudyrowdyyy/capstone-1.0)
+- Issues: [https://github.com/Cloudyrowdyyy/capstone-1.0/issues](https://github.com/Cloudyrowdyyy/capstone-1.0/issues)
 
----
-
-## 🎯 Key Features
-
-✅ **Firearm Inventory Management** - Track assets with detailed specifications  
-✅ **Allocation System** - Assign and track firearm distribution  
-✅ **Maintenance Tracking** - Schedule and monitor maintenance  
-✅ **Guard Permitting** - Manage permits with expiration tracking  
-✅ **Role-Based Access** - Superadmin, Admin, Guard, User roles  
-✅ **Performance Analytics** - Real-time dashboards & insights  
-✅ **Responsive Design** - Works on desktop & mobile  
-
----
-
-## 🔗 Useful Links
-
-- [GitHub Repository](https://github.com/Cloudyrowdyyy/capstone-1.0)
-- [Live Application](https://dasiaaio.up.railway.app)
-- [Issue Tracker](https://github.com/Cloudyrowdyyy/capstone-1.0/issues)
-
----
-
-**Status**: ✅ Active & Maintained  
-**Last Updated**: February 17, 2026
+Status: Active and maintained  
+Last updated: March 27, 2026

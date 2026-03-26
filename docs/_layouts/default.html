@@ -17,6 +17,20 @@
             color: #333;
             background: #f6f8fa;
         }
+
+        .skip-link {
+            position: absolute;
+            left: 0;
+            top: -40px;
+            background: #111;
+            color: #fff;
+            padding: 0.5rem 0.75rem;
+            z-index: 1000;
+        }
+
+        .skip-link:focus {
+            top: 0;
+        }
         
         header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -164,6 +178,7 @@
     </style>
 </head>
 <body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
     <header>
         <div class="container">
             <h1>{{ site.title }}</h1>
@@ -173,27 +188,27 @@
     
     <nav>
         <ul>
-            <li><a href="/capstone-1.0/">Home</a></li>
-            <li><a href="/capstone-1.0/docs/">Docs</a></li>
-            <li><a href="/capstone-1.0/installation/">Installation</a></li>
-            <li><a href="/capstone-1.0/api/">API</a></li>
-            <li><a href="/capstone-1.0/deployment/">Deployment</a></li>
+            <li><a href="{{ '/' | relative_url }}">Home</a></li>
+            <li><a href="{{ '/docs/' | relative_url }}">Docs</a></li>
+            <li><a href="{{ '/installation/' | relative_url }}">Installation</a></li>
+            <li><a href="{{ '/api/' | relative_url }}">API</a></li>
+            <li><a href="{{ '/deployment/' | relative_url }}">Deployment</a></li>
         </ul>
     </nav>
     
-    <div class="container">
+    <main id="main-content" class="container" tabindex="-1">
         {% if page.title != "Home" and page.title != null %}
         <div class="breadcrumb">
-            <a href="/">Home</a> / {{ page.title }}
+            <a href="{{ '/' | relative_url }}">Home</a> / {{ page.title }}
         </div>
         {% endif %}
         
         {{ content }}
-    </div>
+    </main>
     
     <footer>
         <div class="container">
-            <p>&copy; 2026 DASIA AIO Management System. All rights reserved.</p>
+            <p>&copy; 2026 SENTINEL Security Operations Platform. All rights reserved.</p>
             <p><a href="https://github.com/Cloudyrowdyyy/capstone-1.0" style="color: #667eea;">GitHub Repository</a></p>
         </div>
     </footer>

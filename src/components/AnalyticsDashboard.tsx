@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, FC } from 'react'
+import { useState, useEffect, FC } from 'react'
 import { API_BASE_URL } from '../config'
 import { fetchJsonOrThrow } from '../utils/api'
 import SectionHeader from './dashboard/ui/SectionHeader'
@@ -151,7 +151,7 @@ const AnalyticsDashboard: FC = () => {
   const firearmAvailabilityDelta = analytics.performance_metrics.firearm_availability_rate - KPI_TARGETS.firearmAvailabilityRate
   const vehicleUtilizationDelta = analytics.performance_metrics.vehicle_utilization_rate - KPI_TARGETS.vehicleUtilizationRate
 
-  const operationalInsights = useMemo<InsightItem[]>(() => {
+  const operationalInsights: InsightItem[] = (() => {
     const insights: InsightItem[] = []
 
     if (missionCompletionDelta < -8) {
@@ -198,7 +198,7 @@ const AnalyticsDashboard: FC = () => {
     }
 
     return insights.slice(0, 4)
-  }, [analytics.mission_stats.completed_missions_this_month, analytics.mission_stats.pending_missions, guardAttendanceDelta, missionCompletionDelta, vehicleUtilizationDelta])
+  })()
 
   const metricTimeline = [
     {

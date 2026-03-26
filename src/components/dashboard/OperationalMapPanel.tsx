@@ -44,7 +44,15 @@ const MapViewportSync: FC<MapViewportSyncProps> = ({ center }) => {
   const map = useMap()
 
   useEffect(() => {
-    map.setView(center, Math.max(map.getZoom(), 13), { animate: true })
+    const [lat, lng] = center
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return
+
+    const currentCenter = map.getCenter()
+    const centerChanged = Math.abs(currentCenter.lat - lat) > 0.0001 || Math.abs(currentCenter.lng - lng) > 0.0001
+    if (!centerChanged) return
+
+    map.stop()
+    map.setView(center, Math.max(map.getZoom(), 13), { animate: false })
   }, [center, map])
 
   return null
@@ -113,9 +121,10 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
     )
   }, [visibleTrackingPoints, currentUserId])
 
-  const mapCenter: [number, number] = currentUserPoint
-    ? [currentUserPoint.latitude, currentUserPoint.longitude]
-    : DAVAO_CENTER
+  const mapCenter = useMemo<[number, number]>(() => {
+    if (!currentUserPoint) return DAVAO_CENTER
+    return [currentUserPoint.latitude, currentUserPoint.longitude]
+  }, [currentUserPoint?.latitude, currentUserPoint?.longitude])
 
   const bounds = useMemo(() => {
     const positions: [number, number][] = []

@@ -11,7 +11,7 @@ import ArmoredCarDashboard from './components/ArmoredCarDashboard'
 import ProfileDashboard from './components/ProfileDashboard'
 import MeritScoreDashboard from './components/MeritScoreDashboard'
 import CalendarDashboard from './components/CalendarDashboard'
-import { API_BASE_URL } from './config'
+import { API_BASE_URL, APP_VERSION, LATEST_RELEASE_API_URL, RELEASE_DOWNLOAD_URL } from './config'
 import { normalizeRole, isLegacyRole, Role } from './types/auth'
 import { can, Permission } from './utils/permissions'
 import { getRequiredAccuracyMeters, getTrackingAccuracyMode } from './utils/trackingPolicy'
@@ -27,6 +27,29 @@ export interface User {
 
 const TOA_ACCEPTANCE_KEY = 'dasi.toa.accepted.v1'
 const TOA_ACCEPTANCE_VALUE = 'accepted'
+const UPDATE_DISMISS_KEY_PREFIX = 'dasi.update.dismissed.'
+
+type ReleasePrompt = {
+  tag: string
+  url: string
+}
+
+function parseSemverVersion(value: string): [number, number, number] | null {
+  const normalized = value.trim().replace(/^v/i, '')
+  const match = normalized.match(/^(\d+)\.(\d+)\.(\d+)/)
+  if (!match) return null
+  return [Number(match[1]), Number(match[2]), Number(match[3])]
+}
+
+function isReleaseNewer(latestTag: string, currentVersion: string): boolean {
+  const latest = parseSemverVersion(latestTag)
+  const current = parseSemverVersion(currentVersion)
+  if (!latest || !current) return false
+
+  if (latest[0] !== current[0]) return latest[0] > current[0]
+  if (latest[1] !== current[1]) return latest[1] > current[1]
+  return latest[2] > current[2]
+}
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false)
@@ -36,6 +59,7 @@ function App() {
   const [hasAcceptedToa, setHasAcceptedToa] = useState<boolean>(false)
   const [toaChecked, setToaChecked] = useState<boolean>(false)
   const [toaError, setToaError] = useState<string>('')
+  const [releasePrompt, setReleasePrompt] = useState<ReleasePrompt | null>(null)
   const [geoPermissionState, setGeoPermissionState] = useState<'unknown' | 'prompt' | 'granted' | 'denied' | 'unsupported'>('unknown')
   const [geoNotice, setGeoNotice] = useState<string>('')
 
@@ -82,6 +106,50 @@ function App() {
     window.addEventListener('auth:token-expired', handleTokenExpiry)
     return () => {
       window.removeEventListener('auth:token-expired', handleTokenExpiry)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (import.meta.env.DEV) return
+
+    let isCancelled = false
+
+    const checkForUpdates = async () => {
+      try {
+        const response = await fetch(LATEST_RELEASE_API_URL, {
+          headers: { Accept: 'application/vnd.github+json' },
+        })
+
+        if (!response.ok) return
+
+        const data = await response.json() as { tag_name?: string; html_url?: string }
+        const latestTag = (data.tag_name || '').trim()
+        if (!latestTag) return
+
+        if (!isReleaseNewer(latestTag, APP_VERSION)) return
+
+        const dismissedKey = `${UPDATE_DISMISS_KEY_PREFIX}${latestTag}`
+        if (localStorage.getItem(dismissedKey) === 'true') return
+
+        if (!isCancelled) {
+          setReleasePrompt({
+            tag: latestTag,
+            url: data.html_url || RELEASE_DOWNLOAD_URL,
+          })
+        }
+      } catch {
+        // Ignore transient release-check failures.
+      }
+    }
+
+    void checkForUpdates()
+    const interval = window.setInterval(() => {
+      void checkForUpdates()
+    }, 1000 * 60 * 60 * 6)
+
+    return () => {
+      isCancelled = true
+      window.clearInterval(interval)
     }
   }, [])
 
@@ -151,6 +219,18 @@ function App() {
     setIsLoggedIn(false)
     setActiveView('users')
     setToaError('You must agree to the Terms of Agreement to use SENTINEL.')
+  }
+
+  const handleDismissUpdatePrompt = () => {
+    if (!releasePrompt) return
+    localStorage.setItem(`${UPDATE_DISMISS_KEY_PREFIX}${releasePrompt.tag}`, 'true')
+    setReleasePrompt(null)
+  }
+
+  const handleDownloadUpdate = () => {
+    if (!releasePrompt) return
+    window.open(releasePrompt.url, '_blank', 'noopener,noreferrer')
+    handleDismissUpdatePrompt()
   }
 
   const requestGlobalLocationPermission = () => {
@@ -500,6 +580,38 @@ function App() {
                 disabled={!toaChecked}
               >
                 Agree and Continue
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+
+      {releasePrompt ? (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/62 p-4 backdrop-blur-sm">
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="update-title"
+            className="w-full max-w-lg rounded-2xl border border-border-elevated bg-surface p-5 shadow-modal sm:p-6"
+          >
+            <h2 id="update-title" className="text-xl font-bold text-text-primary">New update available</h2>
+            <p className="mt-2 text-sm text-text-secondary">
+              Version {releasePrompt.tag} is available. You are currently using {APP_VERSION}. Download the latest update to continue with new fixes and features.
+            </p>
+            <div className="mt-4 flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                onClick={handleDismissUpdatePrompt}
+                className="rounded-md border border-border-elevated bg-surface-elevated px-4 py-2 text-sm font-semibold text-text-secondary"
+              >
+                Later
+              </button>
+              <button
+                type="button"
+                onClick={handleDownloadUpdate}
+                className="rounded-md bg-info px-4 py-2 text-sm font-semibold text-white"
+              >
+                Download update
               </button>
             </div>
           </section>

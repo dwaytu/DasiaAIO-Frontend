@@ -5,6 +5,7 @@
  */
 
 const trimTrailingSlash = (url: string) => url.replace(/\/+$/, '')
+const DEFAULT_PRODUCTION_API_URL = 'https://backend-production-0c47.up.railway.app'
 
 type RuntimePlatform = 'web' | 'capacitor' | 'tauri'
 
@@ -69,9 +70,15 @@ function getDefaultAPIURL(): string {
     if (platform === 'capacitor') {
       // Android emulator cannot reach host loopback directly.
       if (hostname === 'localhost' || hostname === '127.0.0.1') {
-        return 'http://10.0.2.2:5000'
+        if (import.meta.env.DEV) {
+          return 'http://10.0.2.2:5000'
+        }
+        return DEFAULT_PRODUCTION_API_URL
       }
-      return `${protocol}//${hostname}:5000`
+      if (import.meta.env.DEV) {
+        return `${protocol}//${hostname}:5000`
+      }
+      return DEFAULT_PRODUCTION_API_URL
     }
 
     // Local development
@@ -83,7 +90,7 @@ function getDefaultAPIURL(): string {
 
     // Railway production — hardcoded fallback in case build arg was missing
     if (hostname.includes('.up.railway.app')) {
-      return 'https://backend-production-0c47.up.railway.app'
+      return DEFAULT_PRODUCTION_API_URL
     }
   }
 
@@ -91,3 +98,13 @@ function getDefaultAPIURL(): string {
 }
 
 export const API_BASE_URL = getDefaultAPIURL()
+
+export const APP_VERSION = (import.meta.env.VITE_APP_VERSION || 'dev').toString().trim()
+export const LATEST_RELEASE_API_URL = (
+  import.meta.env.VITE_LATEST_RELEASE_API_URL ||
+  'https://api.github.com/repos/Cloudyrowdyyy/Capstone-Main/releases/latest'
+).toString().trim()
+export const RELEASE_DOWNLOAD_URL = (
+  import.meta.env.VITE_RELEASE_DOWNLOAD_URL ||
+  'https://github.com/Cloudyrowdyyy/Capstone-Main/releases/latest'
+).toString().trim()

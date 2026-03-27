@@ -5,6 +5,7 @@ import Header from './Header'
 import { User as AppUser } from '../App'
 import { getSidebarNav } from '../config/navigation'
 import { logError } from '../utils/logger'
+import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
 
 interface Props {
   user: AppUser
@@ -17,9 +18,10 @@ interface Performance {
   guardId: string
   guardName: string
   attendanceRate: number
-  allocationsCompleted: number
-  maintenanceCompleted: number
-  [key: string]: any
+  missionPerformance: number
+  permitCompliance: number
+  reliabilityScore: number
+  rank: number
 }
 
 const PerformanceDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeView }) => {
@@ -36,26 +38,34 @@ const PerformanceDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeV
   const fetchPerformance = async () => {
     try {
       setLoading(true)
-      // Simulated performance data from attendance and allocations
-      const token = localStorage.getItem('token')
-      const response = await fetch(`${API_BASE_URL}/api/users`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      if (response.ok) {
-        const data = await response.json()
-        // Create mock performance data
-        const users = Array.isArray(data) ? data : (data.users || data || [])
-        const perf = users.map((u: any) => ({
-          guardId: u.id,
-          guardName: u.email.split('@')[0],
-          attendanceRate: Math.floor(Math.random() * 40 + 60),
-          allocationsCompleted: Math.floor(Math.random() * 50 + 10),
-          maintenanceCompleted: Math.floor(Math.random() * 20 + 5)
-        }))
-        setPerformance(perf)
-      }
+      const rows = await fetchJsonOrThrow<Array<{
+        guardId: string
+        guardName: string
+        attendanceScore: number
+        missionPerformance: number
+        permitCompliance: number
+        reliabilityScore: number
+        rank: number
+      }>>(
+        `${API_BASE_URL}/api/analytics/guard-reliability`,
+        { headers: getAuthHeaders() },
+        'Failed to fetch guard reliability metrics',
+      )
+
+      const normalizedRows = rows.map((row) => ({
+        guardId: row.guardId,
+        guardName: row.guardName,
+        attendanceRate: Math.round(row.attendanceScore),
+        missionPerformance: Math.round(row.missionPerformance),
+        permitCompliance: Math.round(row.permitCompliance),
+        reliabilityScore: Math.round(row.reliabilityScore),
+        rank: row.rank,
+      }))
+
+      setPerformance(normalizedRows)
     } catch (err) {
       logError('Error fetching performance:', err)
+      setPerformance([])
     } finally {
       setLoading(false)
     }
@@ -70,8 +80,10 @@ const PerformanceDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeV
   const averageAttendance = performance.length > 0
     ? Math.round(performance.reduce((sum, row) => sum + row.attendanceRate, 0) / performance.length)
     : 0
-  const totalAllocations = performance.reduce((sum, row) => sum + row.allocationsCompleted, 0)
-  const totalMaintenance = performance.reduce((sum, row) => sum + row.maintenanceCompleted, 0)
+  const averageReliability = performance.length > 0
+    ? Math.round(performance.reduce((sum, row) => sum + row.reliabilityScore, 0) / performance.length)
+    : 0
+  const activeGuards = performance.length
 
   return (
     <div className="flex h-screen w-screen bg-background font-sans">
@@ -102,8 +114,8 @@ const PerformanceDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeV
               <h2 className="text-2xl font-black uppercase tracking-wide text-text-primary">Guard Reliability Overview</h2>
               <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
                 <div className="soc-kpi"><p className="soc-kpi-label">Avg Attendance</p><p className="soc-kpi-value">{averageAttendance}%</p></div>
-                <div className="soc-kpi"><p className="soc-kpi-label">Allocations Closed</p><p className="soc-kpi-value">{totalAllocations}</p></div>
-                <div className="soc-kpi"><p className="soc-kpi-label">Maintenance Tasks</p><p className="soc-kpi-value">{totalMaintenance}</p></div>
+                <div className="soc-kpi"><p className="soc-kpi-label">Avg Reliability</p><p className="soc-kpi-value">{averageReliability}%</p></div>
+                <div className="soc-kpi"><p className="soc-kpi-label">Tracked Guards</p><p className="soc-kpi-value">{activeGuards}</p></div>
               </div>
             </section>
 
@@ -117,15 +129,18 @@ const PerformanceDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeV
                   <table className="w-full border-collapse">
                     <thead className="thead-glass">
                       <tr>
+                        <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Rank</th>
                         <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Guard Name</th>
                         <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Attendance Rate</th>
-                        <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Allocations</th>
-                        <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Maintenance Tasks</th>
+                        <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Mission Performance</th>
+                        <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Permit Compliance</th>
+                        <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Reliability Score</th>
                       </tr>
                     </thead>
                     <tbody>
                       {performance.map((p) => (
                         <tr key={p.guardId} className="border-b border-border hover:bg-surface-hover">
+                          <td className="px-4 py-3 text-text-primary font-medium">#{p.rank}</td>
                           <td className="px-4 py-3 text-text-primary font-medium">{p.guardName}</td>
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">
@@ -138,8 +153,9 @@ const PerformanceDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeV
                               <span className="text-sm font-medium text-text-primary min-w-12" aria-label={`Attendance rate ${p.attendanceRate} percent`}>{p.attendanceRate}%</span>
                             </div>
                           </td>
-                          <td className="px-4 py-3"><span className="soc-chip">{p.allocationsCompleted}</span></td>
-                          <td className="px-4 py-3"><span className="soc-chip status-danger">{p.maintenanceCompleted}</span></td>
+                          <td className="px-4 py-3"><span className="soc-chip">{p.missionPerformance}%</span></td>
+                          <td className="px-4 py-3"><span className="soc-chip">{p.permitCompliance}%</span></td>
+                          <td className="px-4 py-3"><span className="soc-chip status-danger">{p.reliabilityScore}%</span></td>
                         </tr>
                       ))}
                     </tbody>

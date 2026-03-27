@@ -1,5 +1,5 @@
 jest.mock('../config', () => ({
-  API_BASE_URL: 'http://localhost:5000',
+  API_BASE_URL: 'https://backend-production-0c47.up.railway.app',
 }))
 
 import { fetchJsonOrThrow, getApiErrorMessage, parseResponseBody } from '../utils/api'

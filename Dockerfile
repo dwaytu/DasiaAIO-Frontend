@@ -8,8 +8,8 @@ COPY package*.json ./
 RUN npm install
 
 # Accept build-time env vars (Railway injects these as Docker build args)
-ARG VITE_API_URL
-ENV VITE_API_URL=${VITE_API_URL}
+ARG VITE_API_BASE_URL
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 
 # Build the app
 COPY . .

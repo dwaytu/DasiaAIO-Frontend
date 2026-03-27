@@ -1,15 +1,27 @@
-/**
- * API Configuration
- * For production on Railway, add `?api_host=https://backend-service:port` to the frontend URL
- * Or set VITE_API_BASE_URL environment variable
- */
-
 const trimTrailingSlash = (url: string) => url.replace(/\/+$/, '')
-const DEFAULT_PRODUCTION_API_URL = 'https://backend-production-0c47.up.railway.app'
 
-type RuntimePlatform = 'web' | 'capacitor' | 'tauri'
+function isDisallowedProductionHost(hostname: string): boolean {
+  const normalizedHost = hostname.trim().toLowerCase()
 
-const detectRuntimePlatform = (): RuntimePlatform => {
+  if (
+    normalizedHost === 'localhost' ||
+    normalizedHost === '127.0.0.1' ||
+    normalizedHost === '0.0.0.0' ||
+    normalizedHost === '10.0.2.2'
+  ) {
+    return true
+  }
+
+  if (normalizedHost.startsWith('10.')) return true
+  if (normalizedHost.startsWith('192.168.')) return true
+  if (/^172\.(1[6-9]|2\d|3[0-1])\./.test(normalizedHost)) return true
+
+  return false
+}
+
+export type RuntimePlatform = 'web' | 'capacitor' | 'tauri'
+
+export const detectRuntimePlatform = (): RuntimePlatform => {
   if (typeof window === 'undefined') return 'web'
 
   const runtimeWindow = window as typeof window & {
@@ -23,81 +35,40 @@ const detectRuntimePlatform = (): RuntimePlatform => {
   return 'web'
 }
 
-const getEnvApiUrl = (): string | null => {
-  const apiUrl = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL
-  if (!apiUrl || typeof apiUrl !== 'string') return null
-  return trimTrailingSlash(apiUrl)
+function validateApiBaseUrl(rawValue: string): string {
+  const trimmed = rawValue.trim()
+  if (!trimmed) {
+    throw new Error('VITE_API_BASE_URL is configured but empty.')
+  }
+
+  let parsed: URL
+  try {
+    parsed = new URL(trimmed)
+  } catch {
+    throw new Error('VITE_API_BASE_URL must be a fully-qualified URL (for example: https://api.example.com).')
+  }
+
+  if (import.meta.env.PROD && parsed.protocol !== 'https:') {
+    throw new Error('Production builds require VITE_API_BASE_URL to use HTTPS.')
+  }
+
+  if (import.meta.env.PROD && isDisallowedProductionHost(parsed.hostname)) {
+    throw new Error('Production builds do not allow VITE_API_BASE_URL to point to localhost or private network addresses.')
+  }
+
+  return trimTrailingSlash(parsed.toString())
 }
 
-const getPlatformEnvApiUrl = (platform: RuntimePlatform): string | null => {
-  const envMap: Record<RuntimePlatform, string | undefined> = {
-    web: import.meta.env.VITE_API_BASE_URL_WEB,
-    tauri: import.meta.env.VITE_API_BASE_URL_DESKTOP,
-    capacitor: import.meta.env.VITE_API_BASE_URL_MOBILE,
+function resolveApiBaseUrl(): string {
+  const configuredUrl = import.meta.env.VITE_API_BASE_URL
+  if (!configuredUrl || typeof configuredUrl !== 'string') {
+    throw new Error('Missing required VITE_API_BASE_URL. Configure it in your environment file before starting the app.')
   }
 
-  const candidate = envMap[platform]
-  if (!candidate || typeof candidate !== 'string') return null
-  return trimTrailingSlash(candidate)
+  return validateApiBaseUrl(configuredUrl)
 }
 
-function getDefaultAPIURL(): string {
-  const platform = detectRuntimePlatform()
-
-  const platformEnvApiUrl = getPlatformEnvApiUrl(platform)
-  if (platformEnvApiUrl) {
-    return platformEnvApiUrl
-  }
-
-  // Build-time: mode-specific .env values are baked by Vite
-  const envApiUrl = getEnvApiUrl()
-  if (envApiUrl) {
-    return envApiUrl
-  }
-
-  if (typeof window !== 'undefined') {
-    // Allow runtime override via query param (e.g. for testing)
-    const apiHostParam = new URLSearchParams(window.location.search).get('api_host')
-    if (apiHostParam) return trimTrailingSlash(apiHostParam)
-
-    const { hostname, protocol } = window.location
-
-    const runtimeOverride = (window as typeof window & { __SENTINEL_API_BASE_URL__?: string }).__SENTINEL_API_BASE_URL__
-    if (runtimeOverride) {
-      return trimTrailingSlash(runtimeOverride)
-    }
-
-    if (platform === 'capacitor') {
-      // Android emulator cannot reach host loopback directly.
-      if (hostname === 'localhost' || hostname === '127.0.0.1') {
-        if (import.meta.env.DEV) {
-          return 'http://10.0.2.2:5000'
-        }
-        return DEFAULT_PRODUCTION_API_URL
-      }
-      if (import.meta.env.DEV) {
-        return `${protocol}//${hostname}:5000`
-      }
-      return DEFAULT_PRODUCTION_API_URL
-    }
-
-    // Local development
-    if (hostname === 'localhost' || hostname === '127.0.0.1' ||
-        hostname.startsWith('192.168.') || hostname.startsWith('10.') ||
-        /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(hostname)) {
-      return `${protocol}//${hostname}:5000`
-    }
-
-    // Railway production — hardcoded fallback in case build arg was missing
-    if (hostname.includes('.up.railway.app')) {
-      return DEFAULT_PRODUCTION_API_URL
-    }
-  }
-
-  return 'http://127.0.0.1:5000'
-}
-
-export const API_BASE_URL = getDefaultAPIURL()
+export const API_BASE_URL = resolveApiBaseUrl()
 
 export const APP_VERSION = (import.meta.env.VITE_APP_VERSION || 'dev').toString().trim()
 export const LATEST_RELEASE_API_URL = (

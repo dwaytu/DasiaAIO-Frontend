@@ -1,7 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { API_BASE_URL } from '../config'
+import { detectRuntimePlatform } from '../config'
 import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
 import { normalizeRole } from '../types/auth'
+import {
+  hasAcceptedLocationConsent,
+  LOCATION_TRACKING_TOGGLE_KEY,
+  resolveLocationWithFallback,
+} from '../utils/location'
 
 export interface MapClientSite {
   id: string
@@ -219,7 +225,10 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
-    if (!storedUser || !navigator.geolocation) return
+    if (!storedUser) return
+
+    const trackingEnabled = localStorage.getItem(LOCATION_TRACKING_TOGGLE_KEY) === 'true'
+    if (!trackingEnabled || !hasAcceptedLocationConsent()) return
 
     try {
       const user = JSON.parse(storedUser)
@@ -230,34 +239,38 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
     }
 
     let lastSent = 0
-    const watchId = navigator.geolocation.watchPosition(
-      (position) => {
-        const now = Date.now()
-        if (now - lastSent < 15000) return
-        lastSent = now
+    let disposed = false
+    const platform = detectRuntimePlatform()
 
-        sendGuardHeartbeat({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          heading: position.coords.heading ?? undefined,
-          speedKph: position.coords.speed != null ? position.coords.speed * 3.6 : undefined,
+    const pushHeartbeat = async () => {
+      const now = Date.now()
+      if (now - lastSent < 15000) return
+      lastSent = now
+
+      try {
+        const location = await resolveLocationWithFallback(platform)
+        await sendGuardHeartbeat({
+          latitude: location.latitude,
+          longitude: location.longitude,
+          heading: location.heading ?? undefined,
+          speedKph: location.speedKph ?? undefined,
+          accuracyMeters: location.accuracyMeters ?? undefined,
           status: 'active',
-        }).catch(() => {
-          // Ignore heartbeat errors to keep the watch loop alive.
         })
-      },
-      () => {
-        // Geolocation denied or unavailable.
-      },
-      {
-        enableHighAccuracy: true,
-        maximumAge: 5000,
-        timeout: 15000,
-      },
-    )
+      } catch {
+        // Ignore heartbeat errors to keep polling alive.
+      }
+    }
+
+    void pushHeartbeat()
+    const intervalId = window.setInterval(() => {
+      if (disposed) return
+      void pushHeartbeat()
+    }, 20000)
 
     return () => {
-      navigator.geolocation.clearWatch(watchId)
+      disposed = true
+      window.clearInterval(intervalId)
     }
   }, [sendGuardHeartbeat])
 

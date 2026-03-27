@@ -97,100 +97,11 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
   const formatTime = (value: Date | string) =>
     new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 
-  const usingMockData =
-    shiftsState.shifts.length === 0 &&
-    incidentsState.incidents.length === 0 &&
-    assetsState.vehicles.length === 0
-
-  const mockShifts = useMemo(
-    () => [
-      { id: 'mock-shift-1', guard_name: 'R. Dela Cruz', client_site: 'North Gate', status: 'in_progress', start_time: new Date().toISOString() },
-      { id: 'mock-shift-2', guard_name: 'M. Santos', client_site: 'Operations Lobby', status: 'scheduled', start_time: new Date().toISOString() },
-      { id: 'mock-shift-3', guard_name: 'A. Villanueva', client_site: 'Vault Corridor', status: 'scheduled', start_time: new Date().toISOString() },
-    ],
-    [],
-  )
-
-  const mockIncidents = useMemo(
-    () => [
-      {
-        id: 'mock-incident-1',
-        title: 'Unauthorized perimeter movement',
-        description: 'Motion sensors detected repeated movement near perimeter sector C.',
-        location: 'Sector C Fence Line',
-        reported_by: 'system',
-        status: 'investigating' as const,
-        priority: 'high' as const,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      },
-      {
-        id: 'mock-incident-2',
-        title: 'Control room camera signal drop',
-        description: 'Camera feed CCT-12 dropped for 90 seconds and recovered.',
-        location: 'Control Room',
-        reported_by: 'system',
-        status: 'open' as const,
-        priority: 'medium' as const,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      },
-    ],
-    [],
-  )
-
-  const displayShifts = shiftsState.shifts.length > 0 ? shiftsState.shifts : usingMockData ? mockShifts : []
-  const displayIncidents = incidentsState.incidents.length > 0 ? incidentsState.incidents : usingMockData ? mockIncidents : []
-
-  const displayGuardPredictions = guardAbsencePredictionState.predictions.length > 0
-    ? guardAbsencePredictionState.predictions
-    : usingMockData
-      ? [{
-          guardId: 'mock-guard-1',
-          guardName: 'R. Dela Cruz',
-          riskScore: 0.42,
-          riskLevel: 'MEDIUM' as const,
-          previousAbsences: 1,
-          lateCheckins: 2,
-          recentLeaveRequests: 0,
-          formula: 'AbsenceRisk = (1*0.5)+(2*0.3)+(0*0.2)',
-          calculatedAt: new Date().toISOString(),
-        }]
-      : []
-
-  const displayReplacementSuggestions = replacementSuggestionsState.suggestions.length > 0
-    ? replacementSuggestionsState.suggestions
-    : usingMockData
-      ? [{
-          guardId: 'mock-repl-1',
-          guardName: 'M. Santos',
-          reliabilityScore: 93.4,
-          distanceKm: 1.7,
-          availability: true,
-          permitValid: true,
-          distanceScore: 88.1,
-          replacementScore: 91.2,
-          formula: 'ReplacementScore = (reliability*0.4)+(availability*0.3)+(distance*0.3)',
-          generatedAt: new Date().toISOString(),
-        }]
-      : []
-
-  const displayVehiclePredictions = vehicleMaintenancePredictionState.predictions.length > 0
-    ? vehicleMaintenancePredictionState.predictions
-    : usingMockData
-      ? [{
-          vehicleId: 'mock-vehicle-1',
-          licensePlate: 'SOC-2147',
-          riskScore: 0.68,
-          riskLevel: 'HIGH' as const,
-          mileageSinceService: 9620,
-          daysSinceService: 73,
-          maintenanceHistoryCount: 4,
-          recommendedAction: 'Schedule preventive maintenance within 24 hours before next mission.',
-          formula: 'MaintenanceRisk = (mileage*0.5)+(days*0.5)',
-          calculatedAt: new Date().toISOString(),
-        }]
-      : []
+  const displayShifts = shiftsState.shifts
+  const displayIncidents = incidentsState.incidents
+  const displayGuardPredictions = guardAbsencePredictionState.predictions
+  const displayReplacementSuggestions = replacementSuggestionsState.suggestions
+  const displayVehiclePredictions = vehicleMaintenancePredictionState.predictions
 
   const liveOperationsItems = useMemo<LiveFeedItem[]>(() => {
     const items: LiveFeedItem[] = []

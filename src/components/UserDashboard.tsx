@@ -1,10 +1,19 @@
 import { useState, useEffect, FC } from 'react'
 import { API_BASE_URL } from '../config'
+import { detectRuntimePlatform } from '../config'
 import Sidebar from './Sidebar'
 import Header from './Header'
 import { User as AppUser } from '../App'
 import { getRequiredAccuracyMeters, getTrackingAccuracyMode } from '../utils/trackingPolicy'
 import { logError } from '../utils/logger'
+import { fetchJsonOrThrow, getAuthToken } from '../utils/api'
+import {
+  getLocationPermissionState,
+  hasAcceptedLocationConsent,
+  LOCATION_TRACKING_TOGGLE_KEY,
+  requestRuntimeLocationPermission,
+  resolveLocationWithFallback,
+} from '../utils/location'
 
 interface UserDashboardProps {
   user: AppUser
@@ -86,6 +95,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
   const [checkInTimes, setCheckInTimes] = useState<{ [key: string]: Date }>({})
   const [checkInSubmitting, setCheckInSubmitting] = useState<{ [key: string]: boolean }>({})
   const [locationTrackingEnabled, setLocationTrackingEnabled] = useState<boolean>(false)
+  const [hasLocationConsent, setHasLocationConsent] = useState<boolean>(false)
   const [locationTrackingMessage, setLocationTrackingMessage] = useState<string>('')
   const [locationPermissionState, setLocationPermissionState] = useState<'unknown' | 'prompt' | 'granted' | 'denied'>('unknown')
   const [locationAccuracyMeters, setLocationAccuracyMeters] = useState<number | null>(null)
@@ -108,55 +118,60 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
   }, [user?.id])
 
   useEffect(() => {
-    const stored = localStorage.getItem('dasi.guardLocationTrackingEnabled')
+    const stored = localStorage.getItem(LOCATION_TRACKING_TOGGLE_KEY)
     setLocationTrackingEnabled(stored === 'true')
+    setHasLocationConsent(hasAcceptedLocationConsent())
   }, [])
 
   useEffect(() => {
-    if (typeof navigator === 'undefined' || !('permissions' in navigator)) {
+    if (!hasLocationConsent) {
+      setLocationPermissionState('unknown')
       return
     }
 
-    navigator.permissions
-      .query({ name: 'geolocation' as PermissionName })
-      .then((result) => {
-        setLocationPermissionState(result.state as 'prompt' | 'granted' | 'denied')
-        result.onchange = () => {
-          setLocationPermissionState(result.state as 'prompt' | 'granted' | 'denied')
-        }
-      })
-      .catch(() => {
+    void getLocationPermissionState().then((state) => {
+      if (state === 'unsupported') {
         setLocationPermissionState('unknown')
-      })
-  }, [])
+        return
+      }
+      setLocationPermissionState(state)
+    })
+  }, [hasLocationConsent])
 
   useEffect(() => {
     if (!locationTrackingEnabled) return
-    if (!navigator.geolocation) {
-      setLocationTrackingMessage('Geolocation is not supported on this device/browser.')
+    if (!hasLocationConsent) {
+      setLocationTrackingMessage('Location tracking is disabled because consent has not been accepted.')
       setLocationTrackingEnabled(false)
-      localStorage.setItem('dasi.guardLocationTrackingEnabled', 'false')
+      localStorage.setItem(LOCATION_TRACKING_TOGGLE_KEY, 'false')
       return
     }
 
-    const token = localStorage.getItem('token')
+    const token = getAuthToken()
     if (!token) return
 
     let lastSent = 0
     const isMobileClient = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
     const trackingMode = getTrackingAccuracyMode()
     const REQUIRED_ACCURACY_METERS = getRequiredAccuracyMeters(isMobileClient, trackingMode)
-    const watchId = navigator.geolocation.watchPosition(
-      async (position) => {
+    const platform = detectRuntimePlatform()
+    let disposed = false
+
+    const sendHeartbeat = async () => {
         const now = Date.now()
         if (now - lastSent < 15000) return
         lastSent = now
 
         try {
-          const accuracyMeters = position.coords.accuracy
+          const location = await resolveLocationWithFallback(platform)
+          const accuracyMeters = location.accuracyMeters
           setLocationAccuracyMeters(accuracyMeters)
 
-          if (accuracyMeters > REQUIRED_ACCURACY_METERS) {
+          if (
+            location.source !== 'ip' &&
+            accuracyMeters != null &&
+            accuracyMeters > REQUIRED_ACCURACY_METERS
+          ) {
             setLocationTrackingMessage(
               isMobileClient
                 ? 'Location fix is too broad to plot accurately. Move to an open area and wait for stronger GPS.'
@@ -165,84 +180,88 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
             return
           }
 
-          const status = 'active'
-          const response = await fetch(`${API_BASE_URL}/api/tracking/heartbeat`, {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json',
+          await fetchJsonOrThrow(
+            `${API_BASE_URL}/api/tracking/heartbeat`,
+            {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                entityType: 'guard',
+                entityId: user.id,
+                label: user.fullName || user.full_name || user.username,
+                status: 'active',
+                latitude: location.latitude,
+                longitude: location.longitude,
+                heading: location.heading,
+                speedKph: location.speedKph,
+                accuracyMeters,
+              }),
             },
-            body: JSON.stringify({
-              entityType: 'guard',
-              entityId: user.id,
-              label: user.fullName || user.full_name || user.username,
-              status,
-              latitude: position.coords.latitude,
-              longitude: position.coords.longitude,
-              heading: position.coords.heading,
-              speedKph: position.coords.speed != null ? position.coords.speed * 3.6 : null,
-              accuracyMeters,
-            }),
-          })
+            'Unable to send location heartbeat.',
+          )
 
-          if (!response.ok) {
-            const body = await response.json().catch(() => ({}))
-            setLocationTrackingMessage(body.error || 'Unable to send location heartbeat.')
+          if (disposed) return
+
+          if (location.source === 'ip') {
+            setLocationPermissionState('denied')
+            setLocationTrackingMessage('Live tracking is active using approximate IP-based location fallback.')
           } else {
+            setLocationPermissionState('granted')
             setLocationTrackingMessage('Live location tracking is active.')
           }
         } catch {
+          if (disposed) return
           setLocationTrackingMessage('Location heartbeat failed. Check your connection.')
         }
-      },
-      () => {
-        setLocationPermissionState('denied')
-        setLocationTrackingMessage('Location permission denied. Enable device location permissions to track in real time.')
-      },
-      {
-        enableHighAccuracy: true,
-        maximumAge: 0,
-        timeout: 20000,
-      },
-    )
+    }
+
+    void sendHeartbeat()
+    const intervalId = window.setInterval(() => {
+      void sendHeartbeat()
+    }, 20000)
 
     return () => {
-      navigator.geolocation.clearWatch(watchId)
+      disposed = true
+      window.clearInterval(intervalId)
     }
-  }, [locationTrackingEnabled, user.id, user.username, user.fullName, user.full_name])
+  }, [hasLocationConsent, locationTrackingEnabled, user.id, user.username, user.fullName, user.full_name])
 
-  const requestLocationPermission = () => {
-    if (!navigator.geolocation) {
-      setLocationTrackingMessage('Geolocation is not supported on this device/browser.')
+  const requestLocationPermission = async () => {
+    setLocationTrackingMessage('Requesting location access...')
+    const state = await requestRuntimeLocationPermission(detectRuntimePlatform())
+
+    if (state === 'granted') {
+      setLocationPermissionState('granted')
+      setLocationTrackingMessage('Location access granted. Live tracking is active.')
       return
     }
 
-    setLocationTrackingMessage('Requesting location access...')
+    if (state === 'unsupported') {
+      setLocationPermissionState('unknown')
+      setLocationTrackingMessage('Precise location is unavailable in this runtime. IP-based fallback will be used.')
+      return
+    }
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setLocationPermissionState('granted')
-        setLocationAccuracyMeters(position.coords.accuracy)
-        setLocationTrackingMessage('Location access granted. Live tracking is active.')
-      },
-      () => {
-        setLocationPermissionState('denied')
-        setLocationTrackingMessage('Location access was denied. Please allow location to enable live tracking.')
-      },
-      {
-        enableHighAccuracy: true,
-        maximumAge: 0,
-        timeout: 20000,
-      },
-    )
+    setLocationPermissionState('denied')
+    setLocationTrackingMessage('Location access was denied. Tracking can continue with approximate IP-based fallback.')
   }
 
   const toggleLocationTracking = () => {
+    if (!hasLocationConsent) {
+      setLocationTrackingEnabled(false)
+      localStorage.setItem(LOCATION_TRACKING_TOGGLE_KEY, 'false')
+      setLocationTrackingMessage('Location consent is required before enabling live tracking.')
+      return
+    }
+
     const next = !locationTrackingEnabled
     setLocationTrackingEnabled(next)
-    localStorage.setItem('dasi.guardLocationTrackingEnabled', String(next))
+    localStorage.setItem(LOCATION_TRACKING_TOGGLE_KEY, String(next))
     if (next) {
-      requestLocationPermission()
+      void requestLocationPermission()
     } else {
       setLocationTrackingMessage('Live location tracking is turned off.')
       setLocationAccuracyMeters(null)
@@ -763,12 +782,20 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                   <p className="text-sm text-text-secondary">
                     Use your device location permission for real-time guard tracking. For best accuracy, keep GPS enabled and allow precise location.
                   </p>
+                  {!hasLocationConsent ? (
+                    <p className="mt-2 text-sm font-semibold text-amber-300">
+                      Location consent is not accepted. Tracking remains disabled until consent is granted in the Terms prompt.
+                    </p>
+                  ) : null}
                   <div className="mt-4 flex flex-wrap items-center gap-3">
                     <button
                       type="button"
                       onClick={toggleLocationTracking}
+                      disabled={!hasLocationConsent}
                       className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
-                        locationTrackingEnabled
+                        !hasLocationConsent
+                          ? 'cursor-not-allowed bg-slate-600 text-slate-200'
+                          : locationTrackingEnabled
                           ? 'bg-red-600 text-white hover:bg-red-700'
                           : 'bg-emerald-600 text-white hover:bg-emerald-700'
                       }`}
@@ -786,14 +813,16 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                     </span>
                     <span
                       className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                        locationPermissionState === 'granted'
+                        !hasLocationConsent
+                          ? 'bg-slate-500/15 text-slate-300 ring-1 ring-slate-500/30'
+                          : locationPermissionState === 'granted'
                           ? 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30'
                           : locationPermissionState === 'denied'
                             ? 'bg-red-500/15 text-red-300 ring-1 ring-red-500/30'
                             : 'bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30'
                       }`}
                     >
-                      Permission: {locationPermissionState}
+                      Permission: {hasLocationConsent ? locationPermissionState : 'consent-required'}
                     </span>
                   </div>
                   <div className="mt-3 rounded-md border border-border-subtle bg-background px-3 py-2">

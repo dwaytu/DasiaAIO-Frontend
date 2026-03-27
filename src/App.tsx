@@ -11,11 +11,19 @@ import ArmoredCarDashboard from './components/ArmoredCarDashboard'
 import ProfileDashboard from './components/ProfileDashboard'
 import MeritScoreDashboard from './components/MeritScoreDashboard'
 import CalendarDashboard from './components/CalendarDashboard'
-import { API_BASE_URL, APP_VERSION, LATEST_RELEASE_API_URL, RELEASE_DOWNLOAD_URL } from './config'
+import { API_BASE_URL, APP_VERSION, LATEST_RELEASE_API_URL, RELEASE_DOWNLOAD_URL, detectRuntimePlatform } from './config'
 import { normalizeRole, isLegacyRole, Role } from './types/auth'
 import { can, Permission } from './utils/permissions'
 import { getRequiredAccuracyMeters, getTrackingAccuracyMode } from './utils/trackingPolicy'
-import { clearAuthSession, getAuthToken, getRefreshToken, hydrateAuthSession } from './utils/api'
+import { clearAuthSession, fetchJsonOrThrow, getAuthToken, getRefreshToken, hydrateAuthSession } from './utils/api'
+import {
+  getLocationConsentStatus,
+  getLocationPermissionState,
+  hasAcceptedLocationConsent,
+  requestRuntimeLocationPermission,
+  resolveLocationWithFallback,
+  setLocationConsentStatus,
+} from './utils/location'
 
 export interface User {
   id: string
@@ -57,23 +65,29 @@ function App() {
   const [activeView, setActiveView] = useState<string>('users')
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [hasAcceptedToa, setHasAcceptedToa] = useState<boolean>(false)
+  const [hasLocationConsent, setHasLocationConsent] = useState<boolean>(false)
   const [toaChecked, setToaChecked] = useState<boolean>(false)
+  const [locationConsentChecked, setLocationConsentChecked] = useState<boolean>(false)
   const [toaError, setToaError] = useState<string>('')
   const [releasePrompt, setReleasePrompt] = useState<ReleasePrompt | null>(null)
   const [geoPermissionState, setGeoPermissionState] = useState<'unknown' | 'prompt' | 'granted' | 'denied' | 'unsupported'>('unknown')
   const [geoNotice, setGeoNotice] = useState<string>('')
+  const [globalError, setGlobalError] = useState<string>('')
 
-  // Restore authentication from localStorage on component mount
   useEffect(() => {
     const restoreAuth = async () => {
       try {
         const storedToa = localStorage.getItem(TOA_ACCEPTANCE_KEY)
         setHasAcceptedToa(storedToa === TOA_ACCEPTANCE_VALUE)
 
+        const consentAccepted = hasAcceptedLocationConsent()
+        setHasLocationConsent(consentAccepted)
+        setLocationConsentChecked(consentAccepted)
+
         await hydrateAuthSession()
         const storedUser = localStorage.getItem('user')
         const storedToken = getAuthToken()
-        
+
         if (storedUser && storedToken) {
           const parsedUser = JSON.parse(storedUser)
           parsedUser.role = normalizeRole(parsedUser.role)
@@ -82,10 +96,10 @@ function App() {
         }
       } catch (error) {
         console.error('Failed to restore authentication:', error)
-        // Clear potentially corrupted data
         clearAuthSession()
         localStorage.removeItem('user')
         setHasAcceptedToa(false)
+        setHasLocationConsent(false)
       } finally {
         setIsLoading(false)
       }
@@ -106,6 +120,32 @@ function App() {
     window.addEventListener('auth:token-expired', handleTokenExpiry)
     return () => {
       window.removeEventListener('auth:token-expired', handleTokenExpiry)
+    }
+  }, [])
+
+  useEffect(() => {
+    const handleWindowError = (event: ErrorEvent) => {
+      const message = event.message?.trim()
+      if (message) setGlobalError(message)
+    }
+
+    const handlePromiseRejection = (event: PromiseRejectionEvent) => {
+      const reason = event.reason
+      if (reason instanceof Error && reason.message) {
+        setGlobalError(reason.message)
+      } else if (typeof reason === 'string' && reason.trim()) {
+        setGlobalError(reason)
+      } else {
+        setGlobalError('An unexpected error occurred. Please refresh and try again.')
+      }
+    }
+
+    window.addEventListener('error', handleWindowError)
+    window.addEventListener('unhandledrejection', handlePromiseRejection)
+
+    return () => {
+      window.removeEventListener('error', handleWindowError)
+      window.removeEventListener('unhandledrejection', handlePromiseRejection)
     }
   }, [])
 
@@ -158,14 +198,13 @@ function App() {
       console.error('Invalid role:', userData.role)
       return
     }
+
     const typedUser: User = {
       ...userData,
-      role: normalizeRole(userData.role)
+      role: normalizeRole(userData.role),
     }
 
-    // Store user data in localStorage for persistence
     localStorage.setItem('user', JSON.stringify(typedUser))
-    
     setUser(typedUser)
     setIsLoggedIn(true)
     setActiveView(typedUser.role === 'guard' ? 'overview' : 'dashboard')
@@ -181,22 +220,21 @@ function App() {
       })
     }
 
-    // Clear authentication from localStorage
     clearAuthSession()
     localStorage.removeItem('user')
-    
+
     setUser(null)
     setIsLoggedIn(false)
     setActiveView('users')
   }
 
   const handleProfilePhotoUpdate = (photoUrl: string) => {
-    if (user) {
-      setUser({
-        ...user,
-        profilePhoto: photoUrl
-      })
-    }
+    if (!user) return
+
+    setUser({
+      ...user,
+      profilePhoto: photoUrl,
+    })
   }
 
   const normalizedRole = normalizeRole(user?.role)
@@ -207,8 +245,15 @@ function App() {
       return
     }
 
+    if (!locationConsentChecked) {
+      setToaError('Please provide location consent so live tracking can operate in the field.')
+      return
+    }
+
     localStorage.setItem(TOA_ACCEPTANCE_KEY, TOA_ACCEPTANCE_VALUE)
+    setLocationConsentStatus(true)
     setHasAcceptedToa(true)
+    setHasLocationConsent(true)
     setToaError('')
   }
 
@@ -219,6 +264,21 @@ function App() {
     setIsLoggedIn(false)
     setActiveView('users')
     setToaError('You must agree to the Terms of Agreement to use SENTINEL.')
+  }
+
+  const handleAcceptLocationConsent = () => {
+    setLocationConsentStatus(true)
+    setHasLocationConsent(true)
+    setLocationConsentChecked(true)
+    setGeoNotice('Location consent enabled. Live tracking can now run.')
+  }
+
+  const handleDeclineLocationConsent = () => {
+    setLocationConsentStatus(false)
+    setHasLocationConsent(false)
+    setLocationConsentChecked(false)
+    setGeoPermissionState('unknown')
+    setGeoNotice('Location tracking remains disabled until consent is accepted.')
   }
 
   const handleDismissUpdatePrompt = () => {
@@ -233,150 +293,119 @@ function App() {
     handleDismissUpdatePrompt()
   }
 
-  const requestGlobalLocationPermission = () => {
-    if (!navigator.geolocation) {
-      setGeoPermissionState('unsupported')
-      setGeoNotice('Geolocation is not supported by this browser/device.')
+  const requestGlobalLocationPermission = async () => {
+    const platform = detectRuntimePlatform()
+    const permissionState = await requestRuntimeLocationPermission(platform)
+    setGeoPermissionState(permissionState)
+
+    if (permissionState === 'granted') {
+      setGeoNotice('Location access granted.')
       return
     }
 
-    if (!window.isSecureContext) {
-      setGeoNotice('Location permission requires HTTPS on this device/network.')
+    if (permissionState === 'unsupported') {
+      setGeoNotice('Location permission is unavailable on this runtime. IP fallback will be used when tracking is enabled.')
       return
     }
 
-    navigator.geolocation.getCurrentPosition(
-      () => {
-        setGeoPermissionState('granted')
-        setGeoNotice('Location access granted.')
-      },
-      () => {
-        setGeoPermissionState('denied')
-        setGeoNotice('Location permission is blocked. Enable it in browser site settings, then refresh.')
-      },
-      {
-        enableHighAccuracy: true,
-        maximumAge: 0,
-        timeout: 20000,
-      },
-    )
+    setGeoNotice('Location permission is blocked. Live tracking will fall back to approximate IP-based positioning.')
   }
 
   useEffect(() => {
     if (!isLoggedIn || !user) return
 
-    if (!navigator.geolocation) {
-      setGeoPermissionState('unsupported')
-      setGeoNotice('Geolocation is not supported by this browser/device.')
+    if (!hasLocationConsent) {
+      setGeoPermissionState('unknown')
+      setGeoNotice('Location tracking is disabled until consent is accepted.')
       return
     }
 
-    if (!window.isSecureContext) {
-      setGeoNotice('Location prompt is unavailable because this page is not secure (HTTPS required on mobile/LAN).')
-      return
-    }
-
-    if (typeof navigator.permissions === 'undefined') {
-      return
-    }
-
-    navigator.permissions
-      .query({ name: 'geolocation' as PermissionName })
-      .then((result) => {
-        setGeoPermissionState(result.state as 'prompt' | 'granted' | 'denied')
-        if (result.state === 'denied') {
-          setGeoNotice('Location permission is currently denied. Enable it in browser site settings to restore live tracking.')
-        }
-        result.onchange = () => {
-          setGeoPermissionState(result.state as 'prompt' | 'granted' | 'denied')
-        }
-      })
-      .catch(() => {
-        setGeoPermissionState('unknown')
-      })
-  }, [isLoggedIn, user?.id])
+    void getLocationPermissionState().then((state) => {
+      setGeoPermissionState(state)
+      if (state === 'denied') {
+        setGeoNotice('Precise location is denied. Live tracking will use approximate IP-based fallback until permission is restored.')
+      }
+    })
+  }, [hasLocationConsent, isLoggedIn, user?.id])
 
   useEffect(() => {
-    if (!isLoggedIn || !user) return
-    if (!navigator.geolocation) return
+    if (!isLoggedIn || !user || !hasLocationConsent) return
 
     let lastSent = 0
+    let disposed = false
+    const platform = detectRuntimePlatform()
     const isMobileClient = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
     const trackingMode = getTrackingAccuracyMode()
-    const REQUIRED_ACCURACY_METERS = getRequiredAccuracyMeters(isMobileClient, trackingMode)
+    const requiredAccuracyMeters = getRequiredAccuracyMeters(isMobileClient, trackingMode)
 
-    const sendHeartbeat = async (position: GeolocationPosition) => {
+    const sendHeartbeat = async () => {
       const now = Date.now()
       if (now - lastSent < 12000) return
       lastSent = now
 
-      const accuracyMeters = position.coords.accuracy
-      if (accuracyMeters > REQUIRED_ACCURACY_METERS) {
-        return
-      }
-      const status = 'active'
       const token = getAuthToken()
-      if (!token) {
-        return
-      }
+      if (!token) return
 
       try {
-        await fetch(`${API_BASE_URL}/api/tracking/heartbeat`, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
+        const location = await resolveLocationWithFallback(platform)
+
+        if (
+          location.source !== 'ip' &&
+          location.accuracyMeters != null &&
+          location.accuracyMeters > requiredAccuracyMeters
+        ) {
+          return
+        }
+
+        await fetchJsonOrThrow(
+          `${API_BASE_URL}/api/tracking/heartbeat`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              entityType: 'user',
+              entityId: user.id,
+              label: user.fullName || user.full_name || user.username,
+              status: 'active',
+              latitude: location.latitude,
+              longitude: location.longitude,
+              heading: location.heading,
+              speedKph: location.speedKph,
+              accuracyMeters: location.accuracyMeters,
+            }),
           },
-          body: JSON.stringify({
-            entityType: 'user',
-            entityId: user.id,
-            label: user.fullName || user.full_name || user.username,
-            status,
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-            heading: position.coords.heading,
-            speedKph: position.coords.speed != null ? position.coords.speed * 3.6 : null,
-            accuracyMeters,
-          }),
-        })
+          'Unable to update location heartbeat',
+        )
+
+        if (!disposed) {
+          if (location.source === 'ip') {
+            setGeoPermissionState('denied')
+            setGeoNotice('Using approximate IP-based location fallback. Enable precise location for higher map accuracy.')
+          } else {
+            setGeoPermissionState('granted')
+            setGeoNotice('Location access active. Live tracking is operational.')
+          }
+        }
       } catch {
-        // Ignore transient heartbeat errors.
+        if (!disposed) {
+          setGeoNotice('Location heartbeat failed. Check connectivity and try again.')
+        }
       }
     }
 
-    // Trigger a one-time permission prompt and immediate heartbeat after login.
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        void sendHeartbeat(position)
-      },
-      () => {
-        // Permission denied or unavailable.
-      },
-      {
-        enableHighAccuracy: true,
-        maximumAge: 0,
-        timeout: 20000,
-      },
-    )
-
-    const watchId = navigator.geolocation.watchPosition(
-      async (position) => {
-        await sendHeartbeat(position)
-      },
-      () => {
-        // Permission denied or unavailable.
-      },
-      {
-        enableHighAccuracy: true,
-        maximumAge: 0,
-        timeout: 20000,
-      },
-    )
+    void sendHeartbeat()
+    const intervalId = window.setInterval(() => {
+      void sendHeartbeat()
+    }, 20000)
 
     return () => {
-      navigator.geolocation.clearWatch(watchId)
+      disposed = true
+      window.clearInterval(intervalId)
     }
-  }, [isLoggedIn, user?.id, user?.username, user?.fullName, user?.full_name])
+  }, [hasLocationConsent, isLoggedIn, user?.id, user?.username, user?.fullName, user?.full_name])
 
   type ViewComponent = (props: {
     user: User
@@ -436,9 +465,7 @@ function App() {
   }
 
   const getHomeView = (role: Role): string => {
-    if (role === 'guard') {
-      return 'overview'
-    }
+    if (role === 'guard') return 'overview'
     return 'dashboard'
   }
 
@@ -484,6 +511,8 @@ function App() {
     )
   }
 
+  const showLocationConsentUpgrade = isLoggedIn && hasAcceptedToa && !hasLocationConsent && getLocationConsentStatus() === ''
+
   return (
     <div className="min-h-screen w-full overflow-x-hidden">
       {!isLoggedIn ? (
@@ -503,14 +532,14 @@ function App() {
         })()
       ) : null}
 
-      {isLoggedIn && geoPermissionState !== 'granted' ? (
+      {isLoggedIn && hasLocationConsent && geoPermissionState !== 'granted' ? (
         <div className="fixed bottom-4 left-4 right-4 z-50 rounded-lg border border-amber-600 bg-amber-50 p-3 text-sm text-amber-900 shadow-lg md:left-auto md:max-w-xl" role="status" aria-live="polite">
           <p className="font-semibold">Location access is not active.</p>
-          <p className="mt-1">{geoNotice || 'Live tracking requires location permission. Tap the button below to request access.'}</p>
+          <p className="mt-1">{geoNotice || 'Live tracking requires location permission. Tap the button below to request access or continue with IP fallback.'}</p>
           <div className="mt-2 flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={requestGlobalLocationPermission}
+              onClick={() => { void requestGlobalLocationPermission() }}
               className="rounded-md bg-amber-700 px-3 py-1.5 text-xs font-semibold text-white"
             >
               Prompt Location Access
@@ -557,6 +586,21 @@ function App() {
                 />
                 <span>I have read and agree to the Terms of Agreement.</span>
               </label>
+              <label htmlFor="location-consent" className="mt-3 flex cursor-pointer items-start gap-3 text-sm text-text-primary">
+                <input
+                  id="location-consent"
+                  type="checkbox"
+                  checked={locationConsentChecked}
+                  onChange={(event) => {
+                    setLocationConsentChecked(event.target.checked)
+                    if (event.target.checked) {
+                      setToaError('')
+                    }
+                  }}
+                  className="mt-0.5 h-4 w-4 rounded border-border-elevated"
+                />
+                <span>I consent to location processing for live guard and mission tracking.</span>
+              </label>
             </div>
 
             {toaError ? (
@@ -577,9 +621,41 @@ function App() {
                 type="button"
                 onClick={handleAcceptToa}
                 className="rounded-md bg-info px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-55"
-                disabled={!toaChecked}
+                disabled={!toaChecked || !locationConsentChecked}
               >
                 Agree and Continue
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+
+      {showLocationConsentUpgrade ? (
+        <div className="fixed inset-0 z-[75] flex items-center justify-center bg-slate-950/62 p-4 backdrop-blur-sm">
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="location-consent-title"
+            className="w-full max-w-lg rounded-2xl border border-border-elevated bg-surface p-5 shadow-modal sm:p-6"
+          >
+            <h2 id="location-consent-title" className="text-xl font-bold text-text-primary">Location Tracking Consent</h2>
+            <p className="mt-2 text-sm text-text-secondary">
+              SENTINEL can use device location for live guard tracking and operational safety. If you decline, location heartbeat updates remain disabled.
+            </p>
+            <div className="mt-4 flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                onClick={handleDeclineLocationConsent}
+                className="rounded-md border border-border-elevated bg-surface-elevated px-4 py-2 text-sm font-semibold text-text-secondary"
+              >
+                Decline
+              </button>
+              <button
+                type="button"
+                onClick={handleAcceptLocationConsent}
+                className="rounded-md bg-info px-4 py-2 text-sm font-semibold text-white"
+              >
+                Allow tracking
               </button>
             </div>
           </section>
@@ -615,6 +691,20 @@ function App() {
               </button>
             </div>
           </section>
+        </div>
+      ) : null}
+
+      {globalError ? (
+        <div className="fixed bottom-4 right-4 z-[90] max-w-md rounded-lg border border-danger-border bg-danger-bg p-3 text-sm text-danger-text shadow-lg" role="alert">
+          <p className="font-semibold">Unexpected error</p>
+          <p className="mt-1">{globalError}</p>
+          <button
+            type="button"
+            onClick={() => setGlobalError('')}
+            className="mt-2 rounded-md border border-danger-border px-3 py-1.5 text-xs font-semibold"
+          >
+            Dismiss
+          </button>
         </div>
       ) : null}
     </div>

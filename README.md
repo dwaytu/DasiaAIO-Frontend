@@ -54,6 +54,15 @@ npm run release:android:bundle
 npm run release:all
 ```
 
+Production release scripts now enforce environment validation and will fail fast if required values are missing or unsafe (for example localhost/private API URLs).
+
+Required release env vars:
+
+```env
+VITE_API_BASE_URL=https://your-production-backend
+VITE_APP_VERSION=v1.2.3
+```
+
 Wrapper project locations:
 
 - `../apps/android-capacitor`
@@ -63,17 +72,12 @@ Wrapper project locations:
 
 Use mode-specific environment files:
 
-- `.env.web`
-- `.env.mobile`
-- `.env.desktop`
+- `.env.development`
+- `.env.production`
 
-For Android testing on a physical device, set `.env.mobile` to your machine LAN IP instead of localhost.
+Platform-specific files (`.env.web`, `.env.mobile`, `.env.desktop`) are also pinned to the same backend origin so web, desktop, and mobile builds remain aligned.
 
-Example:
-
-```env
-VITE_API_BASE_URL=http://192.168.1.25:5000
-```
+`VITE_API_BASE_URL` is the only API endpoint variable used by the client runtime.
 
 ## Key Links
 

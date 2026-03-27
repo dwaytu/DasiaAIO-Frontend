@@ -25,11 +25,17 @@ export interface User {
   [key: string]: any
 }
 
+const TOA_ACCEPTANCE_KEY = 'dasi.toa.accepted.v1'
+const TOA_ACCEPTANCE_VALUE = 'accepted'
+
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false)
   const [user, setUser] = useState<User | null>(null)
   const [activeView, setActiveView] = useState<string>('users')
   const [isLoading, setIsLoading] = useState<boolean>(true)
+  const [hasAcceptedToa, setHasAcceptedToa] = useState<boolean>(false)
+  const [toaChecked, setToaChecked] = useState<boolean>(false)
+  const [toaError, setToaError] = useState<string>('')
   const [geoPermissionState, setGeoPermissionState] = useState<'unknown' | 'prompt' | 'granted' | 'denied' | 'unsupported'>('unknown')
   const [geoNotice, setGeoNotice] = useState<string>('')
 
@@ -37,6 +43,9 @@ function App() {
   useEffect(() => {
     const restoreAuth = async () => {
       try {
+        const storedToa = localStorage.getItem(TOA_ACCEPTANCE_KEY)
+        setHasAcceptedToa(storedToa === TOA_ACCEPTANCE_VALUE)
+
         await hydrateAuthSession()
         const storedUser = localStorage.getItem('user')
         const storedToken = getAuthToken()
@@ -52,6 +61,7 @@ function App() {
         // Clear potentially corrupted data
         clearAuthSession()
         localStorage.removeItem('user')
+        setHasAcceptedToa(false)
       } finally {
         setIsLoading(false)
       }
@@ -122,6 +132,26 @@ function App() {
   }
 
   const normalizedRole = normalizeRole(user?.role)
+
+  const handleAcceptToa = () => {
+    if (!toaChecked) {
+      setToaError('Please confirm that you have read and agree to the Terms of Agreement.')
+      return
+    }
+
+    localStorage.setItem(TOA_ACCEPTANCE_KEY, TOA_ACCEPTANCE_VALUE)
+    setHasAcceptedToa(true)
+    setToaError('')
+  }
+
+  const handleDeclineToa = () => {
+    clearAuthSession()
+    localStorage.removeItem('user')
+    setUser(null)
+    setIsLoggedIn(false)
+    setActiveView('users')
+    setToaError('You must agree to the Terms of Agreement to use SENTINEL.')
+  }
 
   const requestGlobalLocationPermission = () => {
     if (!navigator.geolocation) {
@@ -406,6 +436,73 @@ function App() {
               Prompt Location Access
             </button>
           </div>
+        </div>
+      ) : null}
+
+      {!hasAcceptedToa ? (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/72 p-4 backdrop-blur-sm">
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="toa-title"
+            aria-describedby="toa-summary"
+            className="w-full max-w-3xl rounded-2xl border border-border-elevated bg-surface p-5 shadow-modal sm:p-7"
+          >
+            <h1 id="toa-title" className="text-2xl font-bold text-text-primary">Terms of Agreement</h1>
+            <p id="toa-summary" className="mt-2 text-sm text-text-secondary">
+              Before using SENTINEL on Web, Desktop, or Mobile, you must agree to these terms. This prompt is shown once per app install/browser profile.
+            </p>
+
+            <div className="mt-4 max-h-64 space-y-3 overflow-y-auto rounded-xl border border-border-subtle bg-surface-elevated p-4 text-sm text-text-secondary">
+              <p>You agree to use SENTINEL only for authorized security operations.</p>
+              <p>You agree to protect credentials and not share access with unauthorized individuals.</p>
+              <p>You acknowledge that operational actions, tracking events, and key system updates may be logged for audit, compliance, and safety purposes.</p>
+              <p>You agree that location-based features require device and browser permission and should only be enabled for legitimate operational duties.</p>
+              <p>You understand that violating policy or applicable law may result in account suspension and administrative review.</p>
+            </div>
+
+            <div className="mt-4 rounded-lg border border-border-subtle bg-surface-elevated p-3">
+              <label htmlFor="toa-agree" className="flex cursor-pointer items-start gap-3 text-sm text-text-primary">
+                <input
+                  id="toa-agree"
+                  type="checkbox"
+                  checked={toaChecked}
+                  onChange={(event) => {
+                    setToaChecked(event.target.checked)
+                    if (event.target.checked) {
+                      setToaError('')
+                    }
+                  }}
+                  className="mt-0.5 h-4 w-4 rounded border-border-elevated"
+                />
+                <span>I have read and agree to the Terms of Agreement.</span>
+              </label>
+            </div>
+
+            {toaError ? (
+              <p className="mt-3 rounded-md border border-danger-border bg-danger-bg p-2 text-sm text-danger-text" role="alert">
+                {toaError}
+              </p>
+            ) : null}
+
+            <div className="mt-5 flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                onClick={handleDeclineToa}
+                className="rounded-md border border-border-elevated bg-surface-elevated px-4 py-2 text-sm font-semibold text-text-secondary"
+              >
+                Decline
+              </button>
+              <button
+                type="button"
+                onClick={handleAcceptToa}
+                className="rounded-md bg-info px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-55"
+                disabled={!toaChecked}
+              >
+                Agree and Continue
+              </button>
+            </div>
+          </section>
         </div>
       ) : null}
     </div>

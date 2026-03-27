@@ -688,12 +688,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
     <>
       <a href="#auth-main" className="skip-link">Skip to main content</a>
       <div className="relative min-h-screen overflow-hidden">
-        <div className="pointer-events-none absolute inset-0 opacity-40" aria-hidden="true">
-          <div className="h-full w-full" style={{
-            backgroundImage: 'linear-gradient(rgba(56,189,248,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(56,189,248,0.08) 1px, transparent 1px)',
-            backgroundSize: '42px 42px'
-          }} />
-        </div>
+        <div className="login-atmosphere pointer-events-none absolute inset-0" aria-hidden="true" />
 
         <div className="pointer-events-none absolute inset-0 opacity-70" aria-hidden="true">
           <ParticleBackground particleCount={65} color="56, 189, 248" connectDistance={120} mouseRadius={120} />
@@ -735,7 +730,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
             </section>
           </main>
 
-          <aside className="hidden border-l border-border-subtle bg-surface-elevated/70 p-10 lg:flex lg:flex-col lg:justify-between">
+          <aside className="hidden bg-surface-elevated/65 p-10 shadow-[-24px_0_44px_-34px_rgba(15,23,42,0.45)] backdrop-blur-sm lg:flex lg:flex-col lg:justify-between">
             <div>
               <SentinelLogo size={42} variant="FullLogo" animated />
               <p className="mt-5 max-w-md text-sm text-text-secondary">

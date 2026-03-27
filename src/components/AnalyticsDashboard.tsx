@@ -104,10 +104,7 @@ const AnalyticsDashboard: FC = () => {
           <p className="text-xs mt-1">{error}</p>
           <p className="text-xs mt-2">Make sure the backend server is running on port 5000</p>
         </div>
-        <button 
-    const operationalInsights: InsightItem[] = (() => {
-          className="soc-btn soc-btn-danger"
-        >
+        <button type="button" onClick={fetchAnalytics} className="soc-btn soc-btn-danger">
           Retry
         </button>
       </div>
@@ -151,8 +148,8 @@ const AnalyticsDashboard: FC = () => {
   const firearmAvailabilityDelta = analytics.performance_metrics.firearm_availability_rate - KPI_TARGETS.firearmAvailabilityRate
   const vehicleUtilizationDelta = analytics.performance_metrics.vehicle_utilization_rate - KPI_TARGETS.vehicleUtilizationRate
 
-      return insights.slice(0, 4)
-    })()
+  const operationalInsights: InsightItem[] = (() => {
+    const insights: InsightItem[] = []
 
     if (missionCompletionDelta < -8) {
       insights.push({

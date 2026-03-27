@@ -1,3 +1,7 @@
+jest.mock('../config', () => ({
+  API_BASE_URL: 'http://localhost:5000',
+}))
+
 import { fetchJsonOrThrow, getApiErrorMessage, parseResponseBody } from '../utils/api'
 
 function mockResponse(body: string, ok = true): Response {

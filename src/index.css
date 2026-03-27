@@ -499,6 +499,15 @@
     opacity: 0.55;
   }
 
+  .login-atmosphere {
+    background:
+      radial-gradient(circle at 14% 16%, color-mix(in srgb, var(--color-info) 22%, transparent) 0%, transparent 38%),
+      radial-gradient(circle at 84% 24%, color-mix(in srgb, var(--color-success) 18%, transparent) 0%, transparent 42%),
+      radial-gradient(circle at 66% 78%, color-mix(in srgb, var(--color-info) 14%, transparent) 0%, transparent 40%),
+      linear-gradient(145deg, color-mix(in srgb, var(--color-bg) 96%, #020617 4%) 0%, var(--color-bg) 100%);
+    filter: saturate(108%);
+  }
+
   .status-live-card {
     border-radius: 0.75rem;
     border: 1px solid var(--color-border-subtle);

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, FC } from 'react'
+import { useState, useEffect, useMemo, FC, Suspense, lazy } from 'react'
 import EditUserModal from './EditUserModal'
 import EditScheduleModal from './EditScheduleModal'
 import AnalyticsDashboard from './AnalyticsDashboard'
@@ -17,8 +17,9 @@ import OperationalShell from './layout/OperationalShell'
 import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
 import { can } from '../utils/permissions'
 import { getTrackingAccuracyMode, setTrackingAccuracyMode, TrackingAccuracyMode } from '../utils/trackingPolicy'
-import AuditLogViewer from './AuditLogViewer'
 import { logError } from '../utils/logger'
+
+const AuditDashboard = lazy(() => import('./AuditDashboard'))
 
 interface User {
   id: string
@@ -1710,7 +1711,20 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
             <TripManagement />
           </div>
         ) : activeSection === 'audit-log' ? (
-          <AuditLogViewer />
+          <Suspense
+            fallback={
+              <section
+                className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in"
+                aria-live="polite"
+              >
+                <div className="table-glass rounded-2xl p-6 md:p-8">
+                  <p className="text-sm text-text-secondary">Loading audit intelligence...</p>
+                </div>
+              </section>
+            }
+          >
+            <AuditDashboard />
+          </Suspense>
         ) : null}
 
         {editingUser && (

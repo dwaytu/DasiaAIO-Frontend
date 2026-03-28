@@ -22,8 +22,10 @@ export interface MapTrackingPoint {
   id: string
   entityType: 'guard' | 'vehicle' | string
   entityId: string
+  userId?: string
   label?: string
   status?: string
+  movementStatus?: 'moving' | 'idle' | 'offline' | string
   latitude: number
   longitude: number
   heading?: number
@@ -32,9 +34,59 @@ export interface MapTrackingPoint {
   recordedAt: string
 }
 
+export interface GeofenceAlert {
+  id: string
+  guardId: string
+  guardName?: string
+  eventType: 'enter' | 'exit' | string
+  siteId: string
+  siteName: string
+  distanceKm?: number
+  message?: string
+  createdAt: string
+}
+
+export interface GuardHistoryPoint {
+  id?: string
+  latitude: number
+  longitude: number
+  recordedAt: string
+  movementStatus?: string
+  speedKph?: number
+  status?: string
+  label?: string
+}
+
+export interface ActiveGuard {
+  id: string
+  guardId: string
+  userId?: string
+  guardName?: string
+  movementStatus: string
+  latitude: number
+  longitude: number
+  recordedAt: string
+  ageSeconds?: number
+  speedKph?: number
+  status?: string
+}
+
 interface MapDataResponse {
   clientSites?: MapClientSite[]
   trackingPoints?: MapTrackingPoint[]
+  geofenceAlerts?: GeofenceAlert[]
+}
+
+interface GuardHistoryResponse {
+  points?: GuardHistoryPoint[]
+}
+
+interface GuardPathResponse {
+  coordinates?: GuardHistoryPoint[]
+}
+
+interface ActiveGuardsResponse {
+  guards?: ActiveGuard[]
 }
 
 export interface ClientSiteInput {
@@ -57,6 +109,7 @@ export interface GuardHeartbeatInput {
 interface UseOperationalMapDataResult {
   clientSites: MapClientSite[]
   trackingPoints: MapTrackingPoint[]
+  geofenceAlerts: GeofenceAlert[]
   loading: boolean
   error: string
   refresh: () => Promise<void>
@@ -65,12 +118,16 @@ interface UseOperationalMapDataResult {
   updateClientSite: (siteId: string, input: ClientSiteInput) => Promise<void>
   deleteClientSite: (siteId: string) => Promise<void>
   sendGuardHeartbeat: (input: GuardHeartbeatInput) => Promise<void>
+  fetchGuardHistory: (guardId: string, limit?: number) => Promise<GuardHistoryPoint[]>
+  fetchGuardPath: (guardId: string, limit?: number) => Promise<GuardHistoryPoint[]>
+  fetchActiveGuards: (windowMinutes?: number) => Promise<ActiveGuard[]>
   isElevatedUser: boolean
 }
 
 export function useOperationalMapData(): UseOperationalMapDataResult {
   const [clientSites, setClientSites] = useState<MapClientSite[]>([])
   const [trackingPoints, setTrackingPoints] = useState<MapTrackingPoint[]>([])
+  const [geofenceAlerts, setGeofenceAlerts] = useState<GeofenceAlert[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string>('')
   const [lastUpdated, setLastUpdated] = useState<string>('')
@@ -103,6 +160,7 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
 
       setClientSites(Array.isArray(data.clientSites) ? data.clientSites : [])
       setTrackingPoints(Array.isArray(data.trackingPoints) ? data.trackingPoints : [])
+      setGeofenceAlerts(Array.isArray(data.geofenceAlerts) ? data.geofenceAlerts : [])
       setLastUpdated(new Date().toLocaleTimeString())
       setError('')
     } catch (err) {
@@ -172,6 +230,36 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
     )
   }, [])
 
+  const fetchGuardHistory = useCallback(async (guardId: string, limit = 600) => {
+    const data = await fetchJsonOrThrow<GuardHistoryResponse>(
+      `${API_BASE_URL}/api/tracking/guard-history/${encodeURIComponent(guardId)}?limit=${Math.max(20, Math.min(limit, 1500))}`,
+      { headers: getAuthHeaders() },
+      'Failed to load guard movement history',
+    )
+
+    return Array.isArray(data.points) ? data.points : []
+  }, [])
+
+  const fetchGuardPath = useCallback(async (guardId: string, limit = 1000) => {
+    const data = await fetchJsonOrThrow<GuardPathResponse>(
+      `${API_BASE_URL}/api/tracking/guard-path/${encodeURIComponent(guardId)}?limit=${Math.max(30, Math.min(limit, 2000))}`,
+      { headers: getAuthHeaders() },
+      'Failed to load guard path telemetry',
+    )
+
+    return Array.isArray(data.coordinates) ? data.coordinates : []
+  }, [])
+
+  const fetchActiveGuards = useCallback(async (windowMinutes = 15) => {
+    const data = await fetchJsonOrThrow<ActiveGuardsResponse>(
+      `${API_BASE_URL}/api/tracking/active-guards?windowMinutes=${Math.max(3, Math.min(windowMinutes, 120))}`,
+      { headers: getAuthHeaders() },
+      'Failed to load active guards intelligence',
+    )
+
+    return Array.isArray(data.guards) ? data.guards : []
+  }, [])
+
   useEffect(() => {
     load()
 
@@ -204,6 +292,7 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
           const data = payload.data as MapDataResponse
           setClientSites(Array.isArray(data.clientSites) ? data.clientSites : [])
           setTrackingPoints(Array.isArray(data.trackingPoints) ? data.trackingPoints : [])
+          setGeofenceAlerts(Array.isArray(data.geofenceAlerts) ? data.geofenceAlerts : [])
           setLastUpdated(new Date().toLocaleTimeString())
           setLoading(false)
           setError('')
@@ -278,6 +367,7 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
     () => ({
       clientSites,
       trackingPoints,
+      geofenceAlerts,
       loading,
       error,
       refresh: load,
@@ -286,11 +376,15 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
       updateClientSite,
       deleteClientSite,
       sendGuardHeartbeat,
+      fetchGuardHistory,
+      fetchGuardPath,
+      fetchActiveGuards,
       isElevatedUser,
     }),
     [
       clientSites,
       trackingPoints,
+      geofenceAlerts,
       loading,
       error,
       load,
@@ -299,6 +393,9 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
       updateClientSite,
       deleteClientSite,
       sendGuardHeartbeat,
+      fetchGuardHistory,
+      fetchGuardPath,
+      fetchActiveGuards,
       isElevatedUser,
     ],
   )

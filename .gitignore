@@ -5,6 +5,8 @@ app-dist/
 __pycache__/
 .DS_Store
 .env
+.env.local
+.env.*.local
 .idea/
 .vscode/
 *.swp

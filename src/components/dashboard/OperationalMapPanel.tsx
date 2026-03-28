@@ -1,6 +1,6 @@
 import { FC, FormEvent, Fragment, useEffect, useMemo, useState } from 'react'
 import L from 'leaflet'
-import { Circle, CircleMarker, MapContainer, Marker, Popup, TileLayer, useMap, useMapEvents } from 'react-leaflet'
+import { Circle, CircleMarker, MapContainer, Marker, Polyline, Popup, TileLayer, useMap, useMapEvents } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import { ClientSiteInput, useOperationalMapData } from '../../hooks/useOperationalMapData'
 import { getPersonRecencyMinutes, getTrackingAccuracyMode, getVehicleRecencyMinutes } from '../../utils/trackingPolicy'
@@ -58,6 +58,20 @@ const MapViewportSync: FC<MapViewportSyncProps> = ({ center }) => {
   return null
 }
 
+interface MapZoomTrackerProps {
+  onZoomChange: (zoom: number) => void
+}
+
+const MapZoomTracker: FC<MapZoomTrackerProps> = ({ onZoomChange }) => {
+  useMapEvents({
+    zoomend(event) {
+      onZoomChange(event.target.getZoom())
+    },
+  })
+
+  return null
+}
+
 const currentUserPin = L.divIcon({
   className: 'current-user-pin',
   html: '<span style="display:block;width:16px;height:16px;border-radius:9999px;background:#dc2626;border:2px solid #ffffff;box-shadow:0 0 0 2px rgba(220,38,38,0.35)"></span>',
@@ -69,17 +83,27 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
   const {
     clientSites,
     trackingPoints,
+    geofenceAlerts,
     loading,
     error,
     lastUpdated,
     createClientSite,
     updateClientSite,
     deleteClientSite,
+    fetchGuardPath,
+    fetchActiveGuards,
     isElevatedUser,
   } = useOperationalMapData()
   const [siteForm, setSiteForm] = useState<ClientSiteInput>(INITIAL_FORM)
   const [editingSiteId, setEditingSiteId] = useState<string>('')
   const [mapPickMode, setMapPickMode] = useState<'idle' | 'add' | 'edit'>('idle')
+  const [mapZoom, setMapZoom] = useState<number>(12)
+  const [focusCenter, setFocusCenter] = useState<[number, number] | null>(null)
+  const [selectedGuardId, setSelectedGuardId] = useState<string>('')
+  const [selectedGuardPath, setSelectedGuardPath] = useState<Array<{ latitude: number; longitude: number; recordedAt: string; movementStatus?: string }>>([])
+  const [activeGuardsIntel, setActiveGuardsIntel] = useState<Array<{ guardId: string; guardName?: string; latitude: number; longitude: number; movementStatus: string; recordedAt: string }>>([])
+  const [playbackEnabled, setPlaybackEnabled] = useState<boolean>(false)
+  const [playbackIndex, setPlaybackIndex] = useState<number>(0)
   const [saving, setSaving] = useState<boolean>(false)
   const [formError, setFormError] = useState<string>('')
   const trackingMode = getTrackingAccuracyMode()
@@ -122,9 +146,10 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
   }, [visibleTrackingPoints, currentUserId])
 
   const mapCenter = useMemo<[number, number]>(() => {
+    if (focusCenter) return focusCenter
     if (!currentUserPoint) return DAVAO_CENTER
     return [currentUserPoint.latitude, currentUserPoint.longitude]
-  }, [currentUserPoint?.latitude, currentUserPoint?.longitude])
+  }, [focusCenter, currentUserPoint?.latitude, currentUserPoint?.longitude])
 
   const bounds = useMemo(() => {
     const positions: [number, number][] = []
@@ -139,6 +164,142 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
 
     return positions.length > 0 ? positions : [DAVAO_CENTER]
   }, [clientSites, visibleTrackingPoints])
+
+  useEffect(() => {
+    let disposed = false
+
+    const loadActiveGuards = async () => {
+      try {
+        const guards = await fetchActiveGuards(15)
+        if (disposed) return
+        setActiveGuardsIntel(
+          guards.map((guard) => ({
+            guardId: guard.guardId,
+            guardName: guard.guardName,
+            latitude: guard.latitude,
+            longitude: guard.longitude,
+            movementStatus: guard.movementStatus,
+            recordedAt: guard.recordedAt,
+          })),
+        )
+      } catch {
+        if (!disposed) {
+          setActiveGuardsIntel([])
+        }
+      }
+    }
+
+    void loadActiveGuards()
+    const intervalId = window.setInterval(() => {
+      void loadActiveGuards()
+    }, 30000)
+
+    return () => {
+      disposed = true
+      window.clearInterval(intervalId)
+    }
+  }, [fetchActiveGuards])
+
+  useEffect(() => {
+    if (!selectedGuardId) {
+      setSelectedGuardPath([])
+      setPlaybackEnabled(false)
+      setPlaybackIndex(0)
+      return
+    }
+
+    let disposed = false
+
+    const loadSelectedGuardPath = async () => {
+      try {
+        const coordinates = await fetchGuardPath(selectedGuardId, 1200)
+        if (disposed) return
+
+        const safePath = coordinates
+          .filter((point) => Number.isFinite(point.latitude) && Number.isFinite(point.longitude))
+          .map((point) => ({
+            latitude: point.latitude,
+            longitude: point.longitude,
+            recordedAt: point.recordedAt,
+            movementStatus: point.movementStatus,
+          }))
+
+        setSelectedGuardPath(safePath)
+        setPlaybackIndex(Math.max(0, safePath.length - 1))
+      } catch {
+        if (!disposed) {
+          setSelectedGuardPath([])
+        }
+      }
+    }
+
+    void loadSelectedGuardPath()
+
+    return () => {
+      disposed = true
+    }
+  }, [fetchGuardPath, selectedGuardId])
+
+  useEffect(() => {
+    if (!playbackEnabled || selectedGuardPath.length < 2) return
+
+    const intervalId = window.setInterval(() => {
+      setPlaybackIndex((previous) => {
+        if (previous >= selectedGuardPath.length - 1) {
+          return 0
+        }
+        return previous + 1
+      })
+    }, 1200)
+
+    return () => {
+      window.clearInterval(intervalId)
+    }
+  }, [playbackEnabled, selectedGuardPath.length])
+
+  const clusteredTrackingPoints = useMemo(() => {
+    if (mapZoom >= 11) return []
+
+    const gridSize = mapZoom <= 8 ? 0.16 : 0.08
+    const buckets = new Map<string, { latitude: number; longitude: number; points: typeof visibleTrackingPoints }>()
+
+    for (const point of visibleTrackingPoints) {
+      const latBucket = Math.round(point.latitude / gridSize)
+      const lngBucket = Math.round(point.longitude / gridSize)
+      const key = `${latBucket}:${lngBucket}`
+
+      const existing = buckets.get(key)
+      if (!existing) {
+        buckets.set(key, {
+          latitude: point.latitude,
+          longitude: point.longitude,
+          points: [point],
+        })
+        continue
+      }
+
+      existing.points.push(point)
+      existing.latitude = (existing.latitude * (existing.points.length - 1) + point.latitude) / existing.points.length
+      existing.longitude = (existing.longitude * (existing.points.length - 1) + point.longitude) / existing.points.length
+    }
+
+    return Array.from(buckets.values())
+  }, [mapZoom, visibleTrackingPoints])
+
+  const selectedGuardPolyline = useMemo(() => {
+    if (selectedGuardPath.length < 2) return []
+
+    const maxIndex = playbackEnabled ? Math.max(1, playbackIndex + 1) : selectedGuardPath.length
+    return selectedGuardPath.slice(0, maxIndex).map((point) => [point.latitude, point.longitude] as [number, number])
+  }, [playbackEnabled, playbackIndex, selectedGuardPath])
+
+  const playbackPoint = useMemo(() => {
+    if (!selectedGuardPath.length) return null
+    const index = playbackEnabled ? playbackIndex : selectedGuardPath.length - 1
+    return selectedGuardPath[Math.max(0, Math.min(index, selectedGuardPath.length - 1))]
+  }, [playbackEnabled, playbackIndex, selectedGuardPath])
+
+  const geofenceFeed = useMemo(() => geofenceAlerts.slice(0, 6), [geofenceAlerts])
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -209,6 +370,27 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
     setFormError('')
   }
 
+  const movementTone = (entityType: string, movementStatus?: string) => {
+    if (entityType === 'vehicle') {
+      return { color: '#2563eb', fillColor: '#2563eb', ring: 'status-light-info' }
+    }
+
+    if (movementStatus === 'moving') {
+      return { color: '#16a34a', fillColor: '#16a34a', ring: 'status-light-success' }
+    }
+
+    if (movementStatus === 'offline') {
+      return { color: '#dc2626', fillColor: '#dc2626', ring: 'status-light-danger' }
+    }
+
+    return { color: '#f59e0b', fillColor: '#f59e0b', ring: 'status-light-warning' }
+  }
+
+  const focusGuard = (guardId: string, latitude: number, longitude: number) => {
+    setSelectedGuardId(guardId)
+    setFocusCenter([latitude, longitude])
+  }
+
   return (
     <section className="command-panel p-4 md:p-5" aria-label="Operational map">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3 border-b border-border-subtle pb-3">
@@ -245,6 +427,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
           aria-label="Live operations map with guard, vehicle, and client site markers"
         >
           <MapViewportSync center={mapCenter} />
+          <MapZoomTracker onZoomChange={setMapZoom} />
           <MapClickPicker enabled={isElevatedUser && mapPickMode !== 'idle'} onPick={handleMapPick} />
 
           <TileLayer
@@ -275,11 +458,43 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
             </Fragment>
           ))}
 
-          {visibleTrackingPoints.map((point) => {
+          {selectedGuardPolyline.length > 1 ? (
+            <Polyline
+              positions={selectedGuardPolyline}
+              pathOptions={{ color: '#22c55e', weight: 3, opacity: 0.85 }}
+            />
+          ) : null}
+
+          {playbackPoint ? (
+            <CircleMarker
+              center={[playbackPoint.latitude, playbackPoint.longitude]}
+              radius={8}
+              pathOptions={{ color: '#22c55e', fillColor: '#22c55e', fillOpacity: 0.35, weight: 2 }}
+            >
+              <Popup>
+                <strong>Playback Position</strong>
+                <div>{new Date(playbackPoint.recordedAt).toLocaleString()}</div>
+              </Popup>
+            </CircleMarker>
+          ) : null}
+
+          {mapZoom < 11
+            ? clusteredTrackingPoints.map((cluster, index) => (
+                <CircleMarker
+                  key={`cluster-${index}`}
+                  center={[cluster.latitude, cluster.longitude]}
+                  radius={Math.min(24, 8 + cluster.points.length)}
+                  pathOptions={{ color: '#7c3aed', fillColor: '#7c3aed', fillOpacity: 0.3 }}
+                >
+                  <Popup>
+                    <strong>{cluster.points.length} units in this area</strong>
+                    <div>Zoom in for individual guard movement and status.</div>
+                  </Popup>
+                </CircleMarker>
+              ))
+            : visibleTrackingPoints.map((point) => {
             const isCurrentUser = currentUserId && point.entityId === currentUserId
-            const tone = point.entityType === 'vehicle'
-              ? { color: '#2563eb', fillColor: '#2563eb' }
-              : { color: '#16a34a', fillColor: '#16a34a' }
+            const tone = movementTone(point.entityType, point.movementStatus)
             const pointAgeSeconds = Math.max(0, Math.floor((Date.now() - new Date(point.recordedAt).getTime()) / 1000))
             const sourceLabel = point.entityType === 'vehicle' ? 'Vehicle telemetry' : 'Device geolocation'
 
@@ -290,6 +505,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
                     <strong>Your Location</strong>
                     <div>{point.label || point.entityId}</div>
                     {point.status ? <div>Status: {point.status}</div> : null}
+                    {point.movementStatus ? <div>Movement: {point.movementStatus}</div> : null}
                     <div>Source: {sourceLabel}</div>
                     {point.accuracyMeters != null ? <div>Accuracy: {Math.round(point.accuracyMeters)} m</div> : null}
                     <div>Updated: {pointAgeSeconds}s ago</div>
@@ -314,6 +530,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
                   <strong>{point.entityType === 'vehicle' ? 'Armored Vehicle' : 'Guard'}</strong>
                   <div>{point.label || point.entityId}</div>
                   {point.status ? <div>Status: {point.status}</div> : null}
+                  {point.movementStatus ? <div>Movement: {point.movementStatus}</div> : null}
                   <div>Source: {sourceLabel}</div>
                   {point.speedKph != null ? <div>Speed: {point.speedKph.toFixed(1)} km/h</div> : null}
                   {point.accuracyMeters != null ? <div>Accuracy: {Math.round(point.accuracyMeters)} m</div> : null}
@@ -366,12 +583,84 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
         </div>
       </div>
 
+      <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-[1.2fr_1fr]">
+        <section className="rounded-md border border-border-subtle bg-surface-elevated p-3" aria-label="Guard movement controls">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <h4 className="text-xs font-bold uppercase tracking-[0.14em] text-text-primary">Guard Movement Intelligence</h4>
+            <span className="text-[11px] text-text-tertiary">{activeGuardsIntel.length} active in last 15 minutes</span>
+          </div>
+
+          <div className="mb-2 flex flex-wrap gap-2">
+            {activeGuardsIntel.slice(0, 8).map((guard) => (
+              <button
+                key={guard.guardId}
+                type="button"
+                onClick={() => focusGuard(guard.guardId, guard.latitude, guard.longitude)}
+                className={`rounded-md border px-2 py-1 text-[11px] font-semibold uppercase tracking-wide ${selectedGuardId === guard.guardId ? 'border-success-border bg-success-bg text-success-text' : 'border-border-subtle bg-background text-text-secondary'}`}
+              >
+                {guard.guardName || guard.guardId.slice(0, 8)} ({guard.movementStatus})
+              </button>
+            ))}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setPlaybackEnabled((previous) => !previous)}
+              disabled={selectedGuardPath.length < 2}
+              className="rounded-md border border-border-subtle bg-background px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-text-secondary disabled:opacity-50"
+            >
+              {playbackEnabled ? 'Stop Playback' : 'Start Playback'}
+            </button>
+            <label className="flex items-center gap-2 text-[11px] text-text-secondary" htmlFor="trail-frame-index">
+              Trail Frame
+              <input
+                id="trail-frame-index"
+                type="range"
+                min={0}
+                max={Math.max(0, selectedGuardPath.length - 1)}
+                value={Math.min(playbackIndex, Math.max(0, selectedGuardPath.length - 1))}
+                onChange={(event) => {
+                  setPlaybackEnabled(false)
+                  setPlaybackIndex(Number(event.target.value))
+                }}
+                className="w-44"
+              />
+            </label>
+            <span className="text-[11px] text-text-tertiary">
+              {selectedGuardPath.length > 0
+                ? `Samples: ${selectedGuardPath.length}`
+                : 'Select a guard to load movement trail'}
+            </span>
+          </div>
+        </section>
+
+        <section className="rounded-md border border-border-subtle bg-surface-elevated p-3" aria-label="Geofence transition feed">
+          <h4 className="text-xs font-bold uppercase tracking-[0.14em] text-text-primary">Geofence Alerts</h4>
+          <ul className="mt-2 space-y-1 text-[11px] text-text-secondary">
+            {geofenceFeed.length === 0 ? (
+              <li className="text-text-tertiary">No recent enter or exit alerts.</li>
+            ) : (
+              geofenceFeed.map((alert) => (
+                <li key={alert.id} className="rounded-md border border-border-subtle bg-background px-2 py-1">
+                  <div className="font-semibold text-text-primary">{alert.guardName || alert.guardId} {alert.eventType === 'enter' ? 'entered' : 'exited'} {alert.siteName}</div>
+                  <div className="text-text-tertiary">{new Date(alert.createdAt).toLocaleString()}</div>
+                </li>
+              ))
+            )}
+          </ul>
+        </section>
+      </div>
+
       <div className="mt-3 flex flex-wrap items-center gap-2 rounded-md border border-border-subtle bg-surface-elevated px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-text-secondary">
-        <span className="inline-flex items-center gap-1"><span className="status-light status-light-success" aria-hidden="true" /> Guard</span>
+        <span className="inline-flex items-center gap-1"><span className="status-light status-light-success" aria-hidden="true" /> Guard moving</span>
+        <span className="inline-flex items-center gap-1"><span className="status-light status-light-warning" aria-hidden="true" /> Guard idle</span>
+        <span className="inline-flex items-center gap-1"><span className="status-light status-light-danger" aria-hidden="true" /> Guard offline</span>
         <span className="inline-flex items-center gap-1"><span className="status-light status-light-info" aria-hidden="true" /> Vehicle</span>
+        <span className="inline-flex items-center gap-1"><span className="status-light" aria-hidden="true" style={{ backgroundColor: '#7c3aed' }} /> Clustered units</span>
         <span className="inline-flex items-center gap-1"><span className="status-light status-light-warning" aria-hidden="true" /> Client Site Radius</span>
         <span className="inline-flex items-center gap-1"><span className="status-light status-light-danger" aria-hidden="true" /> Your location</span>
-        <span className="ml-auto text-text-tertiary normal-case tracking-normal">Tip: drag to pan, scroll to zoom, click markers for details</span>
+        <span className="ml-auto text-text-tertiary normal-case tracking-normal">Tip: use guard chips to zoom and replay patrol trail</span>
       </div>
 
       {error ? <p className="mt-3 text-xs text-danger-text">{error}</p> : null}

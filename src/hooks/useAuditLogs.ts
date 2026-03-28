@@ -6,8 +6,15 @@ export interface AuditLogFilters {
   page?: number
   pageSize?: number
   result?: string
+  status?: string
   entityType?: string
+  resourceType?: string
+  actionType?: string
   actorId?: string
+  sourceIp?: string
+  userAgent?: string
+  from?: string
+  to?: string
   search?: string
 }
 
@@ -22,6 +29,8 @@ export interface AuditLogEntry {
   entity_id?: string | null
   result: string
   reason?: string | null
+  source_ip?: string | null
+  user_agent?: string | null
   metadata?: Record<string, unknown> | null
   created_at: string
 }
@@ -66,9 +75,17 @@ export function useAuditLogs() {
       if (nextFilters.entityType) params.append('entity_type', nextFilters.entityType)
       if (nextFilters.actorId) params.append('actor_id', nextFilters.actorId)
       if (nextFilters.search) params.append('search', nextFilters.search)
+      if (nextFilters.status) params.append('status', nextFilters.status)
+      if (nextFilters.resourceType) params.append('resource_type', nextFilters.resourceType)
+      if (nextFilters.actionType) params.append('action_type', nextFilters.actionType)
+      if (nextFilters.sourceIp) params.append('source_ip', nextFilters.sourceIp)
+      if (nextFilters.userAgent) params.append('user_agent', nextFilters.userAgent)
+      if (nextFilters.from) params.append('from', nextFilters.from)
+      if (nextFilters.to) params.append('to', nextFilters.to)
 
       const queryString = params.toString()
-      const url = queryString ? `${API_BASE_URL}/api/audit-logs?${queryString}` : `${API_BASE_URL}/api/audit-logs`
+
+      const url = queryString ? `${API_BASE_URL}/api/audit/logs?${queryString}` : `${API_BASE_URL}/api/audit/logs`
 
       const response = await fetchJsonOrThrow<AuditLogResponse>(
         url,

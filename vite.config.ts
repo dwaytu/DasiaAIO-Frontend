@@ -6,6 +6,14 @@ export default defineConfig({
   build: {
     outDir: 'app-dist',
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          mapping: ['leaflet', 'react-leaflet'],
+          icons: ['lucide-react'],
+        },
+      },
+    },
   },
   preview: {
     port: parseInt(process.env.PORT || '4173'),

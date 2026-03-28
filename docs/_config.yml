@@ -10,6 +10,14 @@ plugins:
 navigation:
   - title: Home
     url: /
+  - title: Download
+    url: /download/
+  - title: Features
+    url: /features/
+  - title: Security
+    url: /security/
+  - title: Architecture
+    url: /architecture/
   - title: Documentation
     url: /docs/
   - title: Installation

@@ -44,6 +44,9 @@ type RuntimeWindow = Window & {
   }
 }
 
+const IP_LOCATION_CACHE_TTL_MS = 5 * 60 * 1000
+let cachedIpLocation: { value: ResolvedLocation; fetchedAt: number } | null = null
+
 function getCapacitorGeolocationPlugin(): CapacitorGeolocationPlugin | null {
   if (typeof window === 'undefined') return null
   const runtimeWindow = window as RuntimeWindow
@@ -109,44 +112,76 @@ async function getCapacitorPosition(timeoutMs = 20000): Promise<ResolvedLocation
 }
 
 async function fetchIpLocation(timeoutMs = 8000): Promise<ResolvedLocation> {
-  const abortController = new AbortController()
-  const timeout = setTimeout(() => abortController.abort(), timeoutMs)
-
-  try {
-    const response = await fetch('https://ipapi.co/json/', {
-      signal: abortController.signal,
-      headers: { Accept: 'application/json' },
-    })
-
-    if (!response.ok) {
-      throw new Error('IP-based location service unavailable.')
-    }
-
-    const payload = await response.json() as {
-      latitude?: number | string
-      longitude?: number | string
-      lat?: number | string
-      lon?: number | string
-    }
-
-    const latitude = Number(payload.latitude ?? payload.lat)
-    const longitude = Number(payload.longitude ?? payload.lon)
-
-    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-      throw new Error('IP-based location returned invalid coordinates.')
-    }
-
-    return {
-      latitude,
-      longitude,
-      accuracyMeters: 20000,
-      heading: null,
-      speedKph: null,
-      source: 'ip',
-    }
-  } finally {
-    clearTimeout(timeout)
+  const now = Date.now()
+  if (cachedIpLocation && now - cachedIpLocation.fetchedAt < IP_LOCATION_CACHE_TTL_MS) {
+    return cachedIpLocation.value
   }
+
+  const providers = [
+    {
+      url: 'https://ipinfo.io/json',
+      parse: (payload: Record<string, unknown>) => {
+        const loc = typeof payload.loc === 'string' ? payload.loc : ''
+        const [latText, lonText] = loc.split(',')
+        return {
+          latitude: Number(latText),
+          longitude: Number(lonText),
+        }
+      },
+    },
+    {
+      url: 'https://geolocation-db.com/json/',
+      parse: (payload: Record<string, unknown>) => ({
+        latitude: Number(payload.latitude),
+        longitude: Number(payload.longitude),
+      }),
+    },
+  ]
+
+  for (const provider of providers) {
+    const abortController = new AbortController()
+    const timeout = setTimeout(() => abortController.abort(), timeoutMs)
+
+    try {
+      const response = await fetch(provider.url, {
+        signal: abortController.signal,
+        headers: { Accept: 'application/json' },
+      })
+
+      if (!response.ok) {
+        continue
+      }
+
+      const payload = (await response.json()) as Record<string, unknown>
+      const { latitude, longitude } = provider.parse(payload)
+
+      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+        continue
+      }
+
+      const resolved: ResolvedLocation = {
+        latitude,
+        longitude,
+        accuracyMeters: 20000,
+        heading: null,
+        speedKph: null,
+        source: 'ip',
+      }
+
+      cachedIpLocation = {
+        value: resolved,
+        fetchedAt: Date.now(),
+      }
+
+      return resolved
+    } catch {
+      continue
+    } finally {
+      clearTimeout(timeout)
+    }
+  }
+
+  throw new Error('IP-based location fallback is currently unavailable.')
 }
 
 export function hasAcceptedLocationConsent(): boolean {

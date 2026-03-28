@@ -84,7 +84,10 @@ docker compose up -d --build
 
 ### Frontend
 ```env
-VITE_API_BASE_URL=https://your-backend-url
+VITE_API_BASE_URL=https://api.your-domain.example
+VITE_APP_VERSION=1.0.0
+VITE_LATEST_RELEASE_API_URL=https://api.github.com/repos/Cloudyrowdyyy/Capstone-Main/releases/latest
+VITE_RELEASE_DOWNLOAD_URL=https://github.com/Cloudyrowdyyy/Capstone-Main/releases/latest
 ```
 
 ### Backend
@@ -92,8 +95,49 @@ VITE_API_BASE_URL=https://your-backend-url
 SERVER_HOST=0.0.0.0
 SERVER_PORT=5000
 DATABASE_URL=postgresql://user:pass@host:5432/db
-ADMIN_CODE=122601
+APP_ENV=production
+JWT_SECRET=<strong-random-secret-32-plus-chars>
+ADMIN_CODE=<non-default-admin-code>
+CORS_ORIGINS=https://your-frontend.example,capacitor://localhost,tauri://localhost,https://localhost,http://localhost
+REQUEST_TIMEOUT_SECS=30
+AUTH_RATE_LIMIT_MAX=10
+AUTH_RATE_LIMIT_WINDOW_SECS=60
+API_RATE_LIMIT_MAX=240
+API_RATE_LIMIT_WINDOW_SECS=60
+EXPENSIVE_RATE_LIMIT_MAX=30
+EXPENSIVE_RATE_LIMIT_WINDOW_SECS=60
+APP_VERSION=v1.0.0
+APP_CHANGELOG=Release notes for this production version.
+WEB_DOWNLOAD_URL=https://github.com/Cloudyrowdyyy/capstone-1.0/releases/latest
+DESKTOP_DOWNLOAD_URL=https://github.com/Cloudyrowdyyy/capstone-1.0/releases/latest
+MOBILE_DOWNLOAD_URL=https://github.com/Cloudyrowdyyy/capstone-1.0/releases/latest
 ```
+
+### Staging Example
+
+Use staging URLs and separate secrets from production:
+
+```env
+# Frontend (.env.staging)
+VITE_API_BASE_URL=https://staging-api.your-domain.example
+VITE_APP_VERSION=1.0.0-rc.1
+
+# Backend (staging)
+APP_ENV=staging
+JWT_SECRET=<staging-secret>
+ADMIN_CODE=<staging-admin-code>
+CORS_ORIGINS=https://staging.your-domain.example,http://localhost:5173
+APP_VERSION=v1.0.0-rc.1
+```
+
+### Production Safety Notes
+
+- `APP_ENV=production` enforces backend startup guards for `JWT_SECRET`, non-default `ADMIN_CODE`, and explicit CORS configuration.
+- Frontend release scripts validate production environment quality before packaging (`npm run release:web`, `release:desktop`, `release:android`).
+- Keep frontend `VITE_APP_VERSION` and backend `APP_VERSION` synchronized with your release tag.
+- Validate legal consent endpoints after deployment:
+  - `GET /api/legal/consent/status`
+  - `POST /api/legal/consent`
 
 ---
 

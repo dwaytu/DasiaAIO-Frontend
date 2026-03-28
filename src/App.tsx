@@ -11,11 +11,18 @@ import ArmoredCarDashboard from './components/ArmoredCarDashboard'
 import ProfileDashboard from './components/ProfileDashboard'
 import MeritScoreDashboard from './components/MeritScoreDashboard'
 import CalendarDashboard from './components/CalendarDashboard'
-import { API_BASE_URL, APP_VERSION, LATEST_RELEASE_API_URL, RELEASE_DOWNLOAD_URL, detectRuntimePlatform } from './config'
+import { API_BASE_URL, APP_VERSION, LATEST_RELEASE_API_URL, RELEASE_DOWNLOAD_URL, detectRuntimePlatform, RuntimePlatform } from './config'
 import { normalizeRole, isLegacyRole, Role } from './types/auth'
 import { can, Permission } from './utils/permissions'
 import { getRequiredAccuracyMeters, getTrackingAccuracyMode } from './utils/trackingPolicy'
-import { clearAuthSession, fetchJsonOrThrow, getAuthToken, getRefreshToken, hydrateAuthSession } from './utils/api'
+import {
+  clearAuthSession,
+  fetchJsonOrThrow,
+  getAuthToken,
+  getRefreshToken,
+  hydrateAuthSession,
+  storeAuthSession,
+} from './utils/api'
 import {
   getLocationConsentStatus,
   getLocationPermissionState,
@@ -40,6 +47,44 @@ const UPDATE_DISMISS_KEY_PREFIX = 'dasi.update.dismissed.'
 type ReleasePrompt = {
   tag: string
   url: string
+  changelog?: string
+  platform: RuntimePlatform
+}
+
+type SystemVersionResponse = {
+  latestVersion?: string
+  changelog?: string
+  downloadLinks?: {
+    web?: string
+    desktop?: string
+    mobile?: string
+  }
+}
+
+type LegalConsentResponse = {
+  consentAcceptedAt?: string
+  consentVersion?: string
+  token?: string
+  refreshToken?: string
+  legalConsentAccepted?: boolean
+}
+
+function hasServerLegalConsent(currentUser: User | null): boolean {
+  if (!currentUser) return false
+  if (currentUser.legalConsentAccepted === true) return true
+  return Boolean(currentUser.consentAcceptedAt)
+}
+
+function resolveDownloadUrl(platform: RuntimePlatform, payload: SystemVersionResponse): string {
+  if (platform === 'tauri') {
+    return payload.downloadLinks?.desktop || payload.downloadLinks?.web || RELEASE_DOWNLOAD_URL
+  }
+
+  if (platform === 'capacitor') {
+    return payload.downloadLinks?.mobile || payload.downloadLinks?.web || RELEASE_DOWNLOAD_URL
+  }
+
+  return payload.downloadLinks?.web || RELEASE_DOWNLOAD_URL
 }
 
 function parseSemverVersion(value: string): [number, number, number] | null {
@@ -60,6 +105,7 @@ function isReleaseNewer(latestTag: string, currentVersion: string): boolean {
 }
 
 function App() {
+  const runtimePlatform = detectRuntimePlatform()
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false)
   const [user, setUser] = useState<User | null>(null)
   const [activeView, setActiveView] = useState<string>('users')
@@ -73,12 +119,15 @@ function App() {
   const [geoPermissionState, setGeoPermissionState] = useState<'unknown' | 'prompt' | 'granted' | 'denied' | 'unsupported'>('unknown')
   const [geoNotice, setGeoNotice] = useState<string>('')
   const [globalError, setGlobalError] = useState<string>('')
+  const [isNetworkOnline, setIsNetworkOnline] = useState<boolean>(() =>
+    typeof navigator === 'undefined' ? true : navigator.onLine,
+  )
+  const [isBackendReachable, setIsBackendReachable] = useState<boolean>(true)
 
   useEffect(() => {
     const restoreAuth = async () => {
       try {
-        const storedToa = localStorage.getItem(TOA_ACCEPTANCE_KEY)
-        setHasAcceptedToa(storedToa === TOA_ACCEPTANCE_VALUE)
+        setHasAcceptedToa(false)
 
         const consentAccepted = hasAcceptedLocationConsent()
         setHasLocationConsent(consentAccepted)
@@ -93,6 +142,7 @@ function App() {
           parsedUser.role = normalizeRole(parsedUser.role)
           setUser(parsedUser)
           setIsLoggedIn(true)
+          setHasAcceptedToa(hasServerLegalConsent(parsedUser))
         }
       } catch (error) {
         console.error('Failed to restore authentication:', error)
@@ -150,48 +200,132 @@ function App() {
   }, [])
 
   useEffect(() => {
+    const handleOnline = () => setIsNetworkOnline(true)
+    const handleOffline = () => {
+      setIsNetworkOnline(false)
+      setIsBackendReachable(false)
+    }
+
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!isNetworkOnline) {
+      setIsBackendReachable(false)
+      return
+    }
+
+    let disposed = false
+
+    const probeBackend = async () => {
+      const controller = new AbortController()
+      const timeout = window.setTimeout(() => controller.abort(), 5000)
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/health`, {
+          method: 'GET',
+          signal: controller.signal,
+          headers: { Accept: 'application/json' },
+        })
+
+        if (!disposed) {
+          setIsBackendReachable(response.ok)
+        }
+      } catch {
+        if (!disposed) {
+          setIsBackendReachable(false)
+        }
+      } finally {
+        window.clearTimeout(timeout)
+      }
+    }
+
+    void probeBackend()
+    const interval = window.setInterval(() => {
+      void probeBackend()
+    }, 30000)
+
+    return () => {
+      disposed = true
+      window.clearInterval(interval)
+    }
+  }, [isNetworkOnline])
+
+  const checkForUpdates = async (ignoreDismissedTag = false) => {
+    try {
+      const systemResponse = await fetch(`${API_BASE_URL}/api/system/version`, {
+        headers: { Accept: 'application/json' },
+      })
+
+      if (systemResponse.ok) {
+        const payload = (await systemResponse.json()) as SystemVersionResponse
+        const latestTag = (payload.latestVersion || '').trim()
+        if (!latestTag || !isReleaseNewer(latestTag, APP_VERSION)) {
+          return
+        }
+
+        const dismissedKey = `${UPDATE_DISMISS_KEY_PREFIX}${latestTag}`
+        if (!ignoreDismissedTag && localStorage.getItem(dismissedKey) === 'true') {
+          return
+        }
+
+        setReleasePrompt({
+          tag: latestTag,
+          url: resolveDownloadUrl(runtimePlatform, payload),
+          changelog: payload.changelog,
+          platform: runtimePlatform,
+        })
+        return
+      }
+
+      const response = await fetch(LATEST_RELEASE_API_URL, {
+        headers: { Accept: 'application/vnd.github+json' },
+      })
+
+      if (!response.ok) return
+
+      const data = (await response.json()) as { tag_name?: string; html_url?: string }
+      const latestTag = (data.tag_name || '').trim()
+      if (!latestTag || !isReleaseNewer(latestTag, APP_VERSION)) return
+
+      const dismissedKey = `${UPDATE_DISMISS_KEY_PREFIX}${latestTag}`
+      if (!ignoreDismissedTag && localStorage.getItem(dismissedKey) === 'true') {
+        return
+      }
+
+      setReleasePrompt({
+        tag: latestTag,
+        url: data.html_url || RELEASE_DOWNLOAD_URL,
+        platform: runtimePlatform,
+      })
+    } catch {
+      // Ignore transient release-check failures.
+    }
+  }
+
+  useEffect(() => {
     if (import.meta.env.DEV) return
 
     let isCancelled = false
 
-    const checkForUpdates = async () => {
-      try {
-        const response = await fetch(LATEST_RELEASE_API_URL, {
-          headers: { Accept: 'application/vnd.github+json' },
-        })
-
-        if (!response.ok) return
-
-        const data = await response.json() as { tag_name?: string; html_url?: string }
-        const latestTag = (data.tag_name || '').trim()
-        if (!latestTag) return
-
-        if (!isReleaseNewer(latestTag, APP_VERSION)) return
-
-        const dismissedKey = `${UPDATE_DISMISS_KEY_PREFIX}${latestTag}`
-        if (localStorage.getItem(dismissedKey) === 'true') return
-
-        if (!isCancelled) {
-          setReleasePrompt({
-            tag: latestTag,
-            url: data.html_url || RELEASE_DOWNLOAD_URL,
-          })
-        }
-      } catch {
-        // Ignore transient release-check failures.
-      }
-    }
-
     void checkForUpdates()
     const interval = window.setInterval(() => {
-      void checkForUpdates()
+      if (!isCancelled) {
+        void checkForUpdates()
+      }
     }, 1000 * 60 * 60 * 6)
 
     return () => {
       isCancelled = true
       window.clearInterval(interval)
     }
-  }, [])
+  }, [runtimePlatform])
 
   const handleLogin = (userData: User) => {
     if (!isLegacyRole(userData.role)) {
@@ -207,6 +341,7 @@ function App() {
     localStorage.setItem('user', JSON.stringify(typedUser))
     setUser(typedUser)
     setIsLoggedIn(true)
+    setHasAcceptedToa(hasServerLegalConsent(typedUser))
     setActiveView(typedUser.role === 'guard' ? 'overview' : 'dashboard')
   }
 
@@ -225,6 +360,7 @@ function App() {
 
     setUser(null)
     setIsLoggedIn(false)
+    setHasAcceptedToa(false)
     setActiveView('users')
   }
 
@@ -239,7 +375,7 @@ function App() {
 
   const normalizedRole = normalizeRole(user?.role)
 
-  const handleAcceptToa = () => {
+  const handleAcceptToa = async () => {
     if (!toaChecked) {
       setToaError('Please confirm that you have read and agree to the Terms of Agreement.')
       return
@@ -247,6 +383,49 @@ function App() {
 
     if (!locationConsentChecked) {
       setToaError('Please provide location consent so live tracking can operate in the field.')
+      return
+    }
+
+    if (!user) {
+      setToaError('No active user session was found. Please log in again.')
+      return
+    }
+
+    try {
+      const consent = await fetchJsonOrThrow<LegalConsentResponse>(
+        `${API_BASE_URL}/api/legal/consent`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            termsAccepted: true,
+            privacyAccepted: true,
+            acceptableUseAccepted: true,
+            consentVersion: '2026-03-28',
+          }),
+        },
+        'Failed to record legal consent',
+      )
+
+      if (consent.token) {
+        storeAuthSession(consent.token, consent.refreshToken)
+      }
+
+      const updatedUser: User = {
+        ...user,
+        legalConsentAccepted: true,
+        consentAcceptedAt: consent.consentAcceptedAt || new Date().toISOString(),
+        consentVersion: consent.consentVersion || '2026-03-28',
+      }
+
+      localStorage.setItem('user', JSON.stringify(updatedUser))
+      setUser(updatedUser)
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Failed to record legal consent. Please try again.'
+      setToaError(message)
       return
     }
 
@@ -287,8 +466,29 @@ function App() {
     setReleasePrompt(null)
   }
 
-  const handleDownloadUpdate = () => {
+  const handleDownloadUpdate = async () => {
     if (!releasePrompt) return
+
+    if (releasePrompt.platform === 'tauri') {
+      try {
+        const updater = await import('@tauri-apps/plugin-updater')
+        const process = await import('@tauri-apps/plugin-process')
+        const update = await updater.check()
+
+        if (update) {
+          await update.downloadAndInstall((event) => {
+            if (event.event === 'Finished') {
+              setGlobalError('Update downloaded. Restarting now...')
+            }
+          })
+          await process.relaunch()
+          return
+        }
+      } catch {
+        // Fall back to release URL if Tauri updater is unavailable.
+      }
+    }
+
     window.open(releasePrompt.url, '_blank', 'noopener,noreferrer')
     handleDismissUpdatePrompt()
   }
@@ -314,6 +514,12 @@ function App() {
   useEffect(() => {
     if (!isLoggedIn || !user) return
 
+    if (!hasAcceptedToa) {
+      setGeoPermissionState('unknown')
+      setGeoNotice('Complete legal confirmation to enable location tracking.')
+      return
+    }
+
     if (!hasLocationConsent) {
       setGeoPermissionState('unknown')
       setGeoNotice('Location tracking is disabled until consent is accepted.')
@@ -326,10 +532,10 @@ function App() {
         setGeoNotice('Precise location is denied. Live tracking will use approximate IP-based fallback until permission is restored.')
       }
     })
-  }, [hasLocationConsent, isLoggedIn, user?.id])
+  }, [hasAcceptedToa, hasLocationConsent, isLoggedIn, user?.id])
 
   useEffect(() => {
-    if (!isLoggedIn || !user || !hasLocationConsent) return
+    if (!isLoggedIn || !user || !hasAcceptedToa || !hasLocationConsent) return
 
     let lastSent = 0
     let disposed = false
@@ -405,7 +611,7 @@ function App() {
       disposed = true
       window.clearInterval(intervalId)
     }
-  }, [hasLocationConsent, isLoggedIn, user?.id, user?.username, user?.fullName, user?.full_name])
+  }, [hasAcceptedToa, hasLocationConsent, isLoggedIn, user?.id, user?.username, user?.fullName, user?.full_name])
 
   type ViewComponent = (props: {
     user: User
@@ -503,20 +709,49 @@ function App() {
   if (isLoading) {
     return (
       <div className="h-screen overflow-hidden w-full flex items-center justify-center" style={{ background: 'var(--bg-primary)' }}>
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-          <p className="mt-4" style={{ color: 'var(--text-primary)' }}>Loading...</p>
+        <div className="w-full max-w-xl px-6">
+          <div className="animate-pulse space-y-4">
+            <div className="h-10 rounded-lg bg-surface-elevated" />
+            <div className="h-24 rounded-lg bg-surface-elevated" />
+            <div className="h-24 rounded-lg bg-surface-elevated" />
+            <div className="h-24 rounded-lg bg-surface-elevated" />
+          </div>
+          <p className="mt-4 text-sm text-center" style={{ color: 'var(--text-secondary)' }}>Loading security operations workspace...</p>
         </div>
       </div>
     )
   }
 
   const showLocationConsentUpgrade = isLoggedIn && hasAcceptedToa && !hasLocationConsent && getLocationConsentStatus() === ''
+  const showConnectivityBanner = isLoggedIn && (!isNetworkOnline || !isBackendReachable)
+
+  const mobileNavItems = normalizedRole === 'guard'
+    ? [
+        { key: 'overview', label: 'Overview' },
+        { key: 'calendar', label: 'Calendar' },
+        { key: 'profile', label: 'Profile' },
+      ]
+    : [
+        { key: 'dashboard', label: 'Dashboard' },
+        { key: 'calendar', label: 'Calendar' },
+        { key: 'firearms', label: 'Firearms' },
+        { key: 'armored-cars', label: 'Vehicles' },
+        { key: 'profile', label: 'Profile' },
+      ]
 
   return (
-    <div className="min-h-screen w-full overflow-x-hidden">
+    <div className="min-h-screen w-full overflow-x-hidden pb-16 md:pb-0">
       {!isLoggedIn ? (
         <LoginPage onLogin={handleLogin} />
+      ) : !hasAcceptedToa ? (
+        <main id="maincontent" className="flex min-h-screen items-center justify-center px-4" tabIndex={-1}>
+          <section className="w-full max-w-lg rounded-2xl border border-border-elevated bg-surface p-6 shadow-xl">
+            <h1 className="text-2xl font-bold text-text-primary">Legal Confirmation Required</h1>
+            <p className="mt-3 text-sm text-text-secondary">
+              Review and accept the Terms of Agreement, Privacy Policy, and Acceptable Use Policy to continue.
+            </p>
+          </section>
+        </main>
       ) : activeView === 'profile' ? (
         <ProfileDashboard user={user!} onLogout={handleLogout} onBack={() => setActiveView(getHomeView(normalizedRole))} onProfilePhotoUpdate={handleProfilePhotoUpdate} />
       ) : user ? (
@@ -532,7 +767,35 @@ function App() {
         })()
       ) : null}
 
-      {isLoggedIn && hasLocationConsent && geoPermissionState !== 'granted' ? (
+      {isLoggedIn && !import.meta.env.DEV ? (
+        <button
+          type="button"
+          onClick={() => {
+            void checkForUpdates(true)
+          }}
+          className="fixed bottom-20 right-4 z-[70] rounded-md border border-border-elevated bg-surface px-3 py-2 text-xs font-semibold text-text-primary shadow-md md:bottom-6"
+          aria-label="Check for updates"
+        >
+          Check for Updates
+        </button>
+      ) : null}
+
+      {showConnectivityBanner ? (
+        <div
+          className="fixed left-4 right-4 top-4 z-[85] rounded-lg border border-danger-border bg-danger-bg p-3 text-sm text-danger-text shadow-lg md:left-auto md:max-w-xl"
+          role="status"
+          aria-live="polite"
+        >
+          <p className="font-semibold">Disconnected</p>
+          <p className="mt-1">
+            {!isNetworkOnline
+              ? 'Network connection is offline. Reconnect to continue syncing SENTINEL data.'
+              : 'Backend is unreachable right now. Retrying automatically in the background.'}
+          </p>
+        </div>
+      ) : null}
+
+      {isLoggedIn && hasAcceptedToa && hasLocationConsent && geoPermissionState !== 'granted' ? (
         <div className="fixed bottom-4 left-4 right-4 z-50 rounded-lg border border-amber-600 bg-amber-50 p-3 text-sm text-amber-900 shadow-lg md:left-auto md:max-w-xl" role="status" aria-live="polite">
           <p className="font-semibold">Location access is not active.</p>
           <p className="mt-1">{geoNotice || 'Live tracking requires location permission. Tap the button below to request access or continue with IP fallback.'}</p>
@@ -548,7 +811,7 @@ function App() {
         </div>
       ) : null}
 
-      {!hasAcceptedToa ? (
+      {isLoggedIn && !hasAcceptedToa ? (
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/72 p-4 backdrop-blur-sm">
           <section
             role="dialog"
@@ -560,6 +823,37 @@ function App() {
             <h1 id="toa-title" className="text-2xl font-bold text-text-primary">Terms of Agreement</h1>
             <p id="toa-summary" className="mt-2 text-sm text-text-secondary">
               Before using SENTINEL on Web, Desktop, or Mobile, you must agree to these terms. This prompt is shown once per app install/browser profile.
+            </p>
+
+            <p className="mt-2 text-sm text-text-secondary">
+              Review the legal documents:{' '}
+              <a
+                href="https://github.com/Cloudyrowdyyy/capstone-1.0/blob/main/TermsOfAgreement.md"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-info underline"
+              >
+                Terms of Agreement
+              </a>
+              ,{' '}
+              <a
+                href="https://github.com/Cloudyrowdyyy/capstone-1.0/blob/main/PrivacyPolicy.md"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-info underline"
+              >
+                Privacy Policy
+              </a>
+              , and{' '}
+              <a
+                href="https://github.com/Cloudyrowdyyy/capstone-1.0/blob/main/AcceptableUsePolicy.md"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-info underline"
+              >
+                Acceptable Use Policy
+              </a>
+              .
             </p>
 
             <div className="mt-4 max-h-64 space-y-3 overflow-y-auto rounded-xl border border-border-subtle bg-surface-elevated p-4 text-sm text-text-secondary">
@@ -674,6 +968,9 @@ function App() {
             <p className="mt-2 text-sm text-text-secondary">
               Version {releasePrompt.tag} is available. You are currently using {APP_VERSION}. Download the latest update to continue with new fixes and features.
             </p>
+            {releasePrompt.changelog ? (
+              <p className="mt-2 text-xs text-text-secondary">{releasePrompt.changelog}</p>
+            ) : null}
             <div className="mt-4 flex flex-wrap justify-end gap-2">
               <button
                 type="button"
@@ -684,14 +981,46 @@ function App() {
               </button>
               <button
                 type="button"
-                onClick={handleDownloadUpdate}
+                onClick={() => { void handleDownloadUpdate() }}
                 className="rounded-md bg-info px-4 py-2 text-sm font-semibold text-white"
               >
-                Download update
+                {releasePrompt.platform === 'tauri' ? 'Update now' : 'Download update'}
               </button>
             </div>
           </section>
         </div>
+      ) : null}
+
+      {isLoggedIn && runtimePlatform === 'capacitor' ? (
+        <nav
+          aria-label="Mobile quick navigation"
+          className="fixed bottom-0 left-0 right-0 z-[65] border-t border-border-elevated bg-surface px-2 py-2 md:hidden"
+        >
+          <ul className="grid grid-cols-5 gap-1">
+            {mobileNavItems.map((item) => {
+              const isAccessible = item.key === 'profile' || canView(item.key, normalizedRole)
+              if (!isAccessible) {
+                return <li key={item.key} />
+              }
+
+              const isActive = activeView === item.key
+
+              return (
+                <li key={item.key}>
+                  <button
+                    type="button"
+                    onClick={() => setActiveView(item.key)}
+                    className={`w-full rounded-md px-2 py-2 text-xs font-semibold transition ${
+                      isActive ? 'bg-info text-white' : 'bg-surface-elevated text-text-secondary'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+        </nav>
       ) : null}
 
       {globalError ? (

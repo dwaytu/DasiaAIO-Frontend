@@ -4,6 +4,26 @@ let authExpiryNotified = false
 const RETRYABLE_STATUS = new Set([429, 502, 503, 504])
 const TOKEN_STORAGE_KEY = 'token'
 const REFRESH_TOKEN_STORAGE_KEY = 'refreshToken'
+const PUBLIC_API_PATHS = new Set([
+  '/api/login',
+  '/api/register',
+  '/api/verify',
+  '/api/resend-code',
+  '/api/forgot-password',
+  '/api/verify-reset-code',
+  '/api/reset-password',
+  '/api/refresh',
+  '/api/auth/login',
+  '/api/auth/register',
+  '/api/auth/verify',
+  '/api/auth/resend-code',
+  '/api/auth/forgot-password',
+  '/api/auth/verify-reset-code',
+  '/api/auth/reset-password',
+  '/api/auth/refresh',
+  '/api/health',
+  '/api/health/system',
+])
 
 let refreshInFlight: Promise<string | null> | null = null
 let refreshTokenCache = readLocalStorage(REFRESH_TOKEN_STORAGE_KEY)
@@ -146,6 +166,22 @@ function isRefreshEndpoint(url: string): boolean {
   return url.includes('/api/refresh') || url.includes('/api/auth/refresh')
 }
 
+function isProtectedApiEndpoint(url: string): boolean {
+  try {
+    const parsed = new URL(url, typeof window !== 'undefined' ? window.location.origin : 'http://localhost')
+    const path = parsed.pathname.toLowerCase()
+
+    if (!path.startsWith('/api/')) {
+      return false
+    }
+
+    return !PUBLIC_API_PATHS.has(path)
+  } catch {
+    const normalized = url.toLowerCase()
+    return normalized.includes('/api/') && !Array.from(PUBLIC_API_PATHS).some((path) => normalized.includes(path))
+  }
+}
+
 async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit | undefined, timeoutMs: number): Promise<Response> {
   const abortController = new AbortController()
   const timeout = setTimeout(() => abortController.abort(), timeoutMs)
@@ -235,7 +271,20 @@ export async function fetchJsonOrThrow<T>(
   fallbackError: string,
   timeoutMs = 15000,
 ): Promise<T> {
-  const method = (init?.method || 'GET').toUpperCase()
+  let requestInit = init
+  const inputUrl = requestUrlString(input)
+
+  if (isProtectedApiEndpoint(inputUrl) && !hasAuthorizationHeader(requestInit?.headers)) {
+    const token = getAuthToken().trim()
+    if (!token) {
+      notifyAuthExpired('Missing authentication token.')
+      throw new Error('Session expired. Please log in again.')
+    }
+
+    requestInit = withAuthorizationHeader(requestInit, token)
+  }
+
+  const method = (requestInit?.method || 'GET').toUpperCase()
   const retryableByMethod = method === 'GET' || method === 'HEAD' || method === 'OPTIONS'
   const maxAttempts = retryableByMethod ? 2 : 1
 
@@ -248,8 +297,8 @@ export async function fetchJsonOrThrow<T>(
 
     try {
       response = await fetch(input, {
-        ...init,
-        signal: init?.signal ?? abortController.signal,
+        ...requestInit,
+        signal: requestInit?.signal ?? abortController.signal,
       })
       lastNetworkError = null
     } catch (error) {
@@ -290,10 +339,9 @@ export async function fetchJsonOrThrow<T>(
     const message = await getApiErrorMessage(response, fallbackError)
 
     if (isAuthExpired(response, message)) {
-      const inputUrl = requestUrlString(input)
       const isCandidateForRefresh =
         !isRefreshEndpoint(inputUrl) &&
-        hasAuthorizationHeader(init?.headers) &&
+        hasAuthorizationHeader(requestInit?.headers) &&
         getRefreshToken().trim().length > 0
 
       if (isCandidateForRefresh) {
@@ -302,7 +350,7 @@ export async function fetchJsonOrThrow<T>(
         if (refreshedToken) {
           const retryResponse = await fetchWithTimeout(
             input,
-            withAuthorizationHeader(init, refreshedToken),
+            withAuthorizationHeader(requestInit, refreshedToken),
             timeoutMs,
           )
 

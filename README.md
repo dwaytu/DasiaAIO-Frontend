@@ -79,6 +79,10 @@ Platform-specific files (`.env.web`, `.env.mobile`, `.env.desktop`) are also pin
 
 `VITE_API_BASE_URL` is the only API endpoint variable used by the client runtime.
 
+Version/update checks now query backend `GET /api/system/version` first, then fall back to GitHub latest release API when unavailable.
+
+Desktop builds support one-click update via Tauri updater when wrapper updater environment is configured.
+
 ## Key Links
 
 - Production: https://dasiaaio.up.railway.app

@@ -59,16 +59,25 @@ Create frontend mode files in `DasiaAIO-Frontend/` as needed:
 ```env
 # .env.web
 VITE_API_BASE_URL=http://localhost:5000
+VITE_APP_VERSION=1.0.0-dev
 ```
 
 ```env
 # .env.mobile (use LAN IP when testing on phone)
 VITE_API_BASE_URL=http://192.168.1.25:5000
+VITE_APP_VERSION=1.0.0-dev
 ```
 
 ```env
 # .env.desktop
 VITE_API_BASE_URL=http://localhost:5000
+VITE_APP_VERSION=1.0.0-dev
+```
+
+Start from the template when creating environment files:
+
+```bash
+cp .env.example .env.web
 ```
 
 Create backend `.env` in `DasiaAIO-Backend/`:
@@ -112,6 +121,13 @@ psql postgresql://postgres:password@localhost/guard_firearm_system
 npm install
 npm install --prefix DasiaAIO-Frontend
 ```
+
+---
+
+## First Login Legal Confirmation
+
+After login, users must complete legal confirmation before protected dashboards are available.
+Consent is persisted server-side through `/api/legal/consent` and enforced by backend middleware.
 
 ---
 

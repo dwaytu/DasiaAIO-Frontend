@@ -69,6 +69,28 @@ Additional auth routes:
 
 Equivalent `/api/auth/*` aliases are also supported.
 
+### Legal Consent Endpoints
+
+- `GET /api/legal/consent/status`
+- `POST /api/legal/consent`
+
+`POST /api/legal/consent` request body example:
+
+```json
+{
+  "termsAccepted": true,
+  "privacyAccepted": true,
+  "acceptableUseAccepted": true,
+  "consentVersion": "2026-03-28"
+}
+```
+
+Behavior notes:
+
+- Consent state is persisted on the user record with timestamp and version metadata.
+- Protected route access is denied by middleware until legal consent is accepted.
+- Endpoint response can include refreshed auth tokens for continuation.
+
 ---
 
 ## User Management
@@ -167,6 +189,10 @@ GET /api/health
 System health:
 
 - `GET /api/health/system`
+
+Version metadata:
+
+- `GET /api/system/version`
 
 ---
 

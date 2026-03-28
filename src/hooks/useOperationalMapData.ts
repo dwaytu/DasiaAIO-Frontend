@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { API_BASE_URL } from '../config'
 import { detectRuntimePlatform } from '../config'
-import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
+import { fetchJsonOrThrow, getAuthHeaders, getAuthToken } from '../utils/api'
 import { normalizeRole } from '../types/auth'
 import {
   hasAcceptedLocationConsent,
@@ -89,6 +89,8 @@ interface ActiveGuardsResponse {
   guards?: ActiveGuard[]
 }
 
+type WsConnectionState = 'disabled' | 'connecting' | 'open' | 'backoff' | 'closed'
+
 export interface ClientSiteInput {
   name: string
   address?: string
@@ -110,6 +112,7 @@ interface UseOperationalMapDataResult {
   clientSites: MapClientSite[]
   trackingPoints: MapTrackingPoint[]
   geofenceAlerts: GeofenceAlert[]
+  wsConnectionState: WsConnectionState
   loading: boolean
   error: string
   refresh: () => Promise<void>
@@ -125,13 +128,21 @@ interface UseOperationalMapDataResult {
 }
 
 export function useOperationalMapData(): UseOperationalMapDataResult {
+  const WS_RECONNECT_BASE_MS = 1500
+  const WS_RECONNECT_MAX_MS = 30000
+  const WS_RECONNECT_MAX_ATTEMPTS = 8
+
   const [clientSites, setClientSites] = useState<MapClientSite[]>([])
   const [trackingPoints, setTrackingPoints] = useState<MapTrackingPoint[]>([])
   const [geofenceAlerts, setGeofenceAlerts] = useState<GeofenceAlert[]>([])
+  const [wsConnectionState, setWsConnectionState] = useState<WsConnectionState>('disabled')
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string>('')
   const [lastUpdated, setLastUpdated] = useState<string>('')
   const [isElevatedUser, setIsElevatedUser] = useState<boolean>(false)
+  const wsRef = useRef<WebSocket | null>(null)
+  const wsReconnectTimerRef = useRef<number | null>(null)
+  const wsReconnectAttemptsRef = useRef<number>(0)
   const enableTrackingWs = import.meta.env.VITE_ENABLE_TRACKING_WS === 'true'
 
   useEffect(() => {
@@ -150,7 +161,21 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
     }
   }, [])
 
+  const applySnapshot = useCallback((data: MapDataResponse) => {
+    setClientSites(Array.isArray(data.clientSites) ? data.clientSites : [])
+    setTrackingPoints(Array.isArray(data.trackingPoints) ? data.trackingPoints : [])
+    setGeofenceAlerts(Array.isArray(data.geofenceAlerts) ? data.geofenceAlerts : [])
+    setLastUpdated(new Date().toLocaleTimeString())
+  }, [])
+
   const load = useCallback(async () => {
+    const token = getAuthToken().trim()
+    if (!token) {
+      setLoading(false)
+      setError('Session expired. Please log in again.')
+      return
+    }
+
     try {
       const data = await fetchJsonOrThrow<MapDataResponse>(
         `${API_BASE_URL}/api/tracking/map-data`,
@@ -158,17 +183,14 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
         'Failed to load operational map data',
       )
 
-      setClientSites(Array.isArray(data.clientSites) ? data.clientSites : [])
-      setTrackingPoints(Array.isArray(data.trackingPoints) ? data.trackingPoints : [])
-      setGeofenceAlerts(Array.isArray(data.geofenceAlerts) ? data.geofenceAlerts : [])
-      setLastUpdated(new Date().toLocaleTimeString())
+      applySnapshot(data)
       setError('')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load operational map data')
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [applySnapshot])
 
   const createClientSite = useCallback(async (input: ClientSiteInput) => {
     await fetchJsonOrThrow<any>(
@@ -261,56 +283,137 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
   }, [])
 
   useEffect(() => {
-    load()
+    void load()
 
-    const fallbackInterval = window.setInterval(load, 30000)
+    const fallbackInterval = window.setInterval(() => {
+      void load()
+    }, 30000)
 
-    const token = localStorage.getItem('token') || ''
+    const clearReconnectTimer = () => {
+      if (wsReconnectTimerRef.current !== null) {
+        window.clearTimeout(wsReconnectTimerRef.current)
+        wsReconnectTimerRef.current = null
+      }
+    }
+
+    const closeSocket = () => {
+      if (wsRef.current) {
+        wsRef.current.onopen = null
+        wsRef.current.onmessage = null
+        wsRef.current.onerror = null
+        wsRef.current.onclose = null
+        wsRef.current.close()
+        wsRef.current = null
+      }
+    }
+
+    let disposed = false
+
+    const token = getAuthToken().trim()
     if (!token || !enableTrackingWs) {
+      setWsConnectionState('disabled')
       return () => {
+        disposed = true
         window.clearInterval(fallbackInterval)
+        clearReconnectTimer()
+        closeSocket()
       }
     }
 
     const wsBase = API_BASE_URL.replace(/^http/, 'ws')
     const wsUrl = `${wsBase}/api/tracking/ws?token=${encodeURIComponent(token)}`
-    let socket: WebSocket | null = null
 
-    try {
-      socket = new WebSocket(wsUrl)
-    } catch {
-      setError('Live map socket unavailable. Using periodic refresh.')
-      return () => {
-        window.clearInterval(fallbackInterval)
+    const scheduleReconnect = (reason: string) => {
+      if (disposed) return
+
+      if (wsReconnectAttemptsRef.current >= WS_RECONNECT_MAX_ATTEMPTS) {
+        setWsConnectionState('closed')
+        setError('Live map socket unavailable. Using periodic refresh.')
+        return
       }
+
+      wsReconnectAttemptsRef.current += 1
+      const delay = Math.min(
+        WS_RECONNECT_BASE_MS * Math.pow(2, wsReconnectAttemptsRef.current - 1),
+        WS_RECONNECT_MAX_MS,
+      )
+
+      setWsConnectionState('backoff')
+      setError(`${reason} Retrying live map in ${Math.round(delay / 1000)}s.`)
+
+      clearReconnectTimer()
+      wsReconnectTimerRef.current = window.setTimeout(() => {
+        wsReconnectTimerRef.current = null
+        connectWebSocket()
+      }, delay)
     }
 
-    socket.onmessage = (event) => {
+    const connectWebSocket = () => {
+      if (disposed) return
+      closeSocket()
+
+      let socket: WebSocket
+
       try {
-        const payload = JSON.parse(event.data)
-        if (payload?.type === 'snapshot' && payload?.data) {
-          const data = payload.data as MapDataResponse
-          setClientSites(Array.isArray(data.clientSites) ? data.clientSites : [])
-          setTrackingPoints(Array.isArray(data.trackingPoints) ? data.trackingPoints : [])
-          setGeofenceAlerts(Array.isArray(data.geofenceAlerts) ? data.geofenceAlerts : [])
-          setLastUpdated(new Date().toLocaleTimeString())
-          setLoading(false)
-          setError('')
-        }
+        setWsConnectionState('connecting')
+        socket = new WebSocket(wsUrl)
       } catch {
-        // Ignore malformed websocket payloads.
+        scheduleReconnect('Live map socket initialization failed.')
+        return
+      }
+
+      wsRef.current = socket
+
+      socket.onopen = () => {
+        if (disposed) return
+        wsReconnectAttemptsRef.current = 0
+        setWsConnectionState('open')
+        setError('')
+      }
+
+      socket.onmessage = (event) => {
+        if (disposed) return
+
+        try {
+          const payload = JSON.parse(event.data)
+          if (payload?.type === 'snapshot' && payload?.data) {
+            const data = payload.data as MapDataResponse
+            applySnapshot(data)
+            setLoading(false)
+            setError('')
+          }
+        } catch {
+          // Ignore malformed websocket payloads.
+        }
+      }
+
+      socket.onerror = () => {
+        if (disposed) return
+        if (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING) {
+          socket.close()
+        }
+      }
+
+      socket.onclose = (event) => {
+        if (disposed) return
+        wsRef.current = null
+        scheduleReconnect(event.wasClean ? 'Live map socket closed.' : 'Live map socket disconnected.')
       }
     }
 
-    socket.onerror = () => {
-      setError('Live map socket disconnected. Falling back to periodic refresh.')
-    }
+    wsReconnectTimerRef.current = window.setTimeout(() => {
+      wsReconnectTimerRef.current = null
+      connectWebSocket()
+    }, 0)
 
     return () => {
+      disposed = true
       window.clearInterval(fallbackInterval)
-      socket?.close()
+      clearReconnectTimer()
+      closeSocket()
+      setWsConnectionState('disabled')
     }
-  }, [enableTrackingWs, load])
+  }, [applySnapshot, enableTrackingWs, load])
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
@@ -368,6 +471,7 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
       clientSites,
       trackingPoints,
       geofenceAlerts,
+      wsConnectionState,
       loading,
       error,
       refresh: load,
@@ -385,6 +489,7 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
       clientSites,
       trackingPoints,
       geofenceAlerts,
+      wsConnectionState,
       loading,
       error,
       load,

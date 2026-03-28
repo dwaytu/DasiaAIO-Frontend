@@ -19,8 +19,8 @@ permalink: /installation/
 
 ### 1. Clone Repository
 ```bash
-git clone https://github.com/Cloudyrowdyyy/capstone-1.0.git
-cd capstone-1.0
+git clone https://github.com/Cloudyrowdyyy/Capstone-Main.git
+cd Capstone-Main
 ```
 
 ### 2. Install Dependencies

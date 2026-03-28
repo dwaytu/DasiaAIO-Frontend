@@ -828,7 +828,7 @@ function App() {
             <p className="mt-2 text-sm text-text-secondary">
               Review the legal documents:{' '}
               <a
-                href="https://github.com/Cloudyrowdyyy/capstone-1.0/blob/main/TermsOfAgreement.md"
+                href="https://github.com/Cloudyrowdyyy/Capstone-Main/blob/main/TermsOfAgreement.md"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="font-semibold text-info underline"
@@ -837,7 +837,7 @@ function App() {
               </a>
               ,{' '}
               <a
-                href="https://github.com/Cloudyrowdyyy/capstone-1.0/blob/main/PrivacyPolicy.md"
+                href="https://github.com/Cloudyrowdyyy/Capstone-Main/blob/main/PrivacyPolicy.md"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="font-semibold text-info underline"
@@ -846,7 +846,7 @@ function App() {
               </a>
               , and{' '}
               <a
-                href="https://github.com/Cloudyrowdyyy/capstone-1.0/blob/main/AcceptableUsePolicy.md"
+                href="https://github.com/Cloudyrowdyyy/Capstone-Main/blob/main/AcceptableUsePolicy.md"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="font-semibold text-info underline"

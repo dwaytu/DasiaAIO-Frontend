@@ -108,9 +108,9 @@ EXPENSIVE_RATE_LIMIT_MAX=30
 EXPENSIVE_RATE_LIMIT_WINDOW_SECS=60
 APP_VERSION=v1.0.0
 APP_CHANGELOG=Release notes for this production version.
-WEB_DOWNLOAD_URL=https://github.com/Cloudyrowdyyy/capstone-1.0/releases/latest
-DESKTOP_DOWNLOAD_URL=https://github.com/Cloudyrowdyyy/capstone-1.0/releases/latest
-MOBILE_DOWNLOAD_URL=https://github.com/Cloudyrowdyyy/capstone-1.0/releases/latest
+WEB_DOWNLOAD_URL=https://github.com/Cloudyrowdyyy/Capstone-Main/releases/latest
+DESKTOP_DOWNLOAD_URL=https://github.com/Cloudyrowdyyy/Capstone-Main/releases/latest
+MOBILE_DOWNLOAD_URL=https://github.com/Cloudyrowdyyy/Capstone-Main/releases/latest
 ```
 
 ### Staging Example
@@ -143,7 +143,7 @@ APP_VERSION=v1.0.0-rc.1
 
 ## GitHub Pages Documentation Update
 
-The docs site at `https://cloudyrowdyyy.github.io/capstone-1.0` is generated from `DasiaAIO-Frontend/docs`.
+The docs site at `https://cloudyrowdyyy.github.io/Capstone-Main` is generated from `DasiaAIO-Frontend/docs`.
 
 To publish docs updates:
 

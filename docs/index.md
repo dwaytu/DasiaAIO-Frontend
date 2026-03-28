@@ -30,9 +30,9 @@ Live application: [https://dasiaaio.up.railway.app](https://dasiaaio.up.railway.
 
 ## Legal and Compliance
 
-- [Terms of Agreement](https://github.com/Cloudyrowdyyy/capstone-1.0/blob/main/TermsOfAgreement.md)
-- [Privacy Policy](https://github.com/Cloudyrowdyyy/capstone-1.0/blob/main/PrivacyPolicy.md)
-- [Acceptable Use Policy](https://github.com/Cloudyrowdyyy/capstone-1.0/blob/main/AcceptableUsePolicy.md)
+- [Terms of Agreement](https://github.com/Cloudyrowdyyy/Capstone-Main/blob/main/TermsOfAgreement.md)
+- [Privacy Policy](https://github.com/Cloudyrowdyyy/Capstone-Main/blob/main/PrivacyPolicy.md)
+- [Acceptable Use Policy](https://github.com/Cloudyrowdyyy/Capstone-Main/blob/main/AcceptableUsePolicy.md)
 
 ## Current Release Highlights
 
@@ -63,8 +63,8 @@ SENTINEL is proprietary software and is distributed under an All Rights Reserved
 
 ## Repository
 
-- GitHub: [https://github.com/Cloudyrowdyyy/capstone-1.0](https://github.com/Cloudyrowdyyy/capstone-1.0)
-- Issues: [https://github.com/Cloudyrowdyyy/capstone-1.0/issues](https://github.com/Cloudyrowdyyy/capstone-1.0/issues)
+- GitHub: [https://github.com/Cloudyrowdyyy/Capstone-Main](https://github.com/Cloudyrowdyyy/Capstone-Main)
+- Issues: [https://github.com/Cloudyrowdyyy/Capstone-Main/issues](https://github.com/Cloudyrowdyyy/Capstone-Main/issues)
 
 Status: Active and maintained  
 Last updated: March 28, 2026

@@ -1,4 +1,5 @@
 const trimTrailingSlash = (url: string) => url.replace(/\/+$/, '')
+const DEFAULT_PRODUCTION_API_BASE_URL = 'https://backend-production-0c47.up.railway.app'
 
 function isDisallowedProductionHost(hostname: string): boolean {
   const normalizedHost = hostname.trim().toLowerCase()
@@ -61,11 +62,16 @@ function validateApiBaseUrl(rawValue: string): string {
 
 function resolveApiBaseUrl(): string {
   const configuredUrl = import.meta.env.VITE_API_BASE_URL
-  if (!configuredUrl || typeof configuredUrl !== 'string') {
-    throw new Error('Missing required VITE_API_BASE_URL. Configure it in your environment file before starting the app.')
+  if (typeof configuredUrl === 'string' && configuredUrl.trim()) {
+    return validateApiBaseUrl(configuredUrl)
   }
 
-  return validateApiBaseUrl(configuredUrl)
+  if (import.meta.env.PROD) {
+    // Keep production clients bootable even when host build args are misconfigured.
+    return validateApiBaseUrl(DEFAULT_PRODUCTION_API_BASE_URL)
+  }
+
+  throw new Error('Missing required VITE_API_BASE_URL. Configure it in your environment file before starting the app.')
 }
 
 export const API_BASE_URL = resolveApiBaseUrl()

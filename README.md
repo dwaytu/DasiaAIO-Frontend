@@ -79,6 +79,8 @@ Platform-specific files (`.env.web`, `.env.mobile`, `.env.desktop`) are also pin
 
 `VITE_API_BASE_URL` is the only API endpoint variable used by the client runtime.
 
+Production runtime safeguard: if `VITE_API_BASE_URL` is not injected during a production build, the app now falls back to `https://backend-production-0c47.up.railway.app` to avoid white-screen startup failures.
+
 Version/update checks now query backend `GET /api/system/version` first, then fall back to GitHub latest release API when unavailable.
 
 Desktop builds support one-click update via Tauri updater when wrapper updater environment is configured.

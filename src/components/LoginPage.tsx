@@ -404,15 +404,15 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
                   id="reset-code"
                   type="text"
                   value={resetCode}
-                  onChange={(e: ChangeEvent<HTMLInputElement>) => setResetCode(e.target.value.slice(0, 6))}
-                  placeholder="000000"
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => setResetCode(e.target.value.slice(0, 8))}
+                  placeholder="00000000"
                   disabled={isLoading}
-                  maxLength={6}
+                  maxLength={8}
                   className={`${inputClass} text-center text-2xl tracking-widest`}
                   style={inputStyle}
                 />
               </div>
-              <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Check your email for the 6-digit code</p>
+              <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Check your email for the 8-digit reset code</p>
 
               {error && (
                 <div className={`p-3 rounded-lg text-sm border`} style={error.includes('verified') ? { background: 'rgba(34,197,94,0.1)', color: '#4ADE80', borderColor: 'rgba(34,197,94,0.3)' } : { background: 'rgba(239,68,68,0.1)', color: '#FCA5A5', borderColor: 'rgba(239,68,68,0.3)' }}>

@@ -222,9 +222,10 @@ export const ThemeToggleButton: React.FC<{
   
   return (
     <button
+      type="button"
       onClick={toggleTheme}
       className={`
-        flex items-center gap-2 px-3 py-2 rounded-lg
+        flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-lg px-3 py-2
         bg-surface-elevated hover:bg-surface-hover
         border border-border-subtle
         text-text-secondary hover:text-text-primary

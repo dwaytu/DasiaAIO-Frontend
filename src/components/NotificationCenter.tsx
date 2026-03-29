@@ -65,8 +65,10 @@ const NotificationItem: FC<NotificationProps> = ({ notification, onDismiss }) =>
         </div>
       </div>
       <button
+        type="button"
         onClick={() => onDismiss(notification.id)}
-        className="text-xl font-bold opacity-50 hover:opacity-100 transition-opacity ml-2"
+        className="ml-2 min-h-10 min-w-10 rounded-md text-xl font-bold opacity-60 transition-opacity hover:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)]"
+        aria-label={`Dismiss notification: ${notification.title}`}
       >
         ×
       </button>
@@ -83,7 +85,13 @@ const NotificationCenter: FC<NotificationCenterProps> = ({ notifications, onDism
   if (notifications.length === 0) return null
 
   return (
-    <div className="fixed top-4 right-4 z-[9999] max-w-md w-full">
+    <div
+      className="fixed top-4 right-4 z-[9999] w-full max-w-md"
+      style={{
+        top: 'calc(1rem + env(safe-area-inset-top, 0px))',
+        right: 'calc(1rem + env(safe-area-inset-right, 0px))',
+      }}
+    >
       {notifications.map((notification) => (
         <NotificationItem
           key={notification.id}

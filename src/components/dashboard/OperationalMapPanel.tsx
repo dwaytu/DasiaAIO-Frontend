@@ -407,7 +407,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
                 setMapPickMode('add')
                 setFormError('')
               }}
-              className="rounded-md border border-info-border bg-info-bg px-3 py-2 text-xs font-semibold uppercase tracking-wide text-info-text"
+              className="min-h-11 rounded-md border border-info-border bg-info-bg px-3 py-2 text-xs font-semibold uppercase tracking-wide text-info-text"
               aria-label="Add a new client location on the map"
             >
               + Add Client Site
@@ -596,7 +596,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
                 key={guard.guardId}
                 type="button"
                 onClick={() => focusGuard(guard.guardId, guard.latitude, guard.longitude)}
-                className={`rounded-md border px-2 py-1 text-[11px] font-semibold uppercase tracking-wide ${selectedGuardId === guard.guardId ? 'border-success-border bg-success-bg text-success-text' : 'border-border-subtle bg-background text-text-secondary'}`}
+                className={`min-h-11 rounded-md border px-2.5 py-1.5 text-xs font-semibold uppercase tracking-wide ${selectedGuardId === guard.guardId ? 'border-success-border bg-success-bg text-success-text' : 'border-border-subtle bg-background text-text-secondary'}`}
               >
                 {guard.guardName || guard.guardId.slice(0, 8)} ({guard.movementStatus})
               </button>
@@ -608,11 +608,11 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
               type="button"
               onClick={() => setPlaybackEnabled((previous) => !previous)}
               disabled={selectedGuardPath.length < 2}
-              className="rounded-md border border-border-subtle bg-background px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-text-secondary disabled:opacity-50"
+              className="min-h-11 rounded-md border border-border-subtle bg-background px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-text-secondary disabled:opacity-50"
             >
               {playbackEnabled ? 'Stop Playback' : 'Start Playback'}
             </button>
-            <label className="flex items-center gap-2 text-[11px] text-text-secondary" htmlFor="trail-frame-index">
+            <label className="flex items-center gap-2 text-xs text-text-secondary" htmlFor="trail-frame-index">
               Trail Frame
               <input
                 id="trail-frame-index"
@@ -627,7 +627,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
                 className="w-44"
               />
             </label>
-            <span className="text-[11px] text-text-tertiary">
+            <span className="text-xs text-text-tertiary">
               {selectedGuardPath.length > 0
                 ? `Samples: ${selectedGuardPath.length}`
                 : 'Select a guard to load movement trail'}
@@ -675,7 +675,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
               <button
                 type="button"
                 onClick={() => setMapPickMode(editingSiteId ? 'edit' : 'add')}
-                className="rounded-md border border-border-subtle px-3 py-2 text-xs font-semibold uppercase tracking-wide text-text-secondary"
+                className="min-h-11 rounded-md border border-border-subtle px-3 py-2 text-xs font-semibold uppercase tracking-wide text-text-secondary"
               >
                 {editingSiteId ? 'Pick New Position On Map' : 'Pick Position On Map'}
               </button>
@@ -732,7 +732,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
               <button
                 type="submit"
                 disabled={saving}
-                className="rounded-md bg-info-bg px-3 py-2 text-xs font-semibold uppercase tracking-wide text-info-text"
+                className="min-h-11 rounded-md bg-info-bg px-3 py-2 text-xs font-semibold uppercase tracking-wide text-info-text"
               >
                 {saving ? 'Saving...' : editingSiteId ? 'Update Site' : 'Add Site'}
               </button>
@@ -745,7 +745,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
                     setSiteForm(INITIAL_FORM)
                     setFormError('')
                   }}
-                  className="rounded-md border border-border-subtle px-3 py-2 text-xs font-semibold uppercase tracking-wide text-text-secondary"
+                  className="min-h-11 rounded-md border border-border-subtle px-3 py-2 text-xs font-semibold uppercase tracking-wide text-text-secondary"
                 >
                   Cancel Edit
                 </button>
@@ -775,14 +775,14 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
                       <button
                         type="button"
                         onClick={() => handleEdit(site.id)}
-                        className="mr-2 rounded-md border border-border-subtle px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-text-secondary"
+                        className="mr-2 min-h-11 rounded-md border border-border-subtle px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-text-secondary"
                       >
                         Edit
                       </button>
                       <button
                         type="button"
                         onClick={() => handleDelete(site.id)}
-                        className="rounded-md bg-danger-bg px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-danger-text"
+                        className="min-h-11 rounded-md bg-danger-bg px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-danger-text"
                       >
                         Delete
                       </button>

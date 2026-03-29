@@ -82,7 +82,7 @@ const IncidentSummaryGenerator: FC<IncidentSummaryGeneratorProps> = ({ incidents
               type="button"
               onClick={runSummary}
               disabled={loading}
-              className="rounded-md border border-cyan-400/40 bg-cyan-500/10 px-3 py-2 font-mono text-[10px] font-semibold uppercase tracking-wide text-cyan-200 disabled:opacity-60"
+              className="min-h-11 rounded-md border border-cyan-400/40 bg-cyan-500/10 px-3 py-2 font-mono text-xs font-semibold uppercase tracking-wide text-cyan-200 disabled:opacity-60"
             >
               {loading ? 'Summarizing...' : 'Generate Summary'}
             </button>

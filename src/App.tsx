@@ -11,7 +11,7 @@ import ArmoredCarDashboard from './components/ArmoredCarDashboard'
 import ProfileDashboard from './components/ProfileDashboard'
 import MeritScoreDashboard from './components/MeritScoreDashboard'
 import CalendarDashboard from './components/CalendarDashboard'
-import { API_BASE_URL, APP_VERSION, LATEST_RELEASE_API_URL, RELEASE_DOWNLOAD_URL, detectRuntimePlatform, RuntimePlatform } from './config'
+import { API_BASE_URL, APP_VERSION, APP_WHATS_NEW, LATEST_RELEASE_API_URL, RELEASE_DOWNLOAD_URL, detectRuntimePlatform, RuntimePlatform } from './config'
 import { normalizeRole, isLegacyRole, Role } from './types/auth'
 import { can, Permission } from './utils/permissions'
 import { getRequiredAccuracyMeters, getTrackingAccuracyMode } from './utils/trackingPolicy'
@@ -21,6 +21,8 @@ import {
   getAuthToken,
   getRefreshToken,
   hydrateAuthSession,
+  isAuthTokenExpired,
+  refreshAuthSessionIfNeeded,
   storeAuthSession,
 } from './utils/api'
 import {
@@ -43,6 +45,7 @@ export interface User {
 const TOA_ACCEPTANCE_KEY = 'dasi.toa.accepted.v1'
 const TOA_ACCEPTANCE_VALUE = 'accepted'
 const UPDATE_DISMISS_KEY_PREFIX = 'dasi.update.dismissed.'
+const WHATS_NEW_SEEN_KEY_PREFIX = 'dasi.whatsnew.seen.'
 
 type ReleasePrompt = {
   tag: string
@@ -61,6 +64,11 @@ type SystemVersionResponse = {
   }
 }
 
+type WhatsNewPrompt = {
+  version: string
+  notes: string
+}
+
 type LegalConsentResponse = {
   consentAcceptedAt?: string
   consentVersion?: string
@@ -69,10 +77,30 @@ type LegalConsentResponse = {
   legalConsentAccepted?: boolean
 }
 
+type TokenExpiredEvent = CustomEvent<{ message?: string }>
+
 function hasServerLegalConsent(currentUser: User | null): boolean {
   if (!currentUser) return false
   if (currentUser.legalConsentAccepted === true) return true
   return Boolean(currentUser.consentAcceptedAt)
+}
+
+function normalizeAuthExpiryMessage(message: string | undefined): string {
+  const normalized = (message || '').trim()
+  if (!normalized) return 'Session expired. Please log in again.'
+
+  const lower = normalized.toLowerCase()
+  if (
+    lower.includes('invalid or expired token') ||
+    lower.includes('invalidtoken') ||
+    lower.includes('expired token') ||
+    lower.includes('expiredsignature') ||
+    lower.includes('jwt')
+  ) {
+    return 'Session expired. Please log in again.'
+  }
+
+  return normalized
 }
 
 function resolveDownloadUrl(platform: RuntimePlatform, payload: SystemVersionResponse): string {
@@ -92,6 +120,14 @@ function parseSemverVersion(value: string): [number, number, number] | null {
   const match = normalized.match(/^(\d+)\.(\d+)\.(\d+)/)
   if (!match) return null
   return [Number(match[1]), Number(match[2]), Number(match[3])]
+}
+
+function normalizeVersionTag(value: string): string {
+  return value.trim().replace(/^v/i, '')
+}
+
+function getWhatsNewSeenKey(version: string): string {
+  return `${WHATS_NEW_SEEN_KEY_PREFIX}${normalizeVersionTag(version)}`
 }
 
 function isReleaseNewer(latestTag: string, currentVersion: string): boolean {
@@ -116,6 +152,7 @@ function App() {
   const [locationConsentChecked, setLocationConsentChecked] = useState<boolean>(false)
   const [toaError, setToaError] = useState<string>('')
   const [releasePrompt, setReleasePrompt] = useState<ReleasePrompt | null>(null)
+  const [whatsNewPrompt, setWhatsNewPrompt] = useState<WhatsNewPrompt | null>(null)
   const [geoPermissionState, setGeoPermissionState] = useState<'unknown' | 'prompt' | 'granted' | 'denied' | 'unsupported'>('unknown')
   const [geoNotice, setGeoNotice] = useState<string>('')
   const [globalError, setGlobalError] = useState<string>('')
@@ -138,6 +175,18 @@ function App() {
         const storedToken = getAuthToken()
 
         if (storedUser && storedToken) {
+          const sessionReady = await refreshAuthSessionIfNeeded()
+          const activeToken = getAuthToken()
+
+          if (!sessionReady || !activeToken || isAuthTokenExpired(activeToken)) {
+            clearAuthSession()
+            localStorage.removeItem('user')
+            setUser(null)
+            setIsLoggedIn(false)
+            setHasAcceptedToa(false)
+            return
+          }
+
           const parsedUser = JSON.parse(storedUser)
           parsedUser.role = normalizeRole(parsedUser.role)
           setUser(parsedUser)
@@ -159,7 +208,9 @@ function App() {
   }, [])
 
   useEffect(() => {
-    const handleTokenExpiry = () => {
+    const handleTokenExpiry = (event: Event) => {
+      const message = (event as TokenExpiredEvent).detail?.message?.trim()
+      setGlobalError(normalizeAuthExpiryMessage(message))
       clearAuthSession()
       localStorage.removeItem('user')
       setUser(null)
@@ -327,6 +378,28 @@ function App() {
     }
   }, [runtimePlatform])
 
+  useEffect(() => {
+    if (import.meta.env.DEV) return
+
+    const currentVersion = normalizeVersionTag(APP_VERSION)
+    const hasSemverVersion = Boolean(parseSemverVersion(currentVersion))
+    const notes = APP_WHATS_NEW.trim()
+
+    if (!hasSemverVersion || !notes) {
+      return
+    }
+
+    const seenKey = getWhatsNewSeenKey(currentVersion)
+    if (localStorage.getItem(seenKey) === 'true') {
+      return
+    }
+
+    setWhatsNewPrompt({
+      version: currentVersion,
+      notes,
+    })
+  }, [])
+
   const handleLogin = (userData: User) => {
     if (!isLegacyRole(userData.role)) {
       console.error('Invalid role:', userData.role)
@@ -388,6 +461,19 @@ function App() {
 
     if (!user) {
       setToaError('No active user session was found. Please log in again.')
+      return
+    }
+
+    const sessionReady = await refreshAuthSessionIfNeeded()
+    const activeToken = getAuthToken()
+    if (!sessionReady || !activeToken || isAuthTokenExpired(activeToken)) {
+      clearAuthSession()
+      localStorage.removeItem('user')
+      setUser(null)
+      setIsLoggedIn(false)
+      setHasAcceptedToa(false)
+      setActiveView('users')
+      setToaError('Session expired. Please log in again.')
       return
     }
 
@@ -464,6 +550,12 @@ function App() {
     if (!releasePrompt) return
     localStorage.setItem(`${UPDATE_DISMISS_KEY_PREFIX}${releasePrompt.tag}`, 'true')
     setReleasePrompt(null)
+  }
+
+  const handleDismissWhatsNewPrompt = () => {
+    if (!whatsNewPrompt) return
+    localStorage.setItem(getWhatsNewSeenKey(whatsNewPrompt.version), 'true')
+    setWhatsNewPrompt(null)
   }
 
   const handleDownloadUpdate = async () => {
@@ -739,8 +831,18 @@ function App() {
         { key: 'profile', label: 'Profile' },
       ]
 
+  const showMobileQuickNav = isLoggedIn && runtimePlatform === 'capacitor' && normalizedRole === 'guard'
+  const mobileSafeBottomOffset = showMobileQuickNav
+    ? 'calc(5rem + env(safe-area-inset-bottom, 0px))'
+    : 'calc(1rem + env(safe-area-inset-bottom, 0px))'
+  const mobileQuickNavColumns = mobileNavItems.length <= 3
+    ? 'grid-cols-3'
+    : mobileNavItems.length === 4
+      ? 'grid-cols-4'
+      : 'grid-cols-5'
+
   return (
-    <div className="min-h-screen w-full overflow-x-hidden pb-16 md:pb-0">
+    <div className={`min-h-screen w-full overflow-x-hidden ${showMobileQuickNav ? 'pb-24 md:pb-0' : 'pb-4 md:pb-0'}`}>
       {!isLoggedIn ? (
         <LoginPage onLogin={handleLogin} />
       ) : !hasAcceptedToa ? (
@@ -773,7 +875,8 @@ function App() {
           onClick={() => {
             void checkForUpdates(true)
           }}
-          className="fixed bottom-20 right-4 z-[70] rounded-md border border-border-elevated bg-surface px-3 py-2 text-xs font-semibold text-text-primary shadow-md md:bottom-6"
+          className="fixed right-4 z-[70] min-h-11 rounded-md border border-border-elevated bg-surface px-3 py-2 text-xs font-semibold text-text-primary shadow-md md:bottom-6"
+          style={{ bottom: mobileSafeBottomOffset }}
           aria-label="Check for updates"
         >
           Check for Updates
@@ -783,6 +886,7 @@ function App() {
       {showConnectivityBanner ? (
         <div
           className="fixed left-4 right-4 top-4 z-[85] rounded-lg border border-danger-border bg-danger-bg p-3 text-sm text-danger-text shadow-lg md:left-auto md:max-w-xl"
+          style={{ top: 'calc(1rem + env(safe-area-inset-top, 0px))' }}
           role="status"
           aria-live="polite"
         >
@@ -796,14 +900,19 @@ function App() {
       ) : null}
 
       {isLoggedIn && hasAcceptedToa && hasLocationConsent && geoPermissionState !== 'granted' ? (
-        <div className="fixed bottom-4 left-4 right-4 z-50 rounded-lg border border-amber-600 bg-amber-50 p-3 text-sm text-amber-900 shadow-lg md:left-auto md:max-w-xl" role="status" aria-live="polite">
+        <div
+          className="fixed left-4 right-4 z-50 rounded-lg border border-amber-600 bg-amber-50 p-3 text-sm text-amber-900 shadow-lg md:left-auto md:max-w-xl"
+          style={{ bottom: mobileSafeBottomOffset }}
+          role="status"
+          aria-live="polite"
+        >
           <p className="font-semibold">Location access is not active.</p>
           <p className="mt-1">{geoNotice || 'Live tracking requires location permission. Tap the button below to request access or continue with IP fallback.'}</p>
           <div className="mt-2 flex flex-wrap gap-2">
             <button
               type="button"
               onClick={() => { void requestGlobalLocationPermission() }}
-              className="rounded-md bg-amber-700 px-3 py-1.5 text-xs font-semibold text-white"
+              className="min-h-11 rounded-md bg-amber-700 px-3 py-1.5 text-xs font-semibold text-white"
             >
               Prompt Location Access
             </button>
@@ -907,14 +1016,14 @@ function App() {
               <button
                 type="button"
                 onClick={handleDeclineToa}
-                className="rounded-md border border-border-elevated bg-surface-elevated px-4 py-2 text-sm font-semibold text-text-secondary"
+                className="min-h-11 rounded-md border border-border-elevated bg-surface-elevated px-4 py-2 text-sm font-semibold text-text-secondary"
               >
                 Decline
               </button>
               <button
                 type="button"
                 onClick={handleAcceptToa}
-                className="rounded-md bg-info px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-55"
+                className="min-h-11 rounded-md bg-info px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-55"
                 disabled={!toaChecked || !locationConsentChecked}
               >
                 Agree and Continue
@@ -940,16 +1049,42 @@ function App() {
               <button
                 type="button"
                 onClick={handleDeclineLocationConsent}
-                className="rounded-md border border-border-elevated bg-surface-elevated px-4 py-2 text-sm font-semibold text-text-secondary"
+                className="min-h-11 rounded-md border border-border-elevated bg-surface-elevated px-4 py-2 text-sm font-semibold text-text-secondary"
               >
                 Decline
               </button>
               <button
                 type="button"
                 onClick={handleAcceptLocationConsent}
-                className="rounded-md bg-info px-4 py-2 text-sm font-semibold text-white"
+                className="min-h-11 rounded-md bg-info px-4 py-2 text-sm font-semibold text-white"
               >
                 Allow tracking
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+
+      {whatsNewPrompt && !releasePrompt ? (
+        <div className="fixed inset-0 z-[72] flex items-center justify-center bg-slate-950/62 p-4 backdrop-blur-sm">
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="whats-new-title"
+            className="w-full max-w-xl rounded-2xl border border-border-elevated bg-surface p-5 shadow-modal sm:p-6"
+          >
+            <h2 id="whats-new-title" className="text-xl font-bold text-text-primary">What's New in {whatsNewPrompt.version}</h2>
+            <p className="mt-2 text-sm text-text-secondary">
+              Highlights from your current release.
+            </p>
+            <p className="mt-3 whitespace-pre-line text-sm text-text-primary">{whatsNewPrompt.notes}</p>
+            <div className="mt-4 flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                onClick={handleDismissWhatsNewPrompt}
+                className="min-h-11 rounded-md bg-info px-4 py-2 text-sm font-semibold text-white"
+              >
+                Continue
               </button>
             </div>
           </section>
@@ -975,14 +1110,14 @@ function App() {
               <button
                 type="button"
                 onClick={handleDismissUpdatePrompt}
-                className="rounded-md border border-border-elevated bg-surface-elevated px-4 py-2 text-sm font-semibold text-text-secondary"
+                className="min-h-11 rounded-md border border-border-elevated bg-surface-elevated px-4 py-2 text-sm font-semibold text-text-secondary"
               >
                 Later
               </button>
               <button
                 type="button"
                 onClick={() => { void handleDownloadUpdate() }}
-                className="rounded-md bg-info px-4 py-2 text-sm font-semibold text-white"
+                className="min-h-11 rounded-md bg-info px-4 py-2 text-sm font-semibold text-white"
               >
                 {releasePrompt.platform === 'tauri' ? 'Update now' : 'Download update'}
               </button>
@@ -991,12 +1126,12 @@ function App() {
         </div>
       ) : null}
 
-      {isLoggedIn && runtimePlatform === 'capacitor' ? (
+      {showMobileQuickNav ? (
         <nav
           aria-label="Mobile quick navigation"
-          className="fixed bottom-0 left-0 right-0 z-[65] border-t border-border-elevated bg-surface px-2 py-2 md:hidden"
+          className="fixed bottom-0 left-0 right-0 z-[65] border-t border-border-elevated bg-surface px-2 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] pt-2 md:hidden"
         >
-          <ul className="grid grid-cols-5 gap-1">
+          <ul className={`grid ${mobileQuickNavColumns} gap-1`}>
             {mobileNavItems.map((item) => {
               const isAccessible = item.key === 'profile' || canView(item.key, normalizedRole)
               if (!isAccessible) {
@@ -1010,7 +1145,7 @@ function App() {
                   <button
                     type="button"
                     onClick={() => setActiveView(item.key)}
-                    className={`w-full rounded-md px-2 py-2 text-xs font-semibold transition ${
+                    className={`min-h-11 w-full rounded-md px-2 py-2 text-xs font-semibold transition ${
                       isActive ? 'bg-info text-white' : 'bg-surface-elevated text-text-secondary'
                     }`}
                   >
@@ -1024,13 +1159,17 @@ function App() {
       ) : null}
 
       {globalError ? (
-        <div className="fixed bottom-4 right-4 z-[90] max-w-md rounded-lg border border-danger-border bg-danger-bg p-3 text-sm text-danger-text shadow-lg" role="alert">
+        <div
+          className="fixed right-4 z-[90] max-w-md rounded-lg border border-danger-border bg-danger-bg p-3 text-sm text-danger-text shadow-lg"
+          style={{ bottom: mobileSafeBottomOffset }}
+          role="alert"
+        >
           <p className="font-semibold">Unexpected error</p>
           <p className="mt-1">{globalError}</p>
           <button
             type="button"
             onClick={() => setGlobalError('')}
-            className="mt-2 rounded-md border border-danger-border px-3 py-1.5 text-xs font-semibold"
+            className="mt-2 min-h-10 rounded-md border border-danger-border px-3 py-1.5 text-xs font-semibold"
           >
             Dismiss
           </button>

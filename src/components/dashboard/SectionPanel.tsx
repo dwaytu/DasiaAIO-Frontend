@@ -29,7 +29,7 @@ const SectionPanel: FC<SectionPanelProps> = ({ title, subtitle, actions, childre
           {collapsible && (
             <button
               type="button"
-              className="rounded-md border border-border-subtle bg-surface px-3 py-2 text-xs font-semibold uppercase tracking-wide text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
+              className="min-h-11 rounded-md border border-border-subtle bg-surface px-3 py-2 text-xs font-semibold uppercase tracking-wide text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
               onClick={() => setCollapsed((prev) => !prev)}
               aria-expanded={!collapsed}
               aria-label={collapsed ? `Expand ${title}` : `Collapse ${title}`}

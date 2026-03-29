@@ -60,7 +60,7 @@ const AccountManager: FC<AccountManagerProps> = ({ user, onLogout, onNavigateToP
   }
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative z-[1300]" ref={dropdownRef}>
       {/* Profile Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
@@ -98,7 +98,7 @@ const AccountManager: FC<AccountManagerProps> = ({ user, onLogout, onNavigateToP
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-72 md:w-80 max-w-[calc(100vw-1rem)] rounded-xl shadow-2xl py-2 z-50 animate-fadeIn" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-color)' }}>
+        <div className="absolute right-0 mt-2 w-72 md:w-80 max-w-[calc(100vw-1rem)] rounded-xl shadow-2xl py-2 z-[1310] animate-fadeIn" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-color)' }}>
           {/* Profile Header */}
           <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--border-color)' }}>
             <div className="flex items-center gap-3">

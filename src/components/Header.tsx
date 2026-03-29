@@ -21,12 +21,14 @@ const Header: FC<HeaderProps> = ({ title, badgeLabel, onLogout, rightSlot, onMen
 
   const refreshControl = rightSlot ?? (
     <button
+      type="button"
       onClick={() => {
         setRefreshing(true)
         window.setTimeout(() => setRefreshing(false), 700)
         window.location.reload()
       }}
-      className="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold text-text-primary bg-surface border border-border rounded-lg hover:bg-surface-hover transition-colors"
+      className="inline-flex min-h-11 items-center gap-2 px-3 py-2 text-sm font-semibold text-text-primary bg-surface border border-border rounded-lg transition-colors hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)]"
+      aria-label="Refresh dashboard"
       title="Refresh dashboard"
     >
       <svg className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -38,13 +40,14 @@ const Header: FC<HeaderProps> = ({ title, badgeLabel, onLogout, rightSlot, onMen
   )
 
   return (
-    <header className="border-b border-border bg-surface/95 px-4 py-4 backdrop-blur md:px-8 md:py-5">
+    <header className="relative isolate z-[1200] border-b border-border bg-surface/95 px-4 py-4 backdrop-blur md:px-8 md:py-5">
       <div className="flex items-center justify-between gap-3">
       <div className="flex items-center gap-3">
         {/* Mobile hamburger menu */}
         <button
+          type="button"
           onClick={onMenuClick}
-          className="rounded-lg p-2 text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary lg:hidden"
+          className="min-h-11 min-w-11 rounded-lg p-2 text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)] lg:hidden"
           aria-label="Toggle menu"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

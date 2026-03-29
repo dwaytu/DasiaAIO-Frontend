@@ -77,6 +77,7 @@ function resolveApiBaseUrl(): string {
 export const API_BASE_URL = resolveApiBaseUrl()
 
 export const APP_VERSION = (import.meta.env.VITE_APP_VERSION || 'dev').toString().trim()
+export const APP_WHATS_NEW = (import.meta.env.VITE_WHATS_NEW || '').toString().trim()
 export const LATEST_RELEASE_API_URL = (
   import.meta.env.VITE_LATEST_RELEASE_API_URL ||
   'https://api.github.com/repos/Cloudyrowdyyy/Capstone-Main/releases/latest'

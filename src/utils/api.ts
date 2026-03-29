@@ -43,6 +43,10 @@ type CapacitorWindow = Window & {
   }
 }
 
+type JwtPayload = {
+  exp?: number
+}
+
 function readLocalStorage(key: string): string {
   try {
     return localStorage.getItem(key) || ''
@@ -164,6 +168,33 @@ function requestUrlString(input: RequestInfo | URL): string {
 
 function isRefreshEndpoint(url: string): boolean {
   return url.includes('/api/refresh') || url.includes('/api/auth/refresh')
+}
+
+function decodeBase64UrlSegment(segment: string): string | null {
+  if (!segment) return null
+
+  try {
+    const normalized = segment.replace(/-/g, '+').replace(/_/g, '/')
+    const padding = (4 - (normalized.length % 4)) % 4
+    const base64 = normalized.padEnd(normalized.length + padding, '=')
+    return atob(base64)
+  } catch {
+    return null
+  }
+}
+
+function decodeJwtPayload(token: string): JwtPayload | null {
+  const parts = token.split('.')
+  if (parts.length < 2) return null
+
+  const payload = decodeBase64UrlSegment(parts[1])
+  if (!payload) return null
+
+  try {
+    return JSON.parse(payload) as JwtPayload
+  } catch {
+    return null
+  }
 }
 
 function isProtectedApiEndpoint(url: string): boolean {
@@ -379,6 +410,20 @@ export function getAuthToken(): string {
   return readLocalStorage(TOKEN_STORAGE_KEY)
 }
 
+export function isAuthTokenExpired(token: string, clockSkewSeconds = 30): boolean {
+  const trimmedToken = token.trim()
+  if (!trimmedToken) return true
+
+  const payload = decodeJwtPayload(trimmedToken)
+  if (!payload || typeof payload.exp !== 'number') {
+    return false
+  }
+
+  const expiresAtMs = payload.exp * 1000
+  const skewMs = Math.max(0, clockSkewSeconds) * 1000
+  return Date.now() >= expiresAtMs - skewMs
+}
+
 export function getRefreshToken(): string {
   if (refreshTokenCache) {
     return refreshTokenCache
@@ -395,6 +440,18 @@ export function getRefreshToken(): string {
 export async function hydrateAuthSession(): Promise<void> {
   const secureRefreshToken = await loadSecureRefreshToken()
   refreshTokenCache = secureRefreshToken
+}
+
+export async function refreshAuthSessionIfNeeded(): Promise<boolean> {
+  const token = getAuthToken().trim()
+  if (!token) return false
+
+  if (!isAuthTokenExpired(token)) {
+    return true
+  }
+
+  const refreshedToken = await refreshAccessToken()
+  return typeof refreshedToken === 'string' && refreshedToken.trim() !== ''
 }
 
 export function storeAuthSession(token: string, refreshToken?: string): void {

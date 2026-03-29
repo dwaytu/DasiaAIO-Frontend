@@ -97,9 +97,10 @@ const Sidebar: FC<SidebarProps> = ({ items, activeView, onNavigate, onLogout, on
     <>
       {/* Mobile overlay */}
       {isOpen && onClose && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
           onClick={onClose}
+          aria-hidden="true"
         />
       )}
       
@@ -119,8 +120,9 @@ const Sidebar: FC<SidebarProps> = ({ items, activeView, onNavigate, onLogout, on
           {/* Close button for mobile */}
           {onClose && (
             <button
+              type="button"
               onClick={onClose}
-              className="lg:hidden absolute top-4 right-4 p-2 rounded-lg transition-colors"
+              className="lg:hidden absolute top-4 right-4 min-h-11 min-w-11 rounded-lg p-2 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)]"
               style={{ color: 'var(--text-secondary)' }}
               aria-label="Close menu"
             >
@@ -159,7 +161,7 @@ const Sidebar: FC<SidebarProps> = ({ items, activeView, onNavigate, onLogout, on
                     {grouped[groupName].map(({ view, label }) => (
                       <button
                         key={view}
-                        className={`px-3 py-2.5 rounded-lg text-left text-sm font-semibold uppercase tracking-wide transition-all duration-200 cursor-pointer select-none ${
+                        className={`px-3 py-3 rounded-lg text-left text-sm font-semibold uppercase tracking-wide transition-all duration-200 cursor-pointer select-none ${
                           view === activeView ? 'text-white' : 'hover:text-white'
                         }`}
                         style={view === activeView ? {
@@ -191,8 +193,9 @@ const Sidebar: FC<SidebarProps> = ({ items, activeView, onNavigate, onLogout, on
           </nav>
 
           <button 
+            type="button"
             onClick={onLogout} 
-            className="group mt-4 flex flex-shrink-0 cursor-pointer items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold uppercase tracking-wide transition-all duration-200"
+            className="group mt-4 flex min-h-11 flex-shrink-0 cursor-pointer items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold uppercase tracking-wide transition-all duration-200"
             style={{ color: '#F87171', border: '1px solid rgba(248,113,113,0.25)' }}
             onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(248,113,113,0.1)'; }}
             onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = ''; }}

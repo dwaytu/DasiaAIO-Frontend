@@ -543,8 +543,10 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
       }}
       rightSlot={
         <button
+          type="button"
           onClick={handleRefresh}
-          className="hidden rounded-lg border border-border bg-surface px-3 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-surface-hover md:block"
+          className="hidden min-h-11 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)] md:block"
+          aria-label="Refresh admin dashboard"
         >
           Refresh
         </button>
@@ -775,33 +777,41 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                                   <div className="flex items-center justify-end gap-1">
                                     {pendingApproval && (
                                       <button
+                                        type="button"
                                         onClick={() => handleApproveIfPending(u)}
                                         title="Approve pending user"
-                                        className="rounded-lg p-2 text-text-tertiary transition-colors hover:bg-emerald-500/10 hover:text-emerald-300"
+                                        aria-label={`Approve ${u.full_name || u.username || u.email}`}
+                                        className="min-h-11 min-w-11 rounded-lg p-2 text-text-tertiary transition-colors hover:bg-emerald-500/10 hover:text-emerald-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)]"
                                       >
                                         <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                                       </button>
                                     )}
                                     {canEdit && (
                                       <button
+                                        type="button"
                                         onClick={() => handleEditUser(u)}
                                         title="Edit user"
-                                        className="rounded-lg p-2 text-text-tertiary transition-colors hover:bg-indigo-500/10 hover:text-indigo-400"
+                                        aria-label={`Edit ${u.full_name || u.username || u.email}`}
+                                        className="min-h-11 min-w-11 rounded-lg p-2 text-text-tertiary transition-colors hover:bg-indigo-500/10 hover:text-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)]"
                                       >
                                         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                                       </button>
                                     )}
                                     <button
+                                      type="button"
                                       onClick={() => handleResetPasswordAction(u)}
                                       title="Reset password"
-                                      className="rounded-lg p-2 text-text-tertiary transition-colors hover:bg-sky-500/10 hover:text-sky-300"
+                                      aria-label={`Reset password for ${u.full_name || u.username || u.email}`}
+                                      className="min-h-11 min-w-11 rounded-lg p-2 text-text-tertiary transition-colors hover:bg-sky-500/10 hover:text-sky-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)]"
                                     >
                                       <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 11V7m0 0l-3 3m3-3l3 3M5 12a7 7 0 1114 0v5a2 2 0 01-2 2H7a2 2 0 01-2-2v-5z" /></svg>
                                     </button>
                                     <button
+                                      type="button"
                                       onClick={() => handleSuspendAction(u)}
                                       title="Suspend user"
-                                      className="rounded-lg p-2 text-text-tertiary transition-colors hover:bg-amber-500/10 hover:text-amber-300"
+                                      aria-label={`Suspend ${u.full_name || u.username || u.email}`}
+                                      className="min-h-11 min-w-11 rounded-lg p-2 text-text-tertiary transition-colors hover:bg-amber-500/10 hover:text-amber-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)]"
                                     >
                                       <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M18.364 5.636l-12.728 12.728M8 7h8a2 2 0 012 2v6a2 2 0 01-2 2H8a2 2 0 01-2-2V9a2 2 0 012-2z" /></svg>
                                     </button>
@@ -812,9 +822,11 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                                     >
                                       {canDelete && (
                                         <button
+                                          type="button"
                                           onClick={() => handleDeleteUser(u.id, u.email)}
                                           title="Delete user"
-                                          className="rounded-lg p-2 text-text-tertiary transition-colors hover:bg-red-500/10 hover:text-red-400"
+                                          aria-label={`Delete ${u.full_name || u.username || u.email}`}
+                                          className="min-h-11 min-w-11 rounded-lg p-2 text-text-tertiary transition-colors hover:bg-red-500/10 hover:text-red-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)]"
                                         >
                                           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                         </button>
@@ -866,13 +878,13 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                               </div>
                               <div className="mt-3 flex flex-wrap gap-2">
                                 {pendingApproval ? (
-                                  <button type="button" onClick={() => handleApproveIfPending(u)} className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1.5 text-xs font-semibold text-emerald-300">Approve</button>
+                                  <button type="button" onClick={() => handleApproveIfPending(u)} className="min-h-11 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1.5 text-xs font-semibold text-emerald-300">Approve</button>
                                 ) : null}
-                                <button type="button" onClick={() => handleEditUser(u)} className="rounded-md border border-indigo-500/40 bg-indigo-500/10 px-2.5 py-1.5 text-xs font-semibold text-indigo-300">Edit</button>
-                                <button type="button" onClick={() => handleResetPasswordAction(u)} className="rounded-md border border-sky-500/40 bg-sky-500/10 px-2.5 py-1.5 text-xs font-semibold text-sky-300">Reset</button>
-                                <button type="button" onClick={() => handleSuspendAction(u)} className="rounded-md border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 text-xs font-semibold text-amber-300">Suspend</button>
+                                <button type="button" onClick={() => handleEditUser(u)} className="min-h-11 rounded-md border border-indigo-500/40 bg-indigo-500/10 px-2.5 py-1.5 text-xs font-semibold text-indigo-300">Edit</button>
+                                <button type="button" onClick={() => handleResetPasswordAction(u)} className="min-h-11 rounded-md border border-sky-500/40 bg-sky-500/10 px-2.5 py-1.5 text-xs font-semibold text-sky-300">Reset</button>
+                                <button type="button" onClick={() => handleSuspendAction(u)} className="min-h-11 rounded-md border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 text-xs font-semibold text-amber-300">Suspend</button>
                                 {canDelete ? (
-                                  <button type="button" onClick={() => handleDeleteUser(u.id, u.email)} className="rounded-md border border-red-500/40 bg-red-500/10 px-2.5 py-1.5 text-xs font-semibold text-red-300">Delete</button>
+                                  <button type="button" onClick={() => handleDeleteUser(u.id, u.email)} className="min-h-11 rounded-md border border-red-500/40 bg-red-500/10 px-2.5 py-1.5 text-xs font-semibold text-red-300">Delete</button>
                                 ) : null}
                               </div>
                             </article>
@@ -887,8 +899,8 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                   <div className="flex items-center justify-between border-t border-border-subtle px-5 py-3">
                     <p className="text-xs text-text-tertiary">Showing {filteredUsers.length} of {users.length} users</p>
                     <div className="flex gap-2">
-                      <button className="rounded-lg border border-border-subtle bg-background px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-hover">Previous</button>
-                      <button className="rounded-lg border border-border-subtle bg-background px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-hover">Next</button>
+                      <button type="button" className="min-h-11 rounded-lg border border-border-subtle bg-background px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-hover">Previous</button>
+                      <button type="button" className="min-h-11 rounded-lg border border-border-subtle bg-background px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-hover">Next</button>
                     </div>
                   </div>
                 </section>

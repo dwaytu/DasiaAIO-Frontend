@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Bell, X, Check, CheckCheck } from 'lucide-react';
 import { API_BASE_URL } from '../config';
 import { logError } from '../utils/logger';
+import { getAuthToken } from '../utils/api';
 
 interface Notification {
   id: string;
@@ -35,12 +36,13 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ userId }) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [panelError, setPanelError] = useState('');
   const panelRef = useRef<HTMLDivElement>(null);
 
   // Fetch notifications
   const fetchNotifications = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       const response = await fetch(`${API_BASE_URL}/api/users/${userId}/notifications`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -48,16 +50,18 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ userId }) => {
         const data = await response.json();
         setNotifications(data.notifications || []);
         setUnreadCount(data.unreadCount || 0);
+        setPanelError('');
       }
     } catch (error) {
       logError('Failed to fetch notifications:', error);
+      setPanelError('Failed to load notifications. Try again.');
     }
   };
 
   // Fetch unread count
   const fetchUnreadCount = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       const response = await fetch(`${API_BASE_URL}/api/users/${userId}/notifications/unread-count`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -73,7 +77,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ userId }) => {
   // Mark notification as read
   const markAsRead = async (notificationId: string) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       const response = await fetch(`${API_BASE_URL}/api/notifications/${notificationId}/read`, {
         method: 'PUT',
         headers: { Authorization: `Bearer ${token}` },
@@ -94,7 +98,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ userId }) => {
   // Mark all as read
   const markAllAsRead = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       const response = await fetch(`${API_BASE_URL}/api/users/${userId}/notifications/mark-all-read`, {
         method: 'PUT',
         headers: { Authorization: `Bearer ${token}` },
@@ -112,7 +116,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ userId }) => {
   const acceptReplacement = async (notificationId: string, shiftId: string) => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       const response = await fetch(`${API_BASE_URL}/api/guard-replacement/accept-replacement`, {
         method: 'POST',
         headers: {
@@ -127,15 +131,15 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ userId }) => {
       });
 
       if (response.ok) {
-        alert('Replacement shift accepted successfully!');
+        setPanelError('');
         await fetchNotifications();
       } else {
         const error = await parseResponseBody(response);
-        alert(error.error || 'Failed to accept replacement');
+        setPanelError(error.error || 'Failed to accept replacement');
       }
     } catch (error) {
       logError('Failed to accept replacement:', error);
-      alert('Failed to accept replacement');
+      setPanelError('Failed to accept replacement');
     } finally {
       setLoading(false);
     }
@@ -144,7 +148,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ userId }) => {
   // Delete notification
   const deleteNotification = async (notificationId: string) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       const response = await fetch(`${API_BASE_URL}/api/notifications/${notificationId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
@@ -160,25 +164,37 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ userId }) => {
 
   // Toggle panel
   const togglePanel = () => {
+    setPanelError('');
     setIsOpen(!isOpen);
     if (!isOpen) {
       fetchNotifications();
     }
   };
 
-  // Click outside to close
+  // Close panel with outside click/tap or Escape key
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    const handlePointerDownOutside = (event: MouseEvent | PointerEvent | TouchEvent) => {
       if (panelRef.current && !panelRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
     };
 
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsOpen(false);
+      }
+    };
+
     if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('mousedown', handlePointerDownOutside);
+      document.addEventListener('touchstart', handlePointerDownOutside);
+      document.addEventListener('keydown', handleEscape);
     }
+
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('mousedown', handlePointerDownOutside);
+      document.removeEventListener('touchstart', handlePointerDownOutside);
+      document.removeEventListener('keydown', handleEscape);
     };
   }, [isOpen]);
 
@@ -209,11 +225,15 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ userId }) => {
     <div className="relative" ref={panelRef}>
       {/* Notification Bell Button */}
       <button
+        type="button"
         onClick={togglePanel}
-        className="relative p-2 rounded-lg transition-colors"
+        className="relative min-h-11 min-w-11 rounded-lg p-2 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)]"
         style={{ color: 'var(--text-secondary)' }}
         onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.06)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)'; }}
         onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = ''; (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'; }}
+        aria-label={unreadCount > 0 ? `Open notifications (${unreadCount} unread)` : 'Open notifications'}
+        aria-expanded={isOpen}
+        aria-controls="notification-panel"
       >
         <Bell className="w-6 h-6" />
         {unreadCount > 0 && (
@@ -225,34 +245,42 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ userId }) => {
 
       {/* Notification Panel */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 max-w-[calc(100vw-1rem)] rounded-xl shadow-2xl z-50 max-h-[600px] flex flex-col" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-color)' }}>
+        <div id="notification-panel" className="absolute right-0 mt-2 z-50 flex max-h-[min(600px,calc(100vh-6rem))] w-80 max-w-[calc(100vw-1rem)] flex-col rounded-xl shadow-2xl sm:w-96" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-color)' }} role="dialog" aria-label="Notifications panel">
           {/* Header */}
           <div className="flex items-center justify-between p-4" style={{ borderBottom: '1px solid var(--border-color)' }}>
             <h3 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>Notifications</h3>
             <div className="flex items-center gap-2">
               {unreadCount > 0 && (
                 <button
+                  type="button"
                   onClick={markAllAsRead}
-                  className="text-xs flex items-center gap-1 px-2 py-1 rounded transition-colors"
+                  className="flex min-h-11 items-center gap-1 rounded px-2 py-1 text-xs transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)]"
                   style={{ color: '#60A5FA' }}
                   onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(59,130,246,0.1)'; }}
                   onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = ''; }}
+                  aria-label="Mark all notifications as read"
                 >
                   <CheckCheck className="w-4 h-4" />
                   Mark all read
                 </button>
               )}
               <button
+                type="button"
                 onClick={() => setIsOpen(false)}
-                className="p-1 rounded transition-colors"
+                className="min-h-11 min-w-11 rounded p-1 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)]"
                 style={{ color: 'var(--text-secondary)' }}
                 onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.06)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)'; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = ''; (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'; }}
+                aria-label="Close notifications panel"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
           </div>
+
+          {panelError ? (
+            <p className="border-b border-border-subtle px-4 py-2 text-xs text-danger-text" role="alert">{panelError}</p>
+          ) : null}
 
           {/* Notifications List */}
           <div className="overflow-y-auto flex-1">
@@ -290,27 +318,33 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ userId }) => {
                       <div className="flex gap-2">
                         {notification.type === 'replacement_request' && notification.relatedShiftId && (
                           <button
+                            type="button"
                             onClick={() => acceptReplacement(notification.id, notification.relatedShiftId!)}
                             disabled={loading}
-                            className="px-2 py-1 text-xs rounded font-medium transition-colors disabled:opacity-50"
+                            className="min-h-11 rounded px-2 py-1 text-xs font-medium transition-colors disabled:opacity-50"
                             style={{ background: 'rgba(34,197,94,0.2)', color: '#4ADE80', border: '1px solid rgba(34,197,94,0.3)' }}
+                            aria-label={`Accept replacement request: ${notification.title}`}
                           >
                             Accept
                           </button>
                         )}
                         {!notification.read && (
                           <button
+                            type="button"
                             onClick={() => markAsRead(notification.id)}
-                            className="px-2 py-1 text-xs rounded transition-colors"
+                            className="min-h-11 min-w-11 rounded px-2 py-1 text-xs transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)]"
                             style={{ background: 'rgba(59,130,246,0.2)', color: '#60A5FA', border: '1px solid rgba(59,130,246,0.3)' }}
+                            aria-label={`Mark notification as read: ${notification.title}`}
                           >
                             <Check className="w-3 h-3" />
                           </button>
                         )}
                         <button
+                          type="button"
                           onClick={() => deleteNotification(notification.id)}
-                          className="px-2 py-1 text-xs rounded transition-colors"
+                          className="min-h-11 min-w-11 rounded px-2 py-1 text-xs transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)]"
                           style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)' }}
+                          aria-label={`Delete notification: ${notification.title}`}
                         >
                           <X className="w-3 h-3" />
                         </button>

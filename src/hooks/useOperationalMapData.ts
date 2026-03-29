@@ -91,6 +91,16 @@ interface ActiveGuardsResponse {
 
 type WsConnectionState = 'disabled' | 'connecting' | 'open' | 'backoff' | 'closed'
 
+const WS_AUTH_CLOSE_CODES = new Set([1008, 4001, 4401, 4403])
+
+function emitAuthExpired(message: string): void {
+  try {
+    window.dispatchEvent(new CustomEvent('auth:token-expired', { detail: { message } }))
+  } catch {
+    // Ignore runtimes where window events are unavailable.
+  }
+}
+
 export interface ClientSiteInput {
   name: string
   address?: string
@@ -321,7 +331,8 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
     }
 
     const wsBase = API_BASE_URL.replace(/^http/, 'ws')
-    const wsUrl = `${wsBase}/api/tracking/ws?token=${encodeURIComponent(token)}`
+    const wsUrl = `${wsBase}/api/tracking/ws`
+    const wsProtocols = ['sentinel-tracking-v1', `bearer.${token}`]
 
     const scheduleReconnect = (reason: string) => {
       if (disposed) return
@@ -356,7 +367,7 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
 
       try {
         setWsConnectionState('connecting')
-        socket = new WebSocket(wsUrl)
+        socket = new WebSocket(wsUrl, wsProtocols)
       } catch {
         scheduleReconnect('Live map socket initialization failed.')
         return
@@ -397,6 +408,20 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
       socket.onclose = (event) => {
         if (disposed) return
         wsRef.current = null
+
+        if (WS_AUTH_CLOSE_CODES.has(event.code)) {
+          setWsConnectionState('closed')
+          setError('Session expired. Please log in again.')
+          emitAuthExpired('Session expired. Please log in again.')
+          return
+        }
+
+        if (!getAuthToken().trim()) {
+          setWsConnectionState('closed')
+          setError('Session expired. Please log in again.')
+          return
+        }
+
         scheduleReconnect(event.wasClean ? 'Live map socket closed.' : 'Live map socket disconnected.')
       }
     }

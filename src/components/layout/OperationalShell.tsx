@@ -37,7 +37,7 @@ const OperationalShell: FC<OperationalShellProps> = ({
   children,
 }) => {
   return (
-    <div className="flex min-h-[100dvh] w-full overflow-hidden bg-background font-sans">
+    <div className="flex h-[100dvh] w-full overflow-hidden bg-background font-sans">
       <a href="#maincontent" className="skip-link">Skip to main content</a>
       <Sidebar
         items={navItems}
@@ -49,7 +49,7 @@ const OperationalShell: FC<OperationalShellProps> = ({
         onClose={onMenuClose}
       />
 
-      <main id="maincontent" tabIndex={-1} className="flex min-w-0 flex-1 flex-col overflow-hidden">
+      <main id="maincontent" tabIndex={-1} className="flex min-w-0 flex-1 min-h-0 flex-col overflow-hidden">
         <Header
           title={title}
           badgeLabel={badgeLabel}
@@ -60,7 +60,7 @@ const OperationalShell: FC<OperationalShellProps> = ({
           rightSlot={rightSlot}
         />
 
-        <div className="flex-1 overflow-y-auto p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] md:p-8">
+        <div className="flex-1 min-h-0 overflow-y-auto p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] md:p-8">
           {error && (
             <div className="mb-4 rounded-lg border border-red-300 bg-red-50 p-3 text-sm font-medium text-red-900">{error}</div>
           )}

@@ -2,6 +2,7 @@ import { Role, normalizeRole } from '../types/auth'
 
 export type Permission =
   | 'manage_users'
+  | 'view_audit_logs'
   | 'approve_guards'
   | 'view_analytics'
   | 'manage_firearms'
@@ -14,6 +15,7 @@ export type Permission =
 const rolePermissions: Record<Role, Permission[]> = {
   superadmin: [
     'manage_users',
+    'view_audit_logs',
     'approve_guards',
     'view_analytics',
     'manage_firearms',

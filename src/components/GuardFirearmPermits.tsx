@@ -86,7 +86,7 @@ const GuardFirearmPermits: FC<Props> = ({ user, onLogout, onViewChange, activeVi
   }
 
   return (
-    <div className="flex h-screen w-screen bg-background font-sans">
+    <div className="flex h-[100dvh] w-full overflow-hidden bg-background font-sans">
       <Sidebar
         items={navItems}
         activeView={currentView}
@@ -97,7 +97,7 @@ const GuardFirearmPermits: FC<Props> = ({ user, onLogout, onViewChange, activeVi
         onClose={() => setMobileMenuOpen(false)}
       />
 
-      <main className="flex-1 flex flex-col overflow-hidden w-full">
+      <main className="flex-1 flex min-w-0 min-h-0 flex-col w-full overflow-hidden">
         <Header title="Guard Firearm Permits" badgeLabel="Permits" onLogout={onLogout} onMenuClick={() => setMobileMenuOpen(true)} user={user} onNavigateToProfile={onViewChange ? () => onViewChange('profile') : undefined} />
 
         {loading ? (

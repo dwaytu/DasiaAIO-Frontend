@@ -106,9 +106,8 @@ const Sidebar: FC<SidebarProps> = ({ items, activeView, onNavigate, onLogout, on
       
       {/* Sidebar */}
       <aside className={`
-        fixed lg:relative inset-y-0 left-0 z-50
+        fixed inset-y-0 left-0 z-50
         w-72 flex flex-col overflow-y-auto shadow-2xl
-        lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto
         transform transition-transform duration-300 ease-in-out
         lg:transform-none
         ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
@@ -207,6 +206,9 @@ const Sidebar: FC<SidebarProps> = ({ items, activeView, onNavigate, onLogout, on
           </button>
         </div>
       </aside>
+
+      {/* Desktop spacer for fixed sidebar */}
+      <div className="hidden w-72 flex-shrink-0 lg:block" aria-hidden="true" />
     </>
   )
 }

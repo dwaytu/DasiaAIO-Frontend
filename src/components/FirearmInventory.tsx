@@ -122,7 +122,7 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
   }
 
   return (
-    <div className="flex h-screen w-screen bg-background font-sans">
+    <div className="flex h-[100dvh] w-full overflow-hidden bg-background font-sans">
       <Sidebar
         items={navItems}
         activeView={currentView}
@@ -133,7 +133,7 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
         onClose={() => setMobileMenuOpen(false)}
       />
 
-      <main className="flex-1 flex flex-col overflow-hidden w-full">
+      <main className="flex-1 flex min-w-0 min-h-0 flex-col w-full overflow-hidden">
         <Header title="Firearm Inventory" badgeLabel="Firearms" onLogout={onLogout} onMenuClick={() => setMobileMenuOpen(true)} user={user} onNavigateToProfile={onViewChange ? () => onViewChange('profile') : undefined} />
 
         {loading ? (

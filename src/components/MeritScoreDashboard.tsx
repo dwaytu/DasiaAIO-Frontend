@@ -183,7 +183,7 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
   }
 
   return (
-    <div className="flex h-screen w-screen bg-background font-sans">
+    <div className="flex h-[100dvh] w-full overflow-hidden bg-background font-sans">
       <a href="#maincontent" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[70] focus:rounded-md focus:bg-background focus:px-3 focus:py-2 focus:text-text-primary focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-[var(--color-focus-ring)]">
         Skip to main content
       </a>
@@ -197,7 +197,7 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
         onClose={() => setMobileMenuOpen(false)}
       />
 
-      <main id="maincontent" tabIndex={-1} className="flex-1 flex flex-col overflow-hidden w-full">
+      <main id="maincontent" tabIndex={-1} className="flex-1 flex min-w-0 min-h-0 flex-col w-full overflow-hidden">
         <Header
           title="Merit Score System"
           badgeLabel="Performance"

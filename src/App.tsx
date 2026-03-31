@@ -768,12 +768,38 @@ function App() {
   }
 
   const canView = (view: string, role: Role): boolean => {
+    if (view === 'audit-log') {
+      return can(role, 'view_audit_logs')
+    }
+
     const route = viewRegistry[view]
     if (!route || !route.permission) {
       return true
     }
 
     return can(role, route.permission)
+  }
+
+  const renderAccessDenied = (role: Role): JSX.Element => {
+    const homeView = getHomeView(role)
+
+    return (
+      <main id="maincontent" className="flex h-full items-center justify-center p-4" tabIndex={-1}>
+        <section className="w-full max-w-lg rounded-2xl border border-danger-border bg-surface p-6 shadow-xl">
+          <h1 className="text-2xl font-bold text-text-primary">Access denied</h1>
+          <p className="mt-3 text-sm text-text-secondary">
+            You do not have permission to open this section. If this looks incorrect, contact a superadmin.
+          </p>
+          <button
+            type="button"
+            onClick={() => setActiveView(homeView)}
+            className="mt-5 min-h-11 rounded-md bg-info px-4 py-2 text-sm font-semibold text-white"
+          >
+            Return to dashboard
+          </button>
+        </section>
+      </main>
+    )
   }
 
   const renderHome = (role: Role, currentUser: User): JSX.Element => {
@@ -831,7 +857,7 @@ function App() {
         { key: 'profile', label: 'Profile' },
       ]
 
-  const showMobileQuickNav = isLoggedIn && runtimePlatform === 'capacitor' && normalizedRole === 'guard'
+  const showMobileQuickNav = false
   const mobileSafeBottomOffset = showMobileQuickNav
     ? 'calc(5rem + env(safe-area-inset-bottom, 0px))'
     : 'calc(1rem + env(safe-area-inset-bottom, 0px))'
@@ -842,11 +868,11 @@ function App() {
       : 'grid-cols-5'
 
   return (
-    <div className={`min-h-screen w-full overflow-x-hidden ${showMobileQuickNav ? 'pb-24 md:pb-0' : 'pb-4 md:pb-0'}`}>
+    <div className={`h-[100dvh] w-full overflow-hidden ${showMobileQuickNav ? 'pb-24 md:pb-0' : 'pb-4 md:pb-0'}`}>
       {!isLoggedIn ? (
         <LoginPage onLogin={handleLogin} />
       ) : !hasAcceptedToa ? (
-        <main id="maincontent" className="flex min-h-screen items-center justify-center px-4" tabIndex={-1}>
+        <main id="maincontent" className="flex h-full items-center justify-center px-4" tabIndex={-1}>
           <section className="w-full max-w-lg rounded-2xl border border-border-elevated bg-surface p-6 shadow-xl">
             <h1 className="text-2xl font-bold text-text-primary">Legal Confirmation Required</h1>
             <p className="mt-3 text-sm text-text-secondary">
@@ -863,6 +889,14 @@ function App() {
 
           if (route && canView(desiredView, normalizedRole)) {
             return route.component({ user, onLogout: handleLogout, onViewChange: setActiveView, activeView })
+          }
+
+          if (route && !canView(desiredView, normalizedRole)) {
+            return renderAccessDenied(normalizedRole)
+          }
+
+          if (!route && !canView(desiredView, normalizedRole)) {
+            return renderAccessDenied(normalizedRole)
           }
 
           return renderHome(normalizedRole, user)

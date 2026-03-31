@@ -158,7 +158,7 @@ const ProfileDashboard: FC<ProfileDashboardProps> = ({ user, onLogout, onBack, o
   const navItems = getSidebarNav(user.role, { homeView: user.role === 'guard' ? 'overview' : 'dashboard' })
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-background">
+    <div className="flex h-[100dvh] w-full overflow-hidden bg-background">
       <Sidebar
         activeView="profile"
         items={navItems}
@@ -169,7 +169,7 @@ const ProfileDashboard: FC<ProfileDashboardProps> = ({ user, onLogout, onBack, o
         onClose={() => setMobileMenuOpen(false)}
       />
 
-      <main className="flex-1 flex flex-col overflow-hidden w-full">
+      <main className="flex-1 flex min-w-0 min-h-0 flex-col w-full overflow-hidden">
         <Header
           title="Account Settings"
           badgeLabel="Profile"

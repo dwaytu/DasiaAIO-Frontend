@@ -13,7 +13,7 @@ interface GuardDashboardProps {
 
 const GuardDashboard: FC<GuardDashboardProps> = ({ user, onLogout }) => {
   return (
-    <div className="flex min-h-screen bg-background font-sans">
+    <div className="flex h-[100dvh] overflow-hidden bg-background font-sans">
       <div className="flex-1">
         <header className="bg-surface shadow-sm border-b border-border">
           <div className="flex items-center justify-between px-8 py-6">

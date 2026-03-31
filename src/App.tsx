@@ -826,7 +826,7 @@ function App() {
 
   if (isLoading) {
     return (
-      <div className="h-screen overflow-hidden w-full flex items-center justify-center" style={{ background: 'var(--bg-primary)' }}>
+      <div className="h-screen overflow-hidden w-full flex items-center justify-center bg-background">
         <div className="w-full max-w-xl px-6">
           <div className="animate-pulse space-y-4">
             <div className="h-10 rounded-lg bg-surface-elevated" />
@@ -834,7 +834,7 @@ function App() {
             <div className="h-24 rounded-lg bg-surface-elevated" />
             <div className="h-24 rounded-lg bg-surface-elevated" />
           </div>
-          <p className="mt-4 text-sm text-center" style={{ color: 'var(--text-secondary)' }}>Loading security operations workspace...</p>
+          <p className="mt-4 text-sm text-center text-text-secondary">Loading security operations workspace...</p>
         </div>
       </div>
     )
@@ -935,7 +935,7 @@ function App() {
 
       {isLoggedIn && hasAcceptedToa && hasLocationConsent && geoPermissionState !== 'granted' ? (
         <div
-          className="fixed left-4 right-4 z-50 rounded-lg border border-amber-600 bg-amber-50 p-3 text-sm text-amber-900 shadow-lg md:left-auto md:max-w-xl"
+          className="soc-warning-banner fixed left-4 right-4 z-50 rounded-lg p-3 text-sm shadow-lg md:left-auto md:max-w-xl"
           style={{ bottom: mobileSafeBottomOffset }}
           role="status"
           aria-live="polite"
@@ -946,7 +946,7 @@ function App() {
             <button
               type="button"
               onClick={() => { void requestGlobalLocationPermission() }}
-              className="min-h-11 rounded-md bg-amber-700 px-3 py-1.5 text-xs font-semibold text-white"
+              className="soc-btn-primary min-h-11 rounded-md px-3 py-1.5 text-xs font-semibold"
             >
               Prompt Location Access
             </button>
@@ -955,7 +955,7 @@ function App() {
       ) : null}
 
       {isLoggedIn && !hasAcceptedToa ? (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/72 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 backdrop-blur-sm" style={{ background: 'var(--color-overlay)' }}>
           <section
             role="dialog"
             aria-modal="true"
@@ -1068,7 +1068,7 @@ function App() {
       ) : null}
 
       {showLocationConsentUpgrade ? (
-        <div className="fixed inset-0 z-[75] flex items-center justify-center bg-slate-950/62 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[75] flex items-center justify-center p-4 backdrop-blur-sm" style={{ background: 'var(--color-overlay)' }}>
           <section
             role="dialog"
             aria-modal="true"
@@ -1100,7 +1100,7 @@ function App() {
       ) : null}
 
       {whatsNewPrompt && !releasePrompt ? (
-        <div className="fixed inset-0 z-[72] flex items-center justify-center bg-slate-950/62 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[72] flex items-center justify-center p-4 backdrop-blur-sm" style={{ background: 'var(--color-overlay)' }}>
           <section
             role="dialog"
             aria-modal="true"
@@ -1126,7 +1126,7 @@ function App() {
       ) : null}
 
       {releasePrompt ? (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/62 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 backdrop-blur-sm" style={{ background: 'var(--color-overlay)' }}>
           <section
             role="dialog"
             aria-modal="true"

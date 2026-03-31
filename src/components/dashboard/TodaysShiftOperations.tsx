@@ -39,9 +39,9 @@ const TodaysShiftOperations: FC<TodaysShiftOperationsProps> = ({
       <div className="flex items-center justify-between border-b border-[color:var(--color-border)] px-4 py-3">
         <div>
           <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-text)]">Today's Shifts</p>
-          <p className="font-mono text-[10px] text-[color:var(--color-muted-text)]">Operational assignments and current guard status</p>
+          <p className="font-mono text-[11px] text-[color:var(--color-muted-text)]">Operational assignments and current guard status</p>
         </div>
-        {lastUpdated && <span className="font-mono text-[10px] text-[color:var(--color-muted-text)]">Updated {lastUpdated}</span>}
+        {lastUpdated && <span className="font-mono text-[11px] text-[color:var(--color-muted-text)]">Updated {lastUpdated}</span>}
       </div>
 
       <div className="px-4 py-3" role="region" aria-live="polite">
@@ -74,13 +74,13 @@ const TodaysShiftOperations: FC<TodaysShiftOperationsProps> = ({
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="truncate font-mono text-xs font-semibold text-[color:var(--color-text)]">{guardName}</p>
-                      <p className="truncate font-mono text-[10px] text-[color:var(--color-muted-text)]">{siteName}</p>
+                      <p className="truncate font-mono text-[11px] text-[color:var(--color-muted-text)]">{siteName}</p>
                     </div>
                     <div className="text-right">
-                      <span className={`inline-flex rounded-full border px-2 py-[2px] font-mono text-[10px] uppercase ${tone}`}>
+                      <span className={`inline-flex rounded-full border px-2 py-0.5 font-mono text-[11px] uppercase ${tone}`}>
                         {status.replace('_', ' ')}
                       </span>
-                      <p className="mt-1 font-mono text-[10px] text-[color:var(--color-muted-text)]">Start {timeLabel}</p>
+                      <p className="mt-1 font-mono text-[11px] text-[color:var(--color-muted-text)]">Start {timeLabel}</p>
                     </div>
                   </div>
                 </li>

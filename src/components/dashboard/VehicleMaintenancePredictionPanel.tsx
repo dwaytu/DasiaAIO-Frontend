@@ -39,9 +39,9 @@ const VehicleMaintenancePredictionPanel: FC<VehicleMaintenancePredictionPanelPro
       <div className="flex items-center justify-between border-b border-[color:var(--color-border)] px-4 py-3">
         <div>
           <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--color-text)]">Predictive Vehicle Maintenance</p>
-          <p className="font-mono text-[10px] text-[color:var(--color-muted-text)]">Vehicles likely to require maintenance soon</p>
+          <p className="font-mono text-[11px] text-[color:var(--color-muted-text)]">Vehicles likely to require maintenance soon</p>
         </div>
-        {lastUpdated && <span className="font-mono text-[10px] text-[color:var(--color-muted-text)]">{lastUpdated}</span>}
+        {lastUpdated && <span className="font-mono text-[11px] text-[color:var(--color-muted-text)]">{lastUpdated}</span>}
       </div>
 
       <div className="space-y-2 px-4 py-3" role="region" aria-live="polite">
@@ -69,22 +69,22 @@ const VehicleMaintenancePredictionPanel: FC<VehicleMaintenancePredictionPanelPro
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="truncate font-mono text-sm text-[color:var(--color-text)]">{item.licensePlate}</p>
-                      <p className="font-mono text-[10px] text-[color:var(--color-muted-text)]">
+                      <p className="font-mono text-[11px] text-[color:var(--color-muted-text)]">
                         Vehicle ID {item.vehicleId.slice(0, 8)} • {item.daysSinceService} days since service
                       </p>
                     </div>
                     <div className="text-right">
                       <p className="font-mono text-base font-bold text-[color:var(--color-text)]">{item.riskScore.toFixed(3)}</p>
-                      <span className={`inline-flex rounded-full border px-2 py-[2px] font-mono text-[10px] font-semibold ${riskClass}`}>
+                      <span className={`inline-flex rounded-full border px-2 py-0.5 font-mono text-[11px] font-semibold ${riskClass}`}>
                         {item.riskLevel}
                       </span>
                     </div>
                   </div>
 
-                  <p className="mt-2 font-mono text-[10px] text-[color:var(--color-muted-text)]">{item.recommendedAction}</p>
-                  <p className="mt-1 font-mono text-[10px] text-[color:var(--color-muted-text)]">Risk level: {item.riskLevel}</p>
-                  <p className="mt-1 font-mono text-[10px] text-[color:var(--color-muted-text)]">Confidence: {(getConfidence(item) * 100).toFixed(0)}%</p>
-                  <p className="mt-1 font-mono text-[10px] text-[color:var(--color-muted-text)]">{getUrgencyNote(item)}</p>
+                  <p className="mt-2 font-mono text-[11px] text-[color:var(--color-muted-text)]">{item.recommendedAction}</p>
+                  <p className="mt-1 font-mono text-[11px] text-[color:var(--color-muted-text)]">Risk level: {item.riskLevel}</p>
+                  <p className="mt-1 font-mono text-[11px] text-[color:var(--color-muted-text)]">Confidence: {(getConfidence(item) * 100).toFixed(0)}%</p>
+                  <p className="mt-1 font-mono text-[11px] text-[color:var(--color-muted-text)]">{getUrgencyNote(item)}</p>
                 </li>
               )
             })}

@@ -67,7 +67,7 @@ const NotificationItem: FC<NotificationProps> = ({ notification, onDismiss }) =>
       <button
         type="button"
         onClick={() => onDismiss(notification.id)}
-        className="ml-2 min-h-10 min-w-10 rounded-md text-xl font-bold opacity-60 transition-opacity hover:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)]"
+        className="ml-2 min-h-10 min-w-10 rounded-md text-xl font-bold opacity-60 transition-opacity hover:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
         aria-label={`Dismiss notification: ${notification.title}`}
       >
         ×

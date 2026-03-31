@@ -144,7 +144,7 @@ const IncidentPanel: FC = () => {
             type="button"
             onClick={() => refresh()}
             aria-label="Refresh incidents"
-            className="rounded border border-[color:var(--color-border)] px-2 py-1 font-mono text-xs text-[color:var(--color-muted-text)] hover:border-[color:var(--color-text)] hover:text-[color:var(--color-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)]"
+            className="min-h-9 rounded border border-[color:var(--color-border)] px-2.5 py-1.5 font-mono text-[11px] font-semibold uppercase tracking-wide text-[color:var(--color-muted-text)] hover:border-[color:var(--color-text)] hover:text-[color:var(--color-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
           >
             Refresh
           </button>
@@ -152,7 +152,7 @@ const IncidentPanel: FC = () => {
             type="button"
             onClick={() => setShowForm((v) => !v)}
             aria-expanded={showForm}
-            className="rounded bg-red-600 px-3 py-1 font-mono text-xs font-semibold text-white hover:bg-red-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-400"
+            className="min-h-9 rounded bg-red-600 px-3 py-1.5 font-mono text-[11px] font-semibold uppercase tracking-wide text-white hover:bg-red-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-400"
           >
             {showForm ? 'Cancel' : '+ Report Incident'}
           </button>
@@ -176,7 +176,7 @@ const IncidentPanel: FC = () => {
             role="tab"
             aria-selected={filter === s}
             onClick={() => setFilter(s)}
-            className={`rounded-t px-3 py-1 font-mono text-xs font-semibold uppercase transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)] ${
+            className={`rounded-t px-3 py-1.5 font-mono text-[11px] font-semibold uppercase tracking-wide transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)] ${
               filter === s
                 ? 'bg-[color:var(--color-border)] text-[color:var(--color-text)]'
                 : 'text-[color:var(--color-muted-text)] hover:text-[color:var(--color-text)]'
@@ -269,13 +269,13 @@ const IncidentPanel: FC = () => {
                             type="button"
                             onClick={() => handleSummaryPreview(incident)}
                             disabled={summarizingId === incident.id}
-                            className="rounded border border-[color:var(--color-border)] px-2 py-0.5 font-mono text-[10px] text-[color:var(--color-muted-text)] hover:border-[color:var(--color-text)] hover:text-[color:var(--color-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)] disabled:cursor-not-allowed disabled:opacity-60"
+                            className="rounded border border-[color:var(--color-border)] px-2 py-0.5 font-mono text-[11px] text-[color:var(--color-muted-text)] hover:border-[color:var(--color-text)] hover:text-[color:var(--color-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)] disabled:cursor-not-allowed disabled:opacity-60"
                           >
                             {summarizingId === incident.id ? 'Generating summary…' : 'Preview AI Summary'}
                           </button>
                         </div>
                         {summaryByIncidentId[incident.id] && (
-                          <div className="max-w-[380px] whitespace-normal rounded border border-[color:var(--color-border)] px-2 py-1 font-mono text-[10px] text-[color:var(--color-muted-text)]">
+                          <div className="max-w-[380px] whitespace-normal rounded border border-[color:var(--color-border)] px-2 py-1 font-mono text-[11px] text-[color:var(--color-muted-text)]">
                             <p>{summaryByIncidentId[incident.id].summary}</p>
                             <p className="mt-1">Risk level: {summaryByIncidentId[incident.id].riskLevel || 'unknown'}</p>
                             <p className="mt-1">Confidence: {Math.round(summaryByIncidentId[incident.id].confidence * 100)}%</p>
@@ -291,12 +291,12 @@ const IncidentPanel: FC = () => {
                       <span title={incident.location}>{incident.location}</span>
                     </td>
                     <td className="px-4 py-2">
-                      <span className={`rounded px-1.5 py-0.5 font-mono text-[10px] font-bold ${pb.cls}`}>
+                      <span className={`rounded px-1.5 py-0.5 font-mono text-[11px] font-bold ${pb.cls}`}>
                         {pb.label}
                       </span>
                     </td>
                     <td className="px-4 py-2">
-                      <span className={`rounded px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase ${sb}`}>
+                      <span className={`rounded px-1.5 py-0.5 font-mono text-[11px] font-semibold uppercase ${sb}`}>
                         {incident.status}
                       </span>
                     </td>
@@ -319,14 +319,14 @@ const IncidentPanel: FC = () => {
                                 disabled={updatingId === incident.id}
                                 onClick={() => handleStatusChange(incident.id, nextStatus)}
                                 aria-label={`Mark incident "${incident.title}" as ${nextStatus}`}
-                                className="rounded border border-[color:var(--color-border)] px-2 py-0.5 font-mono text-[10px] text-[color:var(--color-muted-text)] hover:border-[color:var(--color-text)] hover:text-[color:var(--color-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)] disabled:cursor-not-allowed disabled:opacity-50"
+                                className="rounded border border-[color:var(--color-border)] px-2 py-0.5 font-mono text-[11px] text-[color:var(--color-muted-text)] hover:border-[color:var(--color-text)] hover:text-[color:var(--color-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)] disabled:cursor-not-allowed disabled:opacity-50"
                               >
                                 {updatingId === incident.id ? '…' : nextStatus}
                               </button>
                             ))}
                           </div>
                         ) : (
-                          <span className="font-mono text-[10px] text-[color:var(--color-muted-text)]">—</span>
+                          <span className="font-mono text-[11px] text-[color:var(--color-muted-text)]">—</span>
                         )}
                       </td>
                     )}

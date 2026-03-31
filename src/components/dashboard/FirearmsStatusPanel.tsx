@@ -22,23 +22,23 @@ const FirearmsStatusPanel: FC<FirearmsStatusPanelProps> = ({
       <div className="flex items-center justify-between border-b border-[color:var(--color-border)] px-4 py-3">
         <div>
           <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-text)]">Firearms Status</p>
-          <p className="font-mono text-[10px] text-[color:var(--color-muted-text)]">Availability and assignment posture</p>
+          <p className="font-mono text-[11px] text-[color:var(--color-muted-text)]">Availability and assignment posture</p>
         </div>
-        {lastUpdated && <span className="font-mono text-[10px] text-[color:var(--color-muted-text)]">Updated {lastUpdated}</span>}
+        {lastUpdated && <span className="font-mono text-[11px] text-[color:var(--color-muted-text)]">Updated {lastUpdated}</span>}
       </div>
 
       <div className="space-y-3 px-4 py-3" role="region" aria-live="polite">
         <div className="grid grid-cols-3 gap-2">
           <div className="rounded-md border border-emerald-500/35 bg-emerald-500/10 px-2 py-1.5 text-center">
-            <p className="font-mono text-[9px] uppercase tracking-wide text-emerald-200">Available</p>
+            <p className="font-mono text-[11px] uppercase tracking-wide text-emerald-200">Available</p>
             <p className="font-mono text-lg font-bold text-emerald-100">{available}</p>
           </div>
           <div className="rounded-md border border-sky-500/35 bg-sky-500/10 px-2 py-1.5 text-center">
-            <p className="font-mono text-[9px] uppercase tracking-wide text-sky-200">Issued</p>
+            <p className="font-mono text-[11px] uppercase tracking-wide text-sky-200">Issued</p>
             <p className="font-mono text-lg font-bold text-sky-100">{issued}</p>
           </div>
           <div className="rounded-md border border-amber-500/35 bg-amber-500/10 px-2 py-1.5 text-center">
-            <p className="font-mono text-[9px] uppercase tracking-wide text-amber-200">Maint.</p>
+            <p className="font-mono text-[11px] uppercase tracking-wide text-amber-200">Maint.</p>
             <p className="font-mono text-lg font-bold text-amber-100">{maintenance}</p>
           </div>
         </div>
@@ -67,9 +67,9 @@ const FirearmsStatusPanel: FC<FirearmsStatusPanelProps> = ({
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
                       <p className="truncate font-mono text-xs font-semibold text-[color:var(--color-text)]">{serial}</p>
-                      <p className="truncate font-mono text-[10px] text-[color:var(--color-muted-text)]">{weaponType}</p>
+                      <p className="truncate font-mono text-[11px] text-[color:var(--color-muted-text)]">{weaponType}</p>
                     </div>
-                    <span className="inline-flex rounded-full border border-[color:var(--color-border)] px-2 py-[2px] font-mono text-[10px] uppercase text-[color:var(--color-text)]">
+                    <span className="inline-flex rounded-full border border-[color:var(--color-border)] px-2 py-0.5 font-mono text-[11px] uppercase text-[color:var(--color-text)]">
                       {status}
                     </span>
                   </div>

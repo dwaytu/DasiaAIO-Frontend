@@ -70,7 +70,7 @@ const IncidentSummaryGenerator: FC<IncidentSummaryGeneratorProps> = ({ incidents
       <div className="flex items-center justify-between border-b border-[color:var(--color-border)] px-4 py-3">
         <div>
           <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-text)]">Incident Summary Generator</p>
-          <p className="font-mono text-[10px] text-[color:var(--color-muted-text)]">AI brief for shift handoff and operator reports</p>
+          <p className="font-mono text-[11px] text-[color:var(--color-muted-text)]">AI brief for shift handoff and operator reports</p>
         </div>
       </div>
 
@@ -94,14 +94,14 @@ const IncidentSummaryGenerator: FC<IncidentSummaryGeneratorProps> = ({ incidents
         {summary && (
           <div className="rounded-md border border-[color:var(--color-border)]/60 bg-[color:var(--color-bg)]/30 px-3 py-2">
             <p className="font-mono text-[11px] text-[color:var(--color-text)]">{summary}</p>
-            <p className="mt-1 font-mono text-[10px] text-[color:var(--color-muted-text)]">Risk level: {riskLevel || 'unknown'}</p>
-            <p className="mt-1 font-mono text-[10px] text-[color:var(--color-muted-text)]">Confidence: {Math.round(confidence * 100)}%</p>
-            <p className="mt-1 font-mono text-[10px] text-[color:var(--color-muted-text)]">Explanation: {explanation || 'No explanation returned.'}</p>
-            <p className="mt-1 font-mono text-[10px] text-[color:var(--color-muted-text)]">
+            <p className="mt-1 font-mono text-[11px] text-[color:var(--color-muted-text)]">Risk level: {riskLevel || 'unknown'}</p>
+            <p className="mt-1 font-mono text-[11px] text-[color:var(--color-muted-text)]">Confidence: {Math.round(confidence * 100)}%</p>
+            <p className="mt-1 font-mono text-[11px] text-[color:var(--color-muted-text)]">Explanation: {explanation || 'No explanation returned.'}</p>
+            <p className="mt-1 font-mono text-[11px] text-[color:var(--color-muted-text)]">
               Suggested actions: {suggestedActions.slice(0, 3).join(' | ') || 'No actions suggested.'}
             </p>
             {keyPhrases.length > 0 && (
-              <p className="mt-1 font-mono text-[10px] text-[color:var(--color-muted-text)]">
+              <p className="mt-1 font-mono text-[11px] text-[color:var(--color-muted-text)]">
                 Key: {keyPhrases.slice(0, 4).join(', ')}
               </p>
             )}

@@ -1,5 +1,4 @@
 import React, { ReactNode, forwardRef } from 'react';
-import { useTheme } from '../context/ThemeProvider';
 
 /**
  * SENTINEL BentoCard Component
@@ -160,17 +159,10 @@ export const BentoCard = forwardRef<HTMLDivElement, BentoCardProps>(
     },
     ref
   ) => {
-    const { theme } = useTheme();
-    const isDark = theme === 'dark';
     const isInteractive = interactive || !!onClick;
 
-    // Ergonomic border styling: 
-    // Light mode - NO border (relies on surface color separation to reduce visual clutter)
-    // Dark mode - Subtle border (border-slate-700) for increased depth and visual separation
-    const borderClass = isDark ? 'border border-slate-700' : 'border-0';
-
     const baseClasses = `
-      rounded-lg ${borderClass} transition-all duration-250
+      rounded-lg border transition-all duration-250
       ${getSizeClasses(size)}
       ${getVariantClasses(variant)}
       ${isInteractive ? 'cursor-pointer hover:shadow-bento-hover hover:bg-surface-hover' : 'shadow-bento'}

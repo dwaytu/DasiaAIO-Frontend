@@ -83,7 +83,7 @@ const OperationalActivityFeed: FC<OperationalActivityFeedProps> = ({ items, titl
           </svg>
           <div>
             <p className="font-mono text-xs font-semibold uppercase tracking-wider text-[color:var(--color-text)]">{title}</p>
-            <p className="font-mono text-[10px] text-[color:var(--color-muted-text)]">{subtitle}</p>
+            <p className="font-mono text-[11px] text-[color:var(--color-muted-text)]">{subtitle}</p>
           </div>
         </div>
       </div>

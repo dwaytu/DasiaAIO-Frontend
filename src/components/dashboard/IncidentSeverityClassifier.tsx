@@ -73,7 +73,7 @@ const IncidentSeverityClassifier: FC<IncidentSeverityClassifierProps> = ({ incid
       <div className="flex items-center justify-between border-b border-[color:var(--color-border)] px-4 py-3">
         <div>
           <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-text)]">Incident Severity Classifier</p>
-          <p className="font-mono text-[10px] text-[color:var(--color-muted-text)]">AI severity estimation for active incident flow</p>
+          <p className="font-mono text-[11px] text-[color:var(--color-muted-text)]">AI severity estimation for active incident flow</p>
         </div>
       </div>
 
@@ -96,13 +96,13 @@ const IncidentSeverityClassifier: FC<IncidentSeverityClassifierProps> = ({ incid
 
         {result && (
           <div className="space-y-1 rounded-md border border-[color:var(--color-border)]/60 bg-[color:var(--color-bg)]/30 px-3 py-2">
-            <p className={`inline-flex rounded-full border px-2 py-1 font-mono text-[10px] uppercase ${tone}`}>
+            <p className={`inline-flex rounded-full border px-2 py-0.5 font-mono text-[11px] uppercase ${tone}`}>
               Severity: {severity}
             </p>
-            <p className="font-mono text-[10px] text-[color:var(--color-muted-text)]">Risk level: {riskLevel || 'unknown'}</p>
-            <p className="font-mono text-[10px] text-[color:var(--color-muted-text)]">Confidence: {Math.round((result.confidence || 0) * 100)}%</p>
-            <p className="font-mono text-[10px] text-[color:var(--color-muted-text)]">Explanation: {result.explanation || 'No explanation returned.'}</p>
-            <p className="font-mono text-[10px] text-[color:var(--color-muted-text)]">
+            <p className="font-mono text-[11px] text-[color:var(--color-muted-text)]">Risk level: {riskLevel || 'unknown'}</p>
+            <p className="font-mono text-[11px] text-[color:var(--color-muted-text)]">Confidence: {Math.round((result.confidence || 0) * 100)}%</p>
+            <p className="font-mono text-[11px] text-[color:var(--color-muted-text)]">Explanation: {result.explanation || 'No explanation returned.'}</p>
+            <p className="font-mono text-[11px] text-[color:var(--color-muted-text)]">
               Suggested actions: {(Array.isArray(result.suggestedActions) ? result.suggestedActions : []).slice(0, 3).join(' | ') || 'No actions suggested.'}
             </p>
           </div>

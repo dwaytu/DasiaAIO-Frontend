@@ -43,27 +43,27 @@ const IncidentSeverityMonitoringPanel: FC<IncidentSeverityMonitoringPanelProps> 
       <div className="flex items-center justify-between border-b border-[color:var(--color-border)] px-4 py-3">
         <div>
           <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-text)]">Incident Severity Monitoring</p>
-          <p className="font-mono text-[10px] text-[color:var(--color-muted-text)]">Live severity distribution and escalation posture</p>
+          <p className="font-mono text-[11px] text-[color:var(--color-muted-text)]">Live severity distribution and escalation posture</p>
         </div>
-        {lastUpdated && <span className="font-mono text-[10px] text-[color:var(--color-muted-text)]">Updated {lastUpdated}</span>}
+        {lastUpdated && <span className="font-mono text-[11px] text-[color:var(--color-muted-text)]">Updated {lastUpdated}</span>}
       </div>
 
       <div className="space-y-3 px-4 py-3" role="region" aria-live="polite">
         <div className="grid grid-cols-4 gap-2">
           <div className="rounded-md border border-red-500/35 bg-red-500/10 px-2 py-1.5 text-center">
-            <p className="font-mono text-[9px] uppercase tracking-wide text-red-200">Critical</p>
+            <p className="font-mono text-[11px] uppercase tracking-wide text-red-200">Critical</p>
             <p className="font-mono text-base font-bold text-red-100">{severitySummary.critical}</p>
           </div>
           <div className="rounded-md border border-orange-400/35 bg-orange-500/10 px-2 py-1.5 text-center">
-            <p className="font-mono text-[9px] uppercase tracking-wide text-orange-200">High</p>
+            <p className="font-mono text-[11px] uppercase tracking-wide text-orange-200">High</p>
             <p className="font-mono text-base font-bold text-orange-100">{severitySummary.high}</p>
           </div>
           <div className="rounded-md border border-amber-400/35 bg-amber-500/10 px-2 py-1.5 text-center">
-            <p className="font-mono text-[9px] uppercase tracking-wide text-amber-200">Medium</p>
+            <p className="font-mono text-[11px] uppercase tracking-wide text-amber-200">Medium</p>
             <p className="font-mono text-base font-bold text-amber-100">{severitySummary.medium}</p>
           </div>
           <div className="rounded-md border border-emerald-500/35 bg-emerald-500/10 px-2 py-1.5 text-center">
-            <p className="font-mono text-[9px] uppercase tracking-wide text-emerald-200">Low</p>
+            <p className="font-mono text-[11px] uppercase tracking-wide text-emerald-200">Low</p>
             <p className="font-mono text-base font-bold text-emerald-100">{severitySummary.low}</p>
           </div>
         </div>
@@ -92,18 +92,18 @@ const IncidentSeverityMonitoringPanel: FC<IncidentSeverityMonitoringPanelProps> 
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="truncate font-mono text-xs font-semibold text-[color:var(--color-text)]">{incident.title}</p>
-                      <p className="truncate font-mono text-[10px] text-[color:var(--color-muted-text)]">{incident.location}</p>
+                      <p className="truncate font-mono text-[11px] text-[color:var(--color-muted-text)]">{incident.location}</p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className={`inline-flex rounded-full border px-2 py-[2px] font-mono text-[10px] font-semibold uppercase ${severityBadgeClass[incident.priority]}`}>
+                      <span className={`inline-flex rounded-full border px-2 py-0.5 font-mono text-[11px] font-semibold uppercase ${severityBadgeClass[incident.priority]}`}>
                         {incident.priority}
                       </span>
-                      <span className={`inline-flex rounded-full border px-2 py-[2px] font-mono text-[10px] uppercase ${statusPillClass[incident.status]}`}>
+                      <span className={`inline-flex rounded-full border px-2 py-0.5 font-mono text-[11px] uppercase ${statusPillClass[incident.status]}`}>
                         {incident.status}
                       </span>
                     </div>
                   </div>
-                  <p className="mt-1 font-mono text-[10px] text-[color:var(--color-muted-text)]">Reported {timeLabel}</p>
+                  <p className="mt-1 font-mono text-[11px] text-[color:var(--color-muted-text)]">Reported {timeLabel}</p>
                 </li>
               )
             })}

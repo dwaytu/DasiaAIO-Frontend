@@ -3,7 +3,17 @@
 
 :root {
   --space-unit: 8px;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
   --radius-card: 10px;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-pill: 999px;
   --color-background: #f5f7fb;
   --color-surface: #ffffff;
   --color-surface-elevated: #f3f6fb;
@@ -57,6 +67,45 @@
   --color-primary-hover: #1d4ed8;
   --color-primary-active: #0c3ca8;
   --color-primary-text: #ffffff;
+
+  --color-link: #1d4ed8;
+  --color-link-hover: #1e40af;
+
+  --color-overlay: rgba(2, 6, 23, 0.62);
+  --color-panel-hover: color-mix(in srgb, var(--color-surface-hover) 82%, transparent);
+  --color-panel-hover-strong: color-mix(in srgb, var(--color-info) 10%, var(--color-surface-hover));
+
+  --color-sidebar-accent-start: color-mix(in srgb, var(--color-info) 78%, white 10%);
+  --color-sidebar-accent-end: color-mix(in srgb, var(--color-accent) 72%, white 8%);
+  --color-sidebar-active-bg: linear-gradient(135deg, color-mix(in srgb, var(--color-info) 24%, transparent), color-mix(in srgb, var(--color-accent) 18%, transparent));
+
+  --color-avatar-start: #2563eb;
+  --color-avatar-end: #4f46e5;
+
+  --color-role-admin-bg: color-mix(in srgb, #8b5cf6 17%, var(--color-surface));
+  --color-role-admin-border: color-mix(in srgb, #8b5cf6 38%, var(--color-border));
+  --color-role-admin-text: #7c3aed;
+
+  --color-role-guard-bg: color-mix(in srgb, #0891b2 16%, var(--color-surface));
+  --color-role-guard-border: color-mix(in srgb, #0891b2 35%, var(--color-border));
+  --color-role-guard-text: #0e7490;
+
+  --color-role-default-bg: color-mix(in srgb, #64748b 14%, var(--color-surface));
+  --color-role-default-border: color-mix(in srgb, #64748b 32%, var(--color-border));
+  --color-role-default-text: #475569;
+
+  --color-warning-strong-bg: #fef3c7;
+  --color-warning-strong-border: #f59e0b;
+  --color-warning-strong-text: #92400e;
+
+  --color-danger-soft-bg: color-mix(in srgb, var(--color-danger) 10%, var(--color-surface));
+  --color-danger-soft-border: color-mix(in srgb, var(--color-danger) 26%, var(--color-border));
+  --color-danger-soft-text: color-mix(in srgb, var(--color-danger) 72%, #ffffff 8%);
+
+  --status-dot-success: #22c55e;
+  --status-dot-info: #38bdf8;
+  --status-dot-warning: #eab308;
+  --status-dot-danger: #ef4444;
 
   --color-accent: #0891b2;
   --color-accent-secondary: #0e7490;
@@ -136,6 +185,40 @@
   --color-primary-hover: #67e8f9;
   --color-primary-active: #0ea5e9;
   --color-primary-text: #052433;
+
+  --color-link: #7dd3fc;
+  --color-link-hover: #bae6fd;
+
+  --color-overlay: rgba(2, 6, 23, 0.72);
+  --color-panel-hover: color-mix(in srgb, var(--color-surface-hover) 82%, transparent);
+  --color-panel-hover-strong: color-mix(in srgb, var(--color-info) 14%, var(--color-surface-hover));
+
+  --color-sidebar-accent-start: color-mix(in srgb, var(--color-info) 85%, white 5%);
+  --color-sidebar-accent-end: color-mix(in srgb, var(--color-accent) 80%, white 4%);
+  --color-sidebar-active-bg: linear-gradient(135deg, color-mix(in srgb, var(--color-info) 28%, transparent), color-mix(in srgb, var(--color-accent) 22%, transparent));
+
+  --color-avatar-start: #38bdf8;
+  --color-avatar-end: #22d3ee;
+
+  --color-role-admin-bg: color-mix(in srgb, #a78bfa 18%, var(--color-surface));
+  --color-role-admin-border: color-mix(in srgb, #a78bfa 42%, var(--color-border));
+  --color-role-admin-text: #c4b5fd;
+
+  --color-role-guard-bg: color-mix(in srgb, #22d3ee 18%, var(--color-surface));
+  --color-role-guard-border: color-mix(in srgb, #22d3ee 40%, var(--color-border));
+  --color-role-guard-text: #67e8f9;
+
+  --color-role-default-bg: color-mix(in srgb, #94a3b8 18%, var(--color-surface));
+  --color-role-default-border: color-mix(in srgb, #94a3b8 38%, var(--color-border));
+  --color-role-default-text: #cbd5e1;
+
+  --color-warning-strong-bg: color-mix(in srgb, #f59e0b 18%, var(--color-surface));
+  --color-warning-strong-border: color-mix(in srgb, #f59e0b 48%, var(--color-border));
+  --color-warning-strong-text: #fcd34d;
+
+  --color-danger-soft-bg: color-mix(in srgb, var(--color-danger) 14%, var(--color-surface));
+  --color-danger-soft-border: color-mix(in srgb, var(--color-danger) 38%, var(--color-border));
+  --color-danger-soft-text: #fca5a5;
 
   --color-accent: #22d3ee;
   --color-accent-secondary: #06b6d4;
@@ -252,12 +335,12 @@
   }
 
   a {
-    color: var(--color-primary);
+    color: var(--color-link);
     text-decoration: none;
   }
 
   a:hover {
-    color: var(--color-primary-hover);
+    color: var(--color-link-hover);
   }
 
   a:focus-visible,
@@ -533,7 +616,7 @@
       radial-gradient(circle at 14% 16%, color-mix(in srgb, var(--color-info) 22%, transparent) 0%, transparent 38%),
       radial-gradient(circle at 84% 24%, color-mix(in srgb, var(--color-success) 18%, transparent) 0%, transparent 42%),
       radial-gradient(circle at 66% 78%, color-mix(in srgb, var(--color-info) 14%, transparent) 0%, transparent 40%),
-      linear-gradient(145deg, color-mix(in srgb, var(--color-bg) 96%, #020617 4%) 0%, var(--color-bg) 100%);
+      linear-gradient(145deg, color-mix(in srgb, var(--color-background) 96%, #020617 4%) 0%, var(--color-background) 100%);
     filter: saturate(108%);
   }
 
@@ -560,22 +643,22 @@
   }
 
   .status-light-success {
-    background: #22c55e;
+    background: var(--status-dot-success);
     box-shadow: 0 0 10px rgba(34, 197, 94, 0.55);
   }
 
   .status-light-info {
-    background: #38bdf8;
+    background: var(--status-dot-info);
     box-shadow: 0 0 10px rgba(56, 189, 248, 0.55);
   }
 
   .status-light-warning {
-    background: #eab308;
+    background: var(--status-dot-warning);
     box-shadow: 0 0 10px rgba(234, 179, 8, 0.52);
   }
 
   .status-light-danger {
-    background: #ef4444;
+    background: var(--status-dot-danger);
     box-shadow: 0 0 10px rgba(239, 68, 68, 0.52);
   }
 
@@ -822,6 +905,201 @@
     font-size: 13px;
     color: var(--color-text-secondary);
     background: color-mix(in srgb, var(--color-surface-elevated) 84%, transparent);
+  }
+
+  .soc-section-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--status-info-border);
+    background: var(--status-info-bg);
+    color: var(--status-info-text);
+    padding: 0.26rem 0.75rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .soc-sidebar-shell {
+    background: color-mix(in srgb, var(--color-surface) 94%, transparent);
+    border-right: 1px solid var(--color-border);
+  }
+
+  .soc-sidebar-accent {
+    background: linear-gradient(90deg, var(--color-sidebar-accent-start), var(--color-sidebar-accent-end));
+  }
+
+  .soc-sidebar-heading {
+    color: color-mix(in srgb, var(--color-text-tertiary) 90%, transparent);
+  }
+
+  .soc-sidebar-nav-item {
+    border-radius: var(--radius-sm);
+    color: var(--color-text-secondary);
+    transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease;
+  }
+
+  .soc-sidebar-nav-item:hover {
+    color: var(--color-text-primary);
+    background: var(--color-panel-hover);
+  }
+
+  .soc-sidebar-nav-item-active {
+    color: var(--color-text-primary);
+    background: var(--color-sidebar-active-bg);
+    border-left: 3px solid var(--color-info);
+    padding-left: 10px;
+  }
+
+  .soc-sidebar-logout {
+    color: var(--color-danger-soft-text);
+    border: 1px solid var(--color-danger-soft-border);
+    background: transparent;
+    transition: background-color 160ms ease;
+  }
+
+  .soc-sidebar-logout:hover {
+    background: var(--color-danger-soft-bg);
+  }
+
+  .soc-avatar-gradient {
+    background: linear-gradient(135deg, var(--color-avatar-start), var(--color-avatar-end));
+  }
+
+  .soc-role-chip {
+    display: inline-block;
+    margin-top: 0.25rem;
+    border-radius: var(--radius-pill);
+    padding: 0.125rem 0.5rem;
+    border: 1px solid var(--color-role-default-border);
+    background: var(--color-role-default-bg);
+    color: var(--color-role-default-text);
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .soc-role-chip-admin {
+    border-color: var(--color-role-admin-border);
+    background: var(--color-role-admin-bg);
+    color: var(--color-role-admin-text);
+  }
+
+  .soc-role-chip-guard {
+    border-color: var(--color-role-guard-border);
+    background: var(--color-role-guard-bg);
+    color: var(--color-role-guard-text);
+  }
+
+  .soc-dropdown-surface {
+    border: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-surface-elevated) 96%, transparent);
+    box-shadow: var(--shadow-modal);
+  }
+
+  .soc-menu-item {
+    color: var(--color-text-primary);
+    transition: background-color 150ms ease;
+  }
+
+  .soc-menu-item:hover {
+    background: var(--color-panel-hover);
+  }
+
+  .soc-menu-item-danger {
+    color: var(--color-danger-soft-text);
+  }
+
+  .soc-menu-item-danger:hover {
+    background: var(--color-danger-soft-bg);
+  }
+
+  .soc-icon-muted {
+    color: var(--color-text-secondary);
+  }
+
+  .soc-notification-trigger:hover {
+    background: var(--color-panel-hover);
+  }
+
+  .soc-notification-unread {
+    background: color-mix(in srgb, var(--color-info) 10%, transparent);
+  }
+
+  .soc-notification-unread:hover {
+    background: color-mix(in srgb, var(--color-info) 16%, transparent);
+  }
+
+  .soc-notification-read:hover {
+    background: var(--color-panel-hover);
+  }
+
+  .soc-link-button {
+    color: var(--color-link);
+    transition: color 140ms ease;
+  }
+
+  .soc-link-button:hover {
+    color: var(--color-link-hover);
+  }
+
+  .soc-btn-primary {
+    border: 1px solid color-mix(in srgb, var(--color-primary) 44%, var(--color-border));
+    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover));
+    color: var(--color-primary-text);
+  }
+
+  .soc-btn-primary:hover {
+    filter: brightness(1.04);
+  }
+
+  .soc-btn-secondary {
+    border: 1px solid var(--color-border-elevated);
+    background: color-mix(in srgb, var(--color-surface-elevated) 96%, transparent);
+    color: var(--color-text-secondary);
+  }
+
+  .soc-btn-secondary:hover {
+    background: var(--color-panel-hover);
+    color: var(--color-text-primary);
+  }
+
+  .soc-auth-alert-success {
+    border: 1px solid var(--color-success-border);
+    background: var(--color-success-bg);
+    color: var(--color-success-text);
+  }
+
+  .soc-auth-alert-error {
+    border: 1px solid var(--color-danger-border);
+    background: var(--color-danger-bg);
+    color: var(--color-danger-text);
+  }
+
+  .soc-warning-banner {
+    border: 1px solid var(--color-warning-strong-border);
+    background: var(--color-warning-strong-bg);
+    color: var(--color-warning-strong-text);
+  }
+}
+
+@media (forced-colors: active) {
+  .soc-dashboard-card,
+  .bento-card,
+  .soc-dropdown-surface,
+  .table-glass,
+  .status-live-card {
+    border: 1px solid ButtonBorder;
+    box-shadow: none;
+  }
+
+  .soc-btn,
+  .soc-btn-primary,
+  .soc-btn-secondary,
+  .terminal-login-btn {
+    border: 1px solid ButtonBorder;
+    background: ButtonFace;
+    color: ButtonText;
   }
 }
 

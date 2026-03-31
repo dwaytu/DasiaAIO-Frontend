@@ -19,9 +19,9 @@ const TopReliableGuardsPanel: FC<TopReliableGuardsPanelProps> = ({ guards, loadi
       <div className="flex items-center justify-between border-b border-[color:var(--color-border)] px-4 py-3">
         <div>
           <p className="font-mono text-xs font-semibold uppercase tracking-widest text-[color:var(--color-text)]">Top Reliability</p>
-          <p className="font-mono text-[10px] text-[color:var(--color-muted-text)]">Weighted attendance · mission · compliance</p>
+          <p className="font-mono text-[11px] text-[color:var(--color-muted-text)]">Weighted attendance · mission · compliance</p>
         </div>
-        {lastUpdated && <span className="font-mono text-[10px] text-[color:var(--color-muted-text)]">{lastUpdated}</span>}
+        {lastUpdated && <span className="font-mono text-[11px] text-[color:var(--color-muted-text)]">{lastUpdated}</span>}
       </div>
 
       <div className="px-4 py-3">
@@ -54,14 +54,14 @@ const TopReliableGuardsPanel: FC<TopReliableGuardsPanelProps> = ({ guards, loadi
                   </span>
                   <div>
                     <p className="font-mono text-sm text-[color:var(--color-text)]">{guard.guardName}</p>
-                    <p className="font-mono text-[10px] text-[color:var(--color-muted-text)]">
+                    <p className="font-mono text-[11px] text-[color:var(--color-muted-text)]">
                       Attend {guard.attendanceScore.toFixed(1)} • Mission {guard.missionPerformance.toFixed(1)} • Permits {guard.permitCompliance.toFixed(1)}
                     </p>
                   </div>
                 </div>
                 <div className="text-right">
                   <p className="font-mono text-lg font-bold text-[color:var(--color-text)]">{Math.round(guard.reliabilityScore)}</p>
-                  <p className="font-mono text-[10px] text-[color:var(--color-muted-text)]">Reliability</p>
+                  <p className="font-mono text-[11px] text-[color:var(--color-muted-text)]">Reliability</p>
                 </div>
               </li>
             ))}

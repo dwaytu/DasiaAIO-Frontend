@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useLayoutEffect, useState, ReactNode } from 'react';
 
 /**
  * SENTINEL Theme Provider
@@ -59,40 +59,30 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
   defaultTheme,
   storageKey = 'sentinel-theme',
 }) => {
-  const [theme, setThemeState] = useState<Theme>('dark');
-  const [isLoading, setIsLoading] = useState(true);
+  const [theme, setThemeState] = useState<Theme>(() => {
+    if (typeof window === 'undefined') {
+      return defaultTheme || 'dark';
+    }
 
-  /**
-   * Initialize theme on mount:
-   * 1. Check localStorage for saved preference
-   * 2. Fall back to system preference if no saved theme
-   * 3. Apply default theme if provided
-   */
-  useEffect(() => {
     try {
       const savedTheme = localStorage.getItem(storageKey) as Theme | null;
-      
-      if (savedTheme && (savedTheme === 'light' || savedTheme === 'dark')) {
-        setThemeState(savedTheme);
-      } else if (defaultTheme) {
-        setThemeState(defaultTheme);
-      } else {
-        setThemeState('dark');
+      if (savedTheme === 'light' || savedTheme === 'dark') {
+        return savedTheme;
       }
     } catch (error) {
       console.error('Failed to load theme from localStorage:', error);
-      setThemeState(defaultTheme || 'dark');
-    } finally {
-      setIsLoading(false);
     }
-  }, [defaultTheme, storageKey]);
+
+    return defaultTheme || getSystemTheme();
+  });
+  const [isLoading] = useState(false);
 
   /**
    * Apply theme to document root
    * This triggers CSS variable changes defined in index.css
    */
-  useEffect(() => {
-    if (isLoading) return;
+  useLayoutEffect(() => {
+    if (typeof window === 'undefined') return;
 
     const root = window.document.documentElement;
     
@@ -110,7 +100,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
         theme === 'dark' ? '#0b1220' : '#f8fafc'
       );
     }
-  }, [theme, isLoading]);
+  }, [theme]);
 
   /**
    * Listen for system theme changes
@@ -159,30 +149,6 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
     setTheme,
     isLoading,
   };
-
-  // Prevent flash of unstyled content (FOUC) on initial load
-  // Render children only after theme is determined
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="animate-pulse-subtle">
-          <svg
-            className="w-12 h-12 text-primary"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
-            />
-          </svg>
-        </div>
-      </div>
-    );
-  }
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 };

@@ -420,7 +420,7 @@ export default function AuditDashboard() {
                   anomalies.slice(0, 8).map((anomaly, index) => (
                     <li key={`${anomaly.type}-${index}`} className="rounded-md border border-border-subtle bg-background px-2 py-1">
                       <div className="flex items-center gap-2">
-                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${severityTone[anomaly.severity] || severityTone.medium}`}>
+                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase ${severityTone[anomaly.severity] || severityTone.medium}`}>
                           {anomaly.severity}
                         </span>
                         <span className="font-semibold text-text-primary">{anomaly.type.replace(/_/g, ' ')}</span>
@@ -451,8 +451,8 @@ export default function AuditDashboard() {
                       style={{ backgroundColor: `rgba(37, 99, 235, ${intensity.toFixed(2)})` }}
                       title={`${hour}:00 - ${count} events`}
                     >
-                      <div className="text-[10px] font-semibold text-white">{hour.toString().padStart(2, '0')}</div>
-                      <div className="text-[10px] text-white/90">{count}</div>
+                      <div className="text-[11px] font-semibold text-white">{hour.toString().padStart(2, '0')}</div>
+                      <div className="text-[11px] text-white/90">{count}</div>
                     </div>
                   )
                 })}

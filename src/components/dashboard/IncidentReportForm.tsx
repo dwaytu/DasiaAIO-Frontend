@@ -184,7 +184,7 @@ const IncidentReportForm: FC<IncidentReportFormProps> = ({ onSubmit, onCancel })
           aria-invalid={titleError ? 'true' : undefined}
           aria-describedby={titleError ? 'incident-title-error' : undefined}
           placeholder="Brief incident description"
-          className="w-full rounded border border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-3 py-2 font-mono text-xs text-[color:var(--color-text)] placeholder-[color:var(--color-muted-text)] focus:border-[color:var(--color-focus)] focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus)]"
+          className="w-full rounded border border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-3 py-2 font-mono text-xs text-[color:var(--color-text)] placeholder-[color:var(--color-muted-text)] focus:border-[color:var(--color-focus-ring)] focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)]"
         />
         {titleError && (
           <p id="incident-title-error" role="alert" className="font-mono text-xs text-red-400">
@@ -211,7 +211,7 @@ const IncidentReportForm: FC<IncidentReportFormProps> = ({ onSubmit, onCancel })
           aria-describedby={descError ? 'incident-description-error' : undefined}
           rows={3}
           placeholder="Detailed description of the incident"
-          className="w-full resize-y rounded border border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-3 py-2 font-mono text-xs text-[color:var(--color-text)] placeholder-[color:var(--color-muted-text)] focus:border-[color:var(--color-focus)] focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus)]"
+          className="w-full resize-y rounded border border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-3 py-2 font-mono text-xs text-[color:var(--color-text)] placeholder-[color:var(--color-muted-text)] focus:border-[color:var(--color-focus-ring)] focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)]"
         />
         {descError && (
           <p id="incident-description-error" role="alert" className="font-mono text-xs text-red-400">
@@ -238,7 +238,7 @@ const IncidentReportForm: FC<IncidentReportFormProps> = ({ onSubmit, onCancel })
           aria-invalid={locationError ? 'true' : undefined}
           aria-describedby={locationError ? 'incident-location-error' : undefined}
           placeholder="Site or zone where incident occurred"
-          className="w-full rounded border border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-3 py-2 font-mono text-xs text-[color:var(--color-text)] placeholder-[color:var(--color-muted-text)] focus:border-[color:var(--color-focus)] focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus)]"
+          className="w-full rounded border border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-3 py-2 font-mono text-xs text-[color:var(--color-text)] placeholder-[color:var(--color-muted-text)] focus:border-[color:var(--color-focus-ring)] focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)]"
         />
         {locationError && (
           <p id="incident-location-error" role="alert" className="font-mono text-xs text-red-400">
@@ -256,17 +256,17 @@ const IncidentReportForm: FC<IncidentReportFormProps> = ({ onSubmit, onCancel })
           Priority
         </label>
         <div className="flex items-center justify-between gap-2">
-          <p className="font-mono text-[10px] text-[color:var(--color-muted-text)]">
+          <p className="font-mono text-[11px] text-[color:var(--color-muted-text)]">
             {classifying ? 'AI classifying severity...' : aiSuggestedSeverity ? `AI suggested: ${aiSuggestedSeverity}` : 'AI suggestion available as you type'}
           </p>
           {aiSuggestedSeverity && (
-            <span className="rounded border border-[color:var(--color-border)] px-2 py-[2px] font-mono text-[10px] text-[color:var(--color-text)]">
+            <span className="rounded border border-[color:var(--color-border)] px-2 py-0.5 font-mono text-[11px] text-[color:var(--color-text)]">
               {aiSuggestedSeverity}
             </span>
           )}
         </div>
         {(aiRiskLevel || aiExplanation || aiSuggestedActions.length > 0) && (
-          <div className="rounded border border-[color:var(--color-border)]/70 bg-[color:var(--color-bg)]/30 px-2 py-2 font-mono text-[10px] text-[color:var(--color-muted-text)]">
+          <div className="rounded border border-[color:var(--color-border)]/70 bg-[color:var(--color-bg)]/30 px-2 py-2 font-mono text-[11px] text-[color:var(--color-muted-text)]">
             <p>Risk level: {aiRiskLevel || 'unknown'}</p>
             <p className="mt-1">Confidence: {Math.round(aiConfidence * 100)}%</p>
             <p className="mt-1">Explanation: {aiExplanation || 'No explanation returned.'}</p>
@@ -277,7 +277,7 @@ const IncidentReportForm: FC<IncidentReportFormProps> = ({ onSubmit, onCancel })
           id="incident-priority"
           value={priority}
           onChange={(e) => setPriority(e.target.value as Incident['priority'])}
-          className="w-full rounded border border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-3 py-2 font-mono text-xs text-[color:var(--color-text)] focus:border-[color:var(--color-focus)] focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus)]"
+          className="w-full rounded border border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-3 py-2 font-mono text-xs text-[color:var(--color-text)] focus:border-[color:var(--color-focus-ring)] focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)]"
         >
           {PRIORITY_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -314,7 +314,7 @@ const IncidentReportForm: FC<IncidentReportFormProps> = ({ onSubmit, onCancel })
           <button
             type="button"
             onClick={onCancel}
-            className="rounded border border-[color:var(--color-border)] px-4 py-1.5 font-mono text-xs text-[color:var(--color-muted-text)] hover:border-[color:var(--color-text)] hover:text-[color:var(--color-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)]"
+            className="rounded border border-[color:var(--color-border)] px-4 py-1.5 font-mono text-xs text-[color:var(--color-muted-text)] hover:border-[color:var(--color-text)] hover:text-[color:var(--color-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
           >
             Cancel
           </button>

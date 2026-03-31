@@ -358,10 +358,8 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
     setError('')
   }
 
-  const inputClass = "w-full px-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
-  const inputStyle = { background: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }
+  const inputClass = "w-full px-4 py-2.5 rounded-lg bg-surface border border-border text-text-primary focus:outline-none focus:ring-2 focus:ring-[color:var(--color-focus-ring)] transition-colors"
   const labelClass = "block text-sm font-semibold mb-2"
-  const labelStyle = { color: 'var(--text-secondary)' }
 
   const renderForm = () => {
     // Show forgot password form if in forgot password mode
@@ -371,7 +369,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
           {forgotPasswordMode === 'email' && (
             <>
               <div>
-                <label htmlFor="reset-email" className={labelClass} style={labelStyle}>Email Address</label>
+                <label htmlFor="reset-email" className={`${labelClass} text-text-secondary`}>Email Address</label>
                 <input
                   id="reset-email"
                   type="email"
@@ -380,17 +378,16 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
                   placeholder="Enter your email"
                   disabled={isLoading}
                   className={inputClass}
-                  style={inputStyle}
                 />
               </div>
 
               {error && (
-                <div className={`p-3 rounded-lg text-sm border`} style={error.includes('sent') ? { background: 'rgba(34,197,94,0.1)', color: '#4ADE80', borderColor: 'rgba(34,197,94,0.3)' } : { background: 'rgba(239,68,68,0.1)', color: '#FCA5A5', borderColor: 'rgba(239,68,68,0.3)' }}>
+                <div className={`p-3 rounded-lg text-sm border ${error.includes('sent') ? 'soc-auth-alert-success' : 'soc-auth-alert-error'}`}>
                   {error}
                 </div>
               )}
 
-              <button type="submit" disabled={isLoading} className="w-full text-white font-bold py-3 rounded-lg transition-all disabled:opacity-50" style={{ background: 'var(--accent)' }}>
+              <button type="submit" disabled={isLoading} className="soc-btn-primary w-full font-bold py-3 rounded-lg transition-all disabled:opacity-50">
                 {isLoading ? 'Sending...' : 'Send Reset Code'}
               </button>
             </>
@@ -399,7 +396,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
           {forgotPasswordMode === 'code' && (
             <>
               <div>
-                <label htmlFor="reset-code" className={labelClass} style={labelStyle}>Reset Code</label>
+                <label htmlFor="reset-code" className={`${labelClass} text-text-secondary`}>Reset Code</label>
                 <input
                   id="reset-code"
                   type="text"
@@ -409,18 +406,17 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
                   disabled={isLoading}
                   maxLength={8}
                   className={`${inputClass} text-center text-2xl tracking-widest`}
-                  style={inputStyle}
                 />
               </div>
-              <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Check your email for the 8-digit reset code</p>
+              <p className="text-xs text-text-secondary">Check your email for the 8-digit reset code</p>
 
               {error && (
-                <div className={`p-3 rounded-lg text-sm border`} style={error.includes('verified') ? { background: 'rgba(34,197,94,0.1)', color: '#4ADE80', borderColor: 'rgba(34,197,94,0.3)' } : { background: 'rgba(239,68,68,0.1)', color: '#FCA5A5', borderColor: 'rgba(239,68,68,0.3)' }}>
+                <div className={`p-3 rounded-lg text-sm border ${error.includes('verified') ? 'soc-auth-alert-success' : 'soc-auth-alert-error'}`}>
                   {error}
                 </div>
               )}
 
-              <button type="submit" disabled={isLoading} className="w-full text-white font-bold py-3 rounded-lg transition-all disabled:opacity-50" style={{ background: 'var(--accent)' }}>
+              <button type="submit" disabled={isLoading} className="soc-btn-primary w-full font-bold py-3 rounded-lg transition-all disabled:opacity-50">
                 {isLoading ? 'Verifying...' : 'Verify Code'}
               </button>
             </>
@@ -429,7 +425,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
           {forgotPasswordMode === 'newPassword' && (
             <>
               <div>
-                <label htmlFor="new-password" className={labelClass} style={labelStyle}>New Password</label>
+                <label htmlFor="new-password" className={`${labelClass} text-text-secondary`}>New Password</label>
                 <input
                   id="new-password"
                   type="password"
@@ -438,12 +434,11 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
                   placeholder="Enter new password"
                   disabled={isLoading}
                   className={inputClass}
-                  style={inputStyle}
                 />
               </div>
 
               <div>
-                <label htmlFor="confirm-password" className={labelClass} style={labelStyle}>Confirm Password</label>
+                <label htmlFor="confirm-password" className={`${labelClass} text-text-secondary`}>Confirm Password</label>
                 <input
                   id="confirm-password"
                   type="password"
@@ -452,17 +447,16 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
                   placeholder="Confirm password"
                   disabled={isLoading}
                   className={inputClass}
-                  style={inputStyle}
                 />
               </div>
 
               {error && (
-                <div className={`p-3 rounded-lg text-sm border`} style={error.includes('successful') ? { background: 'rgba(34,197,94,0.1)', color: '#4ADE80', borderColor: 'rgba(34,197,94,0.3)' } : { background: 'rgba(239,68,68,0.1)', color: '#FCA5A5', borderColor: 'rgba(239,68,68,0.3)' }}>
+                <div className={`p-3 rounded-lg text-sm border ${error.includes('successful') ? 'soc-auth-alert-success' : 'soc-auth-alert-error'}`}>
                   {error}
                 </div>
               )}
 
-              <button type="submit" disabled={isLoading} className="w-full text-white font-bold py-3 rounded-lg transition-all disabled:opacity-50" style={{ background: 'var(--accent)' }}>
+              <button type="submit" disabled={isLoading} className="soc-btn-primary w-full font-bold py-3 rounded-lg transition-all disabled:opacity-50">
                 {isLoading ? 'Resetting...' : 'Reset Password'}
               </button>
             </>
@@ -471,8 +465,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
           <div className="text-center">
             <button
               type="button"
-              className="font-semibold transition-colors disabled:opacity-40 text-sm"
-              style={{ color: '#60A5FA' }}
+              className="soc-link-button font-semibold transition-colors disabled:opacity-40 text-sm"
               onClick={handleCancelForgotPassword}
               disabled={isLoading}
             >
@@ -488,7 +481,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
       {requiresVerification ? (
         <>
           <div>
-            <label htmlFor="code" className={labelClass} style={labelStyle}>Confirmation Code</label>
+            <label htmlFor="code" className={`${labelClass} text-text-secondary`}>Confirmation Code</label>
             <input
               id="code"
               type="text"
@@ -498,25 +491,23 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
               disabled={isLoading}
               maxLength={6}
               className={`${inputClass} text-center text-2xl tracking-widest`}
-              style={inputStyle}
             />
           </div>
 
           {error && (
-            <div className={`p-3 rounded-lg text-sm border`} style={error.includes('verified') ? { background: 'rgba(34,197,94,0.1)', color: '#4ADE80', borderColor: 'rgba(34,197,94,0.3)' } : { background: 'rgba(239,68,68,0.1)', color: '#FCA5A5', borderColor: 'rgba(239,68,68,0.3)' }}>
+            <div className={`p-3 rounded-lg text-sm border ${error.includes('verified') ? 'soc-auth-alert-success' : 'soc-auth-alert-error'}`}>
               {error}
             </div>
           )}
 
-          <button type="submit" disabled={isLoading} className="w-full text-white font-bold py-3 rounded-lg transition-all disabled:opacity-50" style={{ background: 'var(--accent)' }}>
+          <button type="submit" disabled={isLoading} className="soc-btn-primary w-full font-bold py-3 rounded-lg transition-all disabled:opacity-50">
             {isLoading ? 'Verifying...' : 'Verify'}
           </button>
 
           <div className="flex gap-2">
             <button
               type="button"
-              className="flex-1 px-3 py-2 font-semibold rounded-lg transition-colors disabled:opacity-40 text-sm"
-              style={{ border: '1px solid rgba(59,130,246,0.4)', color: '#60A5FA', background: 'rgba(59,130,246,0.08)' }}
+              className="soc-btn-secondary flex-1 px-3 py-2 font-semibold rounded-lg transition-colors disabled:opacity-40 text-sm"
               onClick={async () => {
                 setIsLoading(true)
                 try {
@@ -543,8 +534,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
             </button>
             <button
               type="button"
-              className="flex-1 px-3 py-2 font-semibold rounded-lg transition-colors disabled:opacity-40 text-sm"
-              style={{ border: '1px solid var(--border-color)', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.04)' }}
+              className="soc-btn-secondary flex-1 px-3 py-2 font-semibold rounded-lg transition-colors disabled:opacity-40 text-sm"
               onClick={() => {
                 setRequiresVerification(false)
                 setVerificationCode('')
@@ -562,74 +552,74 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
       ) : isRegistering ? (
         <>
           <div>
-            <label htmlFor="username" className={labelClass} style={labelStyle}>Username</label>
-            <input id="username" type="text" value={username} onChange={(e: ChangeEvent<HTMLInputElement>) => setUsername(e.target.value)} placeholder="Enter your username" disabled={isLoading} className={inputClass} style={inputStyle} />
+            <label htmlFor="username" className={`${labelClass} text-text-secondary`}>Username</label>
+            <input id="username" type="text" value={username} onChange={(e: ChangeEvent<HTMLInputElement>) => setUsername(e.target.value)} placeholder="Enter your username" disabled={isLoading} className={inputClass} />
           </div>
 
           <div>
-            <label htmlFor="fullName" className={labelClass} style={labelStyle}>Full Name</label>
-            <input id="fullName" type="text" value={fullName} onChange={(e: ChangeEvent<HTMLInputElement>) => setFullName(e.target.value)} placeholder="Enter your full name" disabled={isLoading} className={inputClass} style={inputStyle} />
+            <label htmlFor="fullName" className={`${labelClass} text-text-secondary`}>Full Name</label>
+            <input id="fullName" type="text" value={fullName} onChange={(e: ChangeEvent<HTMLInputElement>) => setFullName(e.target.value)} placeholder="Enter your full name" disabled={isLoading} className={inputClass} />
           </div>
 
           <div>
-            <label htmlFor="phoneNumber" className={labelClass} style={labelStyle}>Phone Number</label>
-            <input id="phoneNumber" type="text" value={phoneNumber} onChange={(e: ChangeEvent<HTMLInputElement>) => setPhoneNumber(formatPhoneNumber(e.target.value))} placeholder="+63-###-###-####" disabled={isLoading} className={inputClass} style={inputStyle} />
+            <label htmlFor="phoneNumber" className={`${labelClass} text-text-secondary`}>Phone Number</label>
+            <input id="phoneNumber" type="text" value={phoneNumber} onChange={(e: ChangeEvent<HTMLInputElement>) => setPhoneNumber(formatPhoneNumber(e.target.value))} placeholder="+63-###-###-####" disabled={isLoading} className={inputClass} />
           </div>
 
           <>
             <div>
-              <label htmlFor="licenseNumber" className={labelClass} style={labelStyle}>License Number</label>
-              <input id="licenseNumber" type="text" value={licenseNumber} onChange={(e: ChangeEvent<HTMLInputElement>) => setLicenseNumber(e.target.value)} placeholder="Enter your license number" disabled={isLoading} className={inputClass} style={inputStyle} />
+              <label htmlFor="licenseNumber" className={`${labelClass} text-text-secondary`}>License Number</label>
+              <input id="licenseNumber" type="text" value={licenseNumber} onChange={(e: ChangeEvent<HTMLInputElement>) => setLicenseNumber(e.target.value)} placeholder="Enter your license number" disabled={isLoading} className={inputClass} />
             </div>
 
             <div>
-              <label htmlFor="licenseIssuedDate" className={labelClass} style={labelStyle}>License Issued Date</label>
-              <input id="licenseIssuedDate" type="date" value={licenseIssuedDate} onChange={(e: ChangeEvent<HTMLInputElement>) => setLicenseIssuedDate(e.target.value)} disabled={isLoading} className={inputClass} style={inputStyle} />
+              <label htmlFor="licenseIssuedDate" className={`${labelClass} text-text-secondary`}>License Issued Date</label>
+              <input id="licenseIssuedDate" type="date" value={licenseIssuedDate} onChange={(e: ChangeEvent<HTMLInputElement>) => setLicenseIssuedDate(e.target.value)} disabled={isLoading} className={inputClass} />
             </div>
 
             <div>
-              <label htmlFor="licenseExpiryDate" className={labelClass} style={labelStyle}>License Expiry Date</label>
-              <input id="licenseExpiryDate" type="date" value={licenseExpiryDate} onChange={(e: ChangeEvent<HTMLInputElement>) => setLicenseExpiryDate(e.target.value)} disabled={isLoading} className={inputClass} style={inputStyle} />
+              <label htmlFor="licenseExpiryDate" className={`${labelClass} text-text-secondary`}>License Expiry Date</label>
+              <input id="licenseExpiryDate" type="date" value={licenseExpiryDate} onChange={(e: ChangeEvent<HTMLInputElement>) => setLicenseExpiryDate(e.target.value)} disabled={isLoading} className={inputClass} />
             </div>
 
             <div>
-              <label htmlFor="address" className={labelClass} style={labelStyle}>Full Address</label>
-              <textarea id="address" value={address} onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setAddress(e.target.value)} placeholder="Enter your complete address" disabled={isLoading} rows={2} className={inputClass} style={inputStyle} />
+              <label htmlFor="address" className={`${labelClass} text-text-secondary`}>Full Address</label>
+              <textarea id="address" value={address} onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setAddress(e.target.value)} placeholder="Enter your complete address" disabled={isLoading} rows={2} className={inputClass} />
             </div>
           </>
 
           <div>
-            <label htmlFor="email" className={labelClass} style={labelStyle}>Email</label>
-            <input id="email" type="email" value={email} onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)} placeholder="Enter your email" disabled={isLoading} className={inputClass} style={inputStyle} />
+            <label htmlFor="email" className={`${labelClass} text-text-secondary`}>Email</label>
+            <input id="email" type="email" value={email} onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)} placeholder="Enter your email" disabled={isLoading} className={inputClass} />
           </div>
 
           <div>
-            <label htmlFor="password" className={labelClass} style={labelStyle}>Password</label>
-            <input id="password" type="password" value={password} onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)} placeholder="Enter your password" disabled={isLoading} className={inputClass} style={inputStyle} />
+            <label htmlFor="password" className={`${labelClass} text-text-secondary`}>Password</label>
+            <input id="password" type="password" value={password} onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)} placeholder="Enter your password" disabled={isLoading} className={inputClass} />
           </div>
 
           <div>
-            <label htmlFor="role" className={labelClass} style={labelStyle}>Account Type</label>
-            <select id="role" value={role} onChange={(e: ChangeEvent<HTMLSelectElement>) => setRole(e.target.value)} disabled={isLoading} className={inputClass} style={{ ...inputStyle, cursor: 'pointer' }}>
-              <option value="guard" style={{ background: '#1C1F35' }}>Guard</option>
+            <label htmlFor="role" className={`${labelClass} text-text-secondary`}>Account Type</label>
+            <select id="role" value={role} onChange={(e: ChangeEvent<HTMLSelectElement>) => setRole(e.target.value)} disabled={isLoading} className={`${inputClass} cursor-pointer`}>
+              <option value="guard">Guard</option>
             </select>
-            <p className="text-xs mt-2" style={{ color: 'var(--text-secondary)' }}>
+            <p className="text-xs mt-2 text-text-secondary">
               Admin and supervisor accounts are created internally.
             </p>
           </div>
 
           {error && (
-            <div className="p-3 rounded-lg text-sm border" style={error.includes('successful') ? { background: 'rgba(34,197,94,0.1)', color: '#4ADE80', borderColor: 'rgba(34,197,94,0.3)' } : { background: 'rgba(239,68,68,0.1)', color: '#FCA5A5', borderColor: 'rgba(239,68,68,0.3)' }}>
+            <div className={`p-3 rounded-lg text-sm border ${error.includes('successful') ? 'soc-auth-alert-success' : 'soc-auth-alert-error'}`}>
               {error}
             </div>
           )}
 
-          <button type="submit" disabled={isLoading} className="w-full text-white font-bold py-3 rounded-lg transition-all disabled:opacity-50" style={{ background: 'var(--accent)' }}>
+          <button type="submit" disabled={isLoading} className="soc-btn-primary w-full font-bold py-3 rounded-lg transition-all disabled:opacity-50">
             {isLoading ? 'Processing...' : 'Create Account'}
           </button>
 
           <div className="text-center">
-            <button type="button" className="font-semibold transition-colors disabled:opacity-40 text-sm" style={{ color: '#60A5FA' }} onClick={() => { setIsRegistering(false); setError(''); setPassword(''); setIdentifier('') }} disabled={isLoading}>
+            <button type="button" className="soc-link-button font-semibold transition-colors disabled:opacity-40 text-sm" onClick={() => { setIsRegistering(false); setError(''); setPassword(''); setIdentifier('') }} disabled={isLoading}>
               Already have an account? Login
             </button>
           </div>
@@ -637,17 +627,17 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
       ) : (
         <>
           <div>
-            <label htmlFor="identifier" className={labelClass} style={labelStyle}>Email, Username, or Phone Number</label>
-            <input id="identifier" type="text" value={identifier} onChange={(e: ChangeEvent<HTMLInputElement>) => setIdentifier(e.target.value)} placeholder="Enter your email, username, or phone number" disabled={isLoading} className={inputClass} style={inputStyle} />
+            <label htmlFor="identifier" className={`${labelClass} text-text-secondary`}>Email, Username, or Phone Number</label>
+            <input id="identifier" type="text" value={identifier} onChange={(e: ChangeEvent<HTMLInputElement>) => setIdentifier(e.target.value)} placeholder="Enter your email, username, or phone number" disabled={isLoading} className={inputClass} />
           </div>
 
           <div>
-            <label htmlFor="password" className={labelClass} style={labelStyle}>Password</label>
-            <input id="password" type="password" value={password} onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)} placeholder="Enter your password" disabled={isLoading} className={inputClass} style={inputStyle} />
+            <label htmlFor="password" className={`${labelClass} text-text-secondary`}>Password</label>
+            <input id="password" type="password" value={password} onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)} placeholder="Enter your password" disabled={isLoading} className={inputClass} />
           </div>
 
           {error && (
-            <div className="p-3 rounded-lg text-sm border" style={{ background: 'rgba(239,68,68,0.1)', color: '#FCA5A5', borderColor: 'rgba(239,68,68,0.3)' }}>
+            <div className="soc-auth-alert-error p-3 rounded-lg text-sm border">
               {error}
             </div>
           )}
@@ -657,7 +647,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
           </button>
 
           <div className="text-center">
-            <button type="button" className="font-semibold transition-colors disabled:opacity-40 text-sm" style={{ color: '#60A5FA' }} onClick={() => { setIsRegistering(true); setError(''); setPassword(''); setIdentifier('') }} disabled={isLoading}>
+            <button type="button" className="soc-link-button font-semibold transition-colors disabled:opacity-40 text-sm" onClick={() => { setIsRegistering(true); setError(''); setPassword(''); setIdentifier('') }} disabled={isLoading}>
               Don't have an account? Register
             </button>
           </div>
@@ -665,8 +655,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
           <div className="text-center">
             <button
               type="button"
-              className="font-semibold transition-colors disabled:opacity-40 text-sm"
-              style={{ color: '#FF9966' }}
+              className="font-semibold transition-colors disabled:opacity-40 text-sm text-warning"
               onClick={() => {
                 setForgotPasswordMode('email')
                 setError('')
@@ -730,7 +719,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
             </section>
           </main>
 
-          <aside className="hidden bg-surface-elevated/65 p-10 shadow-[-24px_0_44px_-34px_rgba(15,23,42,0.45)] backdrop-blur-sm lg:flex lg:flex-col lg:justify-between">
+          <aside className="hidden bg-surface-elevated/65 p-10 shadow-modal backdrop-blur-sm lg:flex lg:flex-col lg:justify-between">
             <div>
               <SentinelLogo size={42} variant="FullLogo" animated />
               <p className="mt-5 max-w-md text-sm text-text-secondary">

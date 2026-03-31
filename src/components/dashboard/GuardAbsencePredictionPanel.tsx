@@ -52,9 +52,9 @@ const GuardAbsencePredictionPanel: FC<GuardAbsencePredictionPanelProps> = ({
       <div className="flex items-center justify-between border-b border-[color:var(--color-border)] px-4 py-3">
         <div>
           <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--color-text)]">Guard Absence Prediction</p>
-          <p className="font-mono text-[10px] text-[color:var(--color-muted-text)]">Deterministic risk scoring for upcoming shifts</p>
+          <p className="font-mono text-[11px] text-[color:var(--color-muted-text)]">Deterministic risk scoring for upcoming shifts</p>
         </div>
-        {lastUpdated && <span className="font-mono text-[10px] text-[color:var(--color-muted-text)]">{lastUpdated}</span>}
+        {lastUpdated && <span className="font-mono text-[11px] text-[color:var(--color-muted-text)]">{lastUpdated}</span>}
       </div>
 
       <div className="space-y-2 px-4 py-3" role="region" aria-live="polite">
@@ -83,20 +83,20 @@ const GuardAbsencePredictionPanel: FC<GuardAbsencePredictionPanelProps> = ({
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
                       <p className="truncate font-mono text-sm text-[color:var(--color-text)]">{item.guardName}</p>
-                      <p className="font-mono text-[10px] text-[color:var(--color-muted-text)]">
+                      <p className="font-mono text-[11px] text-[color:var(--color-muted-text)]">
                         Absences {item.previousAbsences} • Late {item.lateCheckins} • Leave {item.recentLeaveRequests}
                       </p>
-                      <p className="mt-1 font-mono text-[10px] text-[color:var(--color-muted-text)]">{getRiskReason(item)}</p>
+                      <p className="mt-1 font-mono text-[11px] text-[color:var(--color-muted-text)]">{getRiskReason(item)}</p>
                     </div>
                     <div className="text-right">
                       <p className="font-mono text-base font-bold text-[color:var(--color-text)]">{item.riskScore.toFixed(2)}</p>
-                      <span className={`inline-flex rounded-full border px-2 py-[2px] font-mono text-[10px] font-semibold ${pillClass}`}>
+                      <span className={`inline-flex rounded-full border px-2 py-0.5 font-mono text-[11px] font-semibold ${pillClass}`}>
                         {item.riskLevel}
                       </span>
                     </div>
                   </div>
-                  <p className="mt-2 font-mono text-[10px] text-[color:var(--color-muted-text)]">Suggested action: {getSuggestedAction(item)}</p>
-                  <p className="mt-1 font-mono text-[10px] text-[color:var(--color-muted-text)]">Confidence: {(getConfidence(item) * 100).toFixed(0)}%</p>
+                  <p className="mt-2 font-mono text-[11px] text-[color:var(--color-muted-text)]">Suggested action: {getSuggestedAction(item)}</p>
+                  <p className="mt-1 font-mono text-[11px] text-[color:var(--color-muted-text)]">Confidence: {(getConfidence(item) * 100).toFixed(0)}%</p>
                 </li>
               )
             })}

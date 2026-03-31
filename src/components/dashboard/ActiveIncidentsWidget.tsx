@@ -134,14 +134,14 @@ const ActiveIncidentsWidget: FC<ActiveIncidentsWidgetProps> = ({
                     </p>
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1">
-                    <span className={`rounded px-1.5 py-0.5 font-mono text-[10px] font-bold ${cfg.badgeClass}`}>
+                    <span className={`rounded px-1.5 py-0.5 font-mono text-[11px] font-bold ${cfg.badgeClass}`}>
                       {cfg.label}
                     </span>
-                    <span className="inline-flex items-center gap-1 font-mono text-[10px] text-[color:var(--color-muted-text)]">
+                    <span className="inline-flex items-center gap-1 font-mono text-[11px] text-[color:var(--color-muted-text)]">
                       <span className={`h-1.5 w-1.5 rounded-full ${SEVERITY_DOT_CLASS[incident.priority]}`} aria-hidden="true" />
                       Severity
                     </span>
-                    <span className="font-mono text-[10px] text-[color:var(--color-muted-text)]">
+                    <span className="font-mono text-[11px] text-[color:var(--color-muted-text)]">
                       {STATUS_LABEL[incident.status]} · {timeLabel}
                     </span>
                   </div>

@@ -227,17 +227,14 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ userId }) => {
       <button
         type="button"
         onClick={togglePanel}
-        className="relative min-h-11 min-w-11 rounded-lg p-2 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)]"
-        style={{ color: 'var(--text-secondary)' }}
-        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.06)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)'; }}
-        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = ''; (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'; }}
+        className="soc-notification-trigger relative min-h-11 min-w-11 rounded-lg p-2 text-text-secondary transition-colors hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
         aria-label={unreadCount > 0 ? `Open notifications (${unreadCount} unread)` : 'Open notifications'}
         aria-expanded={isOpen}
         aria-controls="notification-panel"
       >
         <Bell className="w-6 h-6" />
         {unreadCount > 0 && (
-          <span className="absolute top-0 right-0 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-500 rounded-full">
+          <span className="absolute top-0 right-0 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 rounded-full bg-danger">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
@@ -245,19 +242,16 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ userId }) => {
 
       {/* Notification Panel */}
       {isOpen && (
-        <div id="notification-panel" className="absolute right-0 mt-2 z-50 flex max-h-[min(600px,calc(100vh-6rem))] w-80 max-w-[calc(100vw-1rem)] flex-col rounded-xl shadow-2xl sm:w-96" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-color)' }} role="dialog" aria-label="Notifications panel">
+        <div id="notification-panel" className="soc-dropdown-surface absolute right-0 mt-2 z-50 flex max-h-[min(600px,calc(100vh-6rem))] w-80 max-w-[calc(100vw-1rem)] flex-col rounded-xl sm:w-96" role="dialog" aria-label="Notifications panel">
           {/* Header */}
-          <div className="flex items-center justify-between p-4" style={{ borderBottom: '1px solid var(--border-color)' }}>
-            <h3 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>Notifications</h3>
+          <div className="flex items-center justify-between p-4 border-b border-border">
+            <h3 className="text-base font-semibold text-text-primary">Notifications</h3>
             <div className="flex items-center gap-2">
               {unreadCount > 0 && (
                 <button
                   type="button"
                   onClick={markAllAsRead}
-                  className="flex min-h-11 items-center gap-1 rounded px-2 py-1 text-xs transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)]"
-                  style={{ color: '#60A5FA' }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(59,130,246,0.1)'; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = ''; }}
+                  className="soc-link-button flex min-h-11 items-center gap-1 rounded px-2 py-1 text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
                   aria-label="Mark all notifications as read"
                 >
                   <CheckCheck className="w-4 h-4" />
@@ -267,10 +261,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ userId }) => {
               <button
                 type="button"
                 onClick={() => setIsOpen(false)}
-                className="min-h-11 min-w-11 rounded p-1 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)]"
-                style={{ color: 'var(--text-secondary)' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.06)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = ''; (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'; }}
+                className="soc-notification-trigger min-h-11 min-w-11 rounded p-1 text-text-secondary hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
                 aria-label="Close notifications panel"
               >
                 <X className="w-5 h-5" />
@@ -285,8 +276,8 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ userId }) => {
           {/* Notifications List */}
           <div className="overflow-y-auto flex-1">
             {notifications.length === 0 ? (
-              <div className="p-8 text-center" style={{ color: 'var(--text-secondary)' }}>
-                <Bell className="w-12 h-12 mx-auto mb-3" style={{ color: '#2A2D45' }} />
+              <div className="p-8 text-center text-text-secondary">
+                <Bell className="w-12 h-12 mx-auto mb-3 text-text-tertiary" />
                 <p className="text-sm">No notifications</p>
               </div>
             ) : (
@@ -294,25 +285,19 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ userId }) => {
                 {notifications.map((notification, idx) => (
                   <div
                     key={notification.id}
-                    className="p-4 transition-colors cursor-default"
-                    style={{
-                      background: !notification.read ? 'rgba(59,130,246,0.07)' : '',
-                      borderBottom: idx < notifications.length - 1 ? '1px solid var(--border-subtle)' : 'none',
-                    }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = !notification.read ? 'rgba(59,130,246,0.12)' : 'rgba(255,255,255,0.03)'; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = !notification.read ? 'rgba(59,130,246,0.07)' : ''; }}
+                    className={`p-4 transition-colors cursor-default ${notification.read ? 'soc-notification-read' : 'soc-notification-unread'} ${idx < notifications.length - 1 ? 'border-b border-border-subtle' : ''}`}
                   >
                     <div className="flex justify-between items-start mb-1">
-                      <h4 className="font-semibold text-sm flex-1" style={{ color: 'var(--text-primary)' }}>
+                      <h4 className="font-semibold text-sm flex-1 text-text-primary">
                         {notification.title}
                       </h4>
                       {!notification.read && (
-                        <span className="w-2 h-2 rounded-full ml-2 mt-1 flex-shrink-0" style={{ background: '#3B82F6' }}></span>
+                        <span className="w-2 h-2 rounded-full ml-2 mt-1 flex-shrink-0 bg-info"></span>
                       )}
                     </div>
-                    <p className="text-xs mb-2" style={{ color: 'var(--text-secondary)' }}>{notification.message}</p>
+                    <p className="text-xs mb-2 text-text-secondary">{notification.message}</p>
                     <div className="flex items-center justify-between">
-                      <span className="text-xs" style={{ color: '#64748B' }}>
+                      <span className="text-xs text-text-tertiary">
                         {formatTime(notification.createdAt)}
                       </span>
                       <div className="flex gap-2">
@@ -321,8 +306,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ userId }) => {
                             type="button"
                             onClick={() => acceptReplacement(notification.id, notification.relatedShiftId!)}
                             disabled={loading}
-                            className="min-h-11 rounded px-2 py-1 text-xs font-medium transition-colors disabled:opacity-50"
-                            style={{ background: 'rgba(34,197,94,0.2)', color: '#4ADE80', border: '1px solid rgba(34,197,94,0.3)' }}
+                            className="min-h-11 rounded px-2 py-1 text-xs font-medium transition-colors disabled:opacity-50 border border-success-border bg-success-bg text-success-text"
                             aria-label={`Accept replacement request: ${notification.title}`}
                           >
                             Accept
@@ -332,8 +316,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ userId }) => {
                           <button
                             type="button"
                             onClick={() => markAsRead(notification.id)}
-                            className="min-h-11 min-w-11 rounded px-2 py-1 text-xs transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)]"
-                            style={{ background: 'rgba(59,130,246,0.2)', color: '#60A5FA', border: '1px solid rgba(59,130,246,0.3)' }}
+                            className="min-h-11 min-w-11 rounded px-2 py-1 text-xs transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)] border border-info-border bg-info-bg text-info-text"
                             aria-label={`Mark notification as read: ${notification.title}`}
                           >
                             <Check className="w-3 h-3" />
@@ -342,8 +325,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ userId }) => {
                         <button
                           type="button"
                           onClick={() => deleteNotification(notification.id)}
-                          className="min-h-11 min-w-11 rounded px-2 py-1 text-xs transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)]"
-                          style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)' }}
+                          className="soc-btn-secondary min-h-11 min-w-11 rounded px-2 py-1 text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
                           aria-label={`Delete notification: ${notification.title}`}
                         >
                           <X className="w-3 h-3" />

@@ -27,7 +27,7 @@ const Header: FC<HeaderProps> = ({ title, badgeLabel, onLogout, rightSlot, onMen
         window.setTimeout(() => setRefreshing(false), 700)
         window.location.reload()
       }}
-      className="inline-flex min-h-11 items-center gap-2 px-3 py-2 text-sm font-semibold text-text-primary bg-surface border border-border rounded-lg transition-colors hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)]"
+      className="inline-flex min-h-11 items-center gap-2 px-3 py-2 text-sm font-semibold text-text-primary bg-surface border border-border rounded-lg transition-colors hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
       aria-label="Refresh dashboard"
       title="Refresh dashboard"
     >
@@ -47,7 +47,7 @@ const Header: FC<HeaderProps> = ({ title, badgeLabel, onLogout, rightSlot, onMen
         <button
           type="button"
           onClick={onMenuClick}
-          className="min-h-11 min-w-11 rounded-lg p-2 text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)] lg:hidden"
+          className="min-h-11 min-w-11 rounded-lg p-2 text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)] lg:hidden"
           aria-label="Toggle menu"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

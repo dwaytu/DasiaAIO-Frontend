@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { API_BASE_URL } from '../config'
 import { fetchJsonOrThrow } from '../utils/api'
+import { normalizeRole } from '../types/auth'
 
 interface ClientSite {
   id: string
@@ -45,7 +46,38 @@ export function useReplacementSuggestions(): UseReplacementSuggestionsState {
   const refresh = useCallback(async () => {
     try {
       setLoading(true)
+
+      const rawUser = localStorage.getItem('user')
+      if (!rawUser) {
+        setSuggestions([])
+        setError('')
+        return
+      }
+
+      let role = ''
+      try {
+        const parsedUser = JSON.parse(rawUser)
+        role = normalizeRole(parsedUser?.role)
+      } catch {
+        setSuggestions([])
+        setError('')
+        return
+      }
+
+      const hasTrackingAccess = role === 'supervisor' || role === 'guard'
+      if (!hasTrackingAccess) {
+        setSuggestions([])
+        setError('')
+        return
+      }
+
       const token = localStorage.getItem('token')
+      if (!token) {
+        setSuggestions([])
+        setError('')
+        return
+      }
+
       const headers = { Authorization: `Bearer ${token}` }
 
       let resolvedPostId = postId

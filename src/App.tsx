@@ -629,6 +629,13 @@ function App() {
   useEffect(() => {
     if (!isLoggedIn || !user || !hasAcceptedToa || !hasLocationConsent) return
 
+    const role = normalizeRole(user.role)
+    const canSendTrackingHeartbeat = role === 'supervisor' || role === 'guard'
+    if (!canSendTrackingHeartbeat) {
+      setGeoNotice('Location heartbeat is enabled only for supervisor and guard roles.')
+      return
+    }
+
     let lastSent = 0
     let disposed = false
     const platform = detectRuntimePlatform()

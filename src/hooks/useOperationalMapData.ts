@@ -150,6 +150,7 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
   const [error, setError] = useState<string>('')
   const [lastUpdated, setLastUpdated] = useState<string>('')
   const [isElevatedUser, setIsElevatedUser] = useState<boolean>(false)
+  const [hasTrackingAccess, setHasTrackingAccess] = useState<boolean>(false)
   const wsRef = useRef<WebSocket | null>(null)
   const wsReconnectTimerRef = useRef<number | null>(null)
   const wsReconnectAttemptsRef = useRef<number>(0)
@@ -159,15 +160,18 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
     const storedUser = localStorage.getItem('user')
     if (!storedUser) {
       setIsElevatedUser(false)
+      setHasTrackingAccess(false)
       return
     }
 
     try {
       const user = JSON.parse(storedUser)
       const role = normalizeRole(user?.role)
-      setIsElevatedUser(role === 'superadmin' || role === 'admin' || role === 'supervisor')
+      setIsElevatedUser(role === 'supervisor')
+      setHasTrackingAccess(role === 'supervisor' || role === 'guard')
     } catch {
       setIsElevatedUser(false)
+      setHasTrackingAccess(false)
     }
   }, [])
 
@@ -179,6 +183,15 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
   }, [])
 
   const load = useCallback(async () => {
+    if (!hasTrackingAccess) {
+      setClientSites([])
+      setTrackingPoints([])
+      setGeofenceAlerts([])
+      setError('')
+      setLoading(false)
+      return
+    }
+
     const token = getAuthToken().trim()
     if (!token) {
       setLoading(false)
@@ -200,9 +213,11 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
     } finally {
       setLoading(false)
     }
-  }, [applySnapshot])
+  }, [applySnapshot, hasTrackingAccess])
 
   const createClientSite = useCallback(async (input: ClientSiteInput) => {
+    if (!hasTrackingAccess) return
+
     await fetchJsonOrThrow<any>(
       `${API_BASE_URL}/api/tracking/client-sites`,
       {
@@ -213,9 +228,11 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
       'Failed to create client site',
     )
     await load()
-  }, [load])
+  }, [hasTrackingAccess, load])
 
   const updateClientSite = useCallback(async (siteId: string, input: ClientSiteInput) => {
+    if (!hasTrackingAccess) return
+
     await fetchJsonOrThrow<any>(
       `${API_BASE_URL}/api/tracking/client-sites/${siteId}`,
       {
@@ -226,9 +243,11 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
       'Failed to update client site',
     )
     await load()
-  }, [load])
+  }, [hasTrackingAccess, load])
 
   const deleteClientSite = useCallback(async (siteId: string) => {
+    if (!hasTrackingAccess) return
+
     await fetchJsonOrThrow<any>(
       `${API_BASE_URL}/api/tracking/client-sites/${siteId}`,
       {
@@ -238,9 +257,11 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
       'Failed to delete client site',
     )
     await load()
-  }, [load])
+  }, [hasTrackingAccess, load])
 
   const sendGuardHeartbeat = useCallback(async (input: GuardHeartbeatInput) => {
+    if (!hasTrackingAccess) return
+
     await fetchJsonOrThrow<any>(
       `${API_BASE_URL}/api/tracking/heartbeat`,
       {
@@ -260,9 +281,11 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
       },
       'Failed to send guard heartbeat',
     )
-  }, [])
+  }, [hasTrackingAccess])
 
   const fetchGuardHistory = useCallback(async (guardId: string, limit = 600) => {
+    if (!hasTrackingAccess) return []
+
     const data = await fetchJsonOrThrow<GuardHistoryResponse>(
       `${API_BASE_URL}/api/tracking/guard-history/${encodeURIComponent(guardId)}?limit=${Math.max(20, Math.min(limit, 1500))}`,
       { headers: getAuthHeaders() },
@@ -270,9 +293,11 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
     )
 
     return Array.isArray(data.points) ? data.points : []
-  }, [])
+  }, [hasTrackingAccess])
 
   const fetchGuardPath = useCallback(async (guardId: string, limit = 1000) => {
+    if (!hasTrackingAccess) return []
+
     const data = await fetchJsonOrThrow<GuardPathResponse>(
       `${API_BASE_URL}/api/tracking/guard-path/${encodeURIComponent(guardId)}?limit=${Math.max(30, Math.min(limit, 2000))}`,
       { headers: getAuthHeaders() },
@@ -280,9 +305,11 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
     )
 
     return Array.isArray(data.coordinates) ? data.coordinates : []
-  }, [])
+  }, [hasTrackingAccess])
 
   const fetchActiveGuards = useCallback(async (windowMinutes = 15) => {
+    if (!hasTrackingAccess) return []
+
     const data = await fetchJsonOrThrow<ActiveGuardsResponse>(
       `${API_BASE_URL}/api/tracking/active-guards?windowMinutes=${Math.max(3, Math.min(windowMinutes, 120))}`,
       { headers: getAuthHeaders() },
@@ -290,7 +317,7 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
     )
 
     return Array.isArray(data.guards) ? data.guards : []
-  }, [])
+  }, [hasTrackingAccess])
 
   useEffect(() => {
     void load()
@@ -320,7 +347,7 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
     let disposed = false
 
     const token = getAuthToken().trim()
-    if (!token || !enableTrackingWs) {
+    if (!token || !enableTrackingWs || !hasTrackingAccess) {
       setWsConnectionState('disabled')
       return () => {
         disposed = true
@@ -438,7 +465,7 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
       closeSocket()
       setWsConnectionState('disabled')
     }
-  }, [applySnapshot, enableTrackingWs, load])
+  }, [applySnapshot, enableTrackingWs, hasTrackingAccess, load])
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user')

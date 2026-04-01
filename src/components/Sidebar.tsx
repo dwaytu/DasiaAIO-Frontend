@@ -98,7 +98,7 @@ const Sidebar: FC<SidebarProps> = ({ items, activeView, onNavigate, onLogout, on
       {/* Mobile overlay */}
       {isOpen && onClose && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 z-[44] bg-black/50 transition-opacity lg:hidden"
           onClick={onClose}
           aria-hidden="true"
         />
@@ -106,22 +106,22 @@ const Sidebar: FC<SidebarProps> = ({ items, activeView, onNavigate, onLogout, on
       
       {/* Sidebar */}
       <aside className={`
-        fixed inset-y-0 left-0 z-50
+        fixed inset-y-0 left-0 z-[48]
         w-72 flex flex-col overflow-y-auto shadow-2xl soc-sidebar-shell
-        transform transition-transform duration-300 ease-in-out
+        transform transition-transform duration-200 ease-out
         lg:transform-none
         ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `} ref={asideRef}>
         {/* Top accent line */}
         <div className="h-1 w-full soc-sidebar-accent" />
 
-        <div className="flex flex-col flex-1 p-5 md:p-6 overflow-hidden">
+        <div className="flex flex-1 flex-col overflow-hidden p-4 md:p-6">
           {/* Close button for mobile */}
           {onClose && (
             <button
               type="button"
               onClick={onClose}
-              className="lg:hidden absolute top-4 right-4 min-h-11 min-w-11 rounded-lg p-2 text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
+              className="absolute right-3 top-3 min-h-11 min-w-11 rounded-lg p-2 text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)] lg:hidden"
               aria-label="Close menu"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -130,7 +130,7 @@ const Sidebar: FC<SidebarProps> = ({ items, activeView, onNavigate, onLogout, on
             </button>
           )}
           
-          <div className="mb-5 flex-shrink-0 border-b border-border-subtle pb-4">
+          <div className="mb-4 flex-shrink-0 border-b border-border-subtle pb-4">
             <SidebarBrand
               onClick={onLogoClick}
               compact={false}
@@ -138,7 +138,7 @@ const Sidebar: FC<SidebarProps> = ({ items, activeView, onNavigate, onLogout, on
             />
           </div>
 
-          <nav className="flex-1 flex flex-col overflow-y-auto min-h-0" ref={navRef}>
+          <nav className="flex min-h-0 flex-1 flex-col overflow-y-auto" ref={navRef}>
             {(() => {
               const grouped: Record<string, SidebarItem[]> = {}
               items.forEach(item => {
@@ -149,17 +149,17 @@ const Sidebar: FC<SidebarProps> = ({ items, activeView, onNavigate, onLogout, on
               const groupOrder = ['MAIN MENU', 'OPERATIONS', 'RESOURCES', '']
               const visibleGroups = groupOrder.filter(g => grouped[g]?.length)
               return visibleGroups.map((groupName, index) => (
-                <div key={groupName || 'other'} className="mb-4">
+                <div key={groupName || 'other'} className="mb-3">
                   {groupName && (
                     <p className="soc-sidebar-heading px-3 pb-2 pt-1 text-[11px] font-bold uppercase tracking-[0.2em]">
                       {groupName}
                     </p>
                   )}
-                  <div className="flex flex-col gap-0.5">
+                  <div className="flex flex-col gap-1">
                     {grouped[groupName].map(({ view, label }) => (
                       <button
                         key={view}
-                        className={`soc-sidebar-nav-item px-3 py-3 text-left text-sm font-semibold uppercase tracking-wide cursor-pointer select-none ${
+                        className={`soc-sidebar-nav-item cursor-pointer select-none px-3 py-2.5 text-left text-sm font-semibold uppercase tracking-wide ${
                           view === activeView ? 'soc-sidebar-nav-item-active' : ''
                         }`}
                         onClick={() => handleNavigate(view)}
@@ -175,7 +175,7 @@ const Sidebar: FC<SidebarProps> = ({ items, activeView, onNavigate, onLogout, on
                     ))}
                   </div>
                   {index < visibleGroups.length - 1 && (
-                    <div className="mt-3 border-t border-border-subtle" aria-hidden="true" />
+                    <div className="mt-2 border-t border-border-subtle" aria-hidden="true" />
                   )}
                 </div>
               ))
@@ -185,7 +185,7 @@ const Sidebar: FC<SidebarProps> = ({ items, activeView, onNavigate, onLogout, on
           <button 
             type="button"
             onClick={onLogout} 
-            className="soc-sidebar-logout mt-4 flex min-h-11 flex-shrink-0 cursor-pointer items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold uppercase tracking-wide"
+            className="soc-sidebar-logout mt-3 flex min-h-11 flex-shrink-0 cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold uppercase tracking-wide"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />

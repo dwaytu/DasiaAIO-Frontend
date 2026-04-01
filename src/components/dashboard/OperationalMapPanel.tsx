@@ -392,7 +392,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
   }
 
   return (
-    <section className="command-panel p-4 md:p-5" aria-label="Operational map">
+    <section className="command-panel p-4 md:p-6" aria-label="Operational map">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3 border-b border-border-subtle pb-3">
         <div>
           <h3 className="text-base font-bold uppercase tracking-wide text-text-primary">Operational Map</h3>
@@ -417,7 +417,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
         </div>
       </div>
 
-      <div className="relative h-72 overflow-hidden rounded-xl border border-border-elevated bg-surface">
+      <div className="relative isolate h-72 overflow-hidden rounded-xl border border-border-elevated bg-surface">
         <MapContainer
           center={mapCenter}
           zoom={12}
@@ -559,7 +559,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
         </MapContainer>
 
         {loading ? (
-          <div className="absolute inset-0 grid place-items-center bg-black/25 text-sm font-semibold text-white">Loading map telemetry...</div>
+          <div className="pointer-events-none absolute inset-0 grid place-items-center bg-black/25 text-sm font-semibold text-white backdrop-blur-[1px]">Loading map telemetry...</div>
         ) : null}
       </div>
 
@@ -660,7 +660,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
         <span className="inline-flex items-center gap-1"><span className="status-light" aria-hidden="true" style={{ backgroundColor: '#7c3aed' }} /> Clustered units</span>
         <span className="inline-flex items-center gap-1"><span className="status-light status-light-warning" aria-hidden="true" /> Client Site Radius</span>
         <span className="inline-flex items-center gap-1"><span className="status-light status-light-danger" aria-hidden="true" /> Your location</span>
-        <span className="ml-auto text-text-tertiary normal-case tracking-normal">Tip: use guard chips to zoom and replay patrol trail</span>
+        <span className="w-full text-text-tertiary normal-case tracking-normal sm:ml-auto sm:w-auto">Tip: use guard chips to zoom and replay patrol trail</span>
       </div>
 
       {error ? <p className="mt-3 text-xs text-danger-text">{error}</p> : null}

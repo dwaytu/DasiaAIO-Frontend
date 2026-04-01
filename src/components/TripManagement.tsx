@@ -206,12 +206,13 @@ const TripManagement: FC = () => {
 
       {/* Trip Details Modal */}
       {selectedTrip && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setSelectedTrip(null)}>
-          <div className="command-panel w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="soc-modal-backdrop" onClick={() => setSelectedTrip(null)}>
+          <div className="soc-modal-panel command-panel mx-4 w-full max-w-3xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-6 py-4 border-b border-border">
               <h2 className="text-xl font-bold uppercase tracking-wide text-text-primary">Trip Details</h2>
               <button 
-                className="text-3xl text-text-secondary hover:text-text-primary transition-colors w-8 h-8 flex items-center justify-center"
+                type="button"
+                className="flex min-h-11 min-w-11 items-center justify-center rounded-md text-3xl text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
                 onClick={() => setSelectedTrip(null)}
               >
                 ×
@@ -222,7 +223,7 @@ const TripManagement: FC = () => {
               {/* Trip Information */}
               <div className="bento-card">
                 <h3 className="font-bold text-text-primary mb-3">Trip Information</h3>
-                <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
                   <div>
                     <p className="text-text-secondary">Destination:</p>
                     <p className="font-medium text-text-primary">{selectedTrip.destination || 'N/A'}</p>
@@ -297,7 +298,7 @@ const TripManagement: FC = () => {
               </div>
 
               {/* Actions */}
-              <div className="flex gap-3 pt-4 border-t border-border">
+              <div className="flex flex-wrap gap-3 border-t border-border pt-4">
                 {selectedTrip.status === 'scheduled' && (
                   <button
                     onClick={() => {

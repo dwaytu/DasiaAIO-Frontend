@@ -818,11 +818,11 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
       {/* Event detail modal */}
       {selectedEvent && (
         <div
-          className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+          className="soc-modal-backdrop"
           onClick={() => setSelectedEvent(null)}
         >
           <div
-            className="bg-surface border border-border rounded-xl max-w-sm w-full p-5 shadow-2xl"
+            className="soc-modal-panel w-full max-w-sm rounded-xl border border-border bg-surface p-5 shadow-2xl"
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-start justify-between mb-4">
@@ -833,8 +833,9 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
                 </span>
               </div>
               <button
+                type="button"
                 onClick={() => setSelectedEvent(null)}
-                className="text-text-tertiary hover:text-text-primary transition-colors"
+                className="rounded-md text-text-tertiary transition-colors hover:bg-surface-hover hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

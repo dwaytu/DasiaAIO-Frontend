@@ -849,6 +849,8 @@ function App() {
 
   const showLocationConsentUpgrade = isLoggedIn && hasAcceptedToa && !hasLocationConsent && getLocationConsentStatus() === ''
   const showConnectivityBanner = isLoggedIn && (!isNetworkOnline || !isBackendReachable)
+  const hasBlockingOverlay =
+    isLoggedIn && (!hasAcceptedToa || showLocationConsentUpgrade || Boolean(whatsNewPrompt) || Boolean(releasePrompt))
 
   const mobileNavItems = normalizedRole === 'guard'
     ? [
@@ -864,7 +866,12 @@ function App() {
         { key: 'profile', label: 'Profile' },
       ]
 
-  const showMobileQuickNav = false
+  const showMobileQuickNav =
+    isLoggedIn &&
+    hasAcceptedToa &&
+    normalizedRole === 'guard' &&
+    activeView !== 'profile' &&
+    !hasBlockingOverlay
   const mobileSafeBottomOffset = showMobileQuickNav
     ? 'calc(5rem + env(safe-area-inset-bottom, 0px))'
     : 'calc(1rem + env(safe-area-inset-bottom, 0px))'
@@ -875,7 +882,7 @@ function App() {
       : 'grid-cols-5'
 
   return (
-    <div className={`h-[100dvh] w-full overflow-hidden ${showMobileQuickNav ? 'pb-24 md:pb-0' : 'pb-4 md:pb-0'}`}>
+    <div className={`h-[100dvh] w-full overflow-hidden bg-background ${showMobileQuickNav ? 'pb-24 md:pb-0' : 'pb-4 md:pb-0'}`}>
       {!isLoggedIn ? (
         <LoginPage onLogin={handleLogin} />
       ) : !hasAcceptedToa ? (
@@ -910,13 +917,13 @@ function App() {
         })()
       ) : null}
 
-      {isLoggedIn && !import.meta.env.DEV ? (
+      {isLoggedIn && !import.meta.env.DEV && !hasBlockingOverlay ? (
         <button
           type="button"
           onClick={() => {
             void checkForUpdates(true)
           }}
-          className="fixed right-4 z-[70] min-h-11 rounded-md border border-border-elevated bg-surface px-3 py-2 text-xs font-semibold text-text-primary shadow-md md:bottom-6"
+          className="fixed right-4 z-[60] min-h-11 rounded-md border border-border-elevated bg-surface px-3 py-2 text-xs font-semibold text-text-primary shadow-md transition-colors hover:bg-surface-hover md:bottom-6"
           style={{ bottom: mobileSafeBottomOffset }}
           aria-label="Check for updates"
         >
@@ -924,9 +931,9 @@ function App() {
         </button>
       ) : null}
 
-      {showConnectivityBanner ? (
+      {showConnectivityBanner && !hasBlockingOverlay ? (
         <div
-          className="fixed left-4 right-4 top-4 z-[85] rounded-lg border border-danger-border bg-danger-bg p-3 text-sm text-danger-text shadow-lg md:left-auto md:max-w-xl"
+          className="fixed left-4 right-4 top-4 z-[80] rounded-lg border border-danger-border bg-danger-bg p-3 text-sm text-danger-text shadow-lg md:left-auto md:max-w-xl"
           style={{ top: 'calc(1rem + env(safe-area-inset-top, 0px))' }}
           role="status"
           aria-live="polite"
@@ -940,9 +947,9 @@ function App() {
         </div>
       ) : null}
 
-      {isLoggedIn && hasAcceptedToa && hasLocationConsent && geoPermissionState !== 'granted' ? (
+      {isLoggedIn && hasAcceptedToa && hasLocationConsent && geoPermissionState !== 'granted' && !hasBlockingOverlay ? (
         <div
-          className="soc-warning-banner fixed left-4 right-4 z-50 rounded-lg p-3 text-sm shadow-lg md:left-auto md:max-w-xl"
+          className="soc-warning-banner fixed left-4 right-4 z-[82] rounded-lg p-3 text-sm shadow-lg md:left-auto md:max-w-xl"
           style={{ bottom: mobileSafeBottomOffset }}
           role="status"
           aria-live="polite"
@@ -962,13 +969,13 @@ function App() {
       ) : null}
 
       {isLoggedIn && !hasAcceptedToa ? (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 backdrop-blur-sm" style={{ background: 'var(--color-overlay)' }}>
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 backdrop-blur-sm" style={{ background: 'var(--color-overlay)' }}>
           <section
             role="dialog"
             aria-modal="true"
             aria-labelledby="toa-title"
             aria-describedby="toa-summary"
-            className="w-full max-w-3xl rounded-2xl border border-border-elevated bg-surface p-5 shadow-modal sm:p-7"
+            className="soc-modal-panel w-full max-w-3xl rounded-2xl border border-border-elevated bg-surface p-5 shadow-modal sm:p-7"
           >
             <h1 id="toa-title" className="text-2xl font-bold text-text-primary">Terms of Agreement</h1>
             <p id="toa-summary" className="mt-2 text-sm text-text-secondary">
@@ -1075,12 +1082,12 @@ function App() {
       ) : null}
 
       {showLocationConsentUpgrade ? (
-        <div className="fixed inset-0 z-[75] flex items-center justify-center p-4 backdrop-blur-sm" style={{ background: 'var(--color-overlay)' }}>
+        <div className="fixed inset-0 z-[108] flex items-center justify-center p-4 backdrop-blur-sm" style={{ background: 'var(--color-overlay)' }}>
           <section
             role="dialog"
             aria-modal="true"
             aria-labelledby="location-consent-title"
-            className="w-full max-w-lg rounded-2xl border border-border-elevated bg-surface p-5 shadow-modal sm:p-6"
+            className="soc-modal-panel w-full max-w-lg rounded-2xl border border-border-elevated bg-surface p-5 shadow-modal sm:p-6"
           >
             <h2 id="location-consent-title" className="text-xl font-bold text-text-primary">Location Tracking Consent</h2>
             <p className="mt-2 text-sm text-text-secondary">
@@ -1107,12 +1114,12 @@ function App() {
       ) : null}
 
       {whatsNewPrompt && !releasePrompt ? (
-        <div className="fixed inset-0 z-[72] flex items-center justify-center p-4 backdrop-blur-sm" style={{ background: 'var(--color-overlay)' }}>
+        <div className="fixed inset-0 z-[106] flex items-center justify-center p-4 backdrop-blur-sm" style={{ background: 'var(--color-overlay)' }}>
           <section
             role="dialog"
             aria-modal="true"
             aria-labelledby="whats-new-title"
-            className="w-full max-w-xl rounded-2xl border border-border-elevated bg-surface p-5 shadow-modal sm:p-6"
+            className="soc-modal-panel w-full max-w-xl rounded-2xl border border-border-elevated bg-surface p-5 shadow-modal sm:p-6"
           >
             <h2 id="whats-new-title" className="text-xl font-bold text-text-primary">What's New in {whatsNewPrompt.version}</h2>
             <p className="mt-2 text-sm text-text-secondary">
@@ -1133,12 +1140,12 @@ function App() {
       ) : null}
 
       {releasePrompt ? (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 backdrop-blur-sm" style={{ background: 'var(--color-overlay)' }}>
+        <div className="fixed inset-0 z-[104] flex items-center justify-center p-4 backdrop-blur-sm" style={{ background: 'var(--color-overlay)' }}>
           <section
             role="dialog"
             aria-modal="true"
             aria-labelledby="update-title"
-            className="w-full max-w-lg rounded-2xl border border-border-elevated bg-surface p-5 shadow-modal sm:p-6"
+            className="soc-modal-panel w-full max-w-lg rounded-2xl border border-border-elevated bg-surface p-5 shadow-modal sm:p-6"
           >
             <h2 id="update-title" className="text-xl font-bold text-text-primary">New update available</h2>
             <p className="mt-2 text-sm text-text-secondary">
@@ -1170,7 +1177,7 @@ function App() {
       {showMobileQuickNav ? (
         <nav
           aria-label="Mobile quick navigation"
-          className="fixed bottom-0 left-0 right-0 z-[65] border-t border-border-elevated bg-surface px-2 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] pt-2 md:hidden"
+          className="fixed bottom-0 left-0 right-0 z-[64] border-t border-border-elevated bg-surface px-2 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] pt-2 md:hidden"
         >
           <ul className={`grid ${mobileQuickNavColumns} gap-1`}>
             {mobileNavItems.map((item) => {
@@ -1186,7 +1193,7 @@ function App() {
                   <button
                     type="button"
                     onClick={() => setActiveView(item.key)}
-                    className={`min-h-11 w-full rounded-md px-2 py-2 text-xs font-semibold transition ${
+                    className={`min-h-11 w-full rounded-md px-2 py-2 text-xs font-semibold transition-colors duration-150 ${
                       isActive ? 'bg-info text-white' : 'bg-surface-elevated text-text-secondary'
                     }`}
                   >
@@ -1199,9 +1206,9 @@ function App() {
         </nav>
       ) : null}
 
-      {globalError ? (
+      {globalError && !hasBlockingOverlay ? (
         <div
-          className="fixed right-4 z-[90] max-w-md rounded-lg border border-danger-border bg-danger-bg p-3 text-sm text-danger-text shadow-lg"
+          className="fixed right-4 z-[84] max-w-md rounded-lg border border-danger-border bg-danger-bg p-3 text-sm text-danger-text shadow-lg"
           style={{ bottom: mobileSafeBottomOffset }}
           role="alert"
         >

@@ -222,7 +222,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ userId }) => {
   };
 
   return (
-    <div className="relative" ref={panelRef}>
+    <div className="relative z-[40]" ref={panelRef}>
       {/* Notification Bell Button */}
       <button
         type="button"
@@ -242,7 +242,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ userId }) => {
 
       {/* Notification Panel */}
       {isOpen && (
-        <div id="notification-panel" className="soc-dropdown-surface absolute right-0 mt-2 z-50 flex max-h-[min(600px,calc(100vh-6rem))] w-80 max-w-[calc(100vw-1rem)] flex-col rounded-xl sm:w-96" role="dialog" aria-label="Notifications panel">
+        <div id="notification-panel" className="soc-dropdown-surface absolute right-0 z-[46] mt-2 flex max-h-[min(600px,calc(100dvh-6rem))] w-80 max-w-[calc(100vw-1rem)] flex-col rounded-xl sm:w-96" role="dialog" aria-label="Notifications panel">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-border">
             <h3 className="text-base font-semibold text-text-primary">Notifications</h3>

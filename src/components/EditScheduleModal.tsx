@@ -163,12 +163,13 @@ const EditScheduleModal: FC<EditScheduleModalProps> = ({ shift, onClose, onSave,
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-surface rounded-lg shadow-2xl w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+    <div className="soc-modal-backdrop" onClick={onClose}>
+      <div className="soc-modal-panel mx-4 w-full max-w-md rounded-lg bg-surface shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between border-b border-border px-6 py-4">
           <h2 className="text-xl font-bold text-text-primary">Edit Schedule</h2>
           <button 
-            className="text-3xl text-text-secondary hover:text-text-primary transition-colors w-8 h-8 flex items-center justify-center"
+            type="button"
+            className="flex min-h-11 min-w-11 items-center justify-center rounded-md text-3xl text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
             onClick={onClose}
           >
             ×
@@ -176,25 +177,27 @@ const EditScheduleModal: FC<EditScheduleModalProps> = ({ shift, onClose, onSave,
         </div>
 
         {error && (
-          <div className="mx-6 mt-4 p-3 bg-red-50 border border-red-300 text-red-800 rounded-lg text-sm">
+          <div className="soc-alert-error mx-6 mt-4 text-sm">
             {error}
           </div>
         )}
 
         {showDeleteConfirm ? (
-          <div className="p-6 space-y-4">
-            <p className="text-gray-700">Are you sure you want to delete this shift?</p>
+          <div className="space-y-4 p-6">
+            <p className="text-text-secondary">Are you sure you want to delete this shift?</p>
             <div className="flex gap-3">
               <button 
+                type="button"
                 onClick={handleDelete}
-                className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white font-semibold py-2 rounded-lg transition-colors"
+                className="flex-1 rounded-lg bg-red-600 py-2 font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
                 disabled={loading}
               >
                 {loading ? 'Deleting...' : 'Yes, Delete'}
               </button>
               <button 
+                type="button"
                 onClick={() => setShowDeleteConfirm(false)}
-                className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 rounded-lg transition-colors"
+                className="soc-btn-secondary flex-1 rounded-lg py-2 font-semibold"
                 disabled={loading}
               >
                 Cancel
@@ -204,14 +207,14 @@ const EditScheduleModal: FC<EditScheduleModalProps> = ({ shift, onClose, onSave,
         ) : (
           <form onSubmit={handleSubmit} className="p-6 space-y-4">
             <div>
-              <label htmlFor="guardId" className="block text-sm font-semibold text-gray-700 mb-1">Guard</label>
+              <label htmlFor="guardId" className="mb-1 block text-sm font-semibold text-text-secondary">Guard</label>
               <select
                 id="guardId"
                 name="guardId"
                 value={formData.guardId}
                 onChange={handleChange}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                className="w-full rounded-lg border border-border px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-info"
               >
                 <option value="">Select a guard</option>
                 {guards.map(guard => (
@@ -223,7 +226,7 @@ const EditScheduleModal: FC<EditScheduleModalProps> = ({ shift, onClose, onSave,
             </div>
 
             <div>
-              <label htmlFor="clientSite" className="block text-sm font-semibold text-gray-700 mb-1">Client Site</label>
+              <label htmlFor="clientSite" className="mb-1 block text-sm font-semibold text-text-secondary">Client Site</label>
               <input
                 type="text"
                 id="clientSite"
@@ -232,12 +235,12 @@ const EditScheduleModal: FC<EditScheduleModalProps> = ({ shift, onClose, onSave,
                 onChange={handleChange}
                 required
                 placeholder="Enter client site"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                className="w-full rounded-lg border border-border px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-info"
               />
             </div>
 
             <div>
-              <label htmlFor="date" className="block text-sm font-semibold text-gray-700 mb-1">Date</label>
+              <label htmlFor="date" className="mb-1 block text-sm font-semibold text-text-secondary">Date</label>
               <input
                 type="date"
                 id="date"
@@ -245,13 +248,13 @@ const EditScheduleModal: FC<EditScheduleModalProps> = ({ shift, onClose, onSave,
                 value={formData.date}
                 onChange={handleChange}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                className="w-full rounded-lg border border-border px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-info"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label htmlFor="startTime" className="block text-sm font-semibold text-gray-700 mb-1">Start Time</label>
+                <label htmlFor="startTime" className="mb-1 block text-sm font-semibold text-text-secondary">Start Time</label>
                 <input
                   type="time"
                   id="startTime"
@@ -259,12 +262,12 @@ const EditScheduleModal: FC<EditScheduleModalProps> = ({ shift, onClose, onSave,
                   value={formData.startTime}
                   onChange={handleChange}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                  className="w-full rounded-lg border border-border px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-info"
                 />
               </div>
 
               <div>
-                <label htmlFor="endTime" className="block text-sm font-semibold text-gray-700 mb-1">End Time</label>
+                <label htmlFor="endTime" className="mb-1 block text-sm font-semibold text-text-secondary">End Time</label>
                 <input
                   type="time"
                   id="endTime"
@@ -272,7 +275,7 @@ const EditScheduleModal: FC<EditScheduleModalProps> = ({ shift, onClose, onSave,
                   value={formData.endTime}
                   onChange={handleChange}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                  className="w-full rounded-lg border border-border px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-info"
                 />
               </div>
             </div>
@@ -280,14 +283,14 @@ const EditScheduleModal: FC<EditScheduleModalProps> = ({ shift, onClose, onSave,
             <div className="flex gap-3 pt-4">
               <button 
                 type="submit" 
-                className="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-semibold py-2 rounded-lg transition-colors text-sm"
+                className="soc-btn-primary flex-1 rounded-lg py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
                 disabled={loading}
               >
                 {loading ? 'Saving...' : 'Save Changes'}
               </button>
               <button 
                 type="button" 
-                className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white font-semibold py-2 rounded-lg transition-colors text-sm"
+                className="flex-1 rounded-lg bg-red-600 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
                 onClick={() => setShowDeleteConfirm(true)}
                 disabled={loading}
               >
@@ -295,7 +298,7 @@ const EditScheduleModal: FC<EditScheduleModalProps> = ({ shift, onClose, onSave,
               </button>
               <button 
                 type="button" 
-                className="flex-1 bg-gray-300 hover:bg-gray-400 disabled:bg-gray-200 text-gray-800 font-semibold py-2 rounded-lg transition-colors text-sm"
+                className="soc-btn-secondary flex-1 rounded-lg py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
                 onClick={onClose} 
                 disabled={loading}
               >

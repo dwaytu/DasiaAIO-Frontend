@@ -27,7 +27,7 @@ const Header: FC<HeaderProps> = ({ title, badgeLabel, onLogout, rightSlot, onMen
         window.setTimeout(() => setRefreshing(false), 700)
         window.location.reload()
       }}
-      className="inline-flex min-h-11 items-center gap-2 px-3 py-2 text-sm font-semibold text-text-primary bg-surface border border-border rounded-lg transition-colors hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
+      className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border bg-surface px-2.5 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)] sm:px-3"
       aria-label="Refresh dashboard"
       title="Refresh dashboard"
     >
@@ -35,14 +35,14 @@ const Header: FC<HeaderProps> = ({ title, badgeLabel, onLogout, rightSlot, onMen
         <path d="M21 12a9 9 0 10-3.2 6.9" />
         <path d="M21 3v6h-6" />
       </svg>
-      Refresh
+      <span className="hidden sm:inline">Refresh</span>
     </button>
   )
 
   return (
-    <header className="relative isolate z-[1200] border-b border-border bg-surface/95 px-4 py-4 backdrop-blur md:px-8 md:py-5">
-      <div className="flex items-center justify-between gap-3">
-      <div className="flex items-center gap-3">
+    <header className="relative isolate z-[30] border-b border-border bg-surface/95 px-4 py-3 backdrop-blur md:px-8 md:py-4">
+      <div className="flex items-start justify-between gap-3 sm:items-center">
+      <div className="flex min-w-0 items-center gap-3">
         {/* Mobile hamburger menu */}
         <button
           type="button"
@@ -57,13 +57,13 @@ const Header: FC<HeaderProps> = ({ title, badgeLabel, onLogout, rightSlot, onMen
         <div className="hidden lg:block">
           <SentinelLogo size={30} variant="IconOnly" animated />
         </div>
-        <div>
-          <h1 className="m-0 text-xl font-bold uppercase tracking-wide text-text-primary md:text-2xl">{title}</h1>
+        <div className="min-w-0">
+          <h1 className="m-0 truncate text-xl font-bold uppercase tracking-wide text-text-primary md:text-2xl">{title}</h1>
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-tertiary">Mission Console</p>
         </div>
-        {badgeLabel && <SectionBadge label={badgeLabel} />}
+        {badgeLabel && <div className="hidden sm:block"><SectionBadge label={badgeLabel} /></div>}
       </div>
-      <div className="flex items-center gap-2 md:gap-3">
+      <div className="flex shrink-0 items-center gap-1.5 md:gap-3">
         <ThemeToggleButton className="flex" />
         {refreshControl}
         <NotificationPanel userId={user.id} />

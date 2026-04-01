@@ -49,7 +49,7 @@ const OperationalShell: FC<OperationalShellProps> = ({
         onClose={onMenuClose}
       />
 
-      <main id="maincontent" tabIndex={-1} className="flex min-w-0 flex-1 min-h-0 flex-col overflow-hidden">
+      <main id="maincontent" tabIndex={-1} className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <Header
           title={title}
           badgeLabel={badgeLabel}
@@ -60,7 +60,7 @@ const OperationalShell: FC<OperationalShellProps> = ({
           rightSlot={rightSlot}
         />
 
-        <div className="flex-1 min-h-0 overflow-y-auto p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] md:p-8">
+        <div className="soc-scroll-area flex-1 min-h-0 overflow-y-auto p-4 pb-[calc(2rem+env(safe-area-inset-bottom,0px))] md:p-6">
           {error && (
             <div className="mb-4 rounded-lg border border-red-300 bg-red-50 p-3 text-sm font-medium text-red-900">{error}</div>
           )}

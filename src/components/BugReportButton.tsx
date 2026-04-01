@@ -64,8 +64,10 @@ const BugReportButton: React.FC<BugReportButtonProps> = ({ userId }) => {
     <>
       {/* Bug Report Button */}
       <button
+        type="button"
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 bg-red-500 hover:bg-red-600 text-white p-4 rounded-full shadow-lg transition-all hover:scale-110 z-50"
+        className="fixed right-4 z-[58] rounded-full bg-red-500 p-3.5 text-white shadow-lg transition-all hover:scale-105 hover:bg-red-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
+        style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}
         title="Report a Bug"
       >
         <Bug size={24} />
@@ -73,8 +75,8 @@ const BugReportButton: React.FC<BugReportButtonProps> = ({ userId }) => {
 
       {/* Modal */}
       {isOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-surface rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+        <div className="soc-modal-backdrop">
+          <div className="soc-modal-panel w-full max-w-md rounded-lg bg-surface shadow-xl">
             <div className="p-6">
               {/* Header */}
               <div className="flex items-center justify-between mb-4">
@@ -83,8 +85,9 @@ const BugReportButton: React.FC<BugReportButtonProps> = ({ userId }) => {
                   <h2 className="text-xl font-bold text-text-primary">Report a Bug</h2>
                 </div>
                 <button
+                  type="button"
                   onClick={() => setIsOpen(false)}
-                  className="text-text-secondary hover:text-text-primary"
+                  className="flex min-h-11 min-w-11 items-center justify-center rounded-md text-3xl text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
                 >
                   ×
                 </button>
@@ -92,14 +95,14 @@ const BugReportButton: React.FC<BugReportButtonProps> = ({ userId }) => {
 
               {/* Success Message */}
               {successMessage && (
-                <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-lg">
+                <div className="soc-alert-success mb-4">
                   {successMessage}
                 </div>
               )}
 
               {/* Error Message */}
               {errorMessage && (
-                <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">
+                <div className="soc-alert-error mb-4">
                   {errorMessage}
                 </div>
               )}
@@ -108,13 +111,13 @@ const BugReportButton: React.FC<BugReportButtonProps> = ({ userId }) => {
               <form onSubmit={handleSubmit} className="space-y-4">
                 {/* Category */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="mb-1 block text-sm font-medium text-text-secondary">
                     Issue Type
                   </label>
                   <select
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                    className="w-full rounded-lg border border-border px-3 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-danger"
                     required
                   >
                     <option value="bug">Bug / Error</option>
@@ -126,13 +129,13 @@ const BugReportButton: React.FC<BugReportButtonProps> = ({ userId }) => {
 
                 {/* Priority */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="mb-1 block text-sm font-medium text-text-secondary">
                     Priority
                   </label>
                   <select
                     value={formData.priority}
                     onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                    className="w-full rounded-lg border border-border px-3 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-danger"
                     required
                   >
                     <option value="low">Low</option>
@@ -144,14 +147,14 @@ const BugReportButton: React.FC<BugReportButtonProps> = ({ userId }) => {
 
                 {/* Subject */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="mb-1 block text-sm font-medium text-text-secondary">
                     Subject
                   </label>
                   <input
                     type="text"
                     value={formData.subject}
                     onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                    className="w-full rounded-lg border border-border px-3 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-danger"
                     placeholder="Brief description of the issue"
                     required
                     maxLength={255}
@@ -160,13 +163,13 @@ const BugReportButton: React.FC<BugReportButtonProps> = ({ userId }) => {
 
                 {/* Message */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="mb-1 block text-sm font-medium text-text-secondary">
                     Description
                   </label>
                   <textarea
                     value={formData.message}
                     onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"
+                    className="w-full resize-none rounded-lg border border-border px-3 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-danger"
                     placeholder="Please describe the issue in detail..."
                     rows={5}
                     required
@@ -178,14 +181,14 @@ const BugReportButton: React.FC<BugReportButtonProps> = ({ userId }) => {
                   <button
                     type="button"
                     onClick={() => setIsOpen(false)}
-                    className="flex-1 px-4 py-2 border border-border text-text-primary rounded-lg hover:bg-surface-hover transition-colors"
+                    className="soc-btn-secondary flex-1 rounded-lg px-4 py-2 font-semibold"
                     disabled={isSubmitting}
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors disabled:bg-gray-400"
+                    className="flex-1 rounded-lg bg-red-500 px-4 py-2 font-semibold text-white transition-colors hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-60"
                     disabled={isSubmitting}
                   >
                     {isSubmitting ? 'Submitting...' : 'Submit Report'}

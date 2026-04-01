@@ -158,7 +158,8 @@ const ProfileDashboard: FC<ProfileDashboardProps> = ({ user, onLogout, onBack, o
   const navItems = getSidebarNav(user.role, { homeView: user.role === 'guard' ? 'overview' : 'dashboard' })
 
   return (
-    <div className="flex h-[100dvh] w-full overflow-hidden bg-background">
+    <div className="flex h-[100dvh] w-full overflow-hidden bg-background font-sans">
+      <a href="#maincontent" className="skip-link">Skip to main content</a>
       <Sidebar
         activeView="profile"
         items={navItems}
@@ -169,7 +170,7 @@ const ProfileDashboard: FC<ProfileDashboardProps> = ({ user, onLogout, onBack, o
         onClose={() => setMobileMenuOpen(false)}
       />
 
-      <main className="flex-1 flex min-w-0 min-h-0 flex-col w-full overflow-hidden">
+      <main id="maincontent" tabIndex={-1} className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
         <Header
           title="Account Settings"
           badgeLabel="Profile"
@@ -189,24 +190,24 @@ const ProfileDashboard: FC<ProfileDashboardProps> = ({ user, onLogout, onBack, o
           }
         />
 
-        <div className="flex-1 overflow-y-auto p-4 md:p-8">
-          <div className="max-w-4xl mx-auto">
-            <section className="soc-surface mb-6 p-4 md:p-5">
+        <div className="soc-scroll-area flex-1 overflow-y-auto p-4 pb-[calc(2rem+env(safe-area-inset-bottom,0px))] md:p-6">
+          <div className="mx-auto max-w-5xl space-y-6">
+            <section className="soc-surface p-4 md:p-6">
               <p className="text-xs font-bold uppercase tracking-[0.2em] text-text-tertiary">Profile Control</p>
-              <h1 className="text-2xl font-black uppercase tracking-wide text-text-primary">Account Settings</h1>
-              <p className="mt-1 text-sm text-text-secondary">Manage identity details, contact data, and profile media used across operational dashboards.</p>
+              <h1 className="mt-1 text-2xl font-bold text-text-primary md:text-3xl">Account Settings</h1>
+              <p className="mt-2 text-sm text-text-secondary">Manage identity details, contact data, and profile media used across operational dashboards.</p>
             </section>
 
             {/* Success/Error Message */}
             {message && (
-              <div className={`mb-6 p-4 rounded-lg ${isErrorMessage ? 'soc-alert-error' : 'soc-alert-success'}`}>
+              <div className={`rounded-lg p-4 ${isErrorMessage ? 'soc-alert-error' : 'soc-alert-success'}`}>
                 {message}
               </div>
             )}
 
             {/* Profile Photo Section */}
-            <div className="command-panel p-6 md:p-8 mb-6">
-              <h2 className="text-2xl font-bold text-text-primary mb-6">Profile Photo</h2>
+            <div className="command-panel p-4 md:p-6">
+              <h2 className="mb-4 text-xl font-bold text-text-primary md:text-2xl">Profile Photo</h2>
               
               <div className="flex flex-col md:flex-row items-center gap-6">
                 {/* Photo Preview */}
@@ -222,7 +223,7 @@ const ProfileDashboard: FC<ProfileDashboardProps> = ({ user, onLogout, onBack, o
                   {/* Overlay action for mouse and keyboard users */}
                   <button
                     type="button"
-                    className="absolute inset-0 flex items-center justify-center rounded-full bg-black bg-opacity-50 opacity-0 transition-opacity cursor-pointer group-hover:opacity-100 group-focus-within:opacity-100"
+                    className="absolute inset-0 flex cursor-pointer items-center justify-center rounded-full bg-black/45 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
                     onClick={handlePhotoClick}
                     aria-label="Change profile photo"
                   >
@@ -249,7 +250,7 @@ const ProfileDashboard: FC<ProfileDashboardProps> = ({ user, onLogout, onBack, o
                     <button
                       onClick={handlePhotoClick}
                       disabled={uploading}
-                      className="soc-btn"
+                      className="soc-btn min-h-11"
                     >
                       {uploading ? 'Uploading...' : 'Choose Photo'}
                     </button>
@@ -271,7 +272,7 @@ const ProfileDashboard: FC<ProfileDashboardProps> = ({ user, onLogout, onBack, o
                             setMessage('Failed to remove photo')
                           }
                         }}
-                      className="px-6 py-2.5 bg-surface border border-red-300 text-red-600 hover:bg-red-50 font-semibold rounded-lg transition-colors"
+                      className="min-h-11 rounded-lg border border-danger-border bg-surface px-6 py-2.5 font-semibold text-danger-text transition-colors hover:bg-danger-bg"
                       >
                         Remove Photo
                       </button>
@@ -282,8 +283,8 @@ const ProfileDashboard: FC<ProfileDashboardProps> = ({ user, onLogout, onBack, o
             </div>
 
             {/* Account Information */}
-            <div className="command-panel p-6 md:p-8">
-              <h2 className="text-2xl font-bold text-text-primary mb-6">Account Information</h2>
+            <div className="command-panel p-4 md:p-6">
+              <h2 className="mb-4 text-xl font-bold text-text-primary md:text-2xl">Account Information</h2>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>

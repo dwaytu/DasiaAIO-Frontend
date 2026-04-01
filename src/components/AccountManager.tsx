@@ -59,11 +59,12 @@ const AccountManager: FC<AccountManagerProps> = ({ user, onLogout, onNavigateToP
   }
 
   return (
-    <div className="relative z-[1300]" ref={dropdownRef}>
+    <div className="relative z-[40]" ref={dropdownRef}>
       {/* Profile Button */}
       <button
+        type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center gap-2 md:gap-3 rounded-lg px-2 md:px-3 py-2 transition-colors group hover:bg-surface-hover ${isOpen ? 'bg-surface-hover' : ''}`}
+        className={`group flex min-h-11 items-center gap-2 rounded-lg px-2 py-2 transition-colors hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)] md:gap-3 md:px-3 ${isOpen ? 'bg-surface-hover' : ''}`}
       >
         {/* Avatar */}
         <div className="soc-avatar-gradient w-8 h-8 md:w-9 md:h-9 rounded-full flex items-center justify-center text-white font-bold text-xs md:text-sm shadow-md overflow-hidden flex-shrink-0">
@@ -93,7 +94,7 @@ const AccountManager: FC<AccountManagerProps> = ({ user, onLogout, onNavigateToP
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="soc-dropdown-surface absolute right-0 mt-2 w-72 md:w-80 max-w-[calc(100vw-1rem)] rounded-xl py-2 z-[1310] animate-fadeIn">
+        <div className="soc-dropdown-surface absolute right-0 z-[46] mt-2 w-72 max-w-[calc(100vw-1rem)] rounded-xl py-2 animate-fade-in md:w-80">
           {/* Profile Header */}
           <div className="px-4 py-3 border-b border-border">
             <div className="flex items-center gap-3">

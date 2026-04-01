@@ -64,12 +64,13 @@ const EditUserModal: FC<EditUserModalProps> = ({ user, onClose, onSave }) => {
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-surface rounded-lg shadow-2xl w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+    <div className="soc-modal-backdrop" onClick={onClose}>
+      <div className="soc-modal-panel mx-4 w-full max-w-md rounded-lg bg-surface shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between border-b border-border px-6 py-4">
           <h2 className="text-xl font-bold text-text-primary">Edit User: {user.email}</h2>
           <button 
-            className="text-3xl text-text-secondary hover:text-text-primary transition-colors w-8 h-8 flex items-center justify-center"
+            type="button"
+            className="flex min-h-11 min-w-11 items-center justify-center rounded-md text-3xl text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
             onClick={onClose}
           >
             ×
@@ -77,14 +78,14 @@ const EditUserModal: FC<EditUserModalProps> = ({ user, onClose, onSave }) => {
         </div>
 
         {error && (
-          <div className="mx-6 mt-4 p-3 bg-red-50 border border-red-300 text-red-800 rounded-lg text-sm">
+          <div className="soc-alert-error mx-6 mt-4 text-sm">
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
-            <label htmlFor="fullName" className="block text-sm font-semibold text-gray-700 mb-1">Full Name</label>
+            <label htmlFor="fullName" className="mb-1 block text-sm font-semibold text-text-secondary">Full Name</label>
             <input
               type="text"
               id="fullName"
@@ -92,12 +93,12 @@ const EditUserModal: FC<EditUserModalProps> = ({ user, onClose, onSave }) => {
               value={formData.fullName}
               onChange={handleChange}
               placeholder="Enter full name"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+              className="w-full rounded-lg border border-border px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-info"
             />
           </div>
 
           <div>
-            <label htmlFor="phoneNumber" className="block text-sm font-semibold text-gray-700 mb-1">Phone Number</label>
+            <label htmlFor="phoneNumber" className="mb-1 block text-sm font-semibold text-text-secondary">Phone Number</label>
             <input
               type="tel"
               id="phoneNumber"
@@ -105,12 +106,12 @@ const EditUserModal: FC<EditUserModalProps> = ({ user, onClose, onSave }) => {
               value={formData.phoneNumber}
               onChange={handleChange}
               placeholder="Enter phone number"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+              className="w-full rounded-lg border border-border px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-info"
             />
           </div>
 
           <div>
-            <label htmlFor="licenseNumber" className="block text-sm font-semibold text-gray-700 mb-1">License Number</label>
+            <label htmlFor="licenseNumber" className="mb-1 block text-sm font-semibold text-text-secondary">License Number</label>
             <input
               type="text"
               id="licenseNumber"
@@ -118,36 +119,36 @@ const EditUserModal: FC<EditUserModalProps> = ({ user, onClose, onSave }) => {
               value={formData.licenseNumber}
               onChange={handleChange}
               placeholder="Enter license number"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+              className="w-full rounded-lg border border-border px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-info"
             />
           </div>
 
           <div>
-            <label htmlFor="licenseIssuedDate" className="block text-sm font-semibold text-gray-700 mb-1">License Issued Date</label>
+            <label htmlFor="licenseIssuedDate" className="mb-1 block text-sm font-semibold text-text-secondary">License Issued Date</label>
             <input
               type="date"
               id="licenseIssuedDate"
               name="licenseIssuedDate"
               value={formData.licenseIssuedDate}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+              className="w-full rounded-lg border border-border px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-info"
             />
           </div>
 
           <div>
-            <label htmlFor="licenseExpiryDate" className="block text-sm font-semibold text-gray-700 mb-1">License Expiry Date</label>
+            <label htmlFor="licenseExpiryDate" className="mb-1 block text-sm font-semibold text-text-secondary">License Expiry Date</label>
             <input
               type="date"
               id="licenseExpiryDate"
               name="licenseExpiryDate"
               value={formData.licenseExpiryDate}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+              className="w-full rounded-lg border border-border px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-info"
             />
           </div>
 
           <div>
-            <label htmlFor="address" className="block text-sm font-semibold text-gray-700 mb-1">Full Address</label>
+            <label htmlFor="address" className="mb-1 block text-sm font-semibold text-text-secondary">Full Address</label>
             <textarea
               id="address"
               name="address"
@@ -155,21 +156,21 @@ const EditUserModal: FC<EditUserModalProps> = ({ user, onClose, onSave }) => {
               onChange={handleChange}
               placeholder="Enter complete address"
               rows={2}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+              className="w-full rounded-lg border border-border px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-info"
             />
           </div>
 
-          <div className="flex gap-3 pt-4">
+          <div className="flex gap-3 pt-2">
             <button 
               type="submit" 
-              className="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-semibold py-2 rounded-lg transition-colors text-sm"
+              className="soc-btn-primary flex-1 rounded-lg px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
               disabled={loading}
             >
               {loading ? 'Saving...' : 'Save Changes'}
             </button>
             <button 
               type="button" 
-              className="flex-1 bg-gray-300 hover:bg-gray-400 disabled:bg-gray-200 text-gray-800 font-semibold py-2 rounded-lg transition-colors text-sm"
+              className="soc-btn-secondary flex-1 rounded-lg px-3 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
               onClick={onClose} 
               disabled={loading}
             >

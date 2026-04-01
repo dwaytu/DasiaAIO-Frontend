@@ -14,6 +14,7 @@ export interface ServiceHealthResult {
 
 interface ProbeResult {
   reachable: boolean
+  payload?: any
 }
 
 const initialState: ServiceHealthResult = {
@@ -38,8 +39,18 @@ async function probe(url: string, headers: Record<string, string> = {}): Promise
 
     window.clearTimeout(timeout)
 
-    // Any non-5xx response confirms service is reachable.
-    return { reachable: response.status < 500 }
+    if (response.status >= 500) {
+      return { reachable: false }
+    }
+
+    let payload: any = null
+    try {
+      payload = await response.json()
+    } catch {
+      payload = null
+    }
+
+    return { reachable: true, payload }
   } catch {
     return { reachable: false }
   }
@@ -49,22 +60,18 @@ export function useServiceHealth() {
   const [services, setServices] = useState<ServiceHealthResult>(initialState)
 
   const refresh = useCallback(async () => {
-    const token = localStorage.getItem('token')
-    const authHeaders: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {}
-
-    const [healthProbe, monitoringProbe, vehiclesProbe, authProbe] = await Promise.all([
-      probe(`${API_BASE_URL}/api/health`),
-      probe(`${API_BASE_URL}/api/guard-replacement/shifts`, authHeaders),
-      probe(`${API_BASE_URL}/api/armored-cars`, authHeaders),
-      probe(`${API_BASE_URL}/api/users/pending-approvals`, authHeaders),
-    ])
+    const healthProbe = await probe(`${API_BASE_URL}/api/health/system`)
+    const servicesPayload = healthProbe.payload?.services || {}
+    const databaseOnline = servicesPayload?.database === 'up'
+    const apiOnline = servicesPayload?.api === 'up'
+    const websocketOnline = servicesPayload?.websocket?.status === 'up'
 
     setServices({
-      database: healthProbe.reachable ? 'online' : 'offline',
-      apiGateway: healthProbe.reachable ? 'online' : 'offline',
-      monitoringNodes: monitoringProbe.reachable ? 'online' : 'offline',
-      vehicleTelemetry: vehiclesProbe.reachable ? 'online' : 'offline',
-      authenticationService: authProbe.reachable ? 'online' : 'offline',
+      database: healthProbe.reachable && databaseOnline ? 'online' : 'offline',
+      apiGateway: healthProbe.reachable && apiOnline ? 'online' : 'offline',
+      monitoringNodes: healthProbe.reachable && websocketOnline ? 'online' : 'offline',
+      vehicleTelemetry: healthProbe.reachable && websocketOnline ? 'online' : 'offline',
+      authenticationService: healthProbe.reachable && apiOnline ? 'online' : 'offline',
       lastChecked: new Date().toLocaleTimeString(),
     })
   }, [])

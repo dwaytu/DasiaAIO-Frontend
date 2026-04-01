@@ -943,15 +943,15 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                 </div>
                 <div className="rounded-xl border border-border-subtle bg-background px-3 py-3">
                   <div className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">Active</div>
-                  <div className="mt-1 text-xl font-bold text-emerald-300">{summaryStats.active}</div>
+                  <div className="mt-1 text-xl font-bold text-success-text">{summaryStats.active}</div>
                 </div>
                 <div className="rounded-xl border border-border-subtle bg-background px-3 py-3">
                   <div className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">Pending</div>
-                  <div className="mt-1 text-xl font-bold text-amber-300">{summaryStats.pending}</div>
+                  <div className="mt-1 text-xl font-bold text-warning-text">{summaryStats.pending}</div>
                 </div>
                 <div className="rounded-xl border border-border-subtle bg-background px-3 py-3">
                   <div className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">Supervisors</div>
-                  <div className="mt-1 text-xl font-bold text-indigo-300">{summaryStats.supervisors}</div>
+                  <div className="mt-1 text-xl font-bold text-info-text">{summaryStats.supervisors}</div>
                 </div>
               </div>
               {filterMenuOpen ? (
@@ -993,7 +993,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                       type="button"
                       onClick={handleBulkApproveSelected}
                       disabled={bulkProcessing}
-                      className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-300 disabled:opacity-60"
+                      className="rounded-lg border border-success-border bg-success-bg px-3 py-1.5 text-xs font-semibold text-success-text disabled:opacity-60"
                     >
                       Approve Selected
                     </button>
@@ -1001,7 +1001,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                       type="button"
                       onClick={handleBulkSuspendSelected}
                       disabled={bulkProcessing}
-                      className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-xs font-semibold text-amber-300 disabled:opacity-60"
+                      className="rounded-lg border border-warning-border bg-warning-bg px-3 py-1.5 text-xs font-semibold text-warning-text disabled:opacity-60"
                     >
                       Suspend Selected
                     </button>
@@ -1009,7 +1009,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                       type="button"
                       onClick={handleBulkDeleteSelected}
                       disabled={bulkProcessing}
-                      className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-300 disabled:opacity-60"
+                      className="rounded-lg border border-danger-border bg-danger-bg px-3 py-1.5 text-xs font-semibold text-danger-text disabled:opacity-60"
                     >
                       Delete Selected
                     </button>
@@ -1025,7 +1025,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                 </div>
               ) : null}
               {filteredUsers.length > 0 ? (
-                <div className="flex-1 min-h-0 overflow-auto">
+                <div className="soc-scroll-area flex-1 min-h-0 overflow-auto">
                   <table className="hidden w-full min-w-[980px] md:table">
                     <thead className="thead-glass">
                       <tr className="border-b border-border">
@@ -1041,7 +1041,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                             <span>Select</span>
                           </label>
                         </th>
-                        <th className="sticky top-0 z-10 px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary bg-surface">User Details</th>
+                        <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">User Details</th>
                         <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Username</th>
                         <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Role</th>
                         <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Status</th>
@@ -1267,17 +1267,16 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
               <div className="text-center py-12 text-text-secondary font-medium">Loading pending approvals...</div>
             ) : (
               <section className="w-full table-glass rounded-2xl p-6 md:p-8">
-                <h2 className="text-2xl font-bold text-text-primary mb-2">Pending Guard Registrations</h2>
-                <p className="mb-6 text-sm text-text-tertiary">Review each applicant and decide whether to approve or reject account activation.</p>
+                <h2 className="text-2xl font-bold text-text-primary mb-6">Pending Guard Registrations</h2>
                 <div className="overflow-auto">
-                  <table className="hidden w-full border-collapse min-w-[820px] md:table">
+                  <table className="w-full border-collapse min-w-[820px]">
                     <thead className="thead-glass">
                       <tr>
-                        <th className="px-4 py-3 text-left font-semibold text-text-tertiary border-b-2 border-border text-xs uppercase tracking-wider">Guard Name</th>
-                        <th className="px-4 py-3 text-left font-semibold text-text-tertiary border-b-2 border-border text-xs uppercase tracking-wider">Requested Role</th>
-                        <th className="px-4 py-3 text-left font-semibold text-text-tertiary border-b-2 border-border text-xs uppercase tracking-wider">Submitted Date</th>
-                        <th className="px-4 py-3 text-left font-semibold text-text-tertiary border-b-2 border-border text-xs uppercase tracking-wider">Status</th>
-                        <th className="px-4 py-3 text-left font-semibold text-text-tertiary border-b-2 border-border text-xs uppercase tracking-wider">Actions</th>
+                        <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Guard Name</th>
+                        <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Requested Role</th>
+                        <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Submitted Date</th>
+                        <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Status</th>
+                        <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1328,60 +1327,6 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                       )}
                     </tbody>
                   </table>
-
-                  <div className="space-y-3 md:hidden" data-mobile-stack="cards">
-                    {pendingApprovals.length === 0 ? (
-                      <p className="rounded-lg border border-border-subtle bg-background p-4 text-center text-sm text-text-secondary">No pending guard approvals.</p>
-                    ) : (
-                      pendingApprovals.map((pendingUser) => (
-                        <article key={`superadmin-pending-mobile-${pendingUser.id}`} className="rounded-xl border border-border-subtle bg-background p-4">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <h3 className="truncate text-sm font-semibold text-text-primary">{pendingUser.full_name || pendingUser.username}</h3>
-                              <p className="mt-0.5 truncate text-xs text-text-tertiary">{pendingUser.email}</p>
-                            </div>
-                            <span className={`soc-chip ${pendingUser.verified ? 'status-bar-warning text-warning-text' : 'status-bar-critical text-danger-text'}`}>
-                              {pendingUser.verified ? 'Pending Approval' : 'Pending Verification'}
-                            </span>
-                          </div>
-
-                          <dl className="mt-3 grid grid-cols-1 gap-2 text-xs text-text-secondary">
-                            <div>
-                              <dt className="text-text-tertiary">Requested Role</dt>
-                              <dd className="font-medium uppercase text-text-primary">{normalizeRole(pendingUser.role)}</dd>
-                            </div>
-                            <div>
-                              <dt className="text-text-tertiary">Submitted Date</dt>
-                              <dd className="font-medium text-text-primary">{new Date(pendingUser.created_at).toLocaleString()}</dd>
-                            </div>
-                          </dl>
-
-                          <div className="mt-3 flex flex-wrap gap-2">
-                            <button
-                              onClick={() => setSelectedApproval(pendingUser)}
-                              className="soc-btn soc-btn-neutral"
-                            >
-                              Details
-                            </button>
-                            <button
-                              onClick={() => handleApprovalAction(pendingUser.id, 'approve')}
-                              disabled={processingApprovalId === pendingUser.id}
-                              className="soc-btn soc-btn-success disabled:opacity-60"
-                            >
-                              Approve
-                            </button>
-                            <button
-                              onClick={() => handleApprovalAction(pendingUser.id, 'reject')}
-                              disabled={processingApprovalId === pendingUser.id}
-                              className="soc-btn soc-btn-danger disabled:opacity-60"
-                            >
-                              Reject
-                            </button>
-                          </div>
-                        </article>
-                      ))
-                    )}
-                  </div>
                 </div>
               </section>
             )}

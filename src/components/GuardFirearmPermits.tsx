@@ -111,16 +111,16 @@ const GuardFirearmPermits: FC<Props> = ({ user, onLogout, onViewChange, activeVi
                 <h2 className="text-xl font-bold text-text-primary">Active Permits ({permits.length})</h2>
               </div>
               {permits.length > 0 ? (
-                <div className="flex-1 min-h-0 overflow-auto">
+                <div className="soc-scroll-area flex-1 min-h-0 overflow-auto">
                   <table className="w-full border-collapse">
                     <thead className="thead-glass">
                       <tr>
-                        <th className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Guard ID</th>
-                        <th className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Firearm ID</th>
-                        <th className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Type</th>
-                        <th className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Issued Date</th>
-                        <th className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Expiry Date</th>
-                        <th className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Status</th>
+                        <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Guard ID</th>
+                        <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Firearm ID</th>
+                        <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Type</th>
+                        <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Issued Date</th>
+                        <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Expiry Date</th>
+                        <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Status</th>
                       </tr>
                     </thead>
                     <tbody>

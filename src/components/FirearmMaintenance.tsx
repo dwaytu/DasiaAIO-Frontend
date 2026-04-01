@@ -112,7 +112,7 @@ const FirearmMaintenance: FC<Props> = ({ user, onLogout, onViewChange, activeVie
                 <h2 className="text-xl font-bold text-text-primary">Maintenance Records ({maintenances.length})</h2>
               </div>
               {maintenances.length > 0 ? (
-                <div className="flex-1 min-h-0 overflow-auto">
+                <div className="soc-scroll-area flex-1 min-h-0 overflow-auto">
                   <table className="w-full border-collapse">
                     <thead className="thead-glass">
                       <tr>
@@ -126,11 +126,11 @@ const FirearmMaintenance: FC<Props> = ({ user, onLogout, onViewChange, activeVie
                     </thead>
                     <tbody>
                       {maintenances.map((m) => (
-                        <tr key={m.id} className={`border-b border-border hover:bg-surface-hover ${isOverdue(m.nextScheduledDate) ? 'bg-red-50' : ''}`}>
+                        <tr key={m.id} className={`border-b border-border hover:bg-surface-hover ${isOverdue(m.nextScheduledDate) ? 'bg-danger-bg' : ''}`}>
                           <td className="px-4 py-3 text-text-primary">{m.firearmId}</td>
                           <td className="px-4 py-3 text-text-primary">{m.maintenanceType}</td>
                           <td className="px-4 py-3 text-text-primary">{new Date(m.maintenanceDate).toLocaleDateString()}</td>
-                          <td className={`px-4 py-3 ${isOverdue(m.nextScheduledDate) ? 'text-red-700 font-semibold' : 'text-text-primary'}`}>
+                          <td className={`px-4 py-3 ${isOverdue(m.nextScheduledDate) ? 'font-semibold text-danger-text' : 'text-text-primary'}`}>
                             {m.nextScheduledDate ? new Date(m.nextScheduledDate).toLocaleDateString() : 'N/A'}
                           </td>
                           <td className="px-4 py-3">

@@ -626,15 +626,15 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                     </div>
                     <div className="rounded-xl border border-border-subtle bg-background px-3 py-3">
                       <div className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">Active</div>
-                      <div className="mt-1 text-xl font-bold text-emerald-300">{summaryStats.active}</div>
+                      <div className="mt-1 text-xl font-bold text-success-text">{summaryStats.active}</div>
                     </div>
                     <div className="rounded-xl border border-border-subtle bg-background px-3 py-3">
                       <div className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">Pending</div>
-                      <div className="mt-1 text-xl font-bold text-amber-300">{summaryStats.pending}</div>
+                      <div className="mt-1 text-xl font-bold text-warning-text">{summaryStats.pending}</div>
                     </div>
                     <div className="rounded-xl border border-border-subtle bg-background px-3 py-3">
                       <div className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">Supervisors</div>
-                      <div className="mt-1 text-xl font-bold text-indigo-300">{summaryStats.supervisors}</div>
+                      <div className="mt-1 text-xl font-bold text-info-text">{summaryStats.supervisors}</div>
                     </div>
                   </div>
 
@@ -677,7 +677,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                           type="button"
                           onClick={handleBulkApproveSelected}
                           disabled={bulkProcessing}
-                          className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-300 disabled:opacity-60"
+                          className="rounded-lg border border-success-border bg-success-bg px-3 py-1.5 text-xs font-semibold text-success-text disabled:opacity-60"
                         >
                           Approve Selected
                         </button>
@@ -685,7 +685,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                           type="button"
                           onClick={handleBulkSuspendSelected}
                           disabled={bulkProcessing}
-                          className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-xs font-semibold text-amber-300 disabled:opacity-60"
+                          className="rounded-lg border border-warning-border bg-warning-bg px-3 py-1.5 text-xs font-semibold text-warning-text disabled:opacity-60"
                         >
                           Suspend Selected
                         </button>
@@ -693,7 +693,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                           type="button"
                           onClick={handleBulkDeleteSelected}
                           disabled={bulkProcessing}
-                          className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-300 disabled:opacity-60"
+                          className="rounded-lg border border-danger-border bg-danger-bg px-3 py-1.5 text-xs font-semibold text-danger-text disabled:opacity-60"
                         >
                           Delete Selected
                         </button>
@@ -710,7 +710,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                   ) : null}
 
                   {filteredUsers.length > 0 ? (
-                    <div className="flex-1 min-h-0 overflow-auto">
+                    <div className="soc-scroll-area flex-1 min-h-0 overflow-auto">
                       <table className="hidden w-full min-w-[980px] md:table">
                         <thead className="thead-glass">
                           <tr className="border-b border-border">
@@ -920,13 +920,13 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                   <h2 className="text-xl font-bold text-text-primary mb-6 pb-3 border-b border-border">Pending Guard Registrations</h2>
                   <div className="overflow-x-auto">
                     <table className="hidden w-full min-w-[800px] md:table">
-                      <thead className="bg-surface-hover border-b border-border">
+                      <thead className="thead-glass">
                         <tr>
-                          <th className="text-left px-4 py-3 text-sm font-semibold text-text-primary uppercase tracking-wider">Guard Name</th>
-                          <th className="text-left px-4 py-3 text-sm font-semibold text-text-primary uppercase tracking-wider">Requested Role</th>
-                          <th className="text-left px-4 py-3 text-sm font-semibold text-text-primary uppercase tracking-wider">Submitted Date</th>
-                          <th className="text-left px-4 py-3 text-sm font-semibold text-text-primary uppercase tracking-wider">Status</th>
-                          <th className="text-left px-4 py-3 text-sm font-semibold text-text-primary uppercase tracking-wider">Actions</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Guard Name</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Requested Role</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Submitted Date</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Status</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Actions</th>
                         </tr>
                       </thead>
                       <tbody>

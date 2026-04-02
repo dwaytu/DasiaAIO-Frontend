@@ -2,6 +2,7 @@ import { FC } from 'react'
 
 export interface OpsAlert {
   id: string
+  incidentId?: string
   severity: 'critical' | 'warning' | 'info'
   title: string
   detail: string

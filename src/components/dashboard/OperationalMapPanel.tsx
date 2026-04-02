@@ -417,7 +417,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
         </div>
       </div>
 
-      <div className="relative isolate h-72 overflow-hidden rounded-xl border border-border-elevated bg-surface">
+      <div className="relative isolate h-80 overflow-hidden rounded-xl border border-border-elevated bg-surface md:h-96">
         <MapContainer
           center={mapCenter}
           zoom={12}

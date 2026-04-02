@@ -1,4 +1,5 @@
 import { FC } from 'react'
+import { useOperationalEvent } from '../../context/OperationalEventContext'
 
 export type FeedCategory = 'guard' | 'vehicle' | 'mission' | 'equipment' | 'system'
 
@@ -64,6 +65,8 @@ const categoryIcon: Record<FeedCategory, JSX.Element> = {
 }
 
 const LiveOperationsFeed: FC<LiveOperationsFeedProps> = ({ items }) => {
+  const { selectedEventId, selectEvent } = useOperationalEvent()
+
   return (
     <section className="command-panel p-4 md:p-5" aria-label="Live operations feed">
       <div className="mb-4 flex items-center justify-between gap-3 border-b border-border-subtle pb-3">
@@ -80,8 +83,13 @@ const LiveOperationsFeed: FC<LiveOperationsFeedProps> = ({ items }) => {
           items.map((item, index) => (
             <article
               key={item.id}
-              className={`soc-timeline-item soc-animated-entry rounded-lg border p-3 ${categoryStyles[item.category]}`}
+              role="button"
+              tabIndex={0}
+              onClick={() => selectEvent({ id: item.id, type: item.category === 'mission' || item.category === 'system' ? 'incident' : item.category === 'guard' ? 'guard' : 'vehicle', title: item.description })}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectEvent({ id: item.id, type: item.category === 'mission' || item.category === 'system' ? 'incident' : item.category === 'guard' ? 'guard' : 'vehicle', title: item.description }) } }}
+              className={`soc-timeline-item soc-animated-entry cursor-pointer rounded-lg border p-3 transition-all duration-200 ${categoryStyles[item.category]} ${selectedEventId === item.id ? 'ring-2 ring-cyan-400' : ''}`}
               style={{ animationDelay: `${index * 70}ms` }}
+              aria-pressed={selectedEventId === item.id}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-2">

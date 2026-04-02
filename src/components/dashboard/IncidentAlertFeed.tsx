@@ -1,5 +1,6 @@
 import { FC } from 'react'
 import { OpsAlert } from './OpsAlertFeed'
+import { useOperationalEvent } from '../../context/OperationalEventContext'
 
 interface IncidentAlertFeedProps {
   alerts: OpsAlert[]
@@ -13,6 +14,8 @@ const toneClass: Record<OpsAlert['severity'], string> = {
 }
 
 const IncidentAlertFeed: FC<IncidentAlertFeedProps> = ({ alerts, nowLabel }) => {
+  const { selectedEventId, selectEvent } = useOperationalEvent()
+
   return (
     <section className="command-panel p-4 md:p-5" aria-label="Incident alert feed">
       <div className="mb-4 border-b border-border-subtle pb-3">
@@ -20,12 +23,21 @@ const IncidentAlertFeed: FC<IncidentAlertFeedProps> = ({ alerts, nowLabel }) => 
         <p className="text-xs uppercase tracking-[0.16em] text-text-tertiary">Prioritized incident stream for operators</p>
       </div>
 
-      <div className="space-y-2">
+      <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
         {alerts.length === 0 ? (
           <p className="rounded-lg border border-border-subtle bg-surface-elevated p-3 text-sm text-text-secondary">No active incidents. Monitoring remains stable.</p>
         ) : (
           alerts.map((alert, index) => (
-            <article key={alert.id} className={`soc-animated-entry rounded-lg border p-3 ${toneClass[alert.severity]}`} style={{ animationDelay: `${index * 60}ms` }}>
+            <article
+              key={alert.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => selectEvent({ id: alert.incidentId ?? alert.id, type: 'incident', title: alert.title })}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectEvent({ id: alert.incidentId ?? alert.id, type: 'incident', title: alert.title }) } }}
+              className={`soc-animated-entry cursor-pointer rounded-lg border p-3 transition-all duration-200 ${toneClass[alert.severity]} ${selectedEventId === (alert.incidentId ?? alert.id) ? 'ring-2 ring-cyan-400' : ''}`}
+              style={{ animationDelay: `${index * 60}ms` }}
+              aria-pressed={selectedEventId === (alert.incidentId ?? alert.id)}
+            >
               <div className="flex items-start justify-between gap-3">
                 <p className="text-xs font-semibold uppercase tracking-[0.16em]">Severity: {alert.severity}</p>
                 <span className="text-[11px] font-semibold uppercase tracking-wide opacity-90">Observed {nowLabel}</span>

@@ -102,7 +102,7 @@ const PredictiveAlertsPanel: FC<PredictiveAlertsPanelProps> = ({
         {timestamp && <span className="font-mono text-[11px] text-[color:var(--color-muted-text)]">{timestamp}</span>}
       </div>
 
-      <div className="space-y-3 px-4 py-4" role="region" aria-live="polite">
+      <div className="max-h-80 space-y-3 overflow-y-auto px-4 py-4 pr-3" role="region" aria-live="polite">
         {loading && <p className="text-center font-mono text-xs text-[color:var(--color-muted-text)]">Scanning signals...</p>}
 
         {!loading && error && (

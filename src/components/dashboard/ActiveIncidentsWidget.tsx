@@ -113,9 +113,17 @@ const ActiveIncidentsWidget: FC<ActiveIncidentsWidgetProps> = ({
         )}
 
         {!loading && !error && active.length > 0 && (
-          <ul className="space-y-1" role="list">
+          <ul className="max-h-64 space-y-1 overflow-y-auto" role="list">
             {active.map((incident) => {
               const cfg = PRIORITY_CONFIG[incident.priority]
+              const priorityClass =
+                incident.priority === 'critical'
+                  ? 'incident-row-critical'
+                  : incident.priority === 'high'
+                    ? 'incident-row-high'
+                    : incident.priority === 'medium'
+                      ? 'incident-row-medium'
+                      : ''
               const timeLabel = new Date(incident.created_at).toLocaleTimeString([], {
                 hour: '2-digit',
                 minute: '2-digit',
@@ -123,7 +131,7 @@ const ActiveIncidentsWidget: FC<ActiveIncidentsWidgetProps> = ({
               return (
                 <li
                   key={incident.id}
-                  className={`flex items-start justify-between gap-3 rounded px-3 py-2 ${cfg.rowClass}`}
+                  className={`flex cursor-default items-start justify-between gap-3 rounded px-3 py-2 transition-colors hover:bg-[color:var(--color-surface-elevated)] ${cfg.rowClass} ${priorityClass}`}
                 >
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-mono text-xs font-semibold text-[color:var(--color-text)]">

@@ -1,4 +1,5 @@
 import { FC, useEffect, useMemo, useState } from 'react'
+import { OperationalEventProvider } from '../../context/OperationalEventContext'
 import { Activity, ShieldAlert, Siren, TimerReset } from 'lucide-react'
 import SectionPanel from './SectionPanel'
 import QuickActionsPanel, { QuickActionItem } from './QuickActionsPanel'
@@ -170,6 +171,7 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
       .slice(0, 4)
       .map((incident) => ({
         id: `incident-alert-${incident.id}`,
+        incidentId: incident.id,
         severity: (incident.priority === 'critical'
           ? 'critical'
           : incident.priority === 'high'
@@ -183,7 +185,8 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
   }, [alerts, displayIncidents])
 
   return (
-    <main className="space-y-6" aria-label="Security operations command center overview">
+    <OperationalEventProvider>
+      <main className="space-y-6" aria-label="Security operations command center overview">
       <section className="soc-surface p-4 md:p-5" aria-labelledby="command-center-title">
         <SectionHeader
           title="Security Operations Command Center"
@@ -329,7 +332,8 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
           Command center loaded with partial data. Last service check: {serviceState.services.lastChecked}.
         </div>
       )}
-    </main>
+      </main>
+    </OperationalEventProvider>
   )
 }
 

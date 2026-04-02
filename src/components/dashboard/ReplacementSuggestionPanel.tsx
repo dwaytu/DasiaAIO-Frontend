@@ -110,8 +110,33 @@ const ReplacementSuggestionPanel: FC<ReplacementSuggestionPanelProps> = ({
                   </div>
                   <p className="mt-2 font-mono text-[11px] text-[color:var(--color-muted-text)]">Reason: {getRecommendationReason(item)}</p>
                   <p className="mt-1 font-mono text-[11px] text-[color:var(--color-muted-text)]">Risk level: {getRiskLevel(item)}</p>
+                  <p className="mt-2 font-mono text-[11px] text-[color:var(--color-muted-text)]">Suggested action: {getSuggestedAction(item)}</p>
                   <p className="mt-1 font-mono text-[11px] text-[color:var(--color-muted-text)]">Confidence: {(getConfidence(item) * 100).toFixed(0)}%</p>
-                  <p className="mt-1 font-mono text-[11px] text-[color:var(--color-muted-text)]">Suggested action: {getSuggestedAction(item)}</p>
+                  {index === 0 && item.availability && item.permitValid && (
+                    <div className="mt-2 flex gap-1">
+                      <button
+                        type="button"
+                        onClick={() => alert(`Assign ${item.guardName} as replacement`)}
+                        className="rounded border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 font-mono text-[11px] font-semibold text-emerald-200 transition-colors hover:bg-emerald-500/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-400"
+                      >
+                        Assign Now
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => alert(`Contact ${item.guardName} for confirmation`)}
+                        className="rounded border border-sky-400/40 bg-sky-500/10 px-2 py-1 font-mono text-[11px] text-sky-200 transition-colors hover:bg-sky-500/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400"
+                      >
+                        Contact Guard
+                      </button>
+                    </div>
+                  )}
+                  {index !== 0 && !item.availability && (
+                    <div className="mt-2">
+                      <span className="rounded border border-zinc-500/40 bg-zinc-500/10 px-2 py-1 font-mono text-[11px] text-zinc-400">
+                        Unavailable — keep as reserve
+                      </span>
+                    </div>
+                  )}
                 </li>
               )
             })}

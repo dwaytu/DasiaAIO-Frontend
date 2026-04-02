@@ -97,9 +97,24 @@ const IncidentSummaryGenerator: FC<IncidentSummaryGeneratorProps> = ({ incidents
             <p className="mt-1 font-mono text-[11px] text-[color:var(--color-muted-text)]">Risk level: {riskLevel || 'unknown'}</p>
             <p className="mt-1 font-mono text-[11px] text-[color:var(--color-muted-text)]">Confidence: {Math.round(confidence * 100)}%</p>
             <p className="mt-1 font-mono text-[11px] text-[color:var(--color-muted-text)]">Explanation: {explanation || 'No explanation returned.'}</p>
-            <p className="mt-1 font-mono text-[11px] text-[color:var(--color-muted-text)]">
-              Suggested actions: {suggestedActions.slice(0, 3).join(' | ') || 'No actions suggested.'}
-            </p>
+            {suggestedActions.length > 0 && (
+              <div className="mt-2 space-y-1">
+                <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-[color:var(--color-muted-text)]">Recommended Actions:</p>
+                <div className="flex flex-wrap gap-1">
+                  {suggestedActions.slice(0, 3).map((action, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => alert(`Action: ${action}`)}
+                      className="rounded border border-cyan-400/40 bg-cyan-500/10 px-2 py-1 font-mono text-[11px] text-cyan-200 transition-colors hover:bg-cyan-500/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-400"
+                      title={action}
+                    >
+                      {action.length > 40 ? action.slice(0, 40) + '\u2026' : action}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             {keyPhrases.length > 0 && (
               <p className="mt-1 font-mono text-[11px] text-[color:var(--color-muted-text)]">
                 Key: {keyPhrases.slice(0, 4).join(', ')}

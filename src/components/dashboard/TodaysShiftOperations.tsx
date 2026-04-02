@@ -70,7 +70,7 @@ const TodaysShiftOperations: FC<TodaysShiftOperationsProps> = ({
                 : 'TBD'
 
               return (
-                <li key={shift.id || `${guardName}-${siteName}-${index}`} className="rounded-md border border-[color:var(--color-border)]/60 bg-[color:var(--color-bg)]/30 px-3 py-2 shadow-inner shadow-black/20">
+                <li key={shift.id || `${guardName}-${siteName}-${index}`} className="rounded-md border border-[color:var(--color-border)]/60 bg-[color:var(--color-bg)]/30 px-3 py-2 shadow-inner shadow-black/20 transition-colors hover:bg-[color:var(--color-surface-elevated)]">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="truncate font-mono text-xs font-semibold text-[color:var(--color-text)]">{guardName}</p>

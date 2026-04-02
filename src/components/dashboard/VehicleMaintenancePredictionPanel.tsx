@@ -85,6 +85,35 @@ const VehicleMaintenancePredictionPanel: FC<VehicleMaintenancePredictionPanelPro
                   <p className="mt-1 font-mono text-[11px] text-[color:var(--color-muted-text)]">Risk level: {item.riskLevel}</p>
                   <p className="mt-1 font-mono text-[11px] text-[color:var(--color-muted-text)]">Confidence: {(getConfidence(item) * 100).toFixed(0)}%</p>
                   <p className="mt-1 font-mono text-[11px] text-[color:var(--color-muted-text)]">{getUrgencyNote(item)}</p>
+                  {item.riskLevel === 'HIGH' && (
+                    <div className="mt-2 flex gap-1">
+                      <button
+                        type="button"
+                        onClick={() => alert(`Flag ${item.licensePlate} for immediate inspection`)}
+                        className="rounded border border-red-500/40 bg-red-500/10 px-2 py-1 font-mono text-[11px] font-semibold text-red-200 transition-colors hover:bg-red-500/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-red-400"
+                      >
+                        Flag for Inspection
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => alert(`Remove ${item.licensePlate} from dispatch pool`)}
+                        className="rounded border border-orange-400/40 bg-orange-500/10 px-2 py-1 font-mono text-[11px] text-orange-200 transition-colors hover:bg-orange-500/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-400"
+                      >
+                        Remove from Dispatch
+                      </button>
+                    </div>
+                  )}
+                  {item.riskLevel === 'MEDIUM' && (
+                    <div className="mt-2">
+                      <button
+                        type="button"
+                        onClick={() => alert(`Schedule maintenance for ${item.licensePlate}`)}
+                        className="rounded border border-amber-400/40 bg-amber-500/10 px-2 py-1 font-mono text-[11px] text-amber-200 transition-colors hover:bg-amber-500/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400"
+                      >
+                        Book Maintenance
+                      </button>
+                    </div>
+                  )}
                 </li>
               )
             })}

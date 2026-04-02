@@ -97,6 +97,35 @@ const GuardAbsencePredictionPanel: FC<GuardAbsencePredictionPanelProps> = ({
                   </div>
                   <p className="mt-2 font-mono text-[11px] text-[color:var(--color-muted-text)]">Suggested action: {getSuggestedAction(item)}</p>
                   <p className="mt-1 font-mono text-[11px] text-[color:var(--color-muted-text)]">Confidence: {(getConfidence(item) * 100).toFixed(0)}%</p>
+                  {item.riskLevel === 'HIGH' && (
+                    <div className="mt-2 flex gap-1">
+                      <button
+                        type="button"
+                        onClick={() => alert(`Deploy replacement for ${item.guardName}`)}
+                        className="rounded border border-red-500/40 bg-red-500/10 px-2 py-1 font-mono text-[11px] font-semibold text-red-200 transition-colors hover:bg-red-500/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-red-400"
+                      >
+                        Deploy Replacement
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => alert(`Notify ${item.guardName} of shift confirmation request`)}
+                        className="rounded border border-amber-400/40 bg-amber-500/10 px-2 py-1 font-mono text-[11px] text-amber-200 transition-colors hover:bg-amber-500/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400"
+                      >
+                        Notify Guard
+                      </button>
+                    </div>
+                  )}
+                  {item.riskLevel === 'MEDIUM' && (
+                    <div className="mt-2">
+                      <button
+                        type="button"
+                        onClick={() => alert(`Send confirmation to ${item.guardName}`)}
+                        className="rounded border border-amber-400/40 bg-amber-500/10 px-2 py-1 font-mono text-[11px] text-amber-200 transition-colors hover:bg-amber-500/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400"
+                      >
+                        Send Confirmation
+                      </button>
+                    </div>
+                  )}
                 </li>
               )
             })}

@@ -133,9 +133,17 @@ function notifyAuthExpired(message: string): void {
 }
 
 function isAuthExpired(response: Response, message: string): boolean {
-  if (response.status === 401 || response.status === 403) return true
   const normalized = message.toLowerCase()
-  return normalized.includes('invalidtoken') || normalized.includes('invalid or expired token') || normalized.includes('expired token')
+  const tokenExpiredMessage =
+    normalized.includes('invalidtoken') ||
+    normalized.includes('invalid or expired token') ||
+    normalized.includes('expired token') ||
+    normalized.includes('expiredsignature') ||
+    normalized.includes('jwt')
+
+  if (response.status === 401) return true
+  if (response.status === 403) return tokenExpiredMessage
+  return tokenExpiredMessage
 }
 
 function hasAuthorizationHeader(headers: HeadersInit | undefined): boolean {

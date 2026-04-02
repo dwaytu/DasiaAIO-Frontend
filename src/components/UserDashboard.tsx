@@ -1,8 +1,5 @@
-import { useState, useEffect, FC } from 'react'
-import { API_BASE_URL } from '../config'
-import { detectRuntimePlatform } from '../config'
-import Sidebar from './Sidebar'
-import Header from './Header'
+import { FC, FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
+import { API_BASE_URL, detectRuntimePlatform } from '../config'
 import { User as AppUser } from '../App'
 import { getRequiredAccuracyMeters, getTrackingAccuracyMode } from '../utils/trackingPolicy'
 import { logError } from '../utils/logger'
@@ -63,59 +60,118 @@ interface SupportTicketItem {
   created_at: string
 }
 
+type GuardSection = 'mission' | 'resources' | 'support' | 'map'
+
+type IncidentPriority = 'low' | 'medium' | 'high' | 'critical'
+
+interface IncidentFormState {
+  title: string
+  description: string
+  location: string
+  priority: IncidentPriority
+}
+
+interface LastKnownLocation {
+  latitude: number
+  longitude: number
+  accuracyMeters: number | null
+  recordedAt: string
+  source: string
+}
+
+function resolveSectionFromView(activeView?: string): GuardSection {
+  if (activeView === 'support') return 'support'
+  if (activeView === 'firearms' || activeView === 'permits') return 'resources'
+  if (activeView === 'map') return 'map'
+  return 'mission'
+}
+
+function formatTimeWindow(startTime: string, endTime: string): string {
+  const start = new Date(startTime)
+  const end = new Date(endTime)
+
+  return `${start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+}
+
+function calcHours(checkIn: string, checkOut?: string): string {
+  if (!checkOut) return '0.0'
+  const start = new Date(checkIn).getTime()
+  const end = new Date(checkOut).getTime()
+  if (Number.isNaN(start) || Number.isNaN(end)) return '0.0'
+  const duration = Math.max(0, (end - start) / (1000 * 60 * 60))
+  return duration.toFixed(1)
+}
+
 const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, activeView }) => {
+  const [activeSection, setActiveSection] = useState<GuardSection>(() => resolveSectionFromView(activeView))
+
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([])
-  const [loading, setLoading] = useState(true)
-  const [activeSection, setActiveSection] = useState<'overview' | 'schedule' | 'firearms' | 'permits' | 'support'>(() => {
-    // If activeView is 'schedule', 'firearms', 'permits', or 'support', use that
-    if (activeView === 'schedule' || activeView === 'firearms' || activeView === 'permits' || activeView === 'support') {
-      return activeView
-    }
-    return 'overview'
-  })
   const [scheduleItems, setScheduleItems] = useState<ShiftItem[]>([])
   const [firearmItems, setFirearmItems] = useState<AllocationItem[]>([])
   const [permitItems, setPermitItems] = useState<PermitItem[]>([])
   const [ticketItems, setTicketItems] = useState<SupportTicketItem[]>([])
-  const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false)
+
+  const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true)
+  const [isSyncing, setIsSyncing] = useState<boolean>(false)
+  const [syncError, setSyncError] = useState<string>('')
+  const [actionStatus, setActionStatus] = useState<string>('')
+  const [isOnline, setIsOnline] = useState<boolean>(() => (typeof navigator === 'undefined' ? true : navigator.onLine))
+
   const [scheduleForm, setScheduleForm] = useState({
     clientSite: '',
     date: '',
     startTime: '',
-    endTime: ''
+    endTime: '',
   })
   const [scheduleStatus, setScheduleStatus] = useState<string>('')
   const [scheduleSubmitting, setScheduleSubmitting] = useState<boolean>(false)
+
   const [ticketForm, setTicketForm] = useState({ subject: '', message: '' })
   const [ticketStatus, setTicketStatus] = useState<string>('')
   const [ticketSubmitting, setTicketSubmitting] = useState<boolean>(false)
-  const [activeShifts, setActiveShifts] = useState<ShiftItem[]>([])
-  const [checkInStatus, setCheckInStatus] = useState<{ [key: string]: 'idle' | 'checked_in' | 'elapsed' }>({})
-  const [elapsedTime, setElapsedTime] = useState<{ [key: string]: string }>({})
-  const [checkInTimes, setCheckInTimes] = useState<{ [key: string]: Date }>({})
-  const [checkInSubmitting, setCheckInSubmitting] = useState<{ [key: string]: boolean }>({})
+
+  const [incidentModalOpen, setIncidentModalOpen] = useState<boolean>(false)
+  const [incidentForm, setIncidentForm] = useState<IncidentFormState>({
+    title: '',
+    description: '',
+    location: '',
+    priority: 'high',
+  })
+  const [incidentStatus, setIncidentStatus] = useState<string>('')
+  const [incidentSubmitting, setIncidentSubmitting] = useState<boolean>(false)
+
+  const [instructionsOpen, setInstructionsOpen] = useState<boolean>(false)
+
+  const [checkInStatus, setCheckInStatus] = useState<Record<string, 'idle' | 'checked_in'>>({})
+  const [checkInTimes, setCheckInTimes] = useState<Record<string, Date>>({})
+  const [elapsedTime, setElapsedTime] = useState<Record<string, string>>({})
+  const [checkInSubmitting, setCheckInSubmitting] = useState<Record<string, boolean>>({})
+
   const [locationTrackingEnabled, setLocationTrackingEnabled] = useState<boolean>(false)
   const [hasLocationConsent, setHasLocationConsent] = useState<boolean>(false)
   const [locationTrackingMessage, setLocationTrackingMessage] = useState<string>('')
   const [locationPermissionState, setLocationPermissionState] = useState<'unknown' | 'prompt' | 'granted' | 'denied'>('unknown')
   const [locationAccuracyMeters, setLocationAccuracyMeters] = useState<number | null>(null)
-  const navItems = [
-    { view: 'overview', label: 'Dashboard', group: 'MAIN MENU' },
-    { view: 'calendar', label: 'Calendar', group: 'MAIN MENU' },
-    { view: 'schedule', label: 'Schedule', group: 'MAIN MENU' },
-    { view: 'firearms', label: 'Firearms', group: 'RESOURCES' },
-    { view: 'permits', label: 'My Permits', group: 'RESOURCES' },
-    { view: 'support', label: 'Contacts', group: 'RESOURCES' },
-  ]
+  const [lastKnownLocation, setLastKnownLocation] = useState<LastKnownLocation | null>(null)
+
+  const [mapExpanded, setMapExpanded] = useState<boolean>(false)
 
   useEffect(() => {
-    if (!user?.id) return
-    fetchAttendance(user.id)
-    fetchSchedule(user.id)
-    fetchFirearms(user.id)
-    fetchPermits(user.id)
-    fetchTickets(user.id)
-  }, [user?.id])
+    setActiveSection(resolveSectionFromView(activeView))
+  }, [activeView])
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true)
+    const handleOffline = () => setIsOnline(false)
+
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  }, [])
 
   useEffect(() => {
     const stored = localStorage.getItem(LOCATION_TRACKING_TOGGLE_KEY)
@@ -138,84 +194,169 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
     })
   }, [hasLocationConsent])
 
+  const getAuthHeaders = useCallback((extraHeaders: Record<string, string> = {}) => {
+    const token = getAuthToken()
+
+    if (!token) return extraHeaders
+
+    return {
+      Authorization: `Bearer ${token}`,
+      ...extraHeaders,
+    }
+  }, [])
+
+  const refreshData = useCallback(async (initial = false) => {
+    if (!user?.id) {
+      setIsInitialLoading(false)
+      setIsSyncing(false)
+      return
+    }
+
+    if (initial) {
+      setIsInitialLoading(true)
+    }
+
+    setIsSyncing(true)
+    setSyncError('')
+
+    const requests = [
+      fetchJsonOrThrow<any>(
+        `${API_BASE_URL}/api/attendance/${user.id}`,
+        { headers: getAuthHeaders() },
+        'Unable to load attendance records',
+      ),
+      fetchJsonOrThrow<any>(
+        `${API_BASE_URL}/api/guard-replacement/guard/${user.id}/shifts`,
+        { headers: getAuthHeaders() },
+        'Unable to load schedule',
+      ),
+      fetchJsonOrThrow<any>(
+        `${API_BASE_URL}/api/guard-allocations/${user.id}`,
+        { headers: getAuthHeaders() },
+        'Unable to load firearm allocations',
+      ),
+      fetchJsonOrThrow<any>(
+        `${API_BASE_URL}/api/guard-firearm-permits/${user.id}`,
+        { headers: getAuthHeaders() },
+        'Unable to load permits',
+      ),
+      fetchJsonOrThrow<any>(
+        `${API_BASE_URL}/api/support-tickets/${user.id}`,
+        { headers: getAuthHeaders() },
+        'Unable to load support tickets',
+      ),
+    ] as const
+
+    const labels = ['attendance', 'schedule', 'firearms', 'permits', 'support tickets']
+    const settled = await Promise.allSettled(requests)
+    const failures: string[] = []
+
+    settled.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        failures.push(labels[index])
+        return
+      }
+
+      const data = result.value
+      if (index === 0) setAttendance(Array.isArray(data?.attendance) ? data.attendance : [])
+      if (index === 1) setScheduleItems(Array.isArray(data?.shifts) ? data.shifts : [])
+      if (index === 2) setFirearmItems(Array.isArray(data?.allocations) ? data.allocations : [])
+      if (index === 3) setPermitItems(Array.isArray(data?.permits) ? data.permits : [])
+      if (index === 4) setTicketItems(Array.isArray(data?.tickets) ? data.tickets : [])
+    })
+
+    if (failures.length > 0) {
+      setSyncError(`Some data could not be loaded: ${failures.join(', ')}.`)
+    }
+
+    setIsInitialLoading(false)
+    setIsSyncing(false)
+  }, [getAuthHeaders, user?.id])
+
+  useEffect(() => {
+    void refreshData(true)
+  }, [refreshData])
+
   useEffect(() => {
     if (!locationTrackingEnabled) return
     if (!hasLocationConsent) {
-      setLocationTrackingMessage('Location tracking is disabled because consent has not been accepted.')
+      setLocationTrackingMessage('Location tracking is disabled because location consent has not been accepted.')
       setLocationTrackingEnabled(false)
       localStorage.setItem(LOCATION_TRACKING_TOGGLE_KEY, 'false')
       return
     }
 
     const token = getAuthToken()
-    if (!token) return
+    if (!token || !user?.id) return
 
     let lastSent = 0
-    const isMobileClient = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
-    const trackingMode = getTrackingAccuracyMode()
-    const REQUIRED_ACCURACY_METERS = getRequiredAccuracyMeters(isMobileClient, trackingMode)
-    const platform = detectRuntimePlatform()
     let disposed = false
 
+    const isMobileClient = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+    const trackingMode = getTrackingAccuracyMode()
+    const requiredAccuracyMeters = getRequiredAccuracyMeters(isMobileClient, trackingMode)
+    const runtimePlatform = detectRuntimePlatform()
+
     const sendHeartbeat = async () => {
-        const now = Date.now()
-        if (now - lastSent < 15000) return
-        lastSent = now
+      const now = Date.now()
+      if (now - lastSent < 15000) return
+      lastSent = now
 
-        try {
-          const location = await resolveLocationWithFallback(platform)
-          const accuracyMeters = location.accuracyMeters
-          setLocationAccuracyMeters(accuracyMeters)
+      try {
+        const location = await resolveLocationWithFallback(runtimePlatform)
+        if (disposed) return
 
-          if (
-            location.source !== 'ip' &&
-            accuracyMeters != null &&
-            accuracyMeters > REQUIRED_ACCURACY_METERS
-          ) {
-            setLocationTrackingMessage(
-              isMobileClient
-                ? 'Location fix is too broad to plot accurately. Move to an open area and wait for stronger GPS.'
-                : 'Desktop location is often Wi-Fi/IP based and may drift. For reliable tracking, open this dashboard on your phone with GPS enabled.'
-            )
-            return
-          }
+        setLocationAccuracyMeters(location.accuracyMeters)
+        setLastKnownLocation({
+          latitude: location.latitude,
+          longitude: location.longitude,
+          accuracyMeters: location.accuracyMeters ?? null,
+          recordedAt: new Date().toISOString(),
+          source: location.source,
+        })
 
-          await fetchJsonOrThrow(
-            `${API_BASE_URL}/api/tracking/heartbeat`,
-            {
-              method: 'POST',
-              headers: {
-                Authorization: `Bearer ${token}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                entityType: 'guard',
-                entityId: user.id,
-                label: user.fullName || user.full_name || user.username,
-                status: 'active',
-                latitude: location.latitude,
-                longitude: location.longitude,
-                heading: location.heading,
-                speedKph: location.speedKph,
-                accuracyMeters,
-              }),
-            },
-            'Unable to send location heartbeat.',
-          )
-
-          if (disposed) return
-
-          if (location.source === 'ip') {
-            setLocationPermissionState('denied')
-            setLocationTrackingMessage('Live tracking is active using approximate IP-based location fallback.')
-          } else {
-            setLocationPermissionState('granted')
-            setLocationTrackingMessage('Live location tracking is active.')
-          }
-        } catch {
-          if (disposed) return
-          setLocationTrackingMessage('Location heartbeat failed. Check your connection.')
+        if (
+          location.source !== 'ip' &&
+          location.accuracyMeters != null &&
+          location.accuracyMeters > requiredAccuracyMeters
+        ) {
+          setLocationTrackingMessage('Location fix is too broad for precise tracking. Move to an open area and wait for GPS to stabilize.')
+          return
         }
+
+        await fetchJsonOrThrow(
+          `${API_BASE_URL}/api/tracking/heartbeat`,
+          {
+            method: 'POST',
+            headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({
+              entityType: 'guard',
+              entityId: user.id,
+              label: user.fullName || user.full_name || user.username,
+              status: 'active',
+              latitude: location.latitude,
+              longitude: location.longitude,
+              heading: location.heading,
+              speedKph: location.speedKph,
+              accuracyMeters: location.accuracyMeters,
+            }),
+          },
+          'Unable to send location heartbeat',
+        )
+
+        if (disposed) return
+
+        if (location.source === 'ip') {
+          setLocationPermissionState('denied')
+          setLocationTrackingMessage('Live tracking is active using approximate IP fallback.')
+        } else {
+          setLocationPermissionState('granted')
+          setLocationTrackingMessage('Live location tracking is active.')
+        }
+      } catch {
+        if (disposed) return
+        setLocationTrackingMessage('Location heartbeat failed. Check connection and retry.')
+      }
     }
 
     void sendHeartbeat()
@@ -227,7 +368,25 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
       disposed = true
       window.clearInterval(intervalId)
     }
-  }, [hasLocationConsent, locationTrackingEnabled, user.id, user.username, user.fullName, user.full_name])
+  }, [getAuthHeaders, hasLocationConsent, locationTrackingEnabled, user?.fullName, user?.full_name, user?.id, user?.username])
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      Object.entries(checkInTimes).forEach(([shiftId, checkInTime]) => {
+        if (checkInStatus[shiftId] === 'checked_in') {
+          const elapsedSeconds = Math.floor((Date.now() - checkInTime.getTime()) / 1000)
+          const hours = Math.floor(elapsedSeconds / 3600)
+          const minutes = Math.floor((elapsedSeconds % 3600) / 60)
+          setElapsedTime((previous) => ({
+            ...previous,
+            [shiftId]: `${hours}h ${minutes}m`,
+          }))
+        }
+      })
+    }, 1000)
+
+    return () => window.clearInterval(intervalId)
+  }, [checkInStatus, checkInTimes])
 
   const requestLocationPermission = async () => {
     setLocationTrackingMessage('Requesting location access...')
@@ -241,12 +400,12 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
 
     if (state === 'unsupported') {
       setLocationPermissionState('unknown')
-      setLocationTrackingMessage('Precise location is unavailable in this runtime. IP-based fallback will be used.')
+      setLocationTrackingMessage('Precise location is unavailable in this runtime. IP fallback can still be used.')
       return
     }
 
     setLocationPermissionState('denied')
-    setLocationTrackingMessage('Location access was denied. Tracking can continue with approximate IP-based fallback.')
+    setLocationTrackingMessage('Location access was denied. Tracking can continue with approximate fallback.')
   }
 
   const toggleLocationTracking = () => {
@@ -257,10 +416,11 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
       return
     }
 
-    const next = !locationTrackingEnabled
-    setLocationTrackingEnabled(next)
-    localStorage.setItem(LOCATION_TRACKING_TOGGLE_KEY, String(next))
-    if (next) {
+    const nextValue = !locationTrackingEnabled
+    setLocationTrackingEnabled(nextValue)
+    localStorage.setItem(LOCATION_TRACKING_TOGGLE_KEY, String(nextValue))
+
+    if (nextValue) {
       void requestLocationPermission()
     } else {
       setLocationTrackingMessage('Live location tracking is turned off.')
@@ -268,173 +428,214 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
     }
   }
 
-  const locationAccuracyQuality =
-    locationAccuracyMeters == null
-      ? 'unknown'
-      : locationAccuracyMeters <= 15
-        ? 'high'
-        : locationAccuracyMeters <= 40
-          ? 'medium'
-          : 'low'
-
-  // Filter today's shifts
-  useEffect(() => {
+  const activeShifts = useMemo(() => {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     const tomorrow = new Date(today)
     tomorrow.setDate(tomorrow.getDate() + 1)
 
-    const todaysShifts = scheduleItems.filter(shift => {
-      const shiftStart = new Date(shift.start_time)
-      return shiftStart >= today && shiftStart < tomorrow
-    })
-
-    setActiveShifts(todaysShifts)
+    return scheduleItems
+      .filter((shift) => {
+        const shiftStart = new Date(shift.start_time)
+        return shiftStart >= today && shiftStart < tomorrow
+      })
+      .sort((left, right) => new Date(left.start_time).getTime() - new Date(right.start_time).getTime())
   }, [scheduleItems])
 
-  // Update elapsed time
-  useEffect(() => {
-    const interval = setInterval(() => {
-      Object.entries(checkInTimes).forEach(([shiftId, checkInTime]) => {
-        if (checkInStatus[shiftId] === 'checked_in') {
-          const now = new Date()
-          const elapsed = Math.floor((now.getTime() - checkInTime.getTime()) / 1000)
-          const hours = Math.floor(elapsed / 3600)
-          const minutes = Math.floor((elapsed % 3600) / 60)
-          const seconds = elapsed % 60
-          setElapsedTime(prev => ({
-            ...prev,
-            [shiftId]: `${hours}h ${minutes}m ${seconds}s`
-          }))
-        }
-      })
-    }, 1000)
+  const currentShift = useMemo(() => {
+    if (activeShifts.length === 0) return null
 
-    return () => clearInterval(interval)
-  }, [checkInStatus, checkInTimes])
+    const now = Date.now()
+    const inProgress = activeShifts.find((shift) => {
+      const start = new Date(shift.start_time).getTime()
+      const end = new Date(shift.end_time).getTime()
+      return now >= start && now <= end
+    })
 
-  const fetchAttendance = async (guardId: string) => {
+    if (inProgress) return inProgress
+
+    const upcoming = activeShifts.find((shift) => now < new Date(shift.start_time).getTime())
+    if (upcoming) return upcoming
+
+    return activeShifts[0]
+  }, [activeShifts])
+
+  const dutyStatus = useMemo(() => {
+    if (!currentShift) return 'Off Duty'
+
+    const shiftState = checkInStatus[currentShift.id]
+    if (shiftState === 'checked_in') return 'On Post'
+
+    const now = Date.now()
+    const start = new Date(currentShift.start_time).getTime()
+    const end = new Date(currentShift.end_time).getTime()
+
+    if (now < start) return 'Standby'
+    if (now > end) return 'Completed'
+
+    return 'Awaiting Check In'
+  }, [checkInStatus, currentShift])
+
+  const locationAccuracyLabel = useMemo(() => {
+    if (locationAccuracyMeters == null) return 'No Fix'
+    if (locationAccuracyMeters <= 15) return 'High'
+    if (locationAccuracyMeters <= 40) return 'Medium'
+    return 'Low'
+  }, [locationAccuracyMeters])
+
+  const mapEmbedUrl = useMemo(() => {
+    if (!lastKnownLocation) return ''
+
+    const delta = 0.008
+    const left = (lastKnownLocation.longitude - delta).toFixed(6)
+    const right = (lastKnownLocation.longitude + delta).toFixed(6)
+    const bottom = (lastKnownLocation.latitude - delta).toFixed(6)
+    const top = (lastKnownLocation.latitude + delta).toFixed(6)
+    const markerLat = lastKnownLocation.latitude.toFixed(6)
+    const markerLon = lastKnownLocation.longitude.toFixed(6)
+
+    return `https://www.openstreetmap.org/export/embed.html?bbox=${left}%2C${bottom}%2C${right}%2C${top}&layer=mapnik&marker=${markerLat}%2C${markerLon}`
+  }, [lastKnownLocation])
+
+  const mapExternalUrl = useMemo(() => {
+    if (!lastKnownLocation) return ''
+    return `https://www.openstreetmap.org/?mlat=${lastKnownLocation.latitude}&mlon=${lastKnownLocation.longitude}#map=16/${lastKnownLocation.latitude}/${lastKnownLocation.longitude}`
+  }, [lastKnownLocation])
+
+  const handleCheckIn = async (shift: ShiftItem) => {
+    if (!user?.id) return
+
+    setActionStatus('')
+    setCheckInSubmitting((previous) => ({ ...previous, [shift.id]: true }))
+
     try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(`${API_BASE_URL}/api/attendance/${guardId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      if (response.ok) {
-        const data = await response.json()
-        setAttendance(data.attendance || [])
-      }
-    } catch (err) {
-      logError('Error fetching attendance:', err)
+      await fetchJsonOrThrow<any>(
+        `${API_BASE_URL}/api/guard-replacement/attendance/check-in`,
+        {
+          method: 'POST',
+          headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ guard_id: user.id, shift_id: shift.id }),
+        },
+        'Check-in failed',
+      )
+
+      setCheckInStatus((previous) => ({ ...previous, [shift.id]: 'checked_in' }))
+      setCheckInTimes((previous) => ({ ...previous, [shift.id]: new Date() }))
+      setActionStatus('Checked in successfully.')
+      await refreshData(false)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Check-in failed'
+      setActionStatus(message)
+      logError('Check-in error:', error)
     } finally {
-      setLoading(false)
+      setCheckInSubmitting((previous) => ({ ...previous, [shift.id]: false }))
     }
   }
 
-  const fetchSchedule = async (guardId: string) => {
+  const handleCheckOut = async (shift: ShiftItem) => {
+    if (!user?.id) return
+
+    const recentAttendance = attendance.find(
+      (record) =>
+        record.status === 'checked_in' &&
+        new Date(record.check_in_time).toDateString() === new Date().toDateString(),
+    )
+
+    if (!recentAttendance) {
+      setActionStatus('No active check-in found for this shift.')
+      return
+    }
+
+    setActionStatus('')
+    setCheckInSubmitting((previous) => ({ ...previous, [shift.id]: true }))
+
     try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(`${API_BASE_URL}/api/guard-replacement/guard/${guardId}/shifts`, {
-        headers: { Authorization: `Bearer ${token}` }
+      await fetchJsonOrThrow<any>(
+        `${API_BASE_URL}/api/guard-replacement/attendance/check-out`,
+        {
+          method: 'POST',
+          headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ attendance_id: recentAttendance.id }),
+        },
+        'Check-out failed',
+      )
+
+      setCheckInStatus((previous) => ({ ...previous, [shift.id]: 'idle' }))
+      setCheckInTimes((previous) => {
+        const next = { ...previous }
+        delete next[shift.id]
+        return next
       })
-      if (response.ok) {
-        const data = await response.json()
-        setScheduleItems(data.shifts || [])
-      }
-    } catch (err) {
-      logError('Error fetching schedule:', err)
+      setElapsedTime((previous) => {
+        const next = { ...previous }
+        delete next[shift.id]
+        return next
+      })
+
+      setActionStatus('Checked out successfully.')
+      await refreshData(false)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Check-out failed'
+      setActionStatus(message)
+      logError('Check-out error:', error)
+    } finally {
+      setCheckInSubmitting((previous) => ({ ...previous, [shift.id]: false }))
     }
   }
 
-  const fetchFirearms = async (guardId: string) => {
+  const handlePrimaryCheckAction = async () => {
+    if (!currentShift) {
+      setActionStatus('No current assignment available for check in or out.')
+      return
+    }
+
+    if (checkInStatus[currentShift.id] === 'checked_in') {
+      await handleCheckOut(currentShift)
+      return
+    }
+
+    await handleCheckIn(currentShift)
+  }
+
+  const handleIncidentSubmit = async (event: FormEvent) => {
+    event.preventDefault()
+
+    if (!incidentForm.title.trim() || !incidentForm.description.trim() || !incidentForm.location.trim()) {
+      setIncidentStatus('Title, description, and location are required.')
+      return
+    }
+
+    setIncidentSubmitting(true)
+    setIncidentStatus('')
+
     try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(`${API_BASE_URL}/api/guard-allocations/${guardId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      if (response.ok) {
-        const data = await response.json()
-        setFirearmItems(data.allocations || [])
-      }
-    } catch (err) {
-      logError('Error fetching firearms:', err)
+      await fetchJsonOrThrow<any>(
+        `${API_BASE_URL}/api/incidents`,
+        {
+          method: 'POST',
+          headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({
+            title: incidentForm.title.trim(),
+            description: incidentForm.description.trim(),
+            location: incidentForm.location.trim(),
+            priority: incidentForm.priority,
+          }),
+        },
+        'Failed to submit incident report',
+      )
+
+      setIncidentStatus('Incident report submitted.')
+      setIncidentForm({ title: '', description: '', location: '', priority: 'high' })
+      setIncidentModalOpen(false)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to submit incident report'
+      setIncidentStatus(message)
+    } finally {
+      setIncidentSubmitting(false)
     }
   }
 
-  const fetchPermits = async (guardId: string) => {
-    try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(`${API_BASE_URL}/api/guard-firearm-permits/${guardId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      if (response.ok) {
-        const data = await response.json()
-        setPermitItems(data.permits || [])
-      }
-    } catch (err) {
-      logError('Error fetching permits:', err)
-    }
-  }
-
-  const fetchTickets = async (guardId: string) => {
-    try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(`${API_BASE_URL}/api/support-tickets/${guardId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      if (response.ok) {
-        const data = await response.json()
-        setTicketItems(data.tickets || [])
-      }
-    } catch (err) {
-      logError('Error fetching tickets:', err)
-    }
-  }
-
-  const isLicenseExpired = () => {
-    const expiryDate = user?.licenseExpiryDate || user?.license_expiry_date
-    if (!expiryDate) return false
-    return new Date(expiryDate) < new Date()
-  }
-
-  const daysUntilExpiry = () => {
-    const expiryDate = user?.licenseExpiryDate || user?.license_expiry_date
-    if (!expiryDate) return null
-    const days = Math.ceil((new Date(expiryDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
-    return days
-  }
-
-  const getStatusBadgeColor = (status: string): string => {
-    switch (status?.toLowerCase()) {
-      case 'present':
-        return 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30'
-      case 'checked_in':
-        return 'bg-blue-500/15 text-blue-300 ring-1 ring-blue-500/30'
-      case 'checked_out':
-        return 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30'
-      case 'absent':
-        return 'bg-red-500/15 text-red-300 ring-1 ring-red-500/30'
-      case 'late':
-        return 'bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30'
-      default:
-        return 'bg-background text-text-primary'
-    }
-  }
-
-  const formatShiftTime = (startTime: string, endTime: string) => {
-    const start = new Date(startTime)
-    const end = new Date(endTime)
-    return `${start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-  }
-
-  const calcHours = (checkIn: string, checkOut?: string) => {
-    if (!checkOut) return 0
-    const start = new Date(checkIn).getTime()
-    const end = new Date(checkOut).getTime()
-    if (Number.isNaN(start) || Number.isNaN(end)) return 0
-    return Math.max(0, (end - start) / (1000 * 60 * 60))
-  }
-
-  const handleScheduleSubmit = async (event: React.FormEvent) => {
+  const handleScheduleSubmit = async (event: FormEvent) => {
     event.preventDefault()
     if (!user?.id) return
 
@@ -460,49 +661,32 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
     setScheduleStatus('')
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/guard-replacement/shifts`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`
+      await fetchJsonOrThrow<any>(
+        `${API_BASE_URL}/api/guard-replacement/shifts`,
+        {
+          method: 'POST',
+          headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({
+            guard_id: user.id,
+            start_time: startLocal.toISOString(),
+            end_time: endLocal.toISOString(),
+            client_site: scheduleForm.clientSite,
+          }),
         },
-        body: JSON.stringify({
-          guard_id: user.id,
-          start_time: startLocal.toISOString(),
-          end_time: endLocal.toISOString(),
-          client_site: scheduleForm.clientSite
-        })
-      })
-
-      if (!response.ok) {
-        let errorMsg = 'Failed to request schedule.'
-        try {
-          const data = await response.json()
-          errorMsg = data.error || data.message || errorMsg
-        } catch {
-          // If response is not JSON, try to get text
-          try {
-            const text = await response.text()
-            errorMsg = text || errorMsg
-          } catch {
-            errorMsg = `Server error: ${response.status} ${response.statusText}`
-          }
-        }
-        setScheduleStatus(errorMsg)
-        return
-      }
+        'Failed to request schedule',
+      )
 
       setScheduleStatus('Schedule request submitted.')
       setScheduleForm({ clientSite: '', date: '', startTime: '', endTime: '' })
-      fetchSchedule(user.id)
-    } catch (err) {
-      setScheduleStatus(err instanceof Error ? err.message : 'Failed to request schedule.')
+      await refreshData(false)
+    } catch (error) {
+      setScheduleStatus(error instanceof Error ? error.message : 'Failed to request schedule.')
     } finally {
       setScheduleSubmitting(false)
     }
   }
 
-  const handleTicketSubmit = async (event: React.FormEvent) => {
+  const handleTicketSubmit = async (event: FormEvent) => {
     event.preventDefault()
     if (!user?.id) return
 
@@ -515,688 +699,671 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
     setTicketStatus('')
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/support-tickets`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`
+      await fetchJsonOrThrow<any>(
+        `${API_BASE_URL}/api/support-tickets`,
+        {
+          method: 'POST',
+          headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({
+            guard_id: user.id,
+            subject: ticketForm.subject,
+            message: ticketForm.message,
+          }),
         },
-        body: JSON.stringify({
-          guard_id: user.id,
-          subject: ticketForm.subject,
-          message: ticketForm.message
-        })
-      })
+        'Failed to create support ticket',
+      )
 
-      if (!response.ok) {
-        const data = await response.json()
-        setTicketStatus(data.error || 'Failed to create ticket.')
-        return
-      }
-
-      setTicketStatus('Ticket submitted successfully.')
+      setTicketStatus('Support ticket submitted.')
       setTicketForm({ subject: '', message: '' })
-      fetchTickets(user.id)
-    } catch (err) {
-      setTicketStatus(err instanceof Error ? err.message : 'Failed to create ticket.')
+      await refreshData(false)
+    } catch (error) {
+      setTicketStatus(error instanceof Error ? error.message : 'Failed to create support ticket.')
     } finally {
       setTicketSubmitting(false)
     }
   }
 
-  const handleNavigate = (section: 'overview' | 'schedule' | 'firearms' | 'permits' | 'support' | 'calendar') => {
-    if (section === 'calendar') {
-      onViewChange?.('calendar')
-      return
-    }
-    setActiveSection(section as 'overview' | 'schedule' | 'firearms' | 'permits' | 'support')
-  }
+  const missionLocation = currentShift?.client_site || 'No active post'
+  const missionShiftTime = currentShift ? formatTimeWindow(currentShift.start_time, currentShift.end_time) : 'No shift today'
+  const missionAssignment = currentShift ? 'Assigned' : 'Unassigned'
+  const missionElapsed = currentShift ? elapsedTime[currentShift.id] || '0h 0m' : '0h 0m'
 
-  const handleCheckIn = async (shift: ShiftItem) => {
-    if (!user?.id) return
+  const missionCards = [
+    { label: 'Current Assignment', value: missionAssignment },
+    { label: 'Location or Post', value: missionLocation },
+    { label: 'Duty Status', value: dutyStatus },
+    { label: 'Shift Time', value: missionShiftTime },
+  ]
 
-    setCheckInSubmitting(prev => ({ ...prev, [shift.id]: true }))
-    
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/guard-replacement/attendance/check-in`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          guard_id: user.id,
-          shift_id: shift.id
-        })
-      })
-
-      if (!response.ok) {
-        const data = await response.json()
-        logError('Check-in failed:', data)
-        return
-      }
-
-      const data = await response.json()
-      setCheckInStatus(prev => ({ ...prev, [shift.id]: 'checked_in' }))
-      setCheckInTimes(prev => ({ ...prev, [shift.id]: new Date() }))
-      console.log('Check-in successful:', data.attendanceId)
-    } catch (err) {
-      logError('Check-in error:', err)
-    } finally {
-      setCheckInSubmitting(prev => ({ ...prev, [shift.id]: false }))
-    }
-  }
-
-  const handleCheckOut = async (shift: ShiftItem) => {
-    if (!user?.id) return
-
-    // Find the most recent attendance for this shift
-    const recentAttendance = attendance.find(a => 
-      a.status === 'checked_in' && 
-      new Date(a.check_in_time).toDateString() === new Date().toDateString()
-    )
-
-    if (!recentAttendance) {
-      logError('No active check-in found', 'missing_recent_attendance')
-      return
-    }
-
-    setCheckInSubmitting(prev => ({ ...prev, [shift.id]: true }))
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/guard-replacement/attendance/check-out`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          attendance_id: recentAttendance.id
-        })
-      })
-
-      if (!response.ok) {
-        const data = await response.json()
-        logError('Check-out failed:', data)
-        return
-      }
-
-      setCheckInStatus(prev => ({ ...prev, [shift.id]: 'idle' }))
-      setCheckInTimes(prev => {
-        const newTimes = { ...prev }
-        delete newTimes[shift.id]
-        return newTimes
-      })
-      setElapsedTime(prev => {
-        const newTimes = { ...prev }
-        delete newTimes[shift.id]
-        return newTimes
-      })
-
-      // Refresh attendance records
-      if (user?.id) {
-        await fetchAttendance(user.id)
-      }
-
-      console.log('Check-out successful')
-    } catch (err) {
-      logError('Check-out error:', err)
-    } finally {
-      setCheckInSubmitting(prev => ({ ...prev, [shift.id]: false }))
-    }
-  }
-
-  const handleRefresh = async () => {
-    if (!user?.id) return
-    setLoading(true)
-    await Promise.all([
-      fetchAttendance(user.id),
-      fetchSchedule(user.id),
-      fetchFirearms(user.id),
-      fetchPermits(user.id),
-      fetchTickets(user.id)
-    ])
-    setLoading(false)
-  }
+  const navItems: Array<{ key: GuardSection | 'profile'; label: string }> = [
+    { key: 'mission', label: 'Mission' },
+    { key: 'resources', label: 'Resources' },
+    { key: 'support', label: 'Support' },
+    { key: 'map', label: 'Map' },
+    { key: 'profile', label: 'Profile' },
+  ]
 
   return (
-    <div className="flex h-[100dvh] w-full overflow-hidden bg-background font-sans">
-      <Sidebar
-        items={navItems}
-        activeView={activeSection}
-        onNavigate={(view) => handleNavigate(view as typeof activeSection)}
-        onLogoClick={() => handleNavigate('overview')}
-        onLogout={onLogout}
-        isOpen={mobileMenuOpen}
-        onClose={() => setMobileMenuOpen(false)}
-      />
+    <div className="relative min-h-[100dvh] w-full overflow-hidden bg-background font-sans">
+      <a href="#maincontent" className="skip-link">Skip to main content</a>
 
-      <main className="flex-1 flex min-w-0 min-h-0 flex-col w-full overflow-hidden">
-        <Header
-          title={
-            activeSection === 'overview' ? `Welcome, ${user?.username}` :
-            activeSection === 'schedule' ? 'My Schedule' :
-            activeSection === 'firearms' ? 'Assigned Firearms' :
-            activeSection === 'permits' ? 'My Permits' :
-            'Contact Support'
-          }
-          badgeLabel={activeSection === 'overview' ? 'Overview' : activeSection.replace('-', ' ')}
-          onLogout={onLogout}
-          onMenuClick={() => setMobileMenuOpen(true)}
-          user={user}
-          onNavigateToProfile={onViewChange ? () => onViewChange('profile') : undefined}
-          rightSlot={
+      <header className="sticky top-0 z-20 border-b border-border bg-surface/95 px-4 py-3 backdrop-blur">
+        <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-tertiary">Field Operations</p>
+            <p className="truncate text-lg font-bold text-text-primary">{user.fullName || user.full_name || user.username}</p>
+          </div>
+          <div className="flex items-center gap-2">
             <button
-              onClick={handleRefresh}
-              className="px-3 py-2 text-sm font-semibold text-text-primary bg-surface border border-border rounded-lg hover:bg-surface-hover transition-colors"
+              type="button"
+              onClick={() => { void refreshData(false) }}
+              className="min-h-11 rounded-lg border border-border px-3 py-2 text-sm font-semibold text-text-primary hover:bg-surface-hover"
             >
               Refresh
             </button>
-          }
-        />
+            <button
+              type="button"
+              onClick={onLogout}
+              className="min-h-11 rounded-lg border border-danger-border bg-danger-bg px-3 py-2 text-sm font-semibold text-danger-text hover:brightness-95"
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+      </header>
 
-        <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in">
-          <div className="space-y-8">
-            {/* Profile Section */}
-            {activeSection === 'overview' && (
-              <section className="bg-surface rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-bold text-text-primary mb-6 pb-3 border-b border-border">My Profile</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div className="p-4 bg-surface-elevated rounded-lg border border-border">
-                  <label className="text-sm font-semibold text-text-secondary block mb-2">Full Name</label>
-                  <p className="text-text-primary font-medium">{user?.fullName || user?.full_name || 'N/A'}</p>
-                </div>
-                <div className="p-4 bg-surface-elevated rounded-lg border border-border">
-                  <label className="text-sm font-semibold text-text-secondary block mb-2">Email</label>
-                  <p className="text-text-primary font-medium">{user?.email || 'N/A'}</p>
-                </div>
-                <div className="p-4 bg-surface-elevated rounded-lg border border-border">
-                  <label className="text-sm font-semibold text-text-secondary block mb-2">Phone</label>
-                  <p className="text-text-primary font-medium">{user?.phoneNumber || user?.phone_number || 'N/A'}</p>
-                </div>
-                <div className="p-4 bg-surface-elevated rounded-lg border border-border">
-                  <label className="text-sm font-semibold text-text-secondary block mb-2">License Number</label>
-                  <p className="text-text-primary font-medium">{user?.licenseNumber || user?.license_number || 'N/A'}</p>
-                </div>
-                <div className="p-4 bg-surface-elevated rounded-lg border border-border">
-                  <label className="text-sm font-semibold text-text-secondary block mb-2">License Issued Date</label>
-                  <p className="text-text-primary font-medium">
-                    {(user?.licenseIssuedDate || user?.license_issued_date)
-                      ? new Date(user.licenseIssuedDate || user.license_issued_date).toLocaleDateString()
-                      : 'N/A'}
-                  </p>
-                </div>
-                <div className="p-4 bg-surface-elevated rounded-lg border border-border md:col-span-2 lg:col-span-3">
-                  <label className="text-sm font-semibold text-text-secondary block mb-2">Address</label>
-                  <p className="text-text-primary font-medium">{user?.address || 'N/A'}</p>
-                </div>
-              </div>
-              </section>
-            )}
+      <main
+        id="maincontent"
+        tabIndex={-1}
+        className="mx-auto h-[calc(100dvh-4.25rem)] w-full max-w-5xl overflow-y-auto px-4 pb-[calc(14.5rem+env(safe-area-inset-bottom,0px))] pt-4"
+      >
+        <section className="space-y-4" aria-label="Guard mission workspace">
+          <div className="space-y-1">
+            <h1 className="text-2xl font-bold text-text-primary">Mission Screen</h1>
+            <p className="text-sm text-text-secondary">Fast field workflow for assignments, actions, and support under pressure.</p>
+          </div>
 
-            {/* License Status */}
-            {activeSection === 'overview' && (
-              <section className="bg-surface rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-bold text-text-primary mb-6 pb-3 border-b border-border">License Status</h2>
-              <div className={`p-6 rounded-lg border flex items-center justify-between ${
-                isLicenseExpired()
-                  ? 'bg-red-500/10 border-red-500/40'
-                  : 'bg-emerald-500/10 border-emerald-500/40'
-              }`}>
-                <div>
-                  <p className="text-sm font-semibold text-text-secondary mb-1">License Expiry Date</p>
-                  <p className="text-lg font-bold text-text-primary">
-                    {(user?.licenseExpiryDate || user?.license_expiry_date)
-                      ? new Date(user.licenseExpiryDate || user.license_expiry_date).toLocaleDateString()
-                      : 'N/A'}
-                  </p>
-                </div>
-                <div className={`px-6 py-3 rounded-lg text-center ${
-                  isLicenseExpired()
-                    ? 'bg-red-500/15 text-red-300 ring-1 ring-red-500/30'
-                    : 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30'
-                }`}>
-                  {isLicenseExpired() ? (
-                    <>
-                      <div className="text-2xl mb-1">⚠️</div>
-                      <div className="font-bold">EXPIRED</div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="text-2xl mb-1">✓</div>
-                      <div className="font-bold">ACTIVE</div>
-                      {daysUntilExpiry() !== null && (
-                        <div className="text-sm mt-1">{daysUntilExpiry()} days left</div>
-                      )}
-                    </>
-                  )}
-                </div>
-              </div>
-              </section>
-            )}
+          {!isOnline ? (
+            <div className="rounded-xl border border-danger-border bg-danger-bg p-4 text-danger-text" role="status" aria-live="polite">
+              <p className="font-semibold">No connection</p>
+              <p className="mt-1 text-sm">Your device is offline. Reconnect to sync mission updates.</p>
+            </div>
+          ) : null}
 
-            {activeSection === 'overview' && (
-              <section className="bg-surface rounded-lg shadow-md p-6">
-                <h2 className="text-xl font-bold text-text-primary mb-6 pb-3 border-b border-border">Live Location Tracking</h2>
-                <div className="rounded-lg border border-border-subtle bg-surface-elevated p-4">
-                  <p className="text-sm text-text-secondary">
-                    Use your device location permission for real-time guard tracking. For best accuracy, keep GPS enabled and allow precise location.
-                  </p>
-                  {!hasLocationConsent ? (
-                    <p className="mt-2 text-sm font-semibold text-amber-300">
-                      Location consent is not accepted. Tracking remains disabled until consent is granted in the Terms prompt.
-                    </p>
-                  ) : null}
-                  <div className="mt-4 flex flex-wrap items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={toggleLocationTracking}
-                      disabled={!hasLocationConsent}
-                      className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
-                        !hasLocationConsent
-                          ? 'cursor-not-allowed bg-slate-600 text-slate-200'
-                          : locationTrackingEnabled
-                          ? 'bg-red-600 text-white hover:bg-red-700'
-                          : 'bg-emerald-600 text-white hover:bg-emerald-700'
-                      }`}
-                    >
-                      {locationTrackingEnabled ? 'Turn Off Live Location' : 'Turn On Live Location'}
-                    </button>
-                    <span
-                      className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                        locationTrackingEnabled
-                          ? 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30'
-                          : 'bg-slate-500/15 text-slate-300 ring-1 ring-slate-500/30'
-                      }`}
-                    >
-                      {locationTrackingEnabled ? 'Tracking Enabled' : 'Tracking Disabled'}
-                    </span>
-                    <span
-                      className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                        !hasLocationConsent
-                          ? 'bg-slate-500/15 text-slate-300 ring-1 ring-slate-500/30'
-                          : locationPermissionState === 'granted'
-                          ? 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30'
-                          : locationPermissionState === 'denied'
-                            ? 'bg-red-500/15 text-red-300 ring-1 ring-red-500/30'
-                            : 'bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30'
-                      }`}
-                    >
-                      Permission: {hasLocationConsent ? locationPermissionState : 'consent-required'}
-                    </span>
-                  </div>
-                  <div className="mt-3 rounded-md border border-border-subtle bg-background px-3 py-2">
-                    <p className="text-xs font-semibold text-text-secondary">Location Accuracy Meter</p>
-                    <p className="text-sm font-bold text-text-primary">
-                      {locationAccuracyMeters != null ? `${Math.round(locationAccuracyMeters)} m` : 'No fix yet'}
-                    </p>
-                    <p className="text-xs text-text-secondary">
-                      Quality: {locationAccuracyQuality === 'high' ? 'High (GPS-level)' : locationAccuracyQuality === 'medium' ? 'Moderate' : locationAccuracyQuality === 'low' ? 'Low, may drift' : 'Waiting for position'}
-                    </p>
-                    {locationAccuracyQuality === 'low' ? (
-                      <p className="mt-1 text-xs font-semibold text-danger-text" role="status">
-                        Warning: location accuracy is low. Keep precise location enabled for better map precision.
-                      </p>
-                    ) : null}
-                  </div>
-                  {locationTrackingMessage ? <p className="mt-3 text-xs text-text-secondary">{locationTrackingMessage}</p> : null}
+          {syncError ? (
+            <div className="rounded-xl border border-warning-border bg-warning-bg p-4 text-warning-text" role="status" aria-live="polite">
+              <p className="font-semibold">Partial sync issue</p>
+              <p className="mt-1 text-sm">{syncError}</p>
+              <button
+                type="button"
+                onClick={() => { void refreshData(false) }}
+                className="mt-3 min-h-11 rounded-md border border-warning-border px-3 py-2 text-sm font-semibold"
+              >
+                Retry Sync
+              </button>
+            </div>
+          ) : null}
+
+          {actionStatus ? (
+            <div className="rounded-xl border border-info-border bg-info-bg p-3 text-sm text-info-text" role="status" aria-live="polite">
+              {actionStatus}
+            </div>
+          ) : null}
+
+          {isInitialLoading ? (
+            <div className="space-y-3" aria-live="polite">
+              <div className="h-28 animate-pulse rounded-xl bg-surface-elevated" />
+              <div className="h-24 animate-pulse rounded-xl bg-surface-elevated" />
+              <div className="h-24 animate-pulse rounded-xl bg-surface-elevated" />
+            </div>
+          ) : null}
+
+          {!isInitialLoading && activeSection === 'mission' ? (
+            <div className="space-y-4">
+              <section className="rounded-2xl border border-border bg-surface p-4">
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <h2 className="text-lg font-bold text-text-primary">Current Assignment</h2>
+                  <span className="rounded-full border border-border bg-surface-elevated px-3 py-1 text-xs font-semibold text-text-secondary">
+                    {isSyncing ? 'Syncing' : 'Live'}
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {missionCards.map((card) => (
+                    <article key={card.label} className="rounded-xl border border-border-subtle bg-surface-elevated p-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">{card.label}</p>
+                      <p className="mt-1 text-base font-bold text-text-primary">{card.value}</p>
+                    </article>
+                  ))}
                 </div>
               </section>
-            )}
 
-            {/* Active Shift Section */}
-            {activeSection === 'overview' && (
-              <section className="bg-surface rounded-lg shadow-md p-6">
-                <h2 className="text-xl font-bold text-text-primary mb-6 pb-3 border-b border-border">Today's Shifts</h2>
-                {activeShifts && activeShifts.length > 0 ? (
-                  <div className="space-y-4">
-                    {activeShifts.map((shift) => (
-                      <div key={shift.id} className="bg-surface-elevated rounded-lg border border-blue-500/40 p-6 flex items-center justify-between">
-                        <div className="flex-1">
-                          <h3 className="text-lg font-semibold text-text-primary mb-2">{shift.client_site}</h3>
-                          <div className="grid grid-cols-3 gap-4 text-sm">
+              <section className="rounded-2xl border border-border bg-surface p-4">
+                <h2 className="text-lg font-bold text-text-primary">Field Tracking</h2>
+                <p className="mt-1 text-sm text-text-secondary">Keep your location heartbeat active for dispatch visibility.</p>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={toggleLocationTracking}
+                    disabled={!hasLocationConsent}
+                    className={`min-h-11 rounded-md px-4 py-2 text-sm font-semibold ${
+                      !hasLocationConsent
+                        ? 'cursor-not-allowed bg-surface-elevated text-text-tertiary'
+                        : locationTrackingEnabled
+                          ? 'bg-danger-bg text-danger-text border border-danger-border'
+                          : 'bg-success-bg text-success-text border border-success-border'
+                    }`}
+                  >
+                    {locationTrackingEnabled ? 'Turn Off Tracking' : 'Turn On Tracking'}
+                  </button>
+                  <span className="rounded-full border border-border-subtle bg-surface-elevated px-3 py-1 text-xs font-semibold text-text-secondary">
+                    Permission: {hasLocationConsent ? locationPermissionState : 'consent-required'}
+                  </span>
+                  <span className="rounded-full border border-border-subtle bg-surface-elevated px-3 py-1 text-xs font-semibold text-text-secondary">
+                    Accuracy: {locationAccuracyMeters != null ? `${Math.round(locationAccuracyMeters)}m (${locationAccuracyLabel})` : 'No Fix'}
+                  </span>
+                </div>
+                {locationTrackingMessage ? (
+                  <p className="mt-2 text-xs text-text-secondary" role="status">{locationTrackingMessage}</p>
+                ) : null}
+              </section>
+
+              <section className="rounded-2xl border border-border bg-surface p-4">
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <h2 className="text-lg font-bold text-text-primary">Today\'s Shift Timeline</h2>
+                  <span className="rounded-full border border-border-subtle bg-surface-elevated px-3 py-1 text-xs font-semibold text-text-secondary">
+                    Elapsed: {missionElapsed}
+                  </span>
+                </div>
+
+                {activeShifts.length === 0 ? (
+                  <p className="rounded-lg border border-border-subtle bg-surface-elevated p-3 text-sm text-text-secondary">No shifts assigned for today.</p>
+                ) : (
+                  <ul className="space-y-3">
+                    {activeShifts.map((shift) => {
+                      const checkedIn = checkInStatus[shift.id] === 'checked_in'
+                      return (
+                        <li key={shift.id} className="rounded-xl border border-border-subtle bg-surface-elevated p-3">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
                             <div>
-                              <p className="text-text-secondary font-semibold">Time</p>
-                              <p className="text-text-primary">{formatShiftTime(shift.start_time, shift.end_time)}</p>
+                              <p className="text-sm font-semibold text-text-primary">{shift.client_site}</p>
+                              <p className="text-xs text-text-secondary">{formatTimeWindow(shift.start_time, shift.end_time)}</p>
                             </div>
-                            <div>
-                              <p className="text-text-secondary font-semibold">Status</p>
-                              <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
-                                checkInStatus[shift.id] === 'checked_in'
-                                  ? 'bg-green-500/15 text-green-300 ring-1 ring-green-500/30'
-                                  : 'bg-blue-500/15 text-blue-300 ring-1 ring-blue-500/30'
-                              }`}>
-                                {checkInStatus[shift.id] === 'checked_in' ? 'Checked In' : 'Ready to Check In'}
-                              </span>
-                            </div>
-                            {elapsedTime[shift.id] && (
-                              <div>
-                                <p className="text-text-secondary font-semibold">Elapsed Time</p>
-                                <p className="text-emerald-300 font-mono">{elapsedTime[shift.id]}</p>
-                              </div>
-                            )}
+                            <button
+                              type="button"
+                              disabled={checkInSubmitting[shift.id]}
+                              onClick={() => {
+                                if (checkedIn) {
+                                  void handleCheckOut(shift)
+                                  return
+                                }
+                                void handleCheckIn(shift)
+                              }}
+                              className={`min-h-11 rounded-md px-3 py-2 text-sm font-semibold ${
+                                checkedIn
+                                  ? 'border border-danger-border bg-danger-bg text-danger-text'
+                                  : 'border border-success-border bg-success-bg text-success-text'
+                              }`}
+                            >
+                              {checkInSubmitting[shift.id]
+                                ? 'Processing...'
+                                : checkedIn
+                                  ? 'Check Out'
+                                  : 'Check In'}
+                            </button>
                           </div>
-                        </div>
-                        <div className="flex gap-3">
-                          {checkInStatus[shift.id] !== 'checked_in' ? (
-                            <button
-                              onClick={() => handleCheckIn(shift)}
-                              disabled={checkInSubmitting[shift.id]}
-                              className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-semibold disabled:opacity-70"
-                            >
-                              {checkInSubmitting[shift.id] ? 'Checking In...' : 'Check In'}
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => handleCheckOut(shift)}
-                              disabled={checkInSubmitting[shift.id]}
-                              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold disabled:opacity-70"
-                            >
-                              {checkInSubmitting[shift.id] ? 'Checking Out...' : 'Check Out'}
-                            </button>
-                          )}
-                        </div>
-                      </div>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                )}
+              </section>
+
+              <section className="rounded-2xl border border-border bg-surface p-4">
+                <h2 className="text-lg font-bold text-text-primary">Recent Attendance</h2>
+                {attendance.length === 0 ? (
+                  <p className="mt-2 rounded-lg border border-border-subtle bg-surface-elevated p-3 text-sm text-text-secondary">No attendance records available.</p>
+                ) : (
+                  <ul className="mt-2 space-y-2">
+                    {attendance.slice(0, 5).map((record) => (
+                      <li key={record.id} className="rounded-lg border border-border-subtle bg-surface-elevated p-3">
+                        <p className="text-sm font-semibold text-text-primary">
+                          {new Date(record.check_in_time).toLocaleDateString()} - {new Date(record.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                        <p className="text-xs text-text-secondary">
+                          Check Out: {record.check_out_time ? new Date(record.check_out_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Not yet'}
+                        </p>
+                        <p className="text-xs text-text-secondary">Hours: {calcHours(record.check_in_time, record.check_out_time)}</p>
+                      </li>
                     ))}
-                  </div>
-                ) : (
-                  <p className="text-center py-8 text-text-secondary">No shifts assigned for today</p>
+                  </ul>
                 )}
               </section>
-            )}
+            </div>
+          ) : null}
 
-            {/* Attendance Section */}
-            {activeSection === 'overview' && (
-              <section className="bg-surface rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-bold text-text-primary mb-6 pb-3 border-b border-border">Recent Attendance</h2>
-              {loading ? (
-                <div className="text-center py-8 text-text-secondary">Loading attendance records...</div>
-              ) : attendance.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[500px]">
-                    <thead className="thead-glass">
-                      <tr>
-                        <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary">Date</th>
-                        <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary">Check-In</th>
-                        <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary">Check-Out</th>
-                        <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary">Hours</th>
-                        <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {attendance.slice(0, 5).map((record) => (
-                        <tr key={record.id} className="border-b border-border hover:bg-surface-hover transition-colors">
-                          <td className="px-6 py-3 text-text-primary">{new Date(record.check_in_time).toLocaleDateString()}</td>
-                          <td className="px-6 py-3 text-text-primary">{new Date(record.check_in_time).toLocaleTimeString()}</td>
-                          <td className="px-6 py-3 text-text-primary">{record.check_out_time ? new Date(record.check_out_time).toLocaleTimeString() : '-'}</td>
-                          <td className="px-6 py-3 text-text-primary">{calcHours(record.check_in_time, record.check_out_time).toFixed(1)} hrs</td>
-                          <td className="px-6 py-3">
-                            <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadgeColor(record.status)}`}>
-                              {record.status}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <p className="text-center py-8 text-text-secondary">No attendance records found</p>
-              )}
-              </section>
-            )}
-
-            {activeSection === 'schedule' && (
-              <section className="bg-surface rounded-lg shadow-md p-6">
-                <h2 className="text-xl font-bold text-text-primary mb-6 pb-3 border-b border-border">Shift Schedule</h2>
-                <form className="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4" onSubmit={handleScheduleSubmit}>
-                  <div className="md:col-span-2">
-                    <label className="text-sm font-semibold text-text-secondary block mb-2">Client Site</label>
-                    <input
-                      type="text"
-                      className="w-full rounded-lg border border-border px-3 py-2 text-text-primary"
-                      placeholder="Site name"
-                      value={scheduleForm.clientSite}
-                      onChange={(event) => setScheduleForm((prev) => ({ ...prev, clientSite: event.target.value }))}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-semibold text-text-secondary block mb-2">Date</label>
-                    <input
-                      type="date"
-                      className="w-full rounded-lg border border-border px-3 py-2 text-text-primary"
-                      value={scheduleForm.date}
-                      onChange={(event) => setScheduleForm((prev) => ({ ...prev, date: event.target.value }))}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-semibold text-text-secondary block mb-2">Start Time</label>
-                    <input
-                      type="time"
-                      className="w-full rounded-lg border border-border px-3 py-2 text-text-primary"
-                      value={scheduleForm.startTime}
-                      onChange={(event) => setScheduleForm((prev) => ({ ...prev, startTime: event.target.value }))}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-semibold text-text-secondary block mb-2">End Time</label>
-                    <input
-                      type="time"
-                      className="w-full rounded-lg border border-border px-3 py-2 text-text-primary"
-                      value={scheduleForm.endTime}
-                      onChange={(event) => setScheduleForm((prev) => ({ ...prev, endTime: event.target.value }))}
-                    />
-                  </div>
-                  <div className="md:col-span-4 flex items-center gap-4">
-                    <button
-                      type="submit"
-                      disabled={scheduleSubmitting}
-                      className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors font-semibold disabled:opacity-70"
-                    >
-                      {scheduleSubmitting ? 'Submitting...' : 'Request Schedule'}
-                    </button>
-                    {scheduleStatus && (
-                      <span className="text-sm font-semibold text-text-primary">{scheduleStatus}</span>
-                    )}
-                  </div>
-                </form>
-                {scheduleItems.length > 0 ? (
-                  <div className="overflow-x-auto">
-                    <table className="w-full min-w-[500px]">
-                      <thead className="thead-glass">
-                        <tr>
-                          <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary">Site</th>
-                          <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary">Date</th>
-                          <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary">Time</th>
-                          <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {scheduleItems.map((item) => (
-                          <tr key={item.id} className="border-b border-border hover:bg-surface-hover transition-colors">
-                            <td className="px-6 py-3 text-text-primary">{item.client_site}</td>
-                            <td className="px-6 py-3 text-text-primary">{new Date(item.start_time).toLocaleDateString()}</td>
-                            <td className="px-6 py-3 text-text-primary">{formatShiftTime(item.start_time, item.end_time)}</td>
-                            <td className="px-6 py-3">
-                              <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/15 text-blue-300 ring-1 ring-blue-500/30">
-                                {item.status}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+          {!isInitialLoading && activeSection === 'resources' ? (
+            <div className="space-y-4">
+              <section className="rounded-2xl border border-border bg-surface p-4">
+                <h2 className="text-lg font-bold text-text-primary">Assigned Firearms</h2>
+                {firearmItems.length === 0 ? (
+                  <p className="mt-2 rounded-lg border border-border-subtle bg-surface-elevated p-3 text-sm text-text-secondary">No active firearm allocations.</p>
                 ) : (
-                  <p className="text-center py-8 text-text-secondary">No shifts scheduled</p>
+                  <ul className="mt-2 space-y-2">
+                    {firearmItems.map((item) => (
+                      <li key={item.id} className="rounded-lg border border-border-subtle bg-surface-elevated p-3">
+                        <p className="text-sm font-semibold text-text-primary">{item.firearm_model} ({item.firearm_caliber})</p>
+                        <p className="text-xs text-text-secondary">Serial: {item.firearm_serial_number}</p>
+                        <p className="text-xs text-text-secondary">Allocated: {new Date(item.allocation_date).toLocaleDateString()}</p>
+                      </li>
+                    ))}
+                  </ul>
                 )}
               </section>
-            )}
 
-            {activeSection === 'firearms' && (
-              <section className="bg-surface rounded-lg shadow-md p-6">
-                <h2 className="text-xl font-bold text-text-primary mb-6 pb-3 border-b border-border">Assigned Firearms</h2>
-                {firearmItems.length > 0 ? (
-                  <div className="overflow-x-auto">
-                    <table className="w-full min-w-[500px]">
-                      <thead className="thead-glass">
-                        <tr>
-                          <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary">Serial Number</th>
-                          <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary">Model</th>
-                          <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary">Caliber</th>
-                          <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary">Status</th>
-                          <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary">Allocated</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {firearmItems.map((item) => (
-                          <tr key={item.id} className="border-b border-border hover:bg-surface-hover transition-colors">
-                            <td className="px-6 py-3 text-text-primary">{item.firearm_serial_number}</td>
-                            <td className="px-6 py-3 text-text-primary">{item.firearm_model}</td>
-                            <td className="px-6 py-3 text-text-primary">{item.firearm_caliber}</td>
-                            <td className="px-6 py-3">
-                              <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${item.status === 'active' ? 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30' : 'bg-background text-text-primary'}`}>
-                                {item.status}
-                              </span>
-                            </td>
-                            <td className="px-6 py-3 text-text-primary">{new Date(item.allocation_date).toLocaleDateString()}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+              <section className="rounded-2xl border border-border bg-surface p-4">
+                <h2 className="text-lg font-bold text-text-primary">Permit Records</h2>
+                {permitItems.length === 0 ? (
+                  <p className="mt-2 rounded-lg border border-border-subtle bg-surface-elevated p-3 text-sm text-text-secondary">No permit records found.</p>
                 ) : (
-                  <p className="text-center py-8 text-text-secondary">No active allocations</p>
+                  <ul className="mt-2 space-y-2">
+                    {permitItems.map((item) => (
+                      <li key={item.id} className="rounded-lg border border-border-subtle bg-surface-elevated p-3">
+                        <p className="text-sm font-semibold text-text-primary">{item.permit_type}</p>
+                        <p className="text-xs text-text-secondary">Issued: {new Date(item.issued_date).toLocaleDateString()}</p>
+                        <p className="text-xs text-text-secondary">Expires: {new Date(item.expiry_date).toLocaleDateString()}</p>
+                        <p className="text-xs text-text-secondary">Status: {item.status}</p>
+                      </li>
+                    ))}
+                  </ul>
                 )}
               </section>
-            )}
+            </div>
+          ) : null}
 
-            {activeSection === 'permits' && (
-              <section className="bg-surface rounded-lg shadow-md p-6">
-                <h2 className="text-xl font-bold text-text-primary mb-6 pb-3 border-b border-border">My Permits</h2>
-                {permitItems.length > 0 ? (
-                  <div className="overflow-x-auto">
-                    <table className="w-full min-w-[500px]">
-                      <thead className="thead-glass">
-                        <tr>
-                          <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary">Permit ID</th>
-                          <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary">Type</th>
-                          <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary">Issued</th>
-                          <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary">Expiry</th>
-                          <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {permitItems.map((item) => (
-                          <tr key={item.id} className="border-b border-border hover:bg-surface-hover transition-colors">
-                            <td className="px-6 py-3 text-text-primary">{item.id}</td>
-                            <td className="px-6 py-3 text-text-primary">{item.permit_type}</td>
-                            <td className="px-6 py-3 text-text-primary">{new Date(item.issued_date).toLocaleDateString()}</td>
-                            <td className="px-6 py-3 text-text-primary">{new Date(item.expiry_date).toLocaleDateString()}</td>
-                            <td className="px-6 py-3">
-                              <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30">
-                                {item.status}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <p className="text-center py-8 text-text-secondary">No permits found</p>
-                )}
+          {!isInitialLoading && activeSection === 'support' ? (
+            <div className="space-y-4">
+              <section className="rounded-2xl border border-border bg-surface p-4">
+                <h2 className="text-lg font-bold text-text-primary">Field Instructions</h2>
+                <p className="mt-1 text-sm text-text-secondary">Open your current protocol list, escalation chain, and radio discipline reminders.</p>
+                <button
+                  type="button"
+                  onClick={() => setInstructionsOpen(true)}
+                  className="mt-3 min-h-11 rounded-md border border-info-border bg-info-bg px-4 py-2 text-sm font-semibold text-info-text"
+                >
+                  Open Instructions
+                </button>
               </section>
-            )}
 
-            {activeSection === 'support' && (
-              <section className="bg-surface rounded-lg shadow-md p-6">
-                <h2 className="text-xl font-bold text-text-primary mb-6 pb-3 border-b border-border">Contacts Dashboard</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                  <div className="rounded-lg border border-border p-5">
-                    <h3 className="text-lg font-semibold text-text-primary mb-2">Operations Desk</h3>
-                    <p className="text-sm text-text-secondary mb-3">24/7 support for urgent issues.</p>
-                    <div className="text-sm text-text-primary">
-                      <div>Phone: +63 912 345 6789</div>
-                      <div>Email: ops@sentinel-security.com</div>
-                    </div>
-                  </div>
-                  <div className="rounded-lg border border-border p-5">
-                    <h3 className="text-lg font-semibold text-text-primary mb-2">Site Supervisor</h3>
-                    <p className="text-sm text-text-secondary mb-3">For on-site scheduling changes.</p>
-                    <div className="text-sm text-text-primary">
-                      <div>Phone: +63 901 234 5678</div>
-                      <div>Email: supervisor@sentinel-security.com</div>
-                    </div>
-                  </div>
-                  <div className="rounded-lg border border-border p-5">
-                    <h3 className="text-lg font-semibold text-text-primary mb-2">HR and Compliance</h3>
-                    <p className="text-sm text-text-secondary mb-3">Licensing and permit concerns.</p>
-                    <div className="text-sm text-text-primary">
-                      <div>Phone: +63 955 321 4567</div>
-                      <div>Email: hr@sentinel-security.com</div>
-                    </div>
-                  </div>
-                  <div className="rounded-lg border border-border p-5">
-                    <h3 className="text-lg font-semibold text-text-primary mb-2">Submit a Ticket</h3>
-                    <p className="text-sm text-text-secondary mb-3">We will respond within 24 hours.</p>
-                    <form className="space-y-3" onSubmit={handleTicketSubmit}>
+              <section className="rounded-2xl border border-border bg-surface p-4">
+                <h2 className="text-lg font-bold text-text-primary">Request Schedule Change</h2>
+                <form className="mt-3 grid grid-cols-1 gap-3" onSubmit={handleScheduleSubmit}>
+                  <label className="text-sm font-semibold text-text-secondary" htmlFor="schedule-client-site">Client Site</label>
+                  <input
+                    id="schedule-client-site"
+                    type="text"
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-text-primary"
+                    value={scheduleForm.clientSite}
+                    onChange={(event) => setScheduleForm((previous) => ({ ...previous, clientSite: event.target.value }))}
+                    placeholder="Enter post or client site"
+                  />
+
+                  <label className="text-sm font-semibold text-text-secondary" htmlFor="schedule-date">Date</label>
+                  <input
+                    id="schedule-date"
+                    type="date"
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-text-primary"
+                    value={scheduleForm.date}
+                    onChange={(event) => setScheduleForm((previous) => ({ ...previous, date: event.target.value }))}
+                  />
+
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div>
+                      <label className="text-sm font-semibold text-text-secondary" htmlFor="schedule-start-time">Start Time</label>
                       <input
-                        type="text"
-                        className="w-full rounded-lg border border-border px-3 py-2 text-text-primary"
-                        placeholder="Subject"
-                        value={ticketForm.subject}
-                        onChange={(event) => setTicketForm((prev) => ({ ...prev, subject: event.target.value }))}
+                        id="schedule-start-time"
+                        type="time"
+                        className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-text-primary"
+                        value={scheduleForm.startTime}
+                        onChange={(event) => setScheduleForm((previous) => ({ ...previous, startTime: event.target.value }))}
                       />
-                      <textarea
-                        className="w-full rounded-lg border border-border px-3 py-2 text-text-primary min-h-[96px]"
-                        placeholder="Message"
-                        value={ticketForm.message}
-                        onChange={(event) => setTicketForm((prev) => ({ ...prev, message: event.target.value }))}
+                    </div>
+                    <div>
+                      <label className="text-sm font-semibold text-text-secondary" htmlFor="schedule-end-time">End Time</label>
+                      <input
+                        id="schedule-end-time"
+                        type="time"
+                        className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-text-primary"
+                        value={scheduleForm.endTime}
+                        onChange={(event) => setScheduleForm((previous) => ({ ...previous, endTime: event.target.value }))}
                       />
-                      <button
-                        type="submit"
-                        disabled={ticketSubmitting}
-                        className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors font-semibold disabled:opacity-70"
-                      >
-                        {ticketSubmitting ? 'Submitting...' : 'Create Ticket'}
-                      </button>
-                      {ticketStatus && (
-                        <div className="text-sm font-semibold text-text-primary">{ticketStatus}</div>
-                      )}
-                    </form>
+                    </div>
                   </div>
-                </div>
 
-                <div className="bg-surface-elevated rounded-lg border border-border p-5">
-                  <h3 className="text-lg font-semibold text-text-primary mb-4">My Tickets</h3>
-                  {ticketItems.length > 0 ? (
-                    <div className="space-y-3">
+                  <button
+                    type="submit"
+                    disabled={scheduleSubmitting}
+                    className="min-h-11 rounded-md border border-border bg-surface-elevated px-4 py-2 text-sm font-semibold text-text-primary"
+                  >
+                    {scheduleSubmitting ? 'Submitting...' : 'Submit Request'}
+                  </button>
+                  {scheduleStatus ? <p className="text-sm text-text-secondary">{scheduleStatus}</p> : null}
+                </form>
+              </section>
+
+              <section className="rounded-2xl border border-border bg-surface p-4">
+                <h2 className="text-lg font-bold text-text-primary">Contact and Support</h2>
+                <div className="mt-3 grid grid-cols-1 gap-2">
+                  <article className="rounded-lg border border-border-subtle bg-surface-elevated p-3">
+                    <p className="text-sm font-semibold text-text-primary">Operations Desk</p>
+                    <p className="text-xs text-text-secondary">+63 912 345 6789 · ops@sentinel-security.com</p>
+                  </article>
+                  <article className="rounded-lg border border-border-subtle bg-surface-elevated p-3">
+                    <p className="text-sm font-semibold text-text-primary">Site Supervisor</p>
+                    <p className="text-xs text-text-secondary">+63 901 234 5678 · supervisor@sentinel-security.com</p>
+                  </article>
+                  <article className="rounded-lg border border-border-subtle bg-surface-elevated p-3">
+                    <p className="text-sm font-semibold text-text-primary">HR and Compliance</p>
+                    <p className="text-xs text-text-secondary">+63 955 321 4567 · hr@sentinel-security.com</p>
+                  </article>
+                </div>
+              </section>
+
+              <section className="rounded-2xl border border-border bg-surface p-4">
+                <h2 className="text-lg font-bold text-text-primary">Submit Support Ticket</h2>
+                <form className="mt-3 space-y-3" onSubmit={handleTicketSubmit}>
+                  <label className="text-sm font-semibold text-text-secondary" htmlFor="support-subject">Subject</label>
+                  <input
+                    id="support-subject"
+                    type="text"
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-text-primary"
+                    value={ticketForm.subject}
+                    onChange={(event) => setTicketForm((previous) => ({ ...previous, subject: event.target.value }))}
+                    placeholder="Enter ticket subject"
+                  />
+
+                  <label className="text-sm font-semibold text-text-secondary" htmlFor="support-message">Message</label>
+                  <textarea
+                    id="support-message"
+                    className="min-h-[110px] w-full rounded-lg border border-border bg-background px-3 py-2 text-text-primary"
+                    value={ticketForm.message}
+                    onChange={(event) => setTicketForm((previous) => ({ ...previous, message: event.target.value }))}
+                    placeholder="Describe your issue"
+                  />
+
+                  <button
+                    type="submit"
+                    disabled={ticketSubmitting}
+                    className="min-h-11 rounded-md border border-border bg-surface-elevated px-4 py-2 text-sm font-semibold text-text-primary"
+                  >
+                    {ticketSubmitting ? 'Submitting...' : 'Create Ticket'}
+                  </button>
+                  {ticketStatus ? <p className="text-sm text-text-secondary">{ticketStatus}</p> : null}
+                </form>
+
+                <div className="mt-4">
+                  <h3 className="text-base font-semibold text-text-primary">My Tickets</h3>
+                  {ticketItems.length === 0 ? (
+                    <p className="mt-2 rounded-lg border border-border-subtle bg-surface-elevated p-3 text-sm text-text-secondary">No tickets filed yet.</p>
+                  ) : (
+                    <ul className="mt-2 space-y-2">
                       {ticketItems.map((ticket) => (
-                        <div key={ticket.id} className="bg-surface rounded-lg border border-border p-4">
-                          <div className="flex items-center justify-between mb-2">
-                            <h4 className="text-sm font-semibold text-text-primary">{ticket.subject}</h4>
-                            <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/15 text-blue-300 ring-1 ring-blue-500/30">
+                        <li key={ticket.id} className="rounded-lg border border-border-subtle bg-surface-elevated p-3">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-sm font-semibold text-text-primary">{ticket.subject}</p>
+                            <span className="rounded-full border border-border-subtle bg-background px-2 py-1 text-xs font-semibold text-text-secondary">
                               {ticket.status}
                             </span>
                           </div>
-                          <p className="text-sm text-text-secondary mb-2">{ticket.message}</p>
-                          <div className="text-xs text-text-tertiary">{new Date(ticket.created_at).toLocaleString()}</div>
-                        </div>
+                          <p className="mt-1 text-xs text-text-secondary">{ticket.message}</p>
+                          <p className="mt-1 text-xs text-text-tertiary">{new Date(ticket.created_at).toLocaleString()}</p>
+                        </li>
                       ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-text-secondary">No tickets yet.</p>
+                    </ul>
                   )}
                 </div>
               </section>
-            )}
-          </div>
-        </div>
+            </div>
+          ) : null}
+
+          {!isInitialLoading && activeSection === 'map' ? (
+            <div className="space-y-4">
+              <section className="rounded-2xl border border-border bg-surface p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h2 className="text-lg font-bold text-text-primary">Map Screen</h2>
+                  <button
+                    type="button"
+                    onClick={() => setMapExpanded((previous) => !previous)}
+                    className="min-h-11 rounded-md border border-border bg-surface-elevated px-3 py-2 text-sm font-semibold text-text-primary"
+                  >
+                    {mapExpanded ? 'Collapse Map' : 'Open Map'}
+                  </button>
+                </div>
+                <p className="mt-1 text-sm text-text-secondary">Map is separated from mission controls so it never blocks action buttons or check-in workflows.</p>
+
+                {mapExpanded ? (
+                  <div className="mt-3 space-y-3">
+                    {mapEmbedUrl ? (
+                      <>
+                        <div className="overflow-hidden rounded-xl border border-border-subtle bg-surface-elevated">
+                          <iframe
+                            title="Guard location map"
+                            src={mapEmbedUrl}
+                            className="h-[320px] w-full"
+                            loading="lazy"
+                          />
+                        </div>
+                        {mapExternalUrl ? (
+                          <a
+                            href={mapExternalUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex min-h-11 items-center rounded-md border border-border bg-surface-elevated px-3 py-2 text-sm font-semibold text-text-primary"
+                          >
+                            Open Full Map in New Tab
+                          </a>
+                        ) : null}
+                      </>
+                    ) : (
+                      <p className="rounded-lg border border-border-subtle bg-surface-elevated p-3 text-sm text-text-secondary">
+                        No live coordinates yet. Enable tracking from Mission screen, then reopen map.
+                      </p>
+                    )}
+                  </div>
+                ) : null}
+
+                {lastKnownLocation ? (
+                  <div className="mt-3 rounded-lg border border-border-subtle bg-surface-elevated p-3 text-xs text-text-secondary">
+                    <p>Last known position: {lastKnownLocation.latitude.toFixed(6)}, {lastKnownLocation.longitude.toFixed(6)}</p>
+                    <p>Source: {lastKnownLocation.source}</p>
+                    <p>Updated: {new Date(lastKnownLocation.recordedAt).toLocaleString()}</p>
+                  </div>
+                ) : null}
+              </section>
+            </div>
+          ) : null}
+        </section>
       </main>
+
+      <div
+        className="fixed inset-x-0 z-[42] px-3"
+        style={{ bottom: 'calc(4.75rem + env(safe-area-inset-bottom, 0px))' }}
+      >
+        <section className="mx-auto grid w-full max-w-5xl grid-cols-1 gap-2 rounded-2xl border border-border bg-surface/95 p-2 backdrop-blur sm:grid-cols-3" aria-label="Primary guard actions">
+          <button
+            type="button"
+            onClick={() => {
+              setIncidentStatus('')
+              setIncidentModalOpen(true)
+            }}
+            className="min-h-12 rounded-lg border border-danger-border bg-danger-bg px-4 py-3 text-sm font-bold text-danger-text"
+          >
+            Report Incident
+          </button>
+          <button
+            type="button"
+            onClick={() => { void handlePrimaryCheckAction() }}
+            className="min-h-12 rounded-lg border border-success-border bg-success-bg px-4 py-3 text-sm font-bold text-success-text"
+          >
+            {currentShift && checkInStatus[currentShift.id] === 'checked_in' ? 'Check Out' : 'Check In'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setInstructionsOpen(true)}
+            className="min-h-12 rounded-lg border border-info-border bg-info-bg px-4 py-3 text-sm font-bold text-info-text"
+          >
+            View Instructions
+          </button>
+        </section>
+      </div>
+
+      <nav
+        aria-label="Guard primary navigation"
+        className="fixed bottom-0 left-0 right-0 z-[44] border-t border-border-elevated bg-surface px-2 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] pt-2"
+      >
+        <ul className="mx-auto grid w-full max-w-5xl grid-cols-5 gap-1">
+          {navItems.map((item) => {
+            const isProfile = item.key === 'profile'
+            const isActive = !isProfile && activeSection === item.key
+            const isDisabled = isProfile && !onViewChange
+
+            return (
+              <li key={item.key}>
+                <button
+                  type="button"
+                  disabled={isDisabled}
+                  onClick={() => {
+                    if (item.key === 'profile') {
+                      onViewChange?.('profile')
+                      return
+                    }
+                    setActiveSection(item.key)
+                  }}
+                  className={`min-h-11 w-full rounded-md px-2 py-2 text-xs font-semibold transition-colors ${
+                    isActive
+                      ? 'bg-info text-white'
+                      : 'bg-surface-elevated text-text-secondary'
+                  } ${isDisabled ? 'opacity-40' : ''}`}
+                  aria-current={isActive ? 'page' : undefined}
+                >
+                  {item.label}
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+      </nav>
+
+      {instructionsOpen ? (
+        <div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/40 p-4 sm:items-center" role="presentation">
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="guard-instructions-title"
+            className="w-full max-w-xl rounded-2xl border border-border bg-surface p-5 shadow-xl"
+          >
+            <h2 id="guard-instructions-title" className="text-xl font-bold text-text-primary">Field Instructions</h2>
+            <ul className="mt-3 space-y-2 text-sm text-text-secondary">
+              <li>Confirm assignment details before arrival at your post.</li>
+              <li>Check in immediately once on-site and keep location tracking active.</li>
+              <li>Report incidents with clear title, location, and priority level.</li>
+              <li>Escalate critical threats to Operations Desk without delay.</li>
+              <li>Check out only after formal handoff or shift completion.</li>
+            </ul>
+            <div className="mt-4 rounded-lg border border-border-subtle bg-surface-elevated p-3 text-sm text-text-secondary">
+              Operations Desk: +63 912 345 6789
+              <br />
+              Site Supervisor: +63 901 234 5678
+            </div>
+            <button
+              type="button"
+              onClick={() => setInstructionsOpen(false)}
+              className="mt-4 min-h-11 rounded-md border border-border bg-surface-elevated px-4 py-2 text-sm font-semibold text-text-primary"
+            >
+              Close Instructions
+            </button>
+          </section>
+        </div>
+      ) : null}
+
+      {incidentModalOpen ? (
+        <div className="fixed inset-0 z-[92] flex items-end justify-center bg-black/50 p-4 sm:items-center" role="presentation">
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="incident-report-title"
+            className="w-full max-w-xl rounded-2xl border border-border bg-surface p-5 shadow-xl"
+          >
+            <h2 id="incident-report-title" className="text-xl font-bold text-text-primary">Report Incident</h2>
+            <form className="mt-3 space-y-3" onSubmit={handleIncidentSubmit}>
+              <label className="block text-sm font-semibold text-text-secondary" htmlFor="incident-title">Title</label>
+              <input
+                id="incident-title"
+                type="text"
+                value={incidentForm.title}
+                onChange={(event) => setIncidentForm((previous) => ({ ...previous, title: event.target.value }))}
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-text-primary"
+                placeholder="Short incident summary"
+                required
+              />
+
+              <label className="block text-sm font-semibold text-text-secondary" htmlFor="incident-location">Location</label>
+              <input
+                id="incident-location"
+                type="text"
+                value={incidentForm.location}
+                onChange={(event) => setIncidentForm((previous) => ({ ...previous, location: event.target.value }))}
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-text-primary"
+                placeholder="Site or area"
+                required
+              />
+
+              <label className="block text-sm font-semibold text-text-secondary" htmlFor="incident-priority">Priority</label>
+              <select
+                id="incident-priority"
+                value={incidentForm.priority}
+                onChange={(event) => setIncidentForm((previous) => ({ ...previous, priority: event.target.value as IncidentPriority }))}
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-text-primary"
+              >
+                <option value="critical">Critical</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+              </select>
+
+              <label className="block text-sm font-semibold text-text-secondary" htmlFor="incident-description">Description</label>
+              <textarea
+                id="incident-description"
+                value={incidentForm.description}
+                onChange={(event) => setIncidentForm((previous) => ({ ...previous, description: event.target.value }))}
+                className="min-h-[120px] w-full rounded-lg border border-border bg-background px-3 py-2 text-text-primary"
+                placeholder="Describe what happened"
+                required
+              />
+
+              {incidentStatus ? <p className="text-sm text-text-secondary">{incidentStatus}</p> : null}
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="submit"
+                  disabled={incidentSubmitting}
+                  className="min-h-11 rounded-md border border-danger-border bg-danger-bg px-4 py-2 text-sm font-semibold text-danger-text"
+                >
+                  {incidentSubmitting ? 'Submitting...' : 'Submit Incident'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIncidentModalOpen(false)}
+                  className="min-h-11 rounded-md border border-border bg-surface-elevated px-4 py-2 text-sm font-semibold text-text-primary"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      ) : null}
     </div>
   )
 }
 
 export default UserDashboard
-

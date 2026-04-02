@@ -866,12 +866,7 @@ function App() {
         { key: 'profile', label: 'Profile' },
       ]
 
-  const showMobileQuickNav =
-    isLoggedIn &&
-    hasAcceptedToa &&
-    normalizedRole === 'guard' &&
-    activeView !== 'profile' &&
-    !hasBlockingOverlay
+  const showMobileQuickNav = false
   const mobileSafeBottomOffset = showMobileQuickNav
     ? 'calc(5rem + env(safe-area-inset-bottom, 0px))'
     : 'calc(1rem + env(safe-area-inset-bottom, 0px))'

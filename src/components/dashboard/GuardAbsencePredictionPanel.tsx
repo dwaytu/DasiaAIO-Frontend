@@ -9,9 +9,9 @@ interface GuardAbsencePredictionPanelProps {
 }
 
 const riskPillClass: Record<string, string> = {
-  LOW: 'border-green-500/40 bg-green-500/10 text-green-200',
-  MEDIUM: 'border-amber-400/40 bg-amber-500/10 text-amber-200',
-  HIGH: 'border-red-500/40 bg-red-500/10 text-red-200',
+  LOW: 'border border-[color-mix(in_srgb,#22c55e_40%,transparent)] bg-[color-mix(in_srgb,#22c55e_10%,transparent)] text-green-300 dark:text-green-200',
+  MEDIUM: 'border border-[color-mix(in_srgb,#f59e0b_40%,transparent)] bg-[color-mix(in_srgb,#f59e0b_10%,transparent)] text-amber-300 dark:text-amber-200',
+  HIGH: 'border border-[color-mix(in_srgb,#ef4444_40%,transparent)] bg-[color-mix(in_srgb,#ef4444_10%,transparent)] text-red-300 dark:text-red-200',
 }
 
 const riskRowClass: Record<string, string> = {

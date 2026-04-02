@@ -9,7 +9,9 @@ export interface NavItem {
 }
 
 const ELEVATED_NAV: NavItem[] = [
+  { view: 'inbox', label: 'Inbox', group: 'MAIN MENU' },
   { view: 'dashboard', label: 'Dashboard', group: 'MAIN MENU' },
+  { view: 'settings', label: 'Settings', group: 'MAIN MENU' },
   { view: 'approvals', label: 'Approvals', group: 'MAIN MENU', permission: 'approve_guards' },
   { view: 'calendar', label: 'Calendar', group: 'MAIN MENU' },
   { view: 'analytics', label: 'Analytics', group: 'MAIN MENU', permission: 'view_analytics' },
@@ -27,7 +29,9 @@ const ELEVATED_NAV: NavItem[] = [
 ]
 
 const GUARD_NAV: NavItem[] = [
+  { view: 'inbox', label: 'Inbox', group: 'MAIN MENU' },
   { view: 'dashboard', label: 'Dashboard', group: 'MAIN MENU' },
+  { view: 'settings', label: 'Settings', group: 'MAIN MENU' },
   { view: 'calendar', label: 'Calendar', group: 'MAIN MENU' },
   { view: 'schedule', label: 'Schedule', group: 'MAIN MENU' },
   { view: 'firearms', label: 'Firearms', group: 'RESOURCES' },

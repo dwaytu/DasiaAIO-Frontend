@@ -1,6 +1,6 @@
 import { FC, ReactNode } from 'react'
 import Sidebar, { SidebarItem } from '../Sidebar'
-import Header from '../Header'
+import Header from '../shared/Header'
 import { User } from '../../App'
 
 interface OperationalShellProps {
@@ -62,7 +62,7 @@ const OperationalShell: FC<OperationalShellProps> = ({
 
         <div className="soc-scroll-area flex-1 min-h-0 overflow-y-auto p-4 pb-[calc(2rem+env(safe-area-inset-bottom,0px))] md:p-6">
           {error && (
-            <div className="mb-4 rounded-lg border border-red-300 bg-red-50 p-3 text-sm font-medium text-red-900">{error}</div>
+            <div className="mb-4 rounded-lg border border-danger-border bg-danger-bg p-3 text-sm font-medium text-danger-text">{error}</div>
           )}
           {children}
         </div>

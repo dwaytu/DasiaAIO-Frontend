@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import LoginPage from './components/LoginPage'
-import SuperadminDashboard from './components/SuperadminDashboard'
-import UserDashboard from './components/UserDashboard'
+import SuperadminDashboard from './components/admin/SuperadminDashboard'
+import UserDashboard from './components/guards/UserDashboard'
 import PerformanceDashboard from './components/PerformanceDashboard'
 import FirearmInventory from './components/FirearmInventory'
 import FirearmAllocation from './components/FirearmAllocation'
@@ -9,8 +9,10 @@ import GuardFirearmPermits from './components/GuardFirearmPermits'
 import FirearmMaintenance from './components/FirearmMaintenance'
 import ArmoredCarDashboard from './components/ArmoredCarDashboard'
 import ProfileDashboard from './components/ProfileDashboard'
+import SettingsView from './components/settings/SettingsView'
 import MeritScoreDashboard from './components/MeritScoreDashboard'
 import CalendarDashboard from './components/CalendarDashboard'
+import ErrorBoundary from './components/ErrorBoundary'
 import { API_BASE_URL, APP_VERSION, APP_WHATS_NEW, LATEST_RELEASE_API_URL, RELEASE_DOWNLOAD_URL, detectRuntimePlatform, RuntimePlatform } from './config'
 import { normalizeRole, isLegacyRole, Role } from './types/auth'
 import { can, Permission } from './utils/permissions'
@@ -761,6 +763,11 @@ function App() {
       ),
       permission: 'manage_maintenance',
     },
+    settings: {
+      component: ({ user, onLogout, onViewChange }) => (
+        <SettingsView user={user} onLogout={onLogout} onViewChange={onViewChange} />
+      ),
+    },
     'armored-cars': {
       component: ({ user, onLogout, onViewChange, activeView }) => (
         <ArmoredCarDashboard user={user} onLogout={onLogout} onViewChange={onViewChange} activeView={activeView} />
@@ -831,6 +838,16 @@ function App() {
     )
   }
 
+  const renderProtectedView = (view: string, content: JSX.Element): JSX.Element => (
+    <ErrorBoundary
+      key={view}
+      sectionLabel={`${view} view`}
+      onRetry={() => setActiveView(getHomeView(normalizedRole))}
+    >
+      {content}
+    </ErrorBoundary>
+  )
+
   if (isLoading) {
     return (
       <div className="h-screen overflow-hidden w-full flex items-center justify-center bg-background">
@@ -890,14 +907,20 @@ function App() {
           </section>
         </main>
       ) : activeView === 'profile' ? (
-        <ProfileDashboard user={user!} onLogout={handleLogout} onBack={() => setActiveView(getHomeView(normalizedRole))} onProfilePhotoUpdate={handleProfilePhotoUpdate} />
+        renderProtectedView(
+          'profile',
+          <ProfileDashboard user={user!} onLogout={handleLogout} onBack={() => setActiveView(getHomeView(normalizedRole))} onProfilePhotoUpdate={handleProfilePhotoUpdate} />,
+        )
       ) : user ? (
         (() => {
           const desiredView = activeView
           const route = viewRegistry[desiredView]
 
           if (route && canView(desiredView, normalizedRole)) {
-            return route.component({ user, onLogout: handleLogout, onViewChange: setActiveView, activeView })
+            return renderProtectedView(
+              desiredView,
+              route.component({ user, onLogout: handleLogout, onViewChange: setActiveView, activeView }),
+            )
           }
 
           if (route && !canView(desiredView, normalizedRole)) {
@@ -908,7 +931,7 @@ function App() {
             return renderAccessDenied(normalizedRole)
           }
 
-          return renderHome(normalizedRole, user)
+          return renderProtectedView('home', renderHome(normalizedRole, user))
         })()
       ) : null}
 
@@ -980,7 +1003,7 @@ function App() {
             <p className="mt-2 text-sm text-text-secondary">
               Review the legal documents:{' '}
               <a
-                href="https://github.com/Cloudyrowdyyy/Capstone-Main/blob/main/TermsOfAgreement.md"
+                href="https://github.com/dwaytu/Capstone-Main/blob/main/TermsOfAgreement.md"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="font-semibold text-info underline"
@@ -989,7 +1012,7 @@ function App() {
               </a>
               ,{' '}
               <a
-                href="https://github.com/Cloudyrowdyyy/Capstone-Main/blob/main/PrivacyPolicy.md"
+                href="https://github.com/dwaytu/Capstone-Main/blob/main/PrivacyPolicy.md"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="font-semibold text-info underline"
@@ -998,7 +1021,7 @@ function App() {
               </a>
               , and{' '}
               <a
-                href="https://github.com/Cloudyrowdyyy/Capstone-Main/blob/main/AcceptableUsePolicy.md"
+                href="https://github.com/dwaytu/Capstone-Main/blob/main/AcceptableUsePolicy.md"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="font-semibold text-info underline"

@@ -62,19 +62,42 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
   }, [])
 
   useEffect(() => {
+    let isCancelled = false
+
+    const runRefreshCycle = async () => {
+      const refreshTasks: Array<() => Promise<void> | void> = [
+        summaryState.refresh,
+        shiftsState.refresh,
+        assetsState.refresh,
+        incidentsState.refresh,
+        predictiveAlertsState.refresh,
+        guardAbsencePredictionState.refresh,
+        replacementSuggestionsState.refresh,
+        vehicleMaintenancePredictionState.refresh,
+      ]
+
+      for (const refreshTask of refreshTasks) {
+        if (isCancelled) return
+        try {
+          await Promise.resolve(refreshTask())
+        } catch {
+          // Individual modules already surface their own error state.
+        }
+      }
+
+      if (!isCancelled) {
+        setLastRefreshAt(Date.now())
+      }
+    }
+
     const refresher = window.setInterval(() => {
-      summaryState.refresh()
-      shiftsState.refresh()
-      assetsState.refresh()
-      incidentsState.refresh()
-      predictiveAlertsState.refresh()
-      guardAbsencePredictionState.refresh()
-      replacementSuggestionsState.refresh()
-      vehicleMaintenancePredictionState.refresh()
-      setLastRefreshAt(Date.now())
+      void runRefreshCycle()
     }, 15000)
 
-    return () => window.clearInterval(refresher)
+    return () => {
+      isCancelled = true
+      window.clearInterval(refresher)
+    }
   }, [summaryState.refresh, shiftsState.refresh, assetsState.refresh, incidentsState.refresh, predictiveAlertsState.refresh, guardAbsencePredictionState.refresh, replacementSuggestionsState.refresh, vehicleMaintenancePredictionState.refresh])
 
   const systemStatus = alerts.some((alert) => alert.severity === 'critical')

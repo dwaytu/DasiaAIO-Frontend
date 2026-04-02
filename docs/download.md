@@ -16,13 +16,13 @@ Use the channels below to access current platform builds.
 
 ## Desktop Runtime (Windows via Tauri)
 
-- Release feed: [GitHub Releases](https://github.com/Cloudyrowdyyy/Capstone-Main/releases/latest)
+- Release feed: [GitHub Releases](https://github.com/dwaytu/Capstone-Main/releases/latest)
 - Recommended for: Command-center desktops that need a packaged runtime.
 - Update behavior: In-app update detection with download-and-restart flow where supported.
 
 ## Mobile Runtime (Android via Capacitor)
 
-- Release feed: [GitHub Releases](https://github.com/Cloudyrowdyyy/Capstone-Main/releases/latest)
+- Release feed: [GitHub Releases](https://github.com/dwaytu/Capstone-Main/releases/latest)
 - Recommended for: Field guard and supervisor operations.
 - Update behavior: Runtime prompts user to install newer package builds.
 

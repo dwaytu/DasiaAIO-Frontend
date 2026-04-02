@@ -54,9 +54,9 @@ permalink: /security/
 
 ## Legal Documents
 
-- [Terms of Agreement](https://github.com/Cloudyrowdyyy/Capstone-Main/blob/main/TermsOfAgreement.md)
-- [Privacy Policy](https://github.com/Cloudyrowdyyy/Capstone-Main/blob/main/PrivacyPolicy.md)
-- [Acceptable Use Policy](https://github.com/Cloudyrowdyyy/Capstone-Main/blob/main/AcceptableUsePolicy.md)
+- [Terms of Agreement](https://github.com/dwaytu/Capstone-Main/blob/main/TermsOfAgreement.md)
+- [Privacy Policy](https://github.com/dwaytu/Capstone-Main/blob/main/PrivacyPolicy.md)
+- [Acceptable Use Policy](https://github.com/dwaytu/Capstone-Main/blob/main/AcceptableUsePolicy.md)
 
 ---
 

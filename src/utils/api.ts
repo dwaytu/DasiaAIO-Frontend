@@ -1,7 +1,7 @@
 import { API_BASE_URL } from '../config'
 
 let authExpiryNotified = false
-const RETRYABLE_STATUS = new Set([429, 502, 503, 504])
+const RETRYABLE_STATUS = new Set([408, 425, 429, 500, 502, 503, 504])
 const TOKEN_STORAGE_KEY = 'token'
 const REFRESH_TOKEN_STORAGE_KEY = 'refreshToken'
 const PUBLIC_API_PATHS = new Set([
@@ -120,6 +120,7 @@ async function loadSecureRefreshToken(): Promise<string> {
 }
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+const IDEMPOTENCY_HEADER = 'Idempotency-Key'
 
 function notifyAuthExpired(message: string): void {
   if (authExpiryNotified) return
@@ -323,8 +324,21 @@ export async function fetchJsonOrThrow<T>(
     requestInit = withAuthorizationHeader(requestInit, token)
   }
 
+  const headers = new Headers(requestInit?.headers)
+  requestInit = {
+    ...(requestInit || {}),
+    headers,
+  }
+
   const method = (requestInit?.method || 'GET').toUpperCase()
-  const retryableByMethod = method === 'GET' || method === 'HEAD' || method === 'OPTIONS'
+  const idempotentMutation =
+    (method === 'PUT' || method === 'DELETE') &&
+    headers.has(IDEMPOTENCY_HEADER)
+  const retryableByMethod =
+    method === 'GET' ||
+    method === 'HEAD' ||
+    method === 'OPTIONS' ||
+    idempotentMutation
   const maxAttempts = retryableByMethod ? 2 : 1
 
   let response: Response | null = null
@@ -361,7 +375,8 @@ export async function fetchJsonOrThrow<T>(
       (lastNetworkError !== null || (response !== null && RETRYABLE_STATUS.has(response.status)))
 
     if (shouldRetry) {
-      await wait(400 * attempt)
+      const backoffMs = 400 * 2 ** (attempt - 1)
+      await wait(backoffMs)
       continue
     }
 

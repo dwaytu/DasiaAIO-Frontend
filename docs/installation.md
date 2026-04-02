@@ -19,7 +19,7 @@ permalink: /installation/
 
 ### 1. Clone Repository
 ```bash
-git clone https://github.com/Cloudyrowdyyy/Capstone-Main.git
+git clone https://github.com/dwaytu/Capstone-Main.git
 cd Capstone-Main
 ```
 

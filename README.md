@@ -88,5 +88,5 @@ Desktop builds support one-click update via Tauri updater when wrapper updater e
 ## Key Links
 
 - Production: https://dasiaaio.up.railway.app
-- Documentation: https://cloudyrowdyyy.github.io/Capstone-Main
-- Repository: https://github.com/Cloudyrowdyyy/Capstone-Main
+- Documentation: https://dwaytu.github.io/Capstone-Main
+- Repository: https://github.com/dwaytu/Capstone-Main

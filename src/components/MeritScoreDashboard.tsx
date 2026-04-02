@@ -50,6 +50,74 @@ interface Evaluation {
   createdAt: string
 }
 
+function buildScoreHistory(evals: Evaluation[]): { label: string; score: number }[] {
+  const sorted = [...evals].sort(
+    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+  )
+  let sum = 0
+  return sorted.map((e, i) => {
+    sum += e.rating * 20
+    return {
+      label: new Date(e.createdAt).toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+      score: Math.round(sum / (i + 1)),
+    }
+  })
+}
+
+const RatingTrendChart: FC<{ evaluations: Evaluation[] }> = ({ evaluations }) => {
+  if (evaluations.length < 2) return null
+  const points = buildScoreHistory(evaluations)
+  const W = 400, padX = 14, padY = 12, H = 80
+  const xs = points.map((_, i) => padX + (i / (points.length - 1)) * (W - padX * 2))
+  const ys = points.map(p => H - padY - (Math.min(p.score, 100) / 100) * (H - padY * 2))
+  const polyline = xs.map((x, i) => `${x},${ys[i]}`).join(' ')
+  const first = points[0]
+  const last = points[points.length - 1]
+
+  return (
+    <section className="command-panel p-5 md:p-6">
+      <h3 className="mb-3 text-lg font-bold text-text-primary">Client Rating Trend</h3>
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        className="w-full h-20"
+        role="img"
+        aria-label={`Score trend from ${first.score} (${first.label}) to ${last.score} (${last.label})`}
+      >
+        {[0, 25, 50, 75, 100].map(v => {
+          const y = H - padY - (v / 100) * (H - padY * 2)
+          return (
+            <line
+              key={v}
+              x1={padX}
+              y1={y}
+              x2={W - padX}
+              y2={y}
+              stroke="currentColor"
+              strokeOpacity={0.1}
+              strokeWidth={1}
+            />
+          )
+        })}
+        <polyline
+          points={polyline}
+          fill="none"
+          stroke="#6366f1"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        {xs.map((x, i) => (
+          <circle key={i} cx={x} cy={ys[i]} r={3} fill="#6366f1" />
+        ))}
+      </svg>
+      <div className="mt-1 flex justify-between text-[11px] text-text-tertiary">
+        <span>{first.label}: {first.score}</span>
+        <span>{last.label}: {last.score}</span>
+      </div>
+    </section>
+  )
+}
+
 const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeView }) => {
   const [rankings, setRankings] = useState<RankedGuard[]>([])
   const [selectedGuard, setSelectedGuard] = useState<MeritScore | null>(null)
@@ -294,6 +362,8 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
                     </div>
                   </div>
                 </section>
+
+                <RatingTrendChart evaluations={evaluations} />
 
                 {/* Evaluations Section */}
                 <section className="command-panel p-6 md:p-8">

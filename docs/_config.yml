@@ -1,7 +1,7 @@
 title: SENTINEL Security Operations Platform
 description: Security operations, asset, personnel, and mission management platform
 baseurl: /Capstone-Main
-url: https://cloudyrowdyyy.github.io
+url: https://dwaytu.github.io
 remote_theme: pages-themes/cayman@v0.2.0
 plugins:
   - jekyll-remote-theme

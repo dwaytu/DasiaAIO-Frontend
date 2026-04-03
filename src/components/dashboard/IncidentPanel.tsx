@@ -4,7 +4,7 @@ import { useIncidents } from '../../hooks/useIncidents'
 import type { Incident } from '../../hooks/useIncidents'
 import IncidentReportForm from './IncidentReportForm'
 import { API_BASE_URL } from '../../config'
-import { fetchJsonOrThrow } from '../../utils/api'
+import { fetchJsonOrThrow, getAuthHeaders } from '../../utils/api'
 
 interface IncidentSummaryPreview {
   riskLevel: string
@@ -72,13 +72,12 @@ const IncidentPanel: FC = () => {
       setSummarizingId(incident.id)
       setSummaryError('')
 
-      const token = localStorage.getItem('token')
       const response = await fetchJsonOrThrow<IncidentSummaryPreview>(
         `${API_BASE_URL}/api/ai/summarize-incident`,
         {
           method: 'POST',
           headers: {
-            Authorization: `Bearer ${token}`,
+            ...getAuthHeaders(),
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ description: incident.description }),

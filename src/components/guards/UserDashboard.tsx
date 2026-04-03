@@ -1,4 +1,4 @@
-﻿import { FC, FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { FC, FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { API_BASE_URL, detectRuntimePlatform } from '../../config'
 import { User as AppUser } from '../../App'
 import { getRequiredAccuracyMeters, getTrackingAccuracyMode } from '../../utils/trackingPolicy'
@@ -784,7 +784,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
         .sort((left, right) => new Date(left.start_time).getTime() - new Date(right.start_time).getTime())
         .map((shift) => ({
           id: shift.id,
-          label: `${shift.client_site} â€¢ ${formatTimeWindow(shift.start_time, shift.end_time)}`,
+          label: `${shift.client_site} • ${formatTimeWindow(shift.start_time, shift.end_time)}`,
         })),
     [scheduleItems],
   )
@@ -882,7 +882,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
           ) : null}
 
           {!isInitialLoading && activeSection === 'inbox' ? (
-            <div className="p-4">
+            <div className="guard-section-frame">
               <GuardInboxPanel
                 userId={user.id}
                 onAction={(type, _id) => {
@@ -894,7 +894,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
 
           {!isInitialLoading && activeSection === 'mission' ? (
             <div className="guard-section-frame">
-              <div className="guard-kpi-row md:grid-cols-4">
+              <div className="guard-kpi-row">
                 <StatCard label="Duty Status" value={dutyStatusConfig.label} hint={isSyncing ? 'Syncing updates' : 'Operational status'} tone="guard" />
                 <StatCard label="Current Post" value={currentShift ? missionLocation : 'Unassigned'} hint={missionShiftTime} tone="mission" />
                 <StatCard label="Elapsed Time" value={missionElapsed} hint={currentShift ? 'From active shift check-in' : 'No active shift'} tone="analytics" />
@@ -941,7 +941,9 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                     type="button"
                     onClick={toggleLocationTracking}
                     disabled={!hasLocationConsent}
-                    className={`min-h-9 rounded-md px-3 py-1.5 text-xs font-bold ${
+                    aria-pressed={locationTrackingEnabled}
+                      aria-label={locationTrackingEnabled ? 'Disable location tracking' : 'Enable location tracking'}
+                    className={`min-h-11 rounded-md px-3 py-1.5 text-xs font-bold ${
                       !hasLocationConsent
                         ? 'cursor-not-allowed text-text-tertiary'
                         : locationTrackingEnabled
@@ -949,14 +951,15 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                           : 'border border-success-border bg-success-bg text-success-text'
                     }`}
                   >
-                    {locationTrackingEnabled ? 'â— Tracking On' : 'â—‹ Tracking Off'}
+                      <span aria-hidden="true">{locationTrackingEnabled ? '●' : '○'}</span>
+                      {locationTrackingEnabled ? ' Tracking On' : ' Tracking Off'}
                   </button>
                   <span className="text-xs text-text-tertiary">
                     {hasLocationConsent ? locationPermissionState : 'consent required'}
                   </span>
                   {locationAccuracyMeters != null ? (
                     <span className="text-xs text-text-tertiary">
-                      {Math.round(locationAccuracyMeters)}m Â· {locationAccuracyLabel}
+                      {Math.round(locationAccuracyMeters)}m · {locationAccuracyLabel}
                     </span>
                   ) : null}
                   {locationTrackingMessage ? (
@@ -1033,7 +1036,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                               </p>
                               <p className="text-xs text-text-secondary">
                                 {new Date(record.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                {' â€” '}
+                                {' – '}
                                 {record.check_out_time
                                   ? new Date(record.check_out_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                                   : 'Active'}
@@ -1128,15 +1131,15 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                 <div className="mt-3 grid grid-cols-1 gap-2">
                   <article className="rounded-lg border border-border-subtle bg-surface-elevated p-3">
                     <p className="text-sm font-semibold text-text-primary">Operations Desk</p>
-                    <p className="text-xs text-text-secondary">+63 912 345 6789 Â· ops@sentinel-security.com</p>
+                    <p className="text-xs text-text-secondary">+63 912 345 6789 · ops@sentinel-security.com</p>
                   </article>
                   <article className="rounded-lg border border-border-subtle bg-surface-elevated p-3">
                     <p className="text-sm font-semibold text-text-primary">Site Supervisor</p>
-                    <p className="text-xs text-text-secondary">+63 901 234 5678 Â· supervisor@sentinel-security.com</p>
+                    <p className="text-xs text-text-secondary">+63 901 234 5678 · supervisor@sentinel-security.com</p>
                   </article>
                   <article className="rounded-lg border border-border-subtle bg-surface-elevated p-3">
                     <p className="text-sm font-semibold text-text-primary">HR and Compliance</p>
-                    <p className="text-xs text-text-secondary">+63 955 321 4567 Â· hr@sentinel-security.com</p>
+                    <p className="text-xs text-text-secondary">+63 955 321 4567 · hr@sentinel-security.com</p>
                   </article>
                 </div>
 
@@ -1154,7 +1157,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                   <label className="text-sm font-semibold text-text-secondary" htmlFor="support-message">Message</label>
                   <textarea
                     id="support-message"
-                    className="min-h-[110px] w-full rounded-lg border border-border bg-background px-3 py-2 text-text-primary"
+                    className="min-h-28 w-full rounded-lg border border-border bg-background px-3 py-2 text-text-primary"
                     value={ticketForm.message}
                     onChange={(event) => setTicketForm((previous) => ({ ...previous, message: event.target.value }))}
                     placeholder="Describe your issue"
@@ -1227,9 +1230,9 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
             }`}
           >
             {currentShift && checkInStatus[currentShift.id] === 'checked_in'
-              ? 'âœ“ Check Out â€” End Shift'
+              ? '✓ Check Out – End Shift'
               : currentShift
-                ? 'Check In â€” Start Shift'
+                ? 'Check In – Start Shift'
                 : 'No Active Shift'}
           </button>
 
@@ -1273,9 +1276,9 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                         }
                         setActiveSection(item.key)
                       }}
-                      className={`min-h-11 w-full rounded-md px-2 py-2 text-xs font-semibold transition-colors ${
+                      className={`min-h-11 w-full rounded-md px-2 py-2 text-xs font-semibold transition-colors outline outline-offset-[-2px] outline-transparent ${
                         isActive
-                          ? 'bg-info text-white'
+                          ? 'bg-info text-white forced-colors:text-[ButtonText] forced-colors:outline forced-colors:outline-2 forced-colors:outline-[Highlight]'
                           : 'bg-surface-elevated text-text-secondary'
                       } ${isDisabled ? 'opacity-40' : ''}`}
                       aria-current={isActive ? 'page' : undefined}
@@ -1394,7 +1397,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                 id="incident-description"
                 value={incidentForm.description}
                 onChange={(event) => setIncidentForm((previous) => ({ ...previous, description: event.target.value }))}
-                className="min-h-[120px] w-full rounded-lg border border-border bg-background px-3 py-2 text-text-primary"
+                className="min-h-32 w-full rounded-lg border border-border bg-background px-3 py-2 text-text-primary"
                 placeholder="Describe what happened"
                 required
               />

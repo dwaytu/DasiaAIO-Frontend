@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Bug } from 'lucide-react';
 import { API_BASE_URL } from '../config';
-import { getApiErrorMessage } from '../utils/api';
+import { getApiErrorMessage, getAuthHeaders } from '../utils/api';
 
 interface BugReportButtonProps {
   userId: string;
@@ -30,7 +30,7 @@ const BugReportButton: React.FC<BugReportButtonProps> = ({ userId }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          ...getAuthHeaders(),
         },
         body: JSON.stringify({
           guard_id: userId,

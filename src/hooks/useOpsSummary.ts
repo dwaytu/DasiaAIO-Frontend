@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { API_BASE_URL } from '../config'
-import { fetchJsonOrThrow } from '../utils/api'
+import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
 
 export interface OpsSummary {
   activeGuardsOnDuty: number
@@ -31,8 +31,7 @@ export function useOpsSummary() {
   const refresh = useCallback(async () => {
     try {
       setLoading(true)
-      const token = localStorage.getItem('token')
-      const headers = { Authorization: `Bearer ${token}` }
+      const headers = getAuthHeaders()
 
       const [shiftsResult, approvalsResult, allocationsResult, overdueResult, tripsResult, vehiclesResult, permitsResult] = await Promise.allSettled([
         fetchJsonOrThrow<any>(`${API_BASE_URL}/api/guard-replacement/shifts`, { headers }, 'Failed to load shifts'),

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, FC } from 'react'
 import { API_BASE_URL } from '../config'
-import { parseResponseBody } from '../utils/api'
+import { parseResponseBody, getAuthHeaders } from '../utils/api'
 import Sidebar from './Sidebar'
 import Header from './Header'
 import { User } from '../App'
@@ -181,12 +181,11 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
 
   const fetchShifts = useCallback(async (): Promise<ShiftEvent[]> => {
     try {
-      const token = localStorage.getItem('token')
       const url = isAdmin
         ? `${API_BASE_URL}/api/guard-replacement/shifts`
         : `${API_BASE_URL}/api/guard-replacement/guard/${user.id}/shifts`
       const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: getAuthHeaders()
       })
       if (!res.ok) return []
       const data = await parseResponseBody(res)
@@ -216,9 +215,8 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
 
   const fetchTrips = useCallback(async (): Promise<TripEvent[]> => {
     try {
-      const token = localStorage.getItem('token')
       const res = await fetch(`${API_BASE_URL}/api/trips`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: getAuthHeaders()
       })
       if (!res.ok) return []
       const data = await parseResponseBody(res)
@@ -247,9 +245,8 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
 
   const fetchMissions = useCallback(async (): Promise<MissionEvent[]> => {
     try {
-      const token = localStorage.getItem('token')
       const res = await fetch(`${API_BASE_URL}/api/missions`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: getAuthHeaders()
       })
       if (!res.ok) return []
       const data = await parseResponseBody(res)
@@ -277,9 +274,8 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
 
   const fetchMaintenanceEvents = useCallback(async (): Promise<MaintenanceEvent[]> => {
     try {
-      const token = localStorage.getItem('token')
       const res = await fetch(`${API_BASE_URL}/api/firearm-maintenance/pending`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: getAuthHeaders()
       })
       if (!res.ok) return []
       const data = await parseResponseBody(res)

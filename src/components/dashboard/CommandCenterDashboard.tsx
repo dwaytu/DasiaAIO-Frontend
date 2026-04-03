@@ -218,7 +218,7 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
             <div className="flex items-center gap-2">
               <LiveFreshnessPill updatedAt={lastRefreshAt} label="SOC stream" />
               <StatusBadge label={`System ${systemStatus}`} tone={systemTone === 'danger' ? 'danger' : systemTone === 'warning' ? 'warning' : 'success'} />
-              <StatusBadge label={`Threat ${threatLevel}`} tone={threatTone === 'danger' ? 'danger' : threatTone === 'warning' ? 'warning' : 'analytics'} />
+              <StatusBadge label={`Threat ${threatLevel}`} tone={threatTone === 'danger' ? 'danger' : threatTone === 'warning' ? 'warning' : 'success'} />
             </div>
           }
         />
@@ -244,12 +244,9 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
         subtitle="Operational Summary, quick action controls, and current command posture"
         icon={<SentinelLogo size={22} variant="IconOnly" className="shrink-0" animated />}
         actions={<QuickActionsPanel actions={quickActions} />}
-        collapsible
       >
         <OperationalSummaryStrip
           metrics={[
-            { label: 'System Status', value: systemStatus, tone: systemTone, hint: staleNote },
-            { label: 'Threat Level', value: threatLevel, tone: threatTone, hint: staleNote },
             { label: 'Active Guards', value: summary.activeGuardsOnDuty, tone: 'success', hint: staleNote },
             { label: 'Active Missions', value: summary.activeArmoredCarTrips, tone: 'info', hint: staleNote },
             { label: 'Alert Count', value: alerts.length, tone: alerts.length > 0 ? 'warning' : 'neutral', hint: staleNote },
@@ -281,21 +278,23 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
             nowLabel={clock.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
           />
         </div>
-        <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-4">
+        <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 sm:grid-flow-dense xl:grid-cols-4">
           <IncidentSeverityMonitoringPanel
             incidents={displayIncidents}
             loading={incidentsState.loading}
             error={incidentsState.error}
             lastUpdated={incidentsState.lastUpdated || staleNote}
           />
-          <PredictiveAlertsPanel
-            alerts={predictiveAlertsState.alerts}
-            loading={predictiveAlertsState.loading}
-            error={predictiveAlertsState.error}
-            lastUpdated={predictiveAlertsState.lastUpdated || staleNote}
-            title="AI Operational Insights"
-            subtitle="Model-driven alerts and emerging risk vectors"
-          />
+          <div className="sm:col-span-2 xl:col-span-1">
+            <PredictiveAlertsPanel
+              alerts={predictiveAlertsState.alerts}
+              loading={predictiveAlertsState.loading}
+              error={predictiveAlertsState.error}
+              lastUpdated={predictiveAlertsState.lastUpdated || staleNote}
+              title="AI Operational Insights"
+              subtitle="Model-driven alerts and emerging risk vectors"
+            />
+          </div>
           <IncidentSeverityClassifier incidents={displayIncidents} />
           <IncidentSummaryGenerator incidents={displayIncidents} />
         </div>
@@ -351,7 +350,7 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
       </SectionPanel>
 
       {(summaryState.error || shiftsState.error || assetsState.error) && (
-        <div className="rounded-lg border border-amber-400/40 bg-amber-500/10 p-3 text-sm text-amber-100">
+        <div className="rounded-lg border border-warning-border bg-warning-bg p-3 text-sm text-warning-text" role="status" aria-live="polite">
           Command center loaded with partial data. Last service check: {serviceState.services.lastChecked}.
         </div>
       )}

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { API_BASE_URL } from '../config'
-import { fetchJsonOrThrow } from '../utils/api'
+import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
 import { normalizeRole } from '../types/auth'
 
 interface ClientSite {
@@ -71,14 +71,7 @@ export function useReplacementSuggestions(): UseReplacementSuggestionsState {
         return
       }
 
-      const token = localStorage.getItem('token')
-      if (!token) {
-        setSuggestions([])
-        setError('')
-        return
-      }
-
-      const headers = { Authorization: `Bearer ${token}` }
+      const headers = getAuthHeaders()
 
       let resolvedPostId = postId
       let resolvedPostName = postName

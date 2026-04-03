@@ -1,6 +1,7 @@
 import { useState, useEffect, FC } from 'react'
 import { API_BASE_URL } from '../config'
 import { logError } from '../utils/logger'
+import { getAuthHeaders } from '../utils/api'
 import Sidebar from './Sidebar'
 import Header from './Header'
 
@@ -83,9 +84,8 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
 
   const fetchAllocations = async () => {
     try {
-      const token = localStorage.getItem('token')
       const response = await fetch(`${API_BASE_URL}/api/firearm-allocations`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: getAuthHeaders()
       })
       if (!response.ok) {
         throw new Error('Failed to fetch allocations')
@@ -101,9 +101,8 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
 
   const fetchGuards = async () => {
     try {
-      const token = localStorage.getItem('token')
       const response = await fetch(`${API_BASE_URL}/api/users`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: getAuthHeaders()
       })
       if (!response.ok) {
         throw new Error('Failed to fetch guards')
@@ -121,9 +120,8 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
 
   const fetchFirearms = async () => {
     try {
-      const token = localStorage.getItem('token')
       const response = await fetch(`${API_BASE_URL}/api/firearms`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: getAuthHeaders()
       })
       if (!response.ok) {
         throw new Error('Failed to fetch firearms')
@@ -143,12 +141,11 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
     e.preventDefault()
     setLoading(true)
     try {
-      const token = localStorage.getItem('token')
       const response = await fetch(`${API_BASE_URL}/api/firearm-allocation/issue`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          ...getAuthHeaders(),
         },
         body: JSON.stringify({
           guardId: newAllocation.guardId,

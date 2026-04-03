@@ -1,6 +1,7 @@
 import { useState, useEffect, FC } from 'react'
 import { API_BASE_URL } from '../config'
 import { logError } from '../utils/logger'
+import { getAuthHeaders } from '../utils/api'
 import Sidebar from './Sidebar'
 import Header from './Header'
 
@@ -51,9 +52,8 @@ const GuardFirearmPermits: FC<Props> = ({ user, onLogout, onViewChange, activeVi
   const fetchPermits = async () => {
     try {
       setLoading(true)
-      const token = localStorage.getItem('token')
       const response = await fetch(`${API_BASE_URL}/api/guard-firearm-permits`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: getAuthHeaders()
       })
       if (response.ok) {
         const data = await response.json()

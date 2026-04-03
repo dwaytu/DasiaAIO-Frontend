@@ -1,6 +1,7 @@
 import { useState, useEffect, FC } from 'react'
 import { API_BASE_URL } from '../config'
 import { logError } from '../utils/logger'
+import { getAuthHeaders } from '../utils/api'
 
 interface Shift {
   id: string
@@ -46,9 +47,8 @@ const EditScheduleModal: FC<EditScheduleModalProps> = ({ shift, onClose, onSave,
 
   const fetchGuards = async () => {
     try {
-      const token = localStorage.getItem('token')
       const response = await fetch(`${API_BASE_URL}/api/users`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: getAuthHeaders()
       })
       
       if (!response.ok) throw new Error('Failed to fetch guards')
@@ -76,8 +76,6 @@ const EditScheduleModal: FC<EditScheduleModalProps> = ({ shift, onClose, onSave,
     setError('')
 
     try {
-      const token = localStorage.getItem('token')
-      
       // Combine date and time into RFC3339 format
       const startDateTime = `${formData.date}T${formData.startTime}:00Z`
       const endDateTime = `${formData.date}T${formData.endTime}:00Z`
@@ -86,7 +84,7 @@ const EditScheduleModal: FC<EditScheduleModalProps> = ({ shift, onClose, onSave,
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
+          ...getAuthHeaders()
         },
         body: JSON.stringify({
           guard_id: formData.guardId,
@@ -127,12 +125,9 @@ const EditScheduleModal: FC<EditScheduleModalProps> = ({ shift, onClose, onSave,
     setError('')
 
     try {
-      const token = localStorage.getItem('token')
       const response = await fetch(`${API_BASE_URL}/api/guard-replacement/shifts/${shift.id}`, {
         method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+        headers: getAuthHeaders()
       })
 
       if (!response.ok) {

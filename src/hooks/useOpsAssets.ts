@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { API_BASE_URL } from '../config'
-import { fetchJsonOrThrow } from '../utils/api'
+import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
 
 export function useOpsAssets() {
   const [firearms, setFirearms] = useState<any[]>([])
@@ -12,8 +12,7 @@ export function useOpsAssets() {
   const refresh = useCallback(async () => {
     try {
       setLoading(true)
-      const token = localStorage.getItem('token')
-      const headers = { Authorization: `Bearer ${token}` }
+      const headers = getAuthHeaders()
 
       const [firearmsRes, vehiclesRes] = await Promise.allSettled([
         fetchJsonOrThrow<any>(`${API_BASE_URL}/api/firearms`, { headers }, 'Failed to load firearms'),

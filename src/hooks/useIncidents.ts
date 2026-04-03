@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { API_BASE_URL } from '../config'
-import { fetchJsonOrThrow } from '../utils/api'
+import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
 
 export interface Incident {
   id: string
@@ -35,10 +35,9 @@ export function useIncidents() {
   const refresh = useCallback(async () => {
     try {
       setLoading(true)
-      const token = localStorage.getItem('token')
       const data = await fetchJsonOrThrow<Incident[] | IncidentListResponse>(
         `${API_BASE_URL}/api/incidents/active?page=1&page_size=50`,
-        { headers: { Authorization: `Bearer ${token}` } },
+        { headers: getAuthHeaders() },
         'Failed to load incidents',
       )
       const normalized = Array.isArray(data)
@@ -57,13 +56,12 @@ export function useIncidents() {
   }, [])
 
   const reportIncident = useCallback(async (payload: CreateIncidentPayload): Promise<void> => {
-    const token = localStorage.getItem('token')
     await fetchJsonOrThrow<{ id: string }>(
       `${API_BASE_URL}/api/incidents`,
       {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${token}`,
+          ...getAuthHeaders(),
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(payload),
@@ -74,13 +72,12 @@ export function useIncidents() {
   }, [refresh])
 
   const updateStatus = useCallback(async (id: string, status: Incident['status']): Promise<void> => {
-    const token = localStorage.getItem('token')
     await fetchJsonOrThrow<void>(
       `${API_BASE_URL}/api/incidents/${id}/status`,
       {
         method: 'PATCH',
         headers: {
-          Authorization: `Bearer ${token}`,
+          ...getAuthHeaders(),
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ status }),

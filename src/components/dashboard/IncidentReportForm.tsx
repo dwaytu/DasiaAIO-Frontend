@@ -1,7 +1,7 @@
 import { FC, FormEvent, useEffect, useState } from 'react'
 import type { CreateIncidentPayload, Incident } from '../../hooks/useIncidents'
 import { API_BASE_URL } from '../../config'
-import { fetchJsonOrThrow } from '../../utils/api'
+import { fetchJsonOrThrow, getAuthHeaders } from '../../utils/api'
 
 interface IncidentReportFormProps {
   onSubmit: (payload: CreateIncidentPayload) => Promise<void>
@@ -84,11 +84,6 @@ const IncidentReportForm: FC<IncidentReportFormProps> = ({ onSubmit, onCancel })
       return
     }
 
-    const token = localStorage.getItem('token')
-    if (!token) {
-      return
-    }
-
     const timeout = window.setTimeout(async () => {
       try {
         setClassifying(true)
@@ -97,7 +92,7 @@ const IncidentReportForm: FC<IncidentReportFormProps> = ({ onSubmit, onCancel })
           {
             method: 'POST',
             headers: {
-              Authorization: `Bearer ${token}`,
+              ...getAuthHeaders(),
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({ title, description }),

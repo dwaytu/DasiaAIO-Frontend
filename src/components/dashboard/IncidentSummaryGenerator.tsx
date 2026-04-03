@@ -1,6 +1,6 @@
 import { FC, useMemo, useState } from 'react'
 import { API_BASE_URL } from '../../config'
-import { fetchJsonOrThrow } from '../../utils/api'
+import { fetchJsonOrThrow, getAuthHeaders } from '../../utils/api'
 import type { Incident } from '../../hooks/useIncidents'
 
 interface IncidentSummaryGeneratorProps {
@@ -37,14 +37,13 @@ const IncidentSummaryGenerator: FC<IncidentSummaryGeneratorProps> = ({ incidents
     try {
       setLoading(true)
       setError('')
-      const token = localStorage.getItem('token')
 
       const data = await fetchJsonOrThrow<SummaryResult>(
         `${API_BASE_URL}/api/ai/summarize-incident`,
         {
           method: 'POST',
           headers: {
-            Authorization: `Bearer ${token}`,
+            ...getAuthHeaders(),
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ description: candidateIncident.description }),

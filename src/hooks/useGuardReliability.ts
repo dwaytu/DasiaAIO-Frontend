@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { API_BASE_URL } from '../config'
-import { fetchJsonOrThrow } from '../utils/api'
+import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
 
 export interface GuardReliability {
   guardId: string
@@ -21,10 +21,9 @@ export function useGuardReliability() {
   const refresh = useCallback(async () => {
     try {
       setLoading(true)
-      const token = localStorage.getItem('token')
       const data = await fetchJsonOrThrow<GuardReliability[]>(
         `${API_BASE_URL}/api/analytics/guard-reliability`,
-        { headers: { Authorization: `Bearer ${token}` } },
+        { headers: getAuthHeaders() },
         'Failed to load guard reliability data',
       )
       setLeaders(Array.isArray(data) ? data : [])

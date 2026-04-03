@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { User } from '../App'
 import { API_BASE_URL } from '../config'
-import { fetchJsonOrThrow, parseResponseBody } from '../utils/api'
+import { fetchJsonOrThrow, parseResponseBody, getAuthHeaders } from '../utils/api'
 import { logError } from '../utils/logger'
 import Sidebar from './Sidebar'
 import Header from './Header'
@@ -127,11 +127,10 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
   const initializeData = async () => {
     setLoading(true)
     try {
-      const token = localStorage.getItem('token')
       // Fetch cars first, since maintenance fetch depends on it
       const carsData = await fetchJsonOrThrow<ArmoredCar[]>(
         `${API_BASE_URL}/api/armored-cars`,
-        { headers: { Authorization: `Bearer ${token}` } },
+        { headers: getAuthHeaders() },
         'Failed to fetch cars'
       )
       setCars(carsData)
@@ -141,7 +140,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
         let allMaintenance: CarMaintenance[] = []
         for (const car of carsData) {
           const mainResponse = await fetch(`${API_BASE_URL}/api/car-maintenance/${car.id}`, {
-            headers: { Authorization: `Bearer ${token}` }
+            headers: getAuthHeaders()
           })
           if (mainResponse.ok) {
             const mainData = await parseResponseBody(mainResponse)
@@ -167,10 +166,9 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
 
   const fetchAllocations = async () => {
     try {
-      const token = localStorage.getItem('token')
       const data = await fetchJsonOrThrow<CarAllocation[]>(
         `${API_BASE_URL}/api/car-allocations/active`,
-        { headers: { Authorization: `Bearer ${token}` } },
+        { headers: getAuthHeaders() },
         'Failed to fetch allocations'
       )
       setAllocations(data)
@@ -181,11 +179,10 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
 
   const fetchMaintenance = async () => {
     try {
-      const token = localStorage.getItem('token')
       // Fetch maintenance for all cars
       for (const car of cars) {
         const response = await fetch(`${API_BASE_URL}/api/car-maintenance/${car.id}`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: getAuthHeaders()
         })
         if (response.ok) {
           const data = await parseResponseBody(response)
@@ -200,10 +197,9 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
   const fetchCars = async () => {
     setLoading(true)
     try {
-      const token = localStorage.getItem('token')
       const data = await fetchJsonOrThrow<ArmoredCar[]>(
         `${API_BASE_URL}/api/armored-cars`,
-        { headers: { Authorization: `Bearer ${token}` } },
+        { headers: getAuthHeaders() },
         'Failed to fetch cars'
       )
       setCars(data)
@@ -217,10 +213,9 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
 
   const fetchTrips = async () => {
     try {
-      const token = localStorage.getItem('token')
       const data = await fetchJsonOrThrow<Trip[]>(
         `${API_BASE_URL}/api/trips`,
-        { headers: { Authorization: `Bearer ${token}` } },
+        { headers: getAuthHeaders() },
         'Failed to fetch trips'
       )
       setTrips(data)
@@ -233,12 +228,11 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
     e.preventDefault()
     setLoading(true)
     try {
-      const token = localStorage.getItem('token')
       const response = await fetch(`${API_BASE_URL}/api/armored-cars`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          ...getAuthHeaders(),
         },
         body: JSON.stringify(newCar),
       })
@@ -257,12 +251,11 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
     e.preventDefault()
     setLoading(true)
     try {
-      const token = localStorage.getItem('token')
       const response = await fetch(`${API_BASE_URL}/api/car-allocation/issue`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          ...getAuthHeaders(),
         },
         body: JSON.stringify({
           carId: newAllocation.car_id,
@@ -287,12 +280,11 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
     e.preventDefault()
     setLoading(true)
     try {
-      const token = localStorage.getItem('token')
       const response = await fetch(`${API_BASE_URL}/api/car-maintenance/schedule`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          ...getAuthHeaders(),
         },
         body: JSON.stringify({
           carId: newMaintenance.car_id,

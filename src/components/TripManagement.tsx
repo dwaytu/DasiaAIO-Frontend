@@ -1,6 +1,6 @@
 import { useState, useEffect, FC } from 'react'
 import { API_BASE_URL } from '../config'
-import { fetchJsonOrThrow } from '../utils/api'
+import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
 
 interface Trip {
   id: string
@@ -46,9 +46,8 @@ const TripManagement: FC = () => {
 
   const fetchActiveTrips = async () => {
     try {
-      const token = localStorage.getItem('token')
       const data = await fetchJsonOrThrow<{ trips?: Trip[] }>(`${API_BASE_URL}/api/trip-management/active`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: getAuthHeaders()
       }, 'Failed to fetch trips')
 
       setTrips(data.trips || [])
@@ -62,9 +61,8 @@ const TripManagement: FC = () => {
 
   const fetchTripDetails = async (tripId: string) => {
     try {
-      const token = localStorage.getItem('token')
       const data = await fetchJsonOrThrow<any>(`${API_BASE_URL}/api/trip-management/${tripId}`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: getAuthHeaders()
       }, 'Failed to fetch trip details')
 
       setSelectedTrip({
@@ -81,12 +79,11 @@ const TripManagement: FC = () => {
 
   const updateTripStatus = async (tripId: string, status: string) => {
     try {
-      const token = localStorage.getItem('token')
       await fetchJsonOrThrow(`${API_BASE_URL}/api/trip-management/${tripId}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
+          ...getAuthHeaders()
         },
         body: JSON.stringify({ status })
       }, 'Failed to update trip status')

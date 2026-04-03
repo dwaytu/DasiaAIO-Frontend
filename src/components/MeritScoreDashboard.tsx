@@ -5,6 +5,7 @@ import Header from './Header'
 import { User } from '../App'
 import { getSidebarNav } from '../config/navigation'
 import { logError } from '../utils/logger'
+import { getAuthHeaders } from '../utils/api'
 
 interface Props {
   user: User
@@ -142,9 +143,8 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
   const fetchRankings = async () => {
     try {
       setLoading(true)
-      const token = localStorage.getItem('token')
       const response = await fetch(`${API_BASE_URL}/api/merit/rankings/all`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: getAuthHeaders()
       })
       if (response.ok) {
         const data = await response.json()
@@ -163,9 +163,8 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
 
   const fetchGuardDetails = async (guardId: string) => {
     try {
-      const token = localStorage.getItem('token')
       const response = await fetch(`${API_BASE_URL}/api/merit/${guardId}`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: getAuthHeaders()
       })
       if (response.ok) {
         const data = await response.json()
@@ -179,9 +178,8 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
 
   const fetchEvaluations = async (guardId: string) => {
     try {
-      const token = localStorage.getItem('token')
       const response = await fetch(`${API_BASE_URL}/api/merit/evaluations/${guardId}`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: getAuthHeaders()
       })
       if (response.ok) {
         const data = await response.json()
@@ -196,12 +194,11 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
     if (!selectedGuard) return
 
     try {
-      const token = localStorage.getItem('token')
       const response = await fetch(`${API_BASE_URL}/api/merit/evaluations/submit`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          ...getAuthHeaders(),
         },
         body: JSON.stringify({
           guardId: selectedGuard.guardId,

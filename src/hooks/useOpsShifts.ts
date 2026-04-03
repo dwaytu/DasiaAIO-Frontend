@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { API_BASE_URL } from '../config'
-import { fetchJsonOrThrow } from '../utils/api'
+import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
 
 export function useOpsShifts() {
   const [shifts, setShifts] = useState<any[]>([])
@@ -11,10 +11,9 @@ export function useOpsShifts() {
   const refresh = useCallback(async () => {
     try {
       setLoading(true)
-      const token = localStorage.getItem('token')
       const data = await fetchJsonOrThrow<any>(
         `${API_BASE_URL}/api/guard-replacement/shifts`,
-        { headers: { Authorization: `Bearer ${token}` } },
+        { headers: getAuthHeaders() },
         'Failed to load shifts',
       )
       setShifts(data.shifts || data || [])

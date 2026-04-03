@@ -1,6 +1,6 @@
 import { useState, useEffect, FC } from 'react'
 import { API_BASE_URL } from '../config'
-import { fetchJsonOrThrow } from '../utils/api'
+import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
 import SectionHeader from './dashboard/ui/SectionHeader'
 import DashboardCard from './dashboard/ui/DashboardCard'
 import StatCard from './dashboard/ui/StatCard'
@@ -77,9 +77,8 @@ const AnalyticsDashboard: FC = () => {
 
   const fetchAnalytics = async () => {
     try {
-      const token = localStorage.getItem('token')
       const data = await fetchJsonOrThrow<AnalyticsData>(`${API_BASE_URL}/api/analytics`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: getAuthHeaders(),
       }, 'Failed to fetch analytics')
 
       setAnalytics(data)

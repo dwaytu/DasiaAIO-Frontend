@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { API_BASE_URL } from '../config'
-import { fetchJsonOrThrow } from '../utils/api'
+import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
 
 export type GuardAbsenceRiskLevel = 'LOW' | 'MEDIUM' | 'HIGH'
 
@@ -33,10 +33,9 @@ export function useGuardAbsencePrediction(): UseGuardAbsencePredictionState {
   const refresh = useCallback(async () => {
     try {
       setLoading(true)
-      const token = localStorage.getItem('token')
       const data = await fetchJsonOrThrow<GuardAbsencePrediction[]>(
         `${API_BASE_URL}/api/ai/guard-absence-risk`,
-        { headers: { Authorization: `Bearer ${token}` } },
+        { headers: getAuthHeaders() },
         'Failed to load guard absence predictions',
       )
 

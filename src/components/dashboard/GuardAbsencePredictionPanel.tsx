@@ -9,15 +9,15 @@ interface GuardAbsencePredictionPanelProps {
 }
 
 const riskPillClass: Record<string, string> = {
-  LOW: 'border border-[color-mix(in_srgb,#22c55e_40%,transparent)] bg-[color-mix(in_srgb,#22c55e_10%,transparent)] text-green-300 dark:text-green-200',
-  MEDIUM: 'border border-[color-mix(in_srgb,#f59e0b_40%,transparent)] bg-[color-mix(in_srgb,#f59e0b_10%,transparent)] text-amber-300 dark:text-amber-200',
-  HIGH: 'border border-[color-mix(in_srgb,#ef4444_40%,transparent)] bg-[color-mix(in_srgb,#ef4444_10%,transparent)] text-red-300 dark:text-red-200',
+  LOW: 'border border-[color:var(--color-success-border)] bg-[color:var(--color-success-bg)] text-[color:var(--color-success-text)]',
+  MEDIUM: 'border border-[color:var(--color-warning-border)] bg-[color:var(--color-warning-bg)] text-[color:var(--color-warning-text)]',
+  HIGH: 'border border-[color:var(--color-danger-border)] bg-[color:var(--color-danger-bg)] text-[color:var(--color-danger-text)]',
 }
 
 const riskRowClass: Record<string, string> = {
-  LOW: 'border-l-2 border-green-500/60',
-  MEDIUM: 'border-l-2 border-amber-400/60',
-  HIGH: 'border-l-2 border-red-500/70',
+  LOW: 'border-l-2 border-[color:var(--color-success-border)]',
+  MEDIUM: 'border-l-2 border-[color:var(--color-warning-border)]',
+  HIGH: 'border-l-2 border-[color:var(--color-danger-border)]',
 }
 
 const getRiskReason = (item: GuardAbsencePrediction): string => {
@@ -61,7 +61,7 @@ const GuardAbsencePredictionPanel: FC<GuardAbsencePredictionPanelProps> = ({
         {loading && <p className="text-center font-mono text-xs text-[color:var(--color-muted-text)]">Calculating absence risk...</p>}
 
         {!loading && error && (
-          <p role="alert" className="text-center font-mono text-xs text-red-400">
+          <p role="alert" className="text-center font-mono text-xs text-[color:var(--color-danger-text)]">
             {error}
           </p>
         )}
@@ -102,14 +102,14 @@ const GuardAbsencePredictionPanel: FC<GuardAbsencePredictionPanelProps> = ({
                       <button
                         type="button"
                         onClick={() => alert(`Deploy replacement for ${item.guardName}`)}
-                        className="rounded border border-red-500/40 bg-red-500/10 px-2 py-1 font-mono text-[11px] font-semibold text-red-200 transition-colors hover:bg-red-500/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-red-400"
+                        className="rounded border border-[color:var(--color-danger-border)] bg-[color:var(--color-danger-bg)] px-2 py-1 font-mono text-[11px] font-semibold text-[color:var(--color-danger-text)] transition-colors hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--color-danger-border)]"
                       >
                         Deploy Replacement
                       </button>
                       <button
                         type="button"
                         onClick={() => alert(`Notify ${item.guardName} of shift confirmation request`)}
-                        className="rounded border border-amber-400/40 bg-amber-500/10 px-2 py-1 font-mono text-[11px] text-amber-200 transition-colors hover:bg-amber-500/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400"
+                        className="rounded border border-[color:var(--color-warning-border)] bg-[color:var(--color-warning-bg)] px-2 py-1 font-mono text-[11px] text-[color:var(--color-warning-text)] transition-colors hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--color-warning-border)]"
                       >
                         Notify Guard
                       </button>
@@ -120,7 +120,7 @@ const GuardAbsencePredictionPanel: FC<GuardAbsencePredictionPanelProps> = ({
                       <button
                         type="button"
                         onClick={() => alert(`Send confirmation to ${item.guardName}`)}
-                        className="rounded border border-amber-400/40 bg-amber-500/10 px-2 py-1 font-mono text-[11px] text-amber-200 transition-colors hover:bg-amber-500/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400"
+                        className="rounded border border-[color:var(--color-warning-border)] bg-[color:var(--color-warning-bg)] px-2 py-1 font-mono text-[11px] text-[color:var(--color-warning-text)] transition-colors hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--color-warning-border)]"
                       >
                         Send Confirmation
                       </button>

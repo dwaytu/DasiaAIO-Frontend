@@ -4,6 +4,7 @@ import { User as AppUser } from '../../App'
 import { getRequiredAccuracyMeters, getTrackingAccuracyMode } from '../../utils/trackingPolicy'
 import { logError } from '../../utils/logger'
 import { fetchJsonOrThrow, getAuthToken } from '../../utils/api'
+import { enqueueOfflineAction } from '../../utils/offlineQueue'
 import {
   getLocationPermissionState,
   hasAcceptedLocationConsent,
@@ -110,6 +111,17 @@ function calcHours(checkIn: string, checkOut?: string): string {
   if (Number.isNaN(start) || Number.isNaN(end)) return '0.0'
   const duration = Math.max(0, (end - start) / (1000 * 60 * 60))
   return duration.toFixed(1)
+}
+
+function isOfflineRequestError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase()
+  return (
+    !navigator.onLine ||
+    message.includes('network') ||
+    message.includes('offline') ||
+    message.includes('failed to fetch') ||
+    message.includes('timed out')
+  )
 }
 
 const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, activeView }) => {
@@ -575,8 +587,18 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
       setActionStatus('Checked in successfully.')
       await refreshData(false)
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Check-in failed'
-      setActionStatus(message)
+      if (isOfflineRequestError(error)) {
+        await enqueueOfflineAction({
+          url: `${API_BASE_URL}/api/guard-replacement/attendance/check-in`,
+          method: 'POST',
+          headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+          body: { guard_id: user.id, shift_id: shift.id },
+        })
+        setActionStatus('Offline detected. Check-in queued and will sync when connection returns.')
+      } else {
+        const message = error instanceof Error ? error.message : 'Check-in failed'
+        setActionStatus(message)
+      }
       logError('Check-in error:', error)
     } finally {
       setCheckInSubmitting((previous) => ({ ...previous, [shift.id]: false }))
@@ -626,8 +648,18 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
       setActionStatus('Checked out successfully.')
       await refreshData(false)
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Check-out failed'
-      setActionStatus(message)
+      if (isOfflineRequestError(error)) {
+        await enqueueOfflineAction({
+          url: `${API_BASE_URL}/api/guard-replacement/attendance/check-out`,
+          method: 'POST',
+          headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+          body: { attendance_id: recentAttendance.id },
+        })
+        setActionStatus('Offline detected. Check-out queued and will sync when connection returns.')
+      } else {
+        const message = error instanceof Error ? error.message : 'Check-out failed'
+        setActionStatus(message)
+      }
       logError('Check-out error:', error)
     } finally {
       setCheckInSubmitting((previous) => ({ ...previous, [shift.id]: false }))
@@ -731,7 +763,22 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
       setScheduleForm({ clientSite: '', date: '', startTime: '', endTime: '' })
       await refreshData(false)
     } catch (error) {
-      setScheduleStatus(error instanceof Error ? error.message : 'Failed to request schedule.')
+      if (isOfflineRequestError(error)) {
+        await enqueueOfflineAction({
+          url: `${API_BASE_URL}/api/guard-replacement/shifts`,
+          method: 'POST',
+          headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+          body: {
+            guard_id: user.id,
+            start_time: startLocal.toISOString(),
+            end_time: endLocal.toISOString(),
+            client_site: scheduleForm.clientSite,
+          },
+        })
+        setScheduleStatus('Offline detected. Schedule request queued and will sync when connection returns.')
+      } else {
+        setScheduleStatus(error instanceof Error ? error.message : 'Failed to request schedule.')
+      }
     } finally {
       setScheduleSubmitting(false)
     }

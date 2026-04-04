@@ -157,8 +157,12 @@ test.describe('Guard Dashboard UX Regression', () => {
 
   test('mission-first landing and single sticky bottom region are visible', async ({ page }) => {
     const missionWorkspace = page.getByRole('region', { name: 'Guard mission workspace' })
+    const readinessCheck = missionWorkspace.getByRole('region', { name: 'Mission readiness check' })
 
     await expect(page.getByRole('heading', { name: 'Mission Screen' })).toBeVisible()
+    await expect(missionWorkspace.getByRole('heading', { name: 'Immediate Action' })).toBeVisible()
+    await expect(missionWorkspace.getByText(/(check in|stay on post) at tower one lobby/i)).toBeVisible()
+    await expect(readinessCheck).toContainText(/(tracking and sync|location consent|reconnect)/i)
     await expect(missionWorkspace.getByText(/^Duty Status$/)).toBeVisible()
     await expect(missionWorkspace.getByText(/^Current Post$/)).toBeVisible()
     await expect(page.getByRole('button', { name: /Report Incident/i })).toBeVisible()
@@ -199,6 +203,23 @@ test.describe('Guard Dashboard UX Regression', () => {
     await expect(shiftSelector).toBeVisible()
     await expect(shiftSelector.locator('option')).toHaveCount(2)
     await expect(shiftSelector.locator('option').nth(1)).toContainText('Tower One Lobby')
+    await expect(page.getByText(/enter the sentinel user id for the guard covering your post/i)).toBeVisible()
+  })
+
+  test('support section degrades gracefully when swap history is unavailable', async ({ page }) => {
+    await page.route('**/api/shifts/swap-requests', async (route) => {
+      await route.fulfill({
+        status: 404,
+        contentType: 'application/json',
+        body: JSON.stringify({ message: 'Not found' }),
+      })
+    })
+
+    await page.getByRole('button', { name: 'Support' }).click()
+
+    await expect(page.getByText('Shift swap updates are temporarily unavailable. You can still submit a manual request below.')).toBeVisible()
+    await expect(page.getByText('Swap request history is unavailable right now.')).toBeVisible()
+    await expect(page.getByLabel('Scheduled Shift')).toBeVisible()
   })
 
   test('map section keeps status visible and supports expand flow', async ({ page }) => {

@@ -1,7 +1,7 @@
 import { FC, ReactNode } from 'react'
 import Sidebar, { SidebarItem } from '../Sidebar'
 import Header from '../shared/Header'
-import { User } from '../../App'
+import type { User } from '../../context/AuthContext'
 
 interface OperationalShellProps {
   user: User
@@ -15,6 +15,7 @@ interface OperationalShellProps {
   onMenuOpen: () => void
   onMenuClose: () => void
   onLogoClick: () => void
+  onRefresh?: () => void
   rightSlot?: ReactNode
   error?: string
   children: ReactNode
@@ -32,6 +33,7 @@ const OperationalShell: FC<OperationalShellProps> = ({
   onMenuOpen,
   onMenuClose,
   onLogoClick,
+  onRefresh,
   rightSlot,
   error,
   children,
@@ -56,7 +58,11 @@ const OperationalShell: FC<OperationalShellProps> = ({
           onLogout={onLogout}
           onMenuClick={onMenuOpen}
           user={user}
+          currentView={activeView}
+          onNavigateToInbox={() => onNavigate('inbox')}
+          onNavigateToSettings={() => onNavigate('settings')}
           onNavigateToProfile={() => onNavigate('profile')}
+          onRefresh={onRefresh}
           rightSlot={rightSlot}
         />
 

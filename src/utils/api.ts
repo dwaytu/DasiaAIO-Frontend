@@ -1,4 +1,5 @@
 import { API_BASE_URL } from '../config'
+import { sanitizeErrorMessage } from './sanitize'
 
 let authExpiryNotified = false
 const RETRYABLE_STATUS = new Set([408, 425, 429, 500, 502, 503, 504])
@@ -302,7 +303,8 @@ export async function getApiErrorMessage(
   fallback: string,
 ): Promise<string> {
   const body = await parseResponseBody(response)
-  return body.error || body.message || fallback
+  const raw = body.error || body.message || fallback
+  return sanitizeErrorMessage(raw)
 }
 
 export async function fetchJsonOrThrow<T>(

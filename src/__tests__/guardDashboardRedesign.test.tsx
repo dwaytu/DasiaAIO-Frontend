@@ -58,6 +58,10 @@ const testUser = {
   fullName: 'Guard One',
 }
 
+function buildIsoOffset(hoursFromNow: number) {
+  return new Date(Date.now() + hoursFromNow * 60 * 60 * 1000).toISOString()
+}
+
 async function defaultApiMock(url: string) {
   if (url.includes('/attendance/')) return { attendance: [] }
   if (url.includes('/guard-replacement/guard/')) {
@@ -66,8 +70,8 @@ async function defaultApiMock(url: string) {
         {
           id: 'shift-1',
           client_site: 'North Gate',
-          start_time: '2026-04-03T08:00:00.000Z',
-          end_time: '2026-04-03T16:00:00.000Z',
+          start_time: buildIsoOffset(-1),
+          end_time: buildIsoOffset(7),
           status: 'active',
         },
       ],
@@ -87,6 +91,11 @@ function renderGuardDashboard(activeView = 'mission', onViewChange = jest.fn()) 
       <UserDashboard user={testUser} onLogout={jest.fn()} activeView={activeView} onViewChange={onViewChange} />
     </ThemeProvider>,
   )
+}
+
+async function openGuardProfile(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(await screen.findByRole('button', { name: /open profile menu/i }))
+  await user.click(await screen.findByRole('button', { name: /my profile/i }))
 }
 
 describe('guard dashboard redesign tranche', () => {
@@ -119,6 +128,14 @@ describe('guard dashboard redesign tranche', () => {
     expect(stickyRegion).toBeInTheDocument()
     expect(within(stickyRegion).getByRole('button', { name: /report incident/i })).toBeInTheDocument()
     expect(within(stickyRegion).getByRole('button', { name: /mission/i })).toBeInTheDocument()
+  })
+
+  it('surfaces an immediate mission action with clear current-watch guidance', async () => {
+    renderGuardDashboard('mission')
+
+    expect(await screen.findByRole('heading', { name: /immediate action/i })).toBeInTheDocument()
+    expect(screen.getByText(/check in at north gate/i)).toBeInTheDocument()
+    expect(screen.getByText(/confirm tracking and sync before leaving staging/i)).toBeInTheDocument()
   })
 
   it('renders resources in a summary-first hierarchy', () => {
@@ -155,8 +172,6 @@ describe('guard dashboard redesign tranche', () => {
   it('shows map status context before expansion controls', () => {
     render(
       <GuardMapTab
-        mapExpanded={false}
-        onToggleExpand={jest.fn()}
         mapEmbedUrl={null}
         mapExternalUrl={null}
         lastKnownLocation={{
@@ -188,6 +203,49 @@ describe('guard dashboard redesign tranche', () => {
     expect(await screen.findByLabelText(/scheduled shift/i)).toBeInTheDocument()
     expect(screen.getByRole('option', { name: /north gate/i })).toBeInTheDocument()
     expect(screen.getByLabelText(/target guard id/i)).toBeInTheDocument()
+    expect(screen.getByText(/enter the sentinel user id for the guard covering your post/i)).toBeInTheDocument()
+  })
+
+  it('degrades shift swaps gracefully when swap history is unavailable', async () => {
+    ;(globalThis.fetch as jest.Mock).mockResolvedValue({
+      ok: false,
+      status: 404,
+      json: async () => ({ message: 'Not found' }),
+    })
+
+    renderGuardDashboard('support')
+
+    expect(await screen.findByText(/shift swap updates are temporarily unavailable/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/scheduled shift/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/target guard id/i)).toBeInTheDocument()
+  })
+
+  it('guides the guard when no scheduled shift options are available', async () => {
+    mockFetchJsonOrThrow.mockImplementation(async (url: string) => {
+      if (url.includes('/guard-replacement/guard/')) {
+        return { shifts: [] }
+      }
+
+      return defaultApiMock(url)
+    })
+
+    renderGuardDashboard('support')
+
+    expect(await screen.findByText(/no upcoming shifts are available to attach right now/i)).toBeInTheDocument()
+    expect(screen.getByText(/use schedule change requests above or contact the operations desk/i)).toBeInTheDocument()
+  })
+
+  it('keeps the inbox usable when swap request updates are unavailable', async () => {
+    ;(globalThis.fetch as jest.Mock).mockResolvedValue({
+      ok: false,
+      status: 501,
+      json: async () => ({ message: 'Not implemented' }),
+    })
+
+    renderGuardDashboard('inbox')
+
+    expect(await screen.findByText(/inbox is showing other mission activity only/i)).toBeInTheDocument()
+    expect(screen.queryByText(/unable to load inbox data/i)).not.toBeInTheDocument()
   })
 
   it('opens profile inline without leaving the mission shell and closes with escape', async () => {
@@ -196,8 +254,8 @@ describe('guard dashboard redesign tranche', () => {
 
     renderGuardDashboard('mission', onViewChange)
 
-    const profileButton = await screen.findByRole('button', { name: 'Profile' })
-    await user.click(profileButton)
+    const profileButton = await screen.findByRole('button', { name: /open profile menu/i })
+    await openGuardProfile(user)
 
     expect(onViewChange).not.toHaveBeenCalled()
     expect(screen.getByRole('heading', { name: /mission screen/i })).toBeInTheDocument()
@@ -225,7 +283,7 @@ describe('guard dashboard redesign tranche', () => {
 
     renderGuardDashboard('mission')
 
-    await user.click(await screen.findByRole('button', { name: 'Profile' }))
+    await openGuardProfile(user)
     const fullNameInput = await screen.findByLabelText(/full name/i)
     await user.clear(fullNameInput)
     await user.type(fullNameInput, 'Guard One Updated')
@@ -301,7 +359,7 @@ describe('guard dashboard redesign tranche', () => {
 
     renderGuardDashboard('mission')
 
-    await user.click(await screen.findByRole('button', { name: 'Profile' }))
+    await openGuardProfile(user)
     await user.click(screen.getByRole('button', { name: /close profile/i }))
 
     await waitFor(() => {
@@ -314,7 +372,7 @@ describe('guard dashboard redesign tranche', () => {
 
     renderGuardDashboard('mission')
 
-    await user.click(await screen.findByRole('button', { name: 'Profile' }))
+    await openGuardProfile(user)
     await user.click(screen.getByRole('button', { name: /back to mission shell/i }))
 
     await waitFor(() => {

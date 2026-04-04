@@ -6,6 +6,8 @@ export interface OpsAlert {
   severity: 'critical' | 'warning' | 'info'
   title: string
   detail: string
+  createdAt?: string
+  isPanic?: boolean
 }
 
 interface OpsAlertFeedProps {

@@ -41,9 +41,28 @@ function openQueue(): Promise<IDBDatabase> {
  * Falls back to a direct retry if the Background Sync API is unavailable.
  */
 export async function enqueueOfflineAction(action: Omit<OfflineAction, 'queuedAt'>): Promise<void> {
+  const db = await openQueue()
+
+  const isDuplicate = await new Promise<boolean>((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readonly')
+    const store = tx.objectStore(STORE_NAME)
+    const cursorReq = store.openCursor(null, 'prev')
+    cursorReq.onsuccess = (e) => {
+      const cursor = (e.target as IDBRequest<IDBCursorWithValue | null>).result
+      if (cursor) {
+        const last = cursor.value as OfflineAction
+        resolve(last.url === action.url && last.method === action.method)
+      } else {
+        resolve(false)
+      }
+    }
+    cursorReq.onerror = (e) => reject((e.target as IDBRequest).error)
+  })
+
+  if (isDuplicate) return
+
   const record: OfflineAction = { ...action, queuedAt: new Date().toISOString() }
 
-  const db = await openQueue()
   await new Promise<void>((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readwrite')
     tx.objectStore(STORE_NAME).add(record)

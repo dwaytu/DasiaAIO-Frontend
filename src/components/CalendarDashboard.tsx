@@ -3,7 +3,7 @@ import { API_BASE_URL } from '../config'
 import { parseResponseBody, getAuthHeaders } from '../utils/api'
 import Sidebar from './Sidebar'
 import Header from './Header'
-import { User } from '../App'
+import type { User } from '../context/AuthContext'
 import SecurityBentoGrid from './SecurityBentoGrid'
 import BentoGrid, { BentoCard } from './BentoGrid'
 import SectionHeader from './dashboard/ui/SectionHeader'
@@ -480,6 +480,9 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
           onLogout={onLogout}
           title={isAdmin ? 'Operations Calendar' : 'My Schedule Calendar'}
           onMenuClick={() => setMobileMenuOpen(true)}
+          currentView={currentActiveView}
+          onNavigateToInbox={() => onViewChange?.('inbox')}
+          onNavigateToSettings={() => onViewChange?.('settings')}
           onNavigateToProfile={onViewChange ? () => onViewChange('profile') : undefined}
         />
 

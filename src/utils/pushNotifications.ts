@@ -14,6 +14,43 @@ const SW_PATH = '/sw.js'
 /** VAPID public key — set VITE_VAPID_PUBLIC_KEY in .env */
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined
 
+function isDevelopmentRuntime(): boolean {
+  return import.meta.env.DEV
+}
+
+export async function disableServiceWorkerInDevelopment(): Promise<void> {
+  if (!isDevelopmentRuntime() || !('serviceWorker' in navigator) || !('caches' in window)) {
+    return
+  }
+
+  const CLEANUP_KEY = 'sentinel-sw-cleanup'
+  if (sessionStorage.getItem(CLEANUP_KEY)) {
+    sessionStorage.removeItem(CLEANUP_KEY)
+    return
+  }
+
+  const registrations = await navigator.serviceWorker.getRegistrations()
+  const scopedRegistrations = registrations.filter((r) =>
+    r.scope.startsWith(window.location.origin),
+  )
+
+  if (scopedRegistrations.length === 0) {
+    const cacheKeys = await caches.keys()
+    if (cacheKeys.length > 0) {
+      await Promise.all(cacheKeys.map((key) => caches.delete(key)))
+    }
+    return
+  }
+
+  await Promise.all(scopedRegistrations.map((r) => r.unregister()))
+
+  const cacheKeys = await caches.keys()
+  await Promise.all(cacheKeys.map((key) => caches.delete(key)))
+
+  sessionStorage.setItem(CLEANUP_KEY, '1')
+  window.location.reload()
+}
+
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
@@ -28,6 +65,7 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
 
 export async function registerServiceWorker(): Promise<ServiceWorkerRegistration | null> {
   if (!('serviceWorker' in navigator)) return null
+  if (isDevelopmentRuntime()) return null
   try {
     const registration = await navigator.serviceWorker.register(SW_PATH, { scope: '/' })
     return registration

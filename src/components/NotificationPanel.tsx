@@ -1,346 +1,217 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Bell, X, Check, CheckCheck } from 'lucide-react';
-import { API_BASE_URL } from '../config';
-import { logError } from '../utils/logger';
-import { getAuthToken } from '../utils/api';
-
-interface Notification {
-  id: string;
-  userId: string;
-  title: string;
-  message: string;
-  type: string;
-  relatedShiftId?: string;
-  read: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
+import React, { useEffect, useMemo, useState } from 'react'
+import { Bell } from 'lucide-react'
+import type { User } from '../context/AuthContext'
+import type { InboxItem } from './inbox/ActionInbox'
+import { fetchRoleInboxSummary } from './inbox/roleInboxSummary'
 
 interface NotificationPanelProps {
-  userId: string;
+  user?: User | null
+  isOpen: boolean
+  onToggle: () => void
+  onClose: () => void
+  onViewAll?: () => void
 }
 
-async function parseResponseBody(response: Response): Promise<any> {
-  const raw = await response.text();
-  if (!raw) return {};
+const FALLBACK_ITEM_TITLE = 'Inbox Update'
+const FALLBACK_ITEM_DESCRIPTION = 'Additional details unavailable.'
+const FALLBACK_ITEM_TIMESTAMP = () => new Date().toISOString()
 
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return { error: raw };
+function isInboxPriority(value: unknown): value is InboxItem['priority'] {
+  return value === 'urgent' || value === 'high' || value === 'normal' || value === 'low'
+}
+
+function isInboxCategory(value: unknown): value is InboxItem['category'] {
+  return value === 'approval' || value === 'incident' || value === 'shift' || value === 'notification' || value === 'mission'
+}
+
+function sanitizeInboxItem(item: Partial<InboxItem> | null | undefined, index: number): InboxItem | null {
+  if (!item || typeof item !== 'object') {
+    return null
+  }
+
+  const id = typeof item.id === 'string' && item.id.trim() ? item.id.trim() : `quick-inbox-item-${index}`
+  const title = typeof item.title === 'string' && item.title.trim() ? item.title.trim() : FALLBACK_ITEM_TITLE
+  const description = typeof item.description === 'string' && item.description.trim() ? item.description.trim() : FALLBACK_ITEM_DESCRIPTION
+  const timestampCandidate = typeof item.timestamp === 'string' && item.timestamp.trim() ? item.timestamp.trim() : FALLBACK_ITEM_TIMESTAMP()
+  const timestamp = Number.isNaN(new Date(timestampCandidate).getTime()) ? FALLBACK_ITEM_TIMESTAMP() : timestampCandidate
+
+  return {
+    ...item,
+    id,
+    title,
+    description,
+    timestamp,
+    priority: isInboxPriority(item.priority) ? item.priority : 'normal',
+    category: isInboxCategory(item.category) ? item.category : 'notification',
+    isRead: Boolean(item.isRead),
   }
 }
 
-const NotificationPanel: React.FC<NotificationPanelProps> = ({ userId }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [panelError, setPanelError] = useState('');
-  const panelRef = useRef<HTMLDivElement>(null);
+function sanitizeInboxItems(items: InboxItem[]): InboxItem[] {
+  return items
+    .map((item, index) => sanitizeInboxItem(item, index))
+    .filter((item): item is InboxItem => item !== null)
+}
 
-  // Fetch notifications
-  const fetchNotifications = async () => {
-    try {
-      const token = getAuthToken();
-      const response = await fetch(`${API_BASE_URL}/api/users/${userId}/notifications`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setNotifications(data.notifications || []);
-        setUnreadCount(data.unreadCount || 0);
-        setPanelError('');
-      }
-    } catch (error) {
-      logError('Failed to fetch notifications:', error);
-      setPanelError('Failed to load notifications. Try again.');
-    }
-  };
+function formatTime(timestamp: string): string {
+  const diffMs = Date.now() - new Date(timestamp).getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  if (diffMins < 1) return 'Just now'
+  if (diffMins < 60) return `${diffMins}m ago`
+  const diffHours = Math.floor(diffMins / 60)
+  if (diffHours < 24) return `${diffHours}h ago`
+  const diffDays = Math.floor(diffHours / 24)
+  if (diffDays === 1) return 'Yesterday'
+  return `${diffDays}d ago`
+}
 
-  // Fetch unread count
-  const fetchUnreadCount = async () => {
-    try {
-      const token = getAuthToken();
-      const response = await fetch(`${API_BASE_URL}/api/users/${userId}/notifications/unread-count`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setUnreadCount(data.unreadCount || 0);
-      }
-    } catch (error) {
-      logError('Failed to fetch unread count:', error);
-    }
-  };
+const NotificationPanel: React.FC<NotificationPanelProps> = ({ user, isOpen, onToggle, onClose, onViewAll }) => {
+  const [items, setItems] = useState<InboxItem[]>([])
+  const [actionableCount, setActionableCount] = useState(0)
+  const [notice, setNotice] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [panelError, setPanelError] = useState('')
+  const resolvedUserId = typeof user?.id === 'string' ? user.id : ''
+  const resolvedUserRole = typeof user?.role === 'string' ? user.role : ''
 
-  // Mark notification as read
-  const markAsRead = async (notificationId: string) => {
-    try {
-      const token = getAuthToken();
-      const response = await fetch(`${API_BASE_URL}/api/notifications/${notificationId}/read`, {
-        method: 'PUT',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (response.ok) {
-        setNotifications(prev =>
-          prev.map(notif =>
-            notif.id === notificationId ? { ...notif, read: true } : notif
-          )
-        );
-        setUnreadCount(prev => Math.max(0, prev - 1));
-      }
-    } catch (error) {
-      logError('Failed to mark notification as read:', error);
-    }
-  };
-
-  // Mark all as read
-  const markAllAsRead = async () => {
-    try {
-      const token = getAuthToken();
-      const response = await fetch(`${API_BASE_URL}/api/users/${userId}/notifications/mark-all-read`, {
-        method: 'PUT',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (response.ok) {
-        setNotifications(prev => prev.map(notif => ({ ...notif, read: true })));
-        setUnreadCount(0);
-      }
-    } catch (error) {
-      logError('Failed to mark all as read:', error);
-    }
-  };
-
-  // Accept replacement request
-  const acceptReplacement = async (notificationId: string, shiftId: string) => {
-    try {
-      setLoading(true);
-      const token = getAuthToken();
-      const response = await fetch(`${API_BASE_URL}/api/guard-replacement/accept-replacement`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          guardId: userId,
-          shiftId: shiftId,
-          notificationId: notificationId,
-        }),
-      });
-
-      if (response.ok) {
-        setPanelError('');
-        await fetchNotifications();
-      } else {
-        const error = await parseResponseBody(response);
-        setPanelError(error.error || 'Failed to accept replacement');
-      }
-    } catch (error) {
-      logError('Failed to accept replacement:', error);
-      setPanelError('Failed to accept replacement');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Delete notification
-  const deleteNotification = async (notificationId: string) => {
-    try {
-      const token = getAuthToken();
-      const response = await fetch(`${API_BASE_URL}/api/notifications/${notificationId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (response.ok) {
-        setNotifications(prev => prev.filter(notif => notif.id !== notificationId));
-        fetchUnreadCount();
-      }
-    } catch (error) {
-      logError('Failed to delete notification:', error);
-    }
-  };
-
-  // Toggle panel
-  const togglePanel = () => {
-    setPanelError('');
-    setIsOpen(!isOpen);
-    if (!isOpen) {
-      fetchNotifications();
-    }
-  };
-
-  // Close panel with outside click/tap or Escape key
   useEffect(() => {
-    const handlePointerDownOutside = (event: MouseEvent | PointerEvent | TouchEvent) => {
-      if (panelRef.current && !panelRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
+    let cancelled = false
 
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setIsOpen(false);
+    const loadSummary = async () => {
+      if (!resolvedUserId || !resolvedUserRole) {
+        setItems([])
+        setActionableCount(0)
+        setNotice('')
+        setPanelError('')
+        setLoading(false)
+        return
       }
-    };
 
-    if (isOpen) {
-      document.addEventListener('mousedown', handlePointerDownOutside);
-      document.addEventListener('touchstart', handlePointerDownOutside);
-      document.addEventListener('keydown', handleEscape);
+      setLoading(true)
+
+      try {
+        const summary = await fetchRoleInboxSummary(resolvedUserId, resolvedUserRole)
+
+        if (cancelled) return
+
+        const sanitizedItems = sanitizeInboxItems(summary.items)
+
+        setItems(sanitizedItems)
+        setActionableCount(sanitizedItems.length)
+        setNotice(typeof summary.notice === 'string' ? summary.notice : '')
+        setPanelError(summary.hasError ? 'Unable to load inbox data. Please check your connection and try again.' : '')
+      } catch {
+        if (cancelled) return
+
+        setItems([])
+        setActionableCount(0)
+        setNotice('')
+        setPanelError('Unable to load inbox data. Please check your connection and try again.')
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
     }
+
+    void loadSummary()
+    const intervalId = window.setInterval(() => {
+      void loadSummary()
+    }, 30000)
 
     return () => {
-      document.removeEventListener('mousedown', handlePointerDownOutside);
-      document.removeEventListener('touchstart', handlePointerDownOutside);
-      document.removeEventListener('keydown', handleEscape);
-    };
-  }, [isOpen]);
+      cancelled = true
+      window.clearInterval(intervalId)
+    }
+  }, [resolvedUserId, resolvedUserRole])
 
-  // Poll for new notifications every 30 seconds
-  useEffect(() => {
-    fetchUnreadCount();
-    const interval = setInterval(fetchUnreadCount, 30000);
-    return () => clearInterval(interval);
-  }, [userId]);
-
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(minutes / 60);
-    const days = Math.floor(hours / 24);
-
-   if (minutes < 1) return 'Just now';
-    if (minutes < 60) return `${minutes}m ago`;
-    if (hours < 24) return `${hours}h ago`;
-    if (days === 1) return 'Yesterday';
-    if (days < 7) return `${days}d ago`;
-    return date.toLocaleDateString();
-  };
+  const topItems = useMemo(() => items.slice(0, 4), [items])
 
   return (
-    <div className="relative z-[40]" ref={panelRef}>
-      {/* Notification Bell Button */}
+    <div className="relative z-[var(--z-floating)]">
       <button
         type="button"
-        onClick={togglePanel}
+        onClick={onToggle}
         className="soc-notification-trigger relative min-h-11 min-w-11 rounded-lg p-2 text-text-secondary transition-colors hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
-        aria-label={unreadCount > 0 ? `Open notifications (${unreadCount} unread)` : 'Open notifications'}
+        aria-label={actionableCount > 0 ? `Open quick inbox (${actionableCount} items)` : 'Open quick inbox'}
         aria-expanded={isOpen}
-        aria-controls="notification-panel"
+        aria-controls="quick-inbox-panel"
       >
-        <Bell className="w-6 h-6" />
-        {unreadCount > 0 && (
-          <span className="absolute top-0 right-0 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 rounded-full bg-danger">
-            {unreadCount > 99 ? '99+' : unreadCount}
+        <Bell className="h-5 w-5" aria-hidden="true" />
+        {actionableCount > 0 ? (
+          <span className="absolute right-0 top-0 inline-flex translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-danger px-1.5 py-0.5 text-xs font-bold leading-none text-white">
+            {actionableCount > 99 ? '99+' : actionableCount}
           </span>
-        )}
+        ) : null}
       </button>
 
-      {/* Notification Panel */}
-      {isOpen && (
-        <div id="notification-panel" className="soc-dropdown-surface absolute right-0 z-[46] mt-2 flex max-h-[min(600px,calc(100dvh-6rem))] w-80 max-w-[calc(100vw-1rem)] flex-col rounded-xl sm:w-96" role="dialog" aria-label="Notifications panel">
-          {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-border">
-            <h3 className="text-base font-semibold text-text-primary">Notifications</h3>
-            <div className="flex items-center gap-2">
-              {unreadCount > 0 && (
-                <button
-                  type="button"
-                  onClick={markAllAsRead}
-                  className="soc-link-button flex min-h-11 items-center gap-1 rounded px-2 py-1 text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
-                  aria-label="Mark all notifications as read"
-                >
-                  <CheckCheck className="w-4 h-4" />
-                  Mark all read
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => setIsOpen(false)}
-                className="soc-notification-trigger min-h-11 min-w-11 rounded p-1 text-text-secondary hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
-                aria-label="Close notifications panel"
-              >
-                <X className="w-5 h-5" />
-              </button>
+      {isOpen ? (
+        <div id="quick-inbox-panel" className="soc-dropdown-surface absolute right-0 z-[var(--z-floating)] mt-2 flex max-h-[min(36rem,calc(100dvh-6rem))] w-[min(26rem,calc(100vw-1rem))] flex-col rounded-xl" role="dialog" aria-label="Quick inbox">
+          <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-tertiary">Global Actions</p>
+              <h3 className="text-base font-semibold text-text-primary">Quick Inbox</h3>
             </div>
+            <button type="button" onClick={onClose} className="min-h-11 rounded-lg border border-border bg-surface-elevated px-3 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-surface-hover">
+              Close
+            </button>
           </div>
 
-          {panelError ? (
-            <p className="border-b border-border-subtle px-4 py-2 text-xs text-danger-text" role="alert">{panelError}</p>
+          {notice ? (
+            <div className="border-b border-warning-border bg-warning-bg px-4 py-3 text-sm text-warning-text" role="status" aria-live="polite">
+              {notice}
+            </div>
           ) : null}
 
-          {/* Notifications List */}
-          <div className="overflow-y-auto flex-1">
-            {notifications.length === 0 ? (
-              <div className="p-8 text-center text-text-secondary">
-                <Bell className="w-12 h-12 mx-auto mb-3 text-text-tertiary" />
-                <p className="text-sm">No notifications</p>
+          {panelError ? (
+            <div className="border-b border-danger-border bg-danger-bg px-4 py-3 text-sm text-danger-text" role="alert">
+              {panelError}
+            </div>
+          ) : null}
+
+          <div className="soc-scroll-area flex-1 overflow-y-auto">
+            {loading ? (
+              <div className="space-y-3 p-4" role="status" aria-label="Loading quick inbox">
+                <div className="h-20 animate-pulse rounded-xl bg-surface-elevated" />
+                <div className="h-20 animate-pulse rounded-xl bg-surface-elevated" />
               </div>
+            ) : topItems.length === 0 ? (
+              <div className="p-8 text-center text-sm text-text-secondary">No urgent inbox items right now.</div>
             ) : (
-              <div>
-                {notifications.map((notification, idx) => (
-                  <div
-                    key={notification.id}
-                    className={`p-4 transition-colors cursor-default ${notification.read ? 'soc-notification-read' : 'soc-notification-unread'} ${idx < notifications.length - 1 ? 'border-b border-border-subtle' : ''}`}
-                  >
-                    <div className="flex justify-between items-start mb-1">
-                      <h4 className="font-semibold text-sm flex-1 text-text-primary">
-                        {notification.title}
-                      </h4>
-                      {!notification.read && (
-                        <span className="w-2 h-2 rounded-full ml-2 mt-1 flex-shrink-0 bg-info"></span>
-                      )}
-                    </div>
-                    <p className="text-xs mb-2 text-text-secondary">{notification.message}</p>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-text-tertiary">
-                        {formatTime(notification.createdAt)}
-                      </span>
-                      <div className="flex gap-2">
-                        {notification.type === 'replacement_request' && notification.relatedShiftId && (
-                          <button
-                            type="button"
-                            onClick={() => acceptReplacement(notification.id, notification.relatedShiftId!)}
-                            disabled={loading}
-                            className="min-h-11 rounded px-2 py-1 text-xs font-medium transition-colors disabled:opacity-50 border border-success-border bg-success-bg text-success-text"
-                            aria-label={`Accept replacement request: ${notification.title}`}
-                          >
-                            Accept
-                          </button>
-                        )}
-                        {!notification.read && (
-                          <button
-                            type="button"
-                            onClick={() => markAsRead(notification.id)}
-                            className="min-h-11 min-w-11 rounded px-2 py-1 text-xs transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)] border border-info-border bg-info-bg text-info-text"
-                            aria-label={`Mark notification as read: ${notification.title}`}
-                          >
-                            <Check className="w-3 h-3" />
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => deleteNotification(notification.id)}
-                          className="soc-btn-secondary min-h-11 min-w-11 rounded px-2 py-1 text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
-                          aria-label={`Delete notification: ${notification.title}`}
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
+              <ul className="divide-y divide-border-subtle" role="list">
+                {topItems.map((item) => (
+                  <li key={item.id}>
+                    <button
+                      type="button"
+                      onClick={onViewAll}
+                      className="w-full px-4 py-4 text-left transition-colors hover:bg-surface-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[color:var(--color-focus-ring)]"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-text-primary">{item.title}</p>
+                          <p className="mt-1 text-sm text-text-secondary">{item.description}</p>
+                        </div>
+                        <span className="rounded-full border border-border bg-surface px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-text-tertiary">
+                          {item.priority}
+                        </span>
                       </div>
-                    </div>
-                  </div>
+                      <p className="mt-2 text-xs text-text-tertiary">{formatTime(item.timestamp)}</p>
+                    </button>
+                  </li>
                 ))}
-              </div>
+              </ul>
             )}
           </div>
-        </div>
-      )}
-    </div>
-  );
-};
 
-export default NotificationPanel;
+          <div className="border-t border-border px-4 py-4">
+            <button type="button" onClick={onViewAll} className="w-full min-h-11 rounded-lg border border-border bg-surface-elevated px-4 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-surface-hover">
+              View Full Inbox
+            </button>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+export default NotificationPanel

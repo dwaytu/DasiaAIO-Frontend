@@ -189,9 +189,10 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
   }, [assetsState.firearms, assetsState.vehicles, clock, displayIncidents, displayShifts])
 
   const incidentAlerts = useMemo(() => {
+    const severityOrder: Record<string, number> = { critical: 0, warning: 1, info: 2 }
+
     const incidentDriven = displayIncidents
       .filter((incident) => incident.status !== 'resolved')
-      .slice(0, 4)
       .map((incident) => ({
         id: `incident-alert-${incident.id}`,
         incidentId: incident.id,
@@ -202,9 +203,22 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
             : 'info') as 'critical' | 'warning' | 'info',
         title: incident.title,
         detail: `${incident.location} • ${incident.status.toUpperCase()}`,
+        createdAt: incident.created_at || '',
+        isPanic: incident.title?.includes('SOS EMERGENCY') ?? false,
       }))
 
-    return [...incidentDriven, ...alerts].slice(0, 6)
+    const combined = [...incidentDriven, ...alerts.map(a => ({ ...a, createdAt: a.createdAt ?? '', isPanic: a.isPanic ?? false }))]
+
+    combined.sort((a, b) => {
+      if (a.isPanic && !b.isPanic) return -1
+      if (!a.isPanic && b.isPanic) return 1
+      const sevDiff = (severityOrder[a.severity] ?? 2) - (severityOrder[b.severity] ?? 2)
+      if (sevDiff !== 0) return sevDiff
+      if (a.createdAt && b.createdAt) return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      return 0
+    })
+
+    return combined.slice(0, 25)
   }, [alerts, displayIncidents])
 
   return (
@@ -238,33 +252,6 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
         firearmsCheckedOut={summary.firearmsCurrentlyIssued}
         vehiclesDeployed={summary.activeArmoredCarTrips}
       />
-
-      <SectionPanel
-        title="System Status"
-        subtitle="Operational Summary, quick action controls, and current command posture"
-        icon={<SentinelLogo size={22} variant="IconOnly" className="shrink-0" animated />}
-        actions={<QuickActionsPanel actions={quickActions} />}
-      >
-        <OperationalSummaryStrip
-          metrics={[
-            { label: 'Active Guards', value: summary.activeGuardsOnDuty, tone: 'success', hint: staleNote },
-            { label: 'Active Missions', value: summary.activeArmoredCarTrips, tone: 'info', hint: staleNote },
-            { label: 'Alert Count', value: alerts.length, tone: alerts.length > 0 ? 'warning' : 'neutral', hint: staleNote },
-            { label: 'Live Clock', value: clock.toLocaleTimeString(), tone: 'info', hint: 'Command time' },
-          ]}
-        />
-      </SectionPanel>
-
-      <SectionPanel
-        title="Tactical View"
-        subtitle="Live geospatial operations map and guard deployment grid"
-        icon={<Activity className="h-4 w-4" aria-hidden="true" />}
-      >
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-          <OperationalMap activeTrips={summary.activeArmoredCarTrips} activeGuards={summary.activeGuardsOnDuty} />
-          <GuardDeploymentOverview shifts={displayShifts} />
-        </div>
-      </SectionPanel>
 
       <SectionPanel
         title="Live Operations"
@@ -326,6 +313,33 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
             lastUpdated={replacementSuggestionsState.lastUpdated || staleNote}
           />
         </div>
+      </SectionPanel>
+
+      <SectionPanel
+        title="Tactical View"
+        subtitle="Live geospatial operations map and guard deployment grid"
+        icon={<Activity className="h-4 w-4" aria-hidden="true" />}
+      >
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+          <OperationalMap activeTrips={summary.activeArmoredCarTrips} activeGuards={summary.activeGuardsOnDuty} />
+          <GuardDeploymentOverview shifts={displayShifts} />
+        </div>
+      </SectionPanel>
+
+      <SectionPanel
+        title="System Status"
+        subtitle="Operational Summary, quick action controls, and current command posture"
+        icon={<SentinelLogo size={22} variant="IconOnly" className="shrink-0" animated />}
+        actions={<QuickActionsPanel actions={quickActions} />}
+      >
+        <OperationalSummaryStrip
+          metrics={[
+            { label: 'Active Guards', value: summary.activeGuardsOnDuty, tone: 'success', hint: staleNote },
+            { label: 'Active Missions', value: summary.activeArmoredCarTrips, tone: 'info', hint: staleNote },
+            { label: 'Alert Count', value: alerts.length, tone: alerts.length > 0 ? 'warning' : 'neutral', hint: staleNote },
+            { label: 'Live Clock', value: clock.toLocaleTimeString(), tone: 'info', hint: 'Command time' },
+          ]}
+        />
       </SectionPanel>
 
       <SectionPanel

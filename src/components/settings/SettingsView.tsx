@@ -1,12 +1,9 @@
 import { FC } from 'react'
-import { User } from '../../App'
+import type { User } from '../../context/AuthContext'
 import { getSidebarNav } from '../../config/navigation'
 import OperationalShell from '../layout/OperationalShell'
-import GuardSettings from './GuardSettings'
-import SupervisorSettings from './SupervisorSettings'
-import AdminSettings from './AdminSettings'
-import SuperadminSettings from './SuperadminSettings'
 import { useRoleSettingsRole } from './useRoleSettings'
+import RoleSettingsContent from './RoleSettingsContent'
 
 type SettingsViewProps = {
   user: User
@@ -18,14 +15,6 @@ export const SettingsView: FC<SettingsViewProps> = ({ user, onLogout, onViewChan
   const role = useRoleSettingsRole(user.role)
   const homeView = role === 'guard' ? 'overview' : 'dashboard'
   const navItems = getSidebarNav(user.role, { homeView })
-
-  const content = role === 'superadmin'
-    ? <SuperadminSettings user={user} />
-    : role === 'admin'
-      ? <AdminSettings user={user} />
-      : role === 'supervisor'
-        ? <SupervisorSettings user={user} />
-        : <GuardSettings user={user} />
 
   return (
     <OperationalShell
@@ -41,7 +30,7 @@ export const SettingsView: FC<SettingsViewProps> = ({ user, onLogout, onViewChan
       onMenuClose={() => undefined}
       onLogoClick={() => onViewChange(homeView)}
     >
-      {content}
+      <RoleSettingsContent user={user} />
     </OperationalShell>
   )
 }

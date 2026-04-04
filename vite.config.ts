@@ -1,6 +1,8 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
+const devPort = parseInt(process.env.PORT || '5173')
+
 export default defineConfig({
   plugins: [react()],
   build: {
@@ -20,7 +22,13 @@ export default defineConfig({
     host: '0.0.0.0',
   },
   server: {
-    port: parseInt(process.env.PORT || '5173'),
+    port: devPort,
     host: '0.0.0.0',
-  }
+    strictPort: true,
+    hmr: {
+      host: process.env.VITE_HMR_HOST || 'localhost',
+      clientPort: devPort,
+      protocol: 'ws',
+    },
+  },
 })

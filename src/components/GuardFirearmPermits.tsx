@@ -98,7 +98,7 @@ const GuardFirearmPermits: FC<Props> = ({ user, onLogout, onViewChange, activeVi
       />
 
       <main className="flex-1 flex min-w-0 min-h-0 flex-col w-full overflow-hidden">
-        <Header title="Guard Firearm Permits" badgeLabel="Permits" onLogout={onLogout} onMenuClick={() => setMobileMenuOpen(true)} user={user} onNavigateToProfile={onViewChange ? () => onViewChange('profile') : undefined} />
+        <Header title="Guard Firearm Permits" badgeLabel="Permits" onLogout={onLogout} onMenuClick={() => setMobileMenuOpen(true)} user={user} currentView={currentView} onNavigateToInbox={onViewChange ? () => onViewChange('inbox') : undefined} onNavigateToSettings={onViewChange ? () => onViewChange('settings') : undefined} onNavigateToProfile={onViewChange ? () => onViewChange('profile') : undefined} />
 
         {loading ? (
           <div className="flex-1 flex items-center justify-center text-center">

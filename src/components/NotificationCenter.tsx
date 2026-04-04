@@ -86,10 +86,10 @@ const NotificationCenter: FC<NotificationCenterProps> = ({ notifications, onDism
 
   return (
     <div
-      className="fixed top-4 right-4 z-[80] w-full max-w-md"
+      className="fixed left-4 right-4 top-4 z-[80] w-auto max-w-md md:left-auto md:top-[calc(5.5rem+env(safe-area-inset-top,0px))]"
       style={{
-        top: 'calc(1rem + env(safe-area-inset-top, 0px))',
         right: 'calc(1rem + env(safe-area-inset-right, 0px))',
+        left: 'calc(1rem + env(safe-area-inset-left, 0px))',
       }}
     >
       {notifications.map((notification) => (

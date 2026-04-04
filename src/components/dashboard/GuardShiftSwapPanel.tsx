@@ -1,6 +1,7 @@
 import { FC, useEffect, useState } from 'react'
 import { API_BASE_URL } from '../../config'
 import { fetchJsonOrThrow, getAuthHeaders } from '../../utils/api'
+import { fetchSwapRequestsFeed, type SwapRequestsFeedState } from '../../utils/swapRequests'
 
 interface SwapRequest {
   id: string
@@ -24,10 +25,57 @@ interface Props {
   }>
 }
 
+function isSwapStatus(value: unknown): value is SwapRequest['status'] {
+  return value === 'pending' || value === 'accepted' || value === 'declined'
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+function asOptionalString(value: unknown): string | null {
+  return typeof value === 'string' ? value : null
+}
+
+function normalizeSwapRequest(value: unknown): SwapRequest | null {
+  if (!isRecord(value)) return null
+
+  const id = value.id
+  const requesterId = typeof value.requesterId === 'string' ? value.requesterId : value.requester_id
+  const targetId = typeof value.targetId === 'string' ? value.targetId : value.target_id
+  const shiftId = typeof value.shiftId === 'string' ? value.shiftId : value.shift_id
+  const createdAt = typeof value.createdAt === 'string' ? value.createdAt : value.created_at
+  const status = isSwapStatus(value.status) ? value.status : 'pending'
+
+  if (
+    typeof id !== 'string' ||
+    typeof requesterId !== 'string' ||
+    typeof targetId !== 'string' ||
+    typeof shiftId !== 'string' ||
+    typeof createdAt !== 'string'
+  ) {
+    return null
+  }
+
+  return {
+    id,
+    requesterId,
+    requesterName: asOptionalString(value.requesterName ?? value.requester_name),
+    targetId,
+    targetName: asOptionalString(value.targetName ?? value.target_name),
+    shiftId,
+    reason: asOptionalString(value.reason),
+    status,
+    respondedAt: asOptionalString(value.respondedAt ?? value.responded_at),
+    createdAt,
+  }
+}
+
 const GuardShiftSwapPanel: FC<Props> = ({ currentUserId, currentUserRole, shiftOptions }) => {
   const [requests, setRequests] = useState<SwapRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [requestFeedState, setRequestFeedState] = useState<SwapRequestsFeedState>('ready')
 
   // New swap request form
   const [targetId, setTargetId] = useState('')
@@ -41,12 +89,9 @@ const GuardShiftSwapPanel: FC<Props> = ({ currentUserId, currentUserRole, shiftO
     setLoading(true)
     setError(null)
     try {
-      const data = await fetchJsonOrThrow<{ swapRequests: SwapRequest[] }>(
-        `${API_BASE_URL}/api/shifts/swap-requests`,
-        { headers: getAuthHeaders() },
-        'Unable to load shift swap requests.',
-      )
-      setRequests(data.swapRequests ?? [])
+      const data = await fetchSwapRequestsFeed(getAuthHeaders())
+      setRequestFeedState(data.feedState)
+      setRequests(data.swapRequests.map(normalizeSwapRequest).filter((request): request is SwapRequest => request !== null))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to load shift swap requests.')
     } finally {
@@ -60,8 +105,16 @@ const GuardShiftSwapPanel: FC<Props> = ({ currentUserId, currentUserRole, shiftO
 
   const handleSubmitRequest = async (event: React.FormEvent) => {
     event.preventDefault()
-    if (!targetId.trim() || !shiftId.trim()) {
-      setSubmitStatus('Target guard ID and scheduled shift are required.')
+    if (shiftOptions.length === 0) {
+      setSubmitStatus('No scheduled shifts are available to attach right now. Use Schedule Change Requests above or contact the Operations Desk for manual swap support.')
+      return
+    }
+    if (!targetId.trim()) {
+      setSubmitStatus('Enter the target guard ID from Operations Desk or your site supervisor before sending this request.')
+      return
+    }
+    if (!shiftId.trim()) {
+      setSubmitStatus('Select the scheduled shift that needs coverage before sending this request.')
       return
     }
     setSubmitting(true)
@@ -122,6 +175,13 @@ const GuardShiftSwapPanel: FC<Props> = ({ currentUserId, currentUserRole, shiftO
       ? requests.filter((r) => r.requesterId === currentUserId || r.targetId === currentUserId)
       : requests
 
+  const requestFeedMessage =
+    requestFeedState === 'unavailable'
+      ? 'Shift swap updates are temporarily unavailable. You can still submit a manual request below.'
+      : requestFeedState === 'stale'
+        ? 'Shift swap updates may be out of date right now. You can still submit a manual request below.'
+        : null
+
   return (
     <section className="rounded-2xl border border-border bg-surface p-4" aria-labelledby="swap-panel-heading">
       <h2 id="swap-panel-heading" className="text-lg font-bold text-text-primary">
@@ -130,6 +190,12 @@ const GuardShiftSwapPanel: FC<Props> = ({ currentUserId, currentUserRole, shiftO
       <p className="mt-1 text-sm text-text-secondary">
         Request a shift swap with another guard. Both guards must be available on the desired dates.
       </p>
+
+      {requestFeedMessage ? (
+        <div className="mt-3 rounded-xl border border-warning-border bg-warning-bg p-3 text-sm text-warning-text" role="status" aria-live="polite">
+          {requestFeedMessage}
+        </div>
+      ) : null}
 
       {/* New request form — only guards submit */}
       {currentUserRole === 'guard' && (
@@ -158,7 +224,9 @@ const GuardShiftSwapPanel: FC<Props> = ({ currentUserId, currentUserRole, shiftO
               ))}
             </select>
             {shiftOptions.length === 0 ? (
-              <p className="mt-1 text-xs text-text-tertiary">No scheduled shifts are available right now.</p>
+              <p className="mt-1 text-xs text-text-tertiary">
+                No upcoming shifts are available to attach right now. Use Schedule Change Requests above or contact the Operations Desk for manual swap support.
+              </p>
             ) : null}
           </div>
           <div className="sm:col-span-2">
@@ -171,9 +239,12 @@ const GuardShiftSwapPanel: FC<Props> = ({ currentUserId, currentUserRole, shiftO
               required
               value={targetId}
               onChange={(e) => setTargetId(e.target.value)}
-              placeholder="Guard user ID"
+              placeholder="Guard user ID from Operations Desk"
               className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-text-primary"
             />
+            <p className="mt-1 text-xs text-text-tertiary">
+              Enter the SENTINEL user ID for the guard covering your post. If you do not know it, confirm with Operations Desk or your site supervisor before submitting.
+            </p>
           </div>
           <div className="sm:col-span-2">
             <label className="text-sm font-semibold text-text-secondary" htmlFor="swap-reason">
@@ -222,7 +293,12 @@ const GuardShiftSwapPanel: FC<Props> = ({ currentUserId, currentUserRole, shiftO
         {error && !loading && (
           <p className="mt-2 text-sm text-red-400" role="alert">{error}</p>
         )}
-        {!loading && !error && visibleRequests.length === 0 && (
+        {!loading && !error && visibleRequests.length === 0 && requestFeedState !== 'ready' && (
+          <p className="mt-2 rounded-lg border border-border-subtle bg-surface-elevated p-3 text-sm text-text-secondary">
+            Swap request history is unavailable right now.
+          </p>
+        )}
+        {!loading && !error && visibleRequests.length === 0 && requestFeedState === 'ready' && (
           <p className="mt-2 rounded-lg border border-border-subtle bg-surface-elevated p-3 text-sm text-text-secondary">
             No swap requests found.
           </p>

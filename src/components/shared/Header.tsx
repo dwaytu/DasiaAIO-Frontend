@@ -1,10 +1,8 @@
-﻿import { FC, ReactNode, useState } from 'react'
+﻿import { FC, ReactNode } from 'react'
 import SectionBadge from '../SectionBadge'
-import AccountManager from '../AccountManager'
-import NotificationPanel from '../NotificationPanel'
-import { ThemeToggleButton } from '../../context/ThemeProvider'
-import { User } from '../../App'
+import type { User } from '../../context/AuthContext'
 import SentinelLogo from '../SentinelLogo'
+import HeaderGlobalActions from './HeaderGlobalActions'
 
 interface HeaderProps {
   title: string
@@ -14,33 +12,15 @@ interface HeaderProps {
   onMenuClick?: () => void
   user: User
   onNavigateToProfile?: () => void
+  onNavigateToInbox?: () => void
+  onNavigateToSettings?: () => void
+  currentView?: string
+  onRefresh?: () => void
 }
 
-const Header: FC<HeaderProps> = ({ title, badgeLabel, onLogout, rightSlot, onMenuClick, user, onNavigateToProfile }) => {
-  const [refreshing, setRefreshing] = useState(false)
-
-  const refreshControl = rightSlot ?? (
-    <button
-      type="button"
-      onClick={() => {
-        setRefreshing(true)
-        window.setTimeout(() => setRefreshing(false), 700)
-        window.location.reload()
-      }}
-      className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border bg-surface px-2.5 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)] sm:px-3"
-      aria-label="Refresh dashboard"
-      title="Refresh dashboard"
-    >
-      <svg className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-        <path d="M21 12a9 9 0 10-3.2 6.9" />
-        <path d="M21 3v6h-6" />
-      </svg>
-      <span className="hidden sm:inline">Refresh</span>
-    </button>
-  )
-
+const Header: FC<HeaderProps> = ({ title, badgeLabel, onLogout, rightSlot, onMenuClick, user, onNavigateToProfile, onNavigateToInbox, onNavigateToSettings, currentView, onRefresh }) => {
   return (
-    <header className="relative isolate z-[30] border-b border-border bg-surface/95 px-4 py-3 backdrop-blur md:px-8 md:py-4">
+    <header className="relative isolate z-[var(--z-header)] border-b border-border bg-surface/95 px-4 py-3 backdrop-blur md:px-8 md:py-4" style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top, 0px))' }}>
       <div className="flex items-start justify-between gap-3 sm:items-center">
       <div className="flex min-w-0 items-center gap-3">
         {/* Mobile hamburger menu */}
@@ -63,12 +43,16 @@ const Header: FC<HeaderProps> = ({ title, badgeLabel, onLogout, rightSlot, onMen
         </div>
         {badgeLabel && <div className="hidden sm:block"><SectionBadge label={badgeLabel} /></div>}
       </div>
-      <div className="flex shrink-0 items-center gap-1.5 md:gap-3">
-        <ThemeToggleButton className="flex" />
-        {refreshControl}
-        <NotificationPanel userId={user.id} />
-        <AccountManager user={user} onLogout={onLogout} onNavigateToProfile={onNavigateToProfile} />
-      </div>
+      <HeaderGlobalActions
+        user={user}
+        onLogout={onLogout}
+        onNavigateToProfile={onNavigateToProfile}
+        onNavigateToInbox={onNavigateToInbox}
+        onNavigateToSettings={onNavigateToSettings}
+        currentView={currentView}
+        extraAction={rightSlot}
+        onRefresh={onRefresh}
+      />
       </div>
     </header>
   )

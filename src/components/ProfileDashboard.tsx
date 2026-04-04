@@ -1,5 +1,5 @@
 import { FC, useState } from 'react'
-import { User } from '../App'
+import type { User } from '../context/AuthContext'
 import Sidebar from './Sidebar'
 import Header from './Header'
 import { getSidebarNav } from '../config/navigation'
@@ -37,6 +37,8 @@ const ProfileDashboard: FC<ProfileDashboardProps> = ({ user, onLogout, onBack, o
           onLogout={onLogout}
           onMenuClick={() => setMobileMenuOpen(true)}
           user={user}
+          currentView="profile"
+          onNavigateToInbox={user.role === 'guard' ? onBack : undefined}
           rightSlot={
             <button
               onClick={onBack}

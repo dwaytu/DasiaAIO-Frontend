@@ -1,11 +1,12 @@
 ﻿import { useState, useEffect, useMemo, FC, Suspense, lazy } from 'react'
+import { useNavigate } from 'react-router'
 import EditUserModal from '../EditUserModal'
 import EditScheduleModal from '../EditScheduleModal'
 import AnalyticsDashboard from '../AnalyticsDashboard'
 import TripManagement from '../TripManagement'
 import NotificationCenter, { Notification, createNotification } from '../NotificationCenter'
 import { API_BASE_URL } from '../../config'
-import { User as AppUser } from '../../App'
+import type { User as AppUser } from '../../context/AuthContext'
 import { getSidebarNav } from '../../config/navigation'
 import { normalizeRole } from '../../types/auth'
 import CommandCenterDashboard from '../dashboard/CommandCenterDashboard'
@@ -14,6 +15,7 @@ import LiveFreshnessPill from '../dashboard/ui/LiveFreshnessPill'
 import Allowed from '../rbac/Allowed'
 import DeniedFallback from '../rbac/DeniedFallback'
 import OperationalShell from '../layout/OperationalShell'
+import { ROUTES, VIEW_TO_ROUTE } from '../../router/routes'
 import { fetchJsonOrThrow, getAuthHeaders } from '../../utils/api'
 import { can } from '../../utils/permissions'
 import { getTrackingAccuracyMode, setTrackingAccuracyMode, TrackingAccuracyMode } from '../../utils/trackingPolicy'
@@ -227,7 +229,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   const [selectedFirearms, setSelectedFirearms] = useState<string>('')
   const [selectedVehicles, setSelectedVehicles] = useState<string>('')
   const [showAddScheduleForm, setShowAddScheduleForm] = useState<boolean>(false)
-  const [refreshing, setRefreshing] = useState<boolean>(false)
+  const [, setRefreshing] = useState<boolean>(false)
   const [lastUserSyncAt, setLastUserSyncAt] = useState<number>(() => Date.now())
   const [scheduleFormData, setScheduleFormData] = useState({
     guard_id: '',
@@ -242,6 +244,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   const isSupervisorViewer = normalizedViewerRole === 'supervisor'
   const canManageUsers = can(normalizedViewerRole, 'manage_users')
   const navItems = getSidebarNav(user.role)
+  const navigate = useNavigate()
 
   const canViewUserRow = (targetRoleRaw: string) => {
     const targetRole = normalizeRole(targetRoleRaw)
@@ -528,8 +531,9 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   }
 
   const handleNavigate = (view: string) => {
-    if (view === 'inbox' || view === 'approvals' || view === 'schedule' || view === 'dashboard' || view === 'missions' || view === 'analytics' || view === 'trips' || view === 'audit-log') {
-      setActiveSection(view as 'inbox' | 'dashboard' | 'approvals' | 'schedule' | 'missions' | 'analytics' | 'trips' | 'audit-log')
+    const route = VIEW_TO_ROUTE[view]
+    if (route) {
+      navigate(route)
     } else if (onViewChange) {
       onViewChange(view)
     }
@@ -832,24 +836,8 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
         mobileMenuOpen={mobileMenuOpen}
         onMenuOpen={() => setMobileMenuOpen(true)}
         onMenuClose={() => setMobileMenuOpen(false)}
-        onLogoClick={() => {
-          setActiveSection('dashboard')
-          onViewChange?.('dashboard')
-        }}
-        rightSlot={
-          <button
-            type="button"
-            onClick={handleRefresh}
-            className="hidden min-h-11 items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)] md:inline-flex"
-            aria-label="Refresh superadmin dashboard"
-          >
-            <svg className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-              <path d="M21 12a9 9 0 10-3.2 6.9" />
-              <path d="M21 3v6h-6" />
-            </svg>
-            Refresh
-          </button>
-        }
+        onLogoClick={() => navigate(ROUTES.DASHBOARD)}
+        onRefresh={handleRefresh}
         error={error}
       >
 
@@ -863,9 +851,62 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
               <SupervisorInboxPanel userId={user.id} />
             )}
           </div>
+        ) : activeSection === 'dashboard' && error ? (
+          <div className="flex flex-1 items-center justify-center py-8">
+            <section className="w-full max-w-xl rounded-2xl border border-danger-border bg-danger-bg/70 p-6 text-left shadow-lg backdrop-blur-sm">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-danger-text/80">Command Overview Unavailable</p>
+              <h2 className="mt-2 text-2xl font-bold text-danger-text">SENTINEL cannot reach the backend services.</h2>
+              <p className="mt-3 text-sm leading-6 text-danger-text/90">
+                Core command-center data is temporarily unavailable. Check the backend connection, then retry to restore analytics, mission status, and live operational summaries.
+              </p>
+              <div className="mt-5 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={handleRefresh}
+                  className="inline-flex min-h-11 items-center justify-center rounded-lg border border-danger-border bg-surface px-4 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
+                >
+                  Retry Dashboard
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleNavigate('approvals')}
+                  className="inline-flex min-h-11 items-center justify-center rounded-lg border border-border bg-surface-elevated px-4 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
+                >
+                  Open Approvals
+                </button>
+              </div>
+            </section>
+          </div>
         ) : activeSection === 'dashboard' && loading ? (
-          <div className="flex-1 flex items-center justify-center text-center">
-            <div className="text-indigo-600 text-lg font-medium">Loading system data...</div>
+          <div className="flex-1 flex flex-col gap-6 p-4 md:p-8 animate-pulse" aria-busy="true" aria-label="Loading dashboard">
+            {/* Command center skeleton */}
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="rounded-xl border border-border-subtle bg-surface-elevated px-3 py-4">
+                  <div className="h-3 w-20 rounded bg-border-subtle" />
+                  <div className="mt-2 h-6 w-12 rounded bg-border-subtle" />
+                </div>
+              ))}
+            </div>
+            {/* Table skeleton */}
+            <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden">
+              <div className="flex items-center justify-between p-5 border-b border-border-subtle">
+                <div className="h-5 w-40 rounded bg-border-subtle" />
+                <div className="h-8 w-44 rounded-lg bg-border-subtle" />
+              </div>
+              <div className="divide-y divide-border-subtle">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-3 px-5 py-4">
+                    <div className="h-9 w-9 rounded-full bg-border-subtle flex-shrink-0" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 w-32 rounded bg-border-subtle" />
+                      <div className="h-3 w-48 rounded bg-border-subtle" />
+                    </div>
+                    <div className="h-6 w-16 rounded-full bg-border-subtle" />
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         ) : activeSection === 'dashboard' ? (
           <div className="flex-1 flex flex-col overflow-hidden p-4 md:p-8 w-full animate-fade-in gap-4 md:gap-6">
@@ -914,7 +955,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                       placeholder="Search users..."
                       value={searchQuery}
                       onChange={e => setSearchQuery(e.target.value)}
-                      className="pl-9 pr-4 py-2 text-sm bg-background border border-border-subtle rounded-lg text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-indigo-500 w-44"
+                      className="pl-9 pr-4 py-2 text-sm bg-background border border-border-subtle rounded-lg text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-[color:var(--color-focus-ring)] w-44"
                     />
                   </div>
                   <button
@@ -1007,7 +1048,8 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                       type="button"
                       onClick={handleBulkSuspendSelected}
                       disabled={bulkProcessing}
-                      className="rounded-lg border border-warning-border bg-warning-bg px-3 py-1.5 text-xs font-semibold text-warning-text disabled:opacity-60"
+                      title="Coming soon"
+                      className="rounded-lg border border-warning-border bg-warning-bg px-3 py-1.5 text-xs font-semibold text-warning-text opacity-50 cursor-not-allowed disabled:opacity-60"
                     >
                       Suspend Selected
                     </button>
@@ -1121,7 +1163,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                                     onClick={() => handleEditUser(u)}
                                     title="Edit user"
                                     aria-label={`Edit ${u.full_name || u.username || u.email}`}
-                                    className="min-h-11 min-w-11 rounded-lg p-2 text-text-tertiary transition-colors hover:bg-indigo-500/10 hover:text-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
+                                    className="min-h-11 min-w-11 rounded-lg p-2 text-text-tertiary transition-colors hover:bg-info-bg hover:text-info focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
                                   >
                                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                                   </button>
@@ -1129,9 +1171,9 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                                 <button
                                   type="button"
                                   onClick={() => handleResetPasswordAction(u)}
-                                  title="Reset password"
+                                  title="Coming soon"
                                   aria-label={`Reset password for ${u.full_name || u.username || u.email}`}
-                                  className="min-h-11 min-w-11 rounded-lg p-2 text-text-tertiary transition-colors hover:bg-sky-500/10 hover:text-sky-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
+                                  className="min-h-11 min-w-11 rounded-lg p-2 text-text-tertiary opacity-50 cursor-not-allowed transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
                                 >
                                   <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 11V7m0 0l-3 3m3-3l3 3M5 12a7 7 0 1114 0v5a2 2 0 01-2 2H7a2 2 0 01-2-2v-5z" />
@@ -1140,9 +1182,9 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                                 <button
                                   type="button"
                                   onClick={() => handleSuspendAction(u)}
-                                  title="Suspend user"
+                                  title="Coming soon"
                                   aria-label={`Suspend ${u.full_name || u.username || u.email}`}
-                                  className="min-h-11 min-w-11 rounded-lg p-2 text-text-tertiary transition-colors hover:bg-amber-500/10 hover:text-amber-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
+                                  className="min-h-11 min-w-11 rounded-lg p-2 text-text-tertiary opacity-50 cursor-not-allowed transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
                                 >
                                   <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 5.636l-12.728 12.728M8 7h8a2 2 0 012 2v6a2 2 0 01-2 2H8a2 2 0 01-2-2V9a2 2 0 012-2z" />
@@ -1222,21 +1264,23 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                             <button
                               type="button"
                               onClick={() => handleEditUser(u)}
-                              className="min-h-11 rounded-md border border-indigo-500/40 bg-indigo-500/10 px-2.5 py-1.5 text-xs font-semibold text-indigo-300"
+                              className="min-h-11 rounded-md border border-info-border bg-info-bg px-2.5 py-1.5 text-xs font-semibold text-info"
                             >
                               Edit
                             </button>
                             <button
                               type="button"
                               onClick={() => handleResetPasswordAction(u)}
-                              className="min-h-11 rounded-md border border-sky-500/40 bg-sky-500/10 px-2.5 py-1.5 text-xs font-semibold text-sky-300"
+                              title="Coming soon"
+                              className="min-h-11 rounded-md border border-sky-500/40 bg-sky-500/10 px-2.5 py-1.5 text-xs font-semibold text-sky-300 opacity-50 cursor-not-allowed"
                             >
                               Reset
                             </button>
                             <button
                               type="button"
                               onClick={() => handleSuspendAction(u)}
-                              className="min-h-11 rounded-md border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 text-xs font-semibold text-amber-300"
+                              title="Coming soon"
+                              className="min-h-11 rounded-md border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 text-xs font-semibold text-amber-300 opacity-50 cursor-not-allowed"
                             >
                               Suspend
                             </button>
@@ -1348,7 +1392,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                     <h2 className="text-xl font-bold text-text-primary">All Guard Schedules</h2>
                     <button
                       onClick={() => setShowAddScheduleForm(!showAddScheduleForm)}
-                      className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                      className="bg-primary hover:bg-primary-hover text-primary-text px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
                     >
                       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -1393,7 +1437,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                             </td>
                             <td className="px-4 py-3">
                               <button
-                                className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded text-sm font-medium transition-colors"
+                                className="bg-primary hover:bg-primary-hover text-primary-text px-4 py-1.5 rounded text-sm font-medium transition-colors"
                                 onClick={() => setEditingShift(shift)}
                                 title="Edit shift"
                               >
@@ -1453,7 +1497,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                         value={scheduleFormData.client_site}
                         onChange={(e) => setScheduleFormData({...scheduleFormData, client_site: e.target.value})}
                         placeholder="Enter site or location"
-                        className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400"
+                        className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)] focus:border-[color:var(--color-focus-ring)]"
                       />
                     </div>
 
@@ -1464,7 +1508,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                         required
                         value={scheduleFormData.date}
                         onChange={(e) => setScheduleFormData({...scheduleFormData, date: e.target.value})}
-                        className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400"
+                        className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)] focus:border-[color:var(--color-focus-ring)]"
                       />
                     </div>
 
@@ -1475,7 +1519,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                         required
                         value={scheduleFormData.start_time}
                         onChange={(e) => setScheduleFormData({...scheduleFormData, start_time: e.target.value})}
-                        className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400"
+                        className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)] focus:border-[color:var(--color-focus-ring)]"
                       />
                     </div>
 
@@ -1486,7 +1530,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                         required
                         value={scheduleFormData.end_time}
                         onChange={(e) => setScheduleFormData({...scheduleFormData, end_time: e.target.value})}
-                        className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400"
+                        className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)] focus:border-[color:var(--color-focus-ring)]"
                       />
                     </div>
 
@@ -1494,7 +1538,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                       <button
                         type="submit"
                         disabled={shiftsLoading}
-                        className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-semibold py-3 rounded-lg transition-colors"
+                        className="w-full bg-primary hover:bg-primary-hover disabled:opacity-50 text-primary-text font-semibold py-3 rounded-lg transition-colors"
                       >
                         {shiftsLoading ? 'Creating Schedule...' : 'Create Schedule'}
                       </button>
@@ -1544,7 +1588,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                     value={missionFormData.mission_name}
                     onChange={(e) => setMissionFormData({...missionFormData, mission_name: e.target.value})}
                     placeholder="Enter mission name"
-                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400"
+                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)] focus:border-[color:var(--color-focus-ring)]"
                   />
                 </div>
 
@@ -1556,7 +1600,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                     value={missionFormData.destination}
                     onChange={(e) => setMissionFormData({...missionFormData, destination: e.target.value})}
                     placeholder="Enter destination"
-                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400"
+                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)] focus:border-[color:var(--color-focus-ring)]"
                   />
                 </div>
 
@@ -1600,7 +1644,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                     required
                     value={missionFormData.date}
                     onChange={(e) => setMissionFormData({...missionFormData, date: e.target.value})}
-                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400"
+                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)] focus:border-[color:var(--color-focus-ring)]"
                   />
                 </div>
 
@@ -1611,7 +1655,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                     required
                     value={missionFormData.start_time}
                     onChange={(e) => setMissionFormData({...missionFormData, start_time: e.target.value})}
-                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400"
+                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)] focus:border-[color:var(--color-focus-ring)]"
                   />
                 </div>
 
@@ -1622,7 +1666,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                     required
                     value={missionFormData.end_time}
                     onChange={(e) => setMissionFormData({...missionFormData, end_time: e.target.value})}
-                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400"
+                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)] focus:border-[color:var(--color-focus-ring)]"
                   />
                 </div>
 
@@ -1631,7 +1675,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                   <select
                     value={missionFormData.priority}
                     onChange={(e) => setMissionFormData({...missionFormData, priority: e.target.value})}
-                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400"
+                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)] focus:border-[color:var(--color-focus-ring)]"
                   >
                     <option value="low">Low</option>
                     <option value="medium">Medium</option>
@@ -1647,7 +1691,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                     onChange={(e) => setMissionFormData({...missionFormData, special_requirements: e.target.value})}
                     placeholder="Enter any special requirements"
                     rows={3}
-                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400"
+                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)] focus:border-[color:var(--color-focus-ring)]"
                   />
                 </div>
 
@@ -1655,7 +1699,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                   <button
                     type="submit"
                     disabled={missionsLoading}
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-semibold py-3 rounded-lg transition-colors"
+                    className="w-full bg-primary hover:bg-primary-hover disabled:opacity-50 text-primary-text font-semibold py-3 rounded-lg transition-colors"
                   >
                     {missionsLoading ? 'Assigning Mission...' : 'Assign Mission'}
                   </button>

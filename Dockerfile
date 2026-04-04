@@ -3,9 +3,9 @@ FROM node:20-alpine as builder
 
 WORKDIR /app
 
-# Install dependencies
+# Install dependencies (npm ci for deterministic builds)
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 
 # Accept build-time env vars (Railway injects these as Docker build args)
 ARG VITE_API_BASE_URL=https://backend-production-0c47.up.railway.app

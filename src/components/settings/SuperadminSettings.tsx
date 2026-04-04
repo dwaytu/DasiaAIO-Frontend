@@ -1,5 +1,5 @@
 import { FC, useEffect, useState } from 'react'
-import { User } from '../../App'
+import type { User } from '../../context/AuthContext'
 import NotificationSettingsSection from './NotificationSettingsSection'
 import SettingsDashboard from './SettingsDashboard'
 import { defaultNotificationSettings, loadRoleSettings, NotificationSettings, saveRoleSettings } from './settingsStorage'

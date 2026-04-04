@@ -1,10 +1,12 @@
 import { FC, FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { API_BASE_URL, detectRuntimePlatform } from '../../config'
-import { User as AppUser } from '../../App'
+import { EMERGENCY_CONTACTS, phoneToTelHref } from '../../constants/emergencyContacts'
+import type { User as AppUser } from '../../context/AuthContext'
 import { getRequiredAccuracyMeters, getTrackingAccuracyMode } from '../../utils/trackingPolicy'
 import { logError } from '../../utils/logger'
+import { sanitizeErrorMessage } from '../../utils/sanitize'
 import { fetchJsonOrThrow, getAuthToken } from '../../utils/api'
-import { enqueueOfflineAction } from '../../utils/offlineQueue'
+import { enqueueOfflineAction, getPendingCount } from '../../utils/offlineQueue'
 import {
   getLocationPermissionState,
   hasAcceptedLocationConsent,
@@ -12,15 +14,17 @@ import {
   requestRuntimeLocationPermission,
   resolveLocationWithFallback,
 } from '../../utils/location'
+import { useUI } from '../../hooks/useUI'
 import GuardResourcesTab from '../dashboard/GuardResourcesTab'
 import GuardMapTab from '../dashboard/GuardMapTab'
 import GuardSupportTab from '../dashboard/GuardSupportTab'
+import EmergencyContactsBar from './EmergencyContactsBar'
 import DashboardCard from '../dashboard/ui/DashboardCard'
 import SectionHeader from '../dashboard/ui/SectionHeader'
-import StatCard from '../dashboard/ui/StatCard'
 import { GuardInboxPanel } from '../inbox/GuardInboxPanel'
-import { ThemeToggleButton } from '../../context/ThemeProvider'
 import ProfileModalContent from '../profile/ProfileModalContent'
+import HeaderGlobalActions from '../shared/HeaderGlobalActions'
+import PanicButton from './PanicButton'
 
 interface UserDashboardProps {
   user: AppUser
@@ -75,9 +79,7 @@ type GuardSection = 'inbox' | 'mission' | 'resources' | 'support' | 'map'
 type IncidentPriority = 'low' | 'medium' | 'high' | 'critical'
 
 interface IncidentFormState {
-  title: string
   description: string
-  location: string
   priority: IncidentPriority
 }
 
@@ -104,14 +106,7 @@ function formatTimeWindow(startTime: string, endTime: string): string {
   return `${start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
 }
 
-function calcHours(checkIn: string, checkOut?: string): string {
-  if (!checkOut) return '0.0'
-  const start = new Date(checkIn).getTime()
-  const end = new Date(checkOut).getTime()
-  if (Number.isNaN(start) || Number.isNaN(end)) return '0.0'
-  const duration = Math.max(0, (end - start) / (1000 * 60 * 60))
-  return duration.toFixed(1)
-}
+
 
 function isOfflineRequestError(error: unknown): boolean {
   const message = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase()
@@ -137,7 +132,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
   const [isSyncing, setIsSyncing] = useState<boolean>(false)
   const [syncError, setSyncError] = useState<string>('')
   const [actionStatus, setActionStatus] = useState<string>('')
-  const [isOnline, setIsOnline] = useState<boolean>(() => (typeof navigator === 'undefined' ? true : navigator.onLine))
+  const { isNetworkOnline } = useUI()
 
   const [scheduleForm, setScheduleForm] = useState({
     clientSite: '',
@@ -154,9 +149,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
 
   const [incidentModalOpen, setIncidentModalOpen] = useState<boolean>(false)
   const [incidentForm, setIncidentForm] = useState<IncidentFormState>({
-    title: '',
     description: '',
-    location: '',
     priority: 'high',
   })
   const [incidentStatus, setIncidentStatus] = useState<string>('')
@@ -172,11 +165,13 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
   const [locationTrackingEnabled, setLocationTrackingEnabled] = useState<boolean>(false)
   const [hasLocationConsent, setHasLocationConsent] = useState<boolean>(false)
   const [locationTrackingMessage, setLocationTrackingMessage] = useState<string>('')
-  const [locationPermissionState, setLocationPermissionState] = useState<'unknown' | 'prompt' | 'granted' | 'denied'>('unknown')
-  const [locationAccuracyMeters, setLocationAccuracyMeters] = useState<number | null>(null)
+  const [_locationPermissionState, setLocationPermissionState] = useState<'unknown' | 'prompt' | 'granted' | 'denied'>('unknown')
+  const [, setLocationAccuracyMeters] = useState<number | null>(null)
   const [lastKnownLocation, setLastKnownLocation] = useState<LastKnownLocation | null>(null)
 
-  const [mapExpanded, setMapExpanded] = useState<boolean>(false)
+
+  const [pendingCount, setPendingCount] = useState<number>(0)
+
   const [profileModalOpen, setProfileModalOpen] = useState<boolean>(false)
   const profileTriggerRef = useRef<HTMLButtonElement | null>(null)
 
@@ -209,16 +204,16 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
   }, [closeProfileModal, profileModalOpen])
 
   useEffect(() => {
-    const handleOnline = () => setIsOnline(true)
-    const handleOffline = () => setIsOnline(false)
-
-    window.addEventListener('online', handleOnline)
-    window.addEventListener('offline', handleOffline)
-
-    return () => {
-      window.removeEventListener('online', handleOnline)
-      window.removeEventListener('offline', handleOffline)
+    let disposed = false
+    const poll = async () => {
+      try {
+        const count = await getPendingCount()
+        if (!disposed) setPendingCount(count)
+      } catch { /* ignore */ }
     }
+    void poll()
+    const interval = window.setInterval(() => void poll(), 5000)
+    return () => { disposed = true; window.clearInterval(interval) }
   }, [])
 
   useEffect(() => {
@@ -253,7 +248,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
     }
   }, [])
 
-  const refreshData = useCallback(async (initial = false) => {
+  const refreshData = useCallback(async (initial = false, signal?: AbortSignal) => {
     if (!user?.id) {
       setIsInitialLoading(false)
       setIsSyncing(false)
@@ -270,27 +265,27 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
     const requests = [
       fetchJsonOrThrow<any>(
         `${API_BASE_URL}/api/attendance/${user.id}`,
-        { headers: getAuthHeaders() },
+        { headers: getAuthHeaders(), signal },
         'Unable to load attendance records',
       ),
       fetchJsonOrThrow<any>(
         `${API_BASE_URL}/api/guard-replacement/guard/${user.id}/shifts`,
-        { headers: getAuthHeaders() },
+        { headers: getAuthHeaders(), signal },
         'Unable to load schedule',
       ),
       fetchJsonOrThrow<any>(
         `${API_BASE_URL}/api/guard-allocations/${user.id}`,
-        { headers: getAuthHeaders() },
+        { headers: getAuthHeaders(), signal },
         'Unable to load firearm allocations',
       ),
       fetchJsonOrThrow<any>(
         `${API_BASE_URL}/api/guard-firearm-permits/${user.id}`,
-        { headers: getAuthHeaders() },
+        { headers: getAuthHeaders(), signal },
         'Unable to load permits',
       ),
       fetchJsonOrThrow<any>(
         `${API_BASE_URL}/api/support-tickets/${user.id}`,
-        { headers: getAuthHeaders() },
+        { headers: getAuthHeaders(), signal },
         'Unable to load support tickets',
       ),
     ] as const
@@ -314,7 +309,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
     })
 
     if (failures.length > 0) {
-      setSyncError(`Some data could not be loaded: ${failures.join(', ')}.`)
+      setSyncError(`Couldn't load some data: ${failures.join(', ')}. Tap Retry.`)
     }
 
     setIsInitialLoading(false)
@@ -322,7 +317,9 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
   }, [getAuthHeaders, user?.id])
 
   useEffect(() => {
-    void refreshData(true)
+    const controller = new AbortController()
+    void refreshData(true, controller.signal)
+    return () => { controller.abort() }
   }, [refreshData])
 
   useEffect(() => {
@@ -396,14 +393,14 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
 
         if (location.source === 'ip') {
           setLocationPermissionState('denied')
-          setLocationTrackingMessage('Live tracking is active using approximate IP fallback.')
+          setLocationTrackingMessage('Location tracking active (approximate).')
         } else {
           setLocationPermissionState('granted')
-          setLocationTrackingMessage('Live location tracking is active.')
+          setLocationTrackingMessage('Location tracking active.')
         }
       } catch {
         if (disposed) return
-        setLocationTrackingMessage('Location heartbeat failed. Check connection and retry.')
+        setLocationTrackingMessage('Location update paused — will retry automatically.')
       }
     }
 
@@ -539,13 +536,6 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
     }
   }, [dutyStatus])
 
-  const locationAccuracyLabel = useMemo(() => {
-    if (locationAccuracyMeters == null) return 'No Fix'
-    if (locationAccuracyMeters <= 15) return 'High'
-    if (locationAccuracyMeters <= 40) return 'Medium'
-    return 'Low'
-  }, [locationAccuracyMeters])
-
   const mapEmbedUrl = useMemo(() => {
     if (!lastKnownLocation) return ''
 
@@ -594,9 +584,9 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
           headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
           body: { guard_id: user.id, shift_id: shift.id },
         })
-        setActionStatus('Offline detected. Check-in queued and will sync when connection returns.')
+        setActionStatus('Check-in saved — will send when you\'re back online.')
       } else {
-        const message = error instanceof Error ? error.message : 'Check-in failed'
+        const message = sanitizeErrorMessage(error instanceof Error ? error.message : 'Check-in failed')
         setActionStatus(message)
       }
       logError('Check-in error:', error)
@@ -655,9 +645,9 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
           headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
           body: { attendance_id: recentAttendance.id },
         })
-        setActionStatus('Offline detected. Check-out queued and will sync when connection returns.')
+        setActionStatus('Check-out saved — will send when you\'re back online.')
       } else {
-        const message = error instanceof Error ? error.message : 'Check-out failed'
+        const message = sanitizeErrorMessage(error instanceof Error ? error.message : 'Check-out failed')
         setActionStatus(message)
       }
       logError('Check-out error:', error)
@@ -683,13 +673,26 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
   const handleIncidentSubmit = async (event: FormEvent) => {
     event.preventDefault()
 
-    if (!incidentForm.title.trim() || !incidentForm.description.trim() || !incidentForm.location.trim()) {
-      setIncidentStatus('Title, description, and location are required.')
+    if (!incidentForm.description.trim()) {
+      setIncidentStatus('Please describe what happened.')
       return
     }
 
     setIncidentSubmitting(true)
     setIncidentStatus('')
+
+    const description = incidentForm.description.trim()
+    const title = description.length > 50 ? description.slice(0, 50).replace(/\s+\S*$/, '') + '\u2026' : description
+    const location = lastKnownLocation
+      ? `${lastKnownLocation.latitude}, ${lastKnownLocation.longitude}`
+      : 'Location unavailable'
+
+    const payload = {
+      title,
+      description,
+      location,
+      priority: incidentForm.priority,
+    }
 
     try {
       await fetchJsonOrThrow<any>(
@@ -697,22 +700,30 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
         {
           method: 'POST',
           headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
-          body: JSON.stringify({
-            title: incidentForm.title.trim(),
-            description: incidentForm.description.trim(),
-            location: incidentForm.location.trim(),
-            priority: incidentForm.priority,
-          }),
+          body: JSON.stringify(payload),
         },
         'Failed to submit incident report',
       )
 
       setIncidentStatus('Incident report submitted.')
-      setIncidentForm({ title: '', description: '', location: '', priority: 'high' })
+      setIncidentForm({ description: '', priority: 'high' })
       setIncidentModalOpen(false)
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to submit incident report'
-      setIncidentStatus(message)
+      try {
+        const token = getAuthToken()
+        await enqueueOfflineAction({
+          url: `${API_BASE_URL}/api/incidents`,
+          method: 'POST',
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+          body: payload,
+        })
+        setIncidentStatus('Saved \u2014 will send when back online.')
+        setIncidentForm({ description: '', priority: 'high' })
+        setIncidentModalOpen(false)
+      } catch {
+        const message = sanitizeErrorMessage(error instanceof Error ? error.message : 'Failed to submit incident report')
+        setIncidentStatus(message)
+      }
     } finally {
       setIncidentSubmitting(false)
     }
@@ -775,9 +786,9 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
             client_site: scheduleForm.clientSite,
           },
         })
-        setScheduleStatus('Offline detected. Schedule request queued and will sync when connection returns.')
+        setScheduleStatus('Schedule request saved — will send when you\'re back online.')
       } else {
-        setScheduleStatus(error instanceof Error ? error.message : 'Failed to request schedule.')
+        setScheduleStatus(sanitizeErrorMessage(error instanceof Error ? error.message : 'Failed to request schedule.'))
       }
     } finally {
       setScheduleSubmitting(false)
@@ -815,7 +826,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
       setTicketForm({ subject: '', message: '' })
       await refreshData(false)
     } catch (error) {
-      setTicketStatus(error instanceof Error ? error.message : 'Failed to create support ticket.')
+      setTicketStatus(sanitizeErrorMessage(error instanceof Error ? error.message : 'Failed to create support ticket.'))
     } finally {
       setTicketSubmitting(false)
     }
@@ -824,6 +835,14 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
   const missionLocation = currentShift?.client_site || 'No active post'
   const missionShiftTime = currentShift ? formatTimeWindow(currentShift.start_time, currentShift.end_time) : 'No shift today'
   const missionElapsed = currentShift ? elapsedTime[currentShift.id] || '0h 0m' : '0h 0m'
+  const currentShiftCheckedIn = currentShift ? checkInStatus[currentShift.id] === 'checked_in' : false
+  const missionReadinessNote = !isNetworkOnline
+    ? 'Reconnect before sending mission updates or reporting new activity.'
+    : !hasLocationConsent
+      ? 'Review location consent so operations can verify your patrol position.'
+      : !locationTrackingEnabled
+        ? 'Confirm tracking and sync before leaving staging.'
+        : 'Tracking and sync are ready for this watch.'
   const shiftSwapOptions = useMemo(
     () =>
       scheduleItems
@@ -836,49 +855,33 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
     [scheduleItems],
   )
 
-  const navItems: Array<{ key: GuardSection | 'profile'; label: string }> = [
-    { key: 'inbox', label: 'Inbox' },
+  const navItems: Array<{ key: GuardSection; label: string }> = [
     { key: 'mission', label: 'Mission' },
     { key: 'resources', label: 'Resources' },
     { key: 'support', label: 'Support' },
     { key: 'map', label: 'Map' },
-    { key: 'profile', label: 'Profile' },
   ]
 
   return (
     <div className="relative min-h-[100dvh] w-full overflow-hidden bg-background font-sans">
       <a href="#maincontent" className="skip-link">Skip to main content</a>
 
-      <header className="sticky top-0 z-20 border-b border-border bg-surface/95 px-4 py-3 backdrop-blur">
+      <header className="sticky top-0 z-[var(--z-header)] border-b border-border bg-surface/95 px-4 py-3 backdrop-blur" style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top, 0px))' }}>
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-tertiary">Field Operations</p>
             <p className="truncate text-lg font-bold text-text-primary">{user.fullName || user.full_name || user.username}</p>
           </div>
-          <div className="flex items-center gap-2">
-            <ThemeToggleButton className="flex" />
-            <button
-              type="button"
-              onClick={() => onViewChange?.('settings')}
-              className="min-h-11 rounded-lg border border-border px-3 py-2 text-sm font-semibold text-text-primary hover:bg-surface-hover"
-            >
-              Settings
-            </button>
-            <button
-              type="button"
-              onClick={() => { void refreshData(false) }}
-              className="min-h-11 rounded-lg border border-border px-3 py-2 text-sm font-semibold text-text-primary hover:bg-surface-hover"
-            >
-              Refresh
-            </button>
-            <button
-              type="button"
-              onClick={onLogout}
-              className="min-h-11 rounded-lg border border-danger-border bg-danger-bg px-3 py-2 text-sm font-semibold text-danger-text hover:brightness-95"
-            >
-              Logout
-            </button>
-          </div>
+          <HeaderGlobalActions
+            user={user}
+            onLogout={onLogout}
+            onNavigateToInbox={() => onViewChange?.('inbox')}
+            onNavigateToSettings={() => onViewChange?.('settings')}
+            onNavigateToProfile={() => setProfileModalOpen(true)}
+            onRefresh={() => { void refreshData(false) }}
+            profileButtonRef={profileTriggerRef}
+            guardMode
+          />
         </div>
       </header>
 
@@ -888,15 +891,17 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
         className="guard-sticky-main mx-auto h-[calc(100dvh-var(--guard-main-reserved-height))] w-full max-w-5xl overflow-y-auto px-4 pt-4"
       >
         <section className="guard-section-frame" aria-label="Guard mission workspace">
-          <SectionHeader
-            title="Mission Screen"
-            subtitle="Duty status, active shift context, and field actions for the current watch."
-          />
-
-          {!isOnline ? (
+          {!isNetworkOnline ? (
             <div className="rounded-xl border border-danger-border bg-danger-bg p-4 text-danger-text" role="status" aria-live="polite">
               <p className="font-semibold">No connection</p>
-              <p className="mt-1 text-sm">Your device is offline. Reconnect to sync mission updates.</p>
+              <p className="mt-1 text-sm">You're offline. Your actions are saved and will send when you reconnect.</p>
+            </div>
+          ) : null}
+
+          {pendingCount > 0 ? (
+            <div className="flex items-center gap-2 rounded-xl border border-warning-border bg-warning-bg p-3 text-warning-text text-sm" role="status" aria-live="polite">
+              <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-warning-text text-warning-bg text-xs font-bold">{pendingCount}</span>
+              <span>{pendingCount === 1 ? '1 action waiting to send' : `${pendingCount} actions waiting to send`}</span>
             </div>
           ) : null}
 
@@ -941,82 +946,120 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
 
           {!isInitialLoading && activeSection === 'mission' ? (
             <div className="guard-section-frame">
-              <div className="guard-kpi-row">
-                <StatCard label="Duty Status" value={dutyStatusConfig.label} hint={isSyncing ? 'Syncing updates' : 'Operational status'} tone="guard" />
-                <StatCard label="Current Post" value={currentShift ? missionLocation : 'Unassigned'} hint={missionShiftTime} tone="mission" />
-                <StatCard label="Elapsed Time" value={missionElapsed} hint={currentShift ? 'From active shift check-in' : 'No active shift'} tone="analytics" />
-                <StatCard
-                  label="Connectivity"
-                  value={isOnline ? 'Online' : 'Offline'}
-                  hint={hasLocationConsent ? `Location ${locationPermissionState}` : 'Location consent required'}
-                  tone={isOnline ? 'guard' : 'maintenance'}
-                />
-              </div>
+              <SectionHeader title="Mission" />
 
-              <DashboardCard title="Current Duty Status">
-                <section
-                  aria-label="Current duty status"
-                  className={`rounded-2xl border p-5 ${dutyStatusConfig.bannerClass}`}
-                >
-                  <div className="flex items-center justify-between gap-2">
+              {/* Zone 1: StatusHero */}
+              <section
+                aria-label="Current duty status"
+                className={`rounded-2xl border p-5 ${dutyStatusConfig.bannerClass}`}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0 flex-1">
                     <span className={`text-2xl font-black tracking-tight ${dutyStatusConfig.textClass}`}>
                       {dutyStatusConfig.label}
                     </span>
+                    {currentShift ? (
+                      <div className="mt-2 space-y-0.5">
+                        <p className={`text-lg font-bold ${dutyStatusConfig.textClass}`}>{missionLocation}</p>
+                        <p className={`text-sm font-medium opacity-75 ${dutyStatusConfig.textClass}`}>{missionShiftTime}</p>
+                        {currentShiftCheckedIn ? (
+                          <p className={`text-sm font-semibold ${dutyStatusConfig.textClass}`}>Elapsed: {missionElapsed}</p>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <p className={`mt-2 text-sm ${dutyStatusConfig.textClass}`}>No shift assigned. Stand by or contact your supervisor.</p>
+                    )}
+                  </div>
+                  <div className="flex flex-col items-end gap-2">
                     {isSyncing ? (
                       <span className={`rounded-full border border-current px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider opacity-60 ${dutyStatusConfig.textClass}`}>
                         Syncing
                       </span>
                     ) : null}
+                    <span
+                      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ${
+                        locationTrackingEnabled && hasLocationConsent
+                          ? 'border border-success-border bg-success-bg text-success-text'
+                          : 'border border-border-subtle bg-surface-elevated text-text-tertiary'
+                      }`}
+                      aria-label={locationTrackingEnabled && hasLocationConsent ? 'Location tracking active' : 'Location tracking inactive'}
+                    >
+                      <span aria-hidden="true">{locationTrackingEnabled && hasLocationConsent ? '●' : '○'}</span>
+                      {locationTrackingEnabled && hasLocationConsent ? 'Tracking' : 'No Track'}
+                    </span>
                   </div>
-                  {currentShift ? (
-                    <div className="mt-3 space-y-1">
-                      <p className={`text-lg font-bold ${dutyStatusConfig.textClass}`}>{missionLocation}</p>
-                      <p className={`text-sm font-medium opacity-75 ${dutyStatusConfig.textClass}`}>{missionShiftTime}</p>
-                    </div>
-                  ) : (
-                    <div className="mt-3 space-y-1">
-                      <p className={`text-base font-semibold ${dutyStatusConfig.textClass}`}>You are not scheduled today.</p>
-                      <p className={`text-sm opacity-60 ${dutyStatusConfig.textClass}`}>Wait for assignment or contact your supervisor.</p>
-                    </div>
-                  )}
-                </section>
-              </DashboardCard>
-
-              <DashboardCard title="Field Tracking">
-                <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border-subtle bg-surface-elevated px-4 py-3">
-                  <button
-                    type="button"
-                    onClick={toggleLocationTracking}
-                    disabled={!hasLocationConsent}
-                    aria-pressed={locationTrackingEnabled}
+                </div>
+                {missionReadinessNote && !(dutyStatus === 'Off Duty') ? (
+                  <p className={`mt-3 rounded-lg border border-current/10 px-3 py-2 text-xs font-medium opacity-80 ${dutyStatusConfig.textClass}`}>
+                    {missionReadinessNote}
+                  </p>
+                ) : null}
+                {hasLocationConsent ? (
+                  <div className="mt-3 flex flex-wrap items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={toggleLocationTracking}
+                      aria-pressed={locationTrackingEnabled}
                       aria-label={locationTrackingEnabled ? 'Disable location tracking' : 'Enable location tracking'}
-                    className={`min-h-11 rounded-md px-3 py-1.5 text-xs font-bold ${
-                      !hasLocationConsent
-                        ? 'cursor-not-allowed text-text-tertiary'
-                        : locationTrackingEnabled
+                      className={`min-h-10 rounded-md px-3 py-1.5 text-xs font-bold ${
+                        locationTrackingEnabled
                           ? 'border border-danger-border bg-danger-bg text-danger-text'
                           : 'border border-success-border bg-success-bg text-success-text'
+                      }`}
+                    >
+                      <span aria-hidden="true">{locationTrackingEnabled ? '●' : '○'}</span>
+                      {locationTrackingEnabled ? ' Stop Tracking' : ' Start Tracking'}
+                    </button>
+                    {locationTrackingMessage ? (
+                      <p className="text-xs text-text-secondary" role="status">{locationTrackingMessage}</p>
+                    ) : null}
+                  </div>
+                ) : (
+                  <div className="mt-3 rounded-lg border border-warning-border bg-warning-bg px-3 py-2" role="status">
+                    <p className="text-xs font-semibold text-warning-text">Location consent required — enable in your profile settings to start tracking.</p>
+                  </div>
+                )}
+              </section>
+
+              {/* Zone 2: QuickActions */}
+              <div className="space-y-3">
+                {currentShift ? (
+                  <button
+                    type="button"
+                    onClick={() => { void handlePrimaryCheckAction() }}
+                    className={`min-h-14 w-full rounded-xl px-4 py-3 text-base font-extrabold tracking-wide ${
+                      checkInStatus[currentShift.id] === 'checked_in'
+                        ? 'border border-danger-border bg-danger-bg text-danger-text'
+                        : 'border border-success-border bg-success-bg text-success-text'
                     }`}
                   >
-                      <span aria-hidden="true">{locationTrackingEnabled ? '●' : '○'}</span>
-                      {locationTrackingEnabled ? ' Tracking On' : ' Tracking Off'}
+                    {checkInStatus[currentShift.id] === 'checked_in'
+                      ? '✓ Check Out – End Shift'
+                      : 'Check In – Start Shift'}
                   </button>
-                  <span className="text-xs text-text-tertiary">
-                    {hasLocationConsent ? locationPermissionState : 'consent required'}
-                  </span>
-                  {locationAccuracyMeters != null ? (
-                    <span className="text-xs text-text-tertiary">
-                      {Math.round(locationAccuracyMeters)}m · {locationAccuracyLabel}
-                    </span>
-                  ) : null}
-                  {locationTrackingMessage ? (
-                    <p className="w-full text-xs text-text-secondary" role="status">{locationTrackingMessage}</p>
-                  ) : null}
-                </div>
-              </DashboardCard>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIncidentStatus('')
+                    setIncidentModalOpen(true)
+                  }}
+                  className="min-h-12 w-full rounded-lg border-2 border-danger-border bg-danger-bg px-4 py-3 text-sm font-extrabold uppercase tracking-wide text-danger-text"
+                >
+                  ⚠ Report Incident
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInstructionsOpen(true)}
+                  className="min-h-10 w-full rounded-lg border border-info-border bg-info-bg px-4 py-2 text-xs font-semibold text-info-text"
+                >
+                  View Instructions
+                </button>
+              </div>
 
+              {/* Zone 3: TodaysSchedule */}
               {activeShifts.length > 0 ? (
-                <DashboardCard title="Today's Shifts" actions={<span className="text-xs text-text-tertiary">Elapsed: {missionElapsed}</span>}>
+                <DashboardCard title="Today's Shifts">
                   <section aria-label="Today's shifts">
                     <ul className="space-y-2">
                       {activeShifts.map((shift) => {
@@ -1037,6 +1080,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                                 </p>
                                 <p className={`text-xs ${checkedIn ? 'text-success-text opacity-70' : 'text-text-secondary'}`}>
                                   {formatTimeWindow(shift.start_time, shift.end_time)}
+                                  {checkedIn && elapsedTime[shift.id] ? ` · ${elapsedTime[shift.id]}` : ''}
                                 </p>
                               </div>
                               <button
@@ -1068,35 +1112,12 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                     </ul>
                   </section>
                 </DashboardCard>
-              ) : null}
-
-              {attendance.length > 0 ? (
-                <DashboardCard title="Recent Attendance">
-                  <section aria-label="Recent attendance">
-                    <ul className="space-y-2">
-                      {attendance.slice(0, 3).map((record) => (
-                        <li key={record.id} className="rounded-xl border border-border-subtle bg-surface-elevated p-3">
-                          <div className="flex items-start justify-between gap-2">
-                            <div>
-                              <p className="text-sm font-semibold text-text-primary">
-                                {new Date(record.check_in_time).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}
-                              </p>
-                              <p className="text-xs text-text-secondary">
-                                {new Date(record.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                {' – '}
-                                {record.check_out_time
-                                  ? new Date(record.check_out_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                                  : 'Active'}
-                              </p>
-                            </div>
-                            <span className="text-xs font-semibold text-text-tertiary">{calcHours(record.check_in_time, record.check_out_time)}h</span>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  </section>
-                </DashboardCard>
-              ) : null}
+              ) : (
+                <div className="rounded-xl border border-border-subtle bg-surface-elevated p-4 text-center">
+                  <p className="text-sm font-semibold text-text-secondary">No shifts scheduled for today</p>
+                  <p className="mt-1 text-xs text-text-tertiary">Check the Support tab for schedule requests</p>
+                </div>
+              )}
             </div>
           ) : null}
 
@@ -1126,76 +1147,30 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
 
           {!isInitialLoading && activeSection === 'map' ? (
             <GuardMapTab
-              mapExpanded={mapExpanded}
-              onToggleExpand={() => setMapExpanded((previous) => !previous)}
               mapEmbedUrl={mapEmbedUrl}
               mapExternalUrl={mapExternalUrl}
               lastKnownLocation={lastKnownLocation}
+              onSwitchToMission={() => setActiveSection('mission')}
             />
           ) : null}
         </section>
       </main>
 
       <div className="guard-sticky-region" data-testid="guard-sticky-region">
-        <section className="guard-sticky-inner" aria-label="Primary guard actions and navigation">
-          <button
-            type="button"
-            onClick={() => { void handlePrimaryCheckAction() }}
-            className={`min-h-14 w-full rounded-xl px-4 py-3 text-base font-extrabold tracking-wide ${
-              currentShift && checkInStatus[currentShift.id] === 'checked_in'
-                ? 'border border-danger-border bg-danger-bg text-danger-text'
-                : currentShift
-                  ? 'border border-success-border bg-success-bg text-success-text'
-                  : 'border border-border bg-surface-elevated text-text-secondary'
-            }`}
-          >
-            {currentShift && checkInStatus[currentShift.id] === 'checked_in'
-              ? '✓ Check Out – End Shift'
-              : currentShift
-                ? 'Check In – Start Shift'
-                : 'No Active Shift'}
-          </button>
-
-          <div className="guard-sticky-action-row">
-            <button
-              type="button"
-              onClick={() => {
-                setIncidentStatus('')
-                setIncidentModalOpen(true)
-              }}
-              className="min-h-11 rounded-lg border border-danger-border bg-danger-bg px-4 py-2.5 text-sm font-bold text-danger-text"
-            >
-              Report Incident
-            </button>
-            <button
-              type="button"
-              onClick={() => setInstructionsOpen(true)}
-              className="min-h-11 rounded-lg border border-info-border bg-info-bg px-4 py-2.5 text-sm font-bold text-info-text"
-            >
-              View Instructions
-            </button>
-          </div>
-
+        <EmergencyContactsBar />
+        <section className="guard-sticky-inner" aria-label="Guard primary navigation">
           <nav aria-label="Guard primary navigation">
             <ul className="guard-sticky-nav">
               {navItems.map((item) => {
-                const isProfile = item.key === 'profile'
-                const isActive = !isProfile && activeSection === item.key
+                const isActive = activeSection === item.key
                 const isDisabled = false
 
                 return (
                   <li key={item.key}>
                     <button
                       type="button"
-                      ref={isProfile ? profileTriggerRef : undefined}
                       disabled={isDisabled}
-                      onClick={() => {
-                        if (item.key === 'profile') {
-                          setProfileModalOpen(true)
-                          return
-                        }
-                        setActiveSection(item.key)
-                      }}
+                      onClick={() => setActiveSection(item.key)}
                       className={`min-h-11 w-full rounded-md px-2 py-2 text-xs font-semibold transition-colors outline outline-offset-[-2px] outline-transparent ${
                         isActive
                           ? 'bg-info text-white forced-colors:text-[ButtonText] forced-colors:outline forced-colors:outline-2 forced-colors:outline-[Highlight]'
@@ -1212,6 +1187,8 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
           </nav>
         </section>
       </div>
+
+      <PanicButton userId={user.id} />
 
       {profileModalOpen ? (
         <div className="fixed inset-0 z-[var(--z-overlay)] flex items-center justify-center bg-black/50 p-4" role="presentation">
@@ -1234,7 +1211,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
       ) : null}
 
       {instructionsOpen ? (
-        <div className="fixed inset-0 z-[var(--z-overlay)] flex items-end justify-center bg-black/40 p-4 sm:items-center" role="presentation">
+        <div className="fixed inset-0 z-[var(--z-overlay)] flex items-end justify-center bg-black/40 p-4 sm:items-center" role="presentation" onKeyDown={(e) => { if (e.key === 'Escape') setInstructionsOpen(false) }}>
           <section
             role="dialog"
             aria-modal="true"
@@ -1250,9 +1227,12 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
               <li>Check out only after formal handoff or shift completion.</li>
             </ul>
             <div className="mt-4 rounded-lg border border-border-subtle bg-surface-elevated p-3 text-sm text-text-secondary">
-              Operations Desk: +63 912 345 6789
-              <br />
-              Site Supervisor: +63 901 234 5678
+              {EMERGENCY_CONTACTS.filter((c) => c.role === 'operations' || c.role === 'supervisor').map((c, i) => (
+                <span key={c.role}>
+                  {i > 0 && <br />}
+                  {c.label}: <a href={phoneToTelHref(c.phone)} className="underline">{c.phone}</a>
+                </span>
+              ))}
             </div>
             <button
               type="button"
@@ -1267,7 +1247,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
       ) : null}
 
       {incidentModalOpen ? (
-        <div className="fixed inset-0 z-[var(--z-overlay)] flex items-end justify-center bg-black/50 p-4 sm:items-center" role="presentation">
+        <div className="fixed inset-0 z-[var(--z-overlay)] flex items-end justify-center bg-black/50 p-4 sm:items-center" role="presentation" onKeyDown={(e) => { if (e.key === 'Escape') setIncidentModalOpen(false) }}>
           <section
             role="dialog"
             aria-modal="true"
@@ -1276,26 +1256,14 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
           >
             <h2 id="incident-report-title" className="text-xl font-bold text-text-primary">Report Incident</h2>
             <form className="mt-3 space-y-3" onSubmit={handleIncidentSubmit}>
-              <label className="block text-sm font-semibold text-text-secondary" htmlFor="incident-title">Title</label>
-              <input
-                id="incident-title"
-                type="text"
+              <label className="block text-sm font-semibold text-text-secondary" htmlFor="incident-description">What happened?</label>
+              <textarea
+                id="incident-description"
                 autoFocus
-                value={incidentForm.title}
-                onChange={(event) => setIncidentForm((previous) => ({ ...previous, title: event.target.value }))}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-text-primary"
-                placeholder="Short incident summary"
-                required
-              />
-
-              <label className="block text-sm font-semibold text-text-secondary" htmlFor="incident-location">Location</label>
-              <input
-                id="incident-location"
-                type="text"
-                value={incidentForm.location}
-                onChange={(event) => setIncidentForm((previous) => ({ ...previous, location: event.target.value }))}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-text-primary"
-                placeholder="Site or area"
+                value={incidentForm.description}
+                onChange={(event) => setIncidentForm((previous) => ({ ...previous, description: event.target.value }))}
+                className="min-h-32 w-full rounded-lg border border-border bg-background px-3 py-2 text-text-primary"
+                placeholder="Describe the situation"
                 required
               />
 
@@ -1312,15 +1280,12 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                 <option value="low">Low</option>
               </select>
 
-              <label className="block text-sm font-semibold text-text-secondary" htmlFor="incident-description">Description</label>
-              <textarea
-                id="incident-description"
-                value={incidentForm.description}
-                onChange={(event) => setIncidentForm((previous) => ({ ...previous, description: event.target.value }))}
-                className="min-h-32 w-full rounded-lg border border-border bg-background px-3 py-2 text-text-primary"
-                placeholder="Describe what happened"
-                required
-              />
+              <p className="flex items-center gap-1 text-xs text-text-secondary" aria-live="polite">
+                <span aria-hidden="true">{"\uD83D\uDCCD"}</span>
+                {lastKnownLocation
+                  ? `Location: ${lastKnownLocation.latitude.toFixed(4)}, ${lastKnownLocation.longitude.toFixed(4)} \u2713`
+                  : 'Getting your location\u2026'}
+              </p>
 
               {incidentStatus ? <p className="text-sm text-text-secondary">{incidentStatus}</p> : null}
 
@@ -1330,7 +1295,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                   disabled={incidentSubmitting}
                   className="min-h-11 rounded-md border border-danger-border bg-danger-bg px-4 py-2 text-sm font-semibold text-danger-text"
                 >
-                  {incidentSubmitting ? 'Submitting...' : 'Submit Incident'}
+                  {incidentSubmitting ? 'Submitting...' : 'Submit Report'}
                 </button>
                 <button
                   type="button"

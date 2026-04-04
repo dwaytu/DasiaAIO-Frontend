@@ -1,145 +1,95 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test'
 
-test.describe('Inbox Feature', () => {
-  // Mock all API calls to prevent backend dependency
+const BASE_URL = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:5173/'
+
+function installSession(page: Page, user: Record<string, unknown>) {
+  return page.addInitScript((payload) => {
+    localStorage.setItem('token', 'test-token')
+    localStorage.setItem('user', JSON.stringify(payload))
+    localStorage.setItem('dasi.toa.accepted.v1', 'accepted')
+    localStorage.setItem('dasi.locationConsent.v1', 'accepted')
+  }, user)
+}
+
+test.describe('Shell Header Actions', () => {
   test.beforeEach(async ({ page }) => {
-    await page.route('**/api/**', (route) =>
-      route.fulfill({
+    await page.route('**/api/**', async (route) => {
+      const url = route.request().url()
+
+      if (url.includes('/guard-replacement/guard/') && url.includes('/shifts')) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            shifts: [
+              {
+                id: 'shift-1',
+                client_site: 'North Gate',
+                start_time: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+                end_time: new Date(Date.now() + 10 * 60 * 60 * 1000).toISOString(),
+                status: 'active',
+              },
+            ],
+          }),
+        })
+        return
+      }
+
+      if (url.includes('/users/') && url.includes('/notifications')) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            notifications: [
+              {
+                id: 'notif-1',
+                title: 'Relief update',
+                message: 'Relief guard confirmed for North Gate.',
+                type: 'shift',
+                created_at: new Date().toISOString(),
+                is_read: false,
+              },
+            ],
+            unreadCount: 1,
+          }),
+        })
+        return
+      }
+
+      await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify([]),
       })
-    );
-  });
+    })
+  })
 
-  test('guard sees Inbox tab in bottom navigation', async ({ page }) => {
-    await page.addInitScript(() => {
-      localStorage.setItem('token', 'test-token');
-      localStorage.setItem(
-        'user',
-        JSON.stringify({
-          id: 'u1',
-          email: 'guard@test.com',
-          username: 'guard@test.com',
-          role: 'guard',
-          fullName: 'Test Guard',
-          legalConsentAccepted: true,
-        })
-      );
-    });
+  test('admin sidebar is trimmed and header actions open quick inbox and settings', async ({ page }) => {
+    await installSession(page, {
+      id: 'u2',
+      email: 'admin@test.com',
+      username: 'admin@test.com',
+      role: 'admin',
+      fullName: 'Test Admin',
+      legalConsentAccepted: true,
+    })
 
-    await page.goto('http://127.0.0.1:5173/');
-    await page.waitForLoadState('networkidle');
+    await page.goto(BASE_URL)
+    await page.waitForLoadState('networkidle')
 
-    // Guard dashboard renders tabs at bottom; look for Inbox tab button
-    const inboxButton = page.getByRole('button', { name: /inbox/i });
-    const count = await inboxButton.count();
+    const sidebarNav = page.getByRole('navigation').first()
+    await expect(sidebarNav.getByRole('button', { name: 'Dashboard', exact: true })).toBeVisible()
+    await expect(sidebarNav.getByRole('button', { name: 'Inbox', exact: true })).toHaveCount(0)
+    await expect(sidebarNav.getByRole('button', { name: 'Settings', exact: true })).toHaveCount(0)
 
-    if (count === 0) {
-      // Debug: check if there's any nav area with text
-      test.skip(
-        true,
-        'Inbox tab not found in guard dashboard bottom nav. This may indicate the guard role view is not rendering as expected.'
-      );
-    } else {
-      await expect(inboxButton.first()).toBeVisible();
-    }
-  });
+    await page.getByRole('button', { name: /open quick inbox/i }).click()
+    const quickInbox = page.getByRole('dialog', { name: /quick inbox/i })
+    await expect(quickInbox).toBeVisible()
+    await expect(quickInbox).toContainText(/pending guard approval|relief update|quick inbox/i)
 
-  test('admin sees Inbox in sidebar navigation', async ({ page }) => {
-    await page.addInitScript(() => {
-      localStorage.setItem('token', 'test-token');
-      localStorage.setItem(
-        'user',
-        JSON.stringify({
-          id: 'u2',
-          email: 'admin@test.com',
-          username: 'admin@test.com',
-          role: 'admin',
-          fullName: 'Test Admin',
-          legalConsentAccepted: true,
-        })
-      );
-    });
-
-    await page.goto('http://127.0.0.1:5173/');
-    await page.waitForLoadState('networkidle');
-
-    // Elevated roles render sidebar with navigation items
-    const inboxNavItem = page
-      .locator('nav, aside, [role="navigation"]')
-      .filter({ hasText: /inbox/i })
-      .first();
-    const visible = await inboxNavItem.isVisible().catch(() => false);
-
-    if (!visible) {
-      test.skip(true, 'Inbox navigation item not visible for admin role');
-    } else {
-      await expect(inboxNavItem).toBeVisible();
-    }
-  });
-
-  test('supervisor sees Inbox in sidebar navigation', async ({ page }) => {
-    await page.addInitScript(() => {
-      localStorage.setItem('token', 'test-token');
-      localStorage.setItem(
-        'user',
-        JSON.stringify({
-          id: 'u3',
-          email: 'supervisor@test.com',
-          username: 'supervisor@test.com',
-          role: 'supervisor',
-          fullName: 'Test Supervisor',
-          legalConsentAccepted: true,
-        })
-      );
-    });
-
-    await page.goto('http://127.0.0.1:5173/');
-    await page.waitForLoadState('networkidle');
-
-    const inboxNavItem = page
-      .locator('nav, aside, [role="navigation"]')
-      .filter({ hasText: /inbox/i })
-      .first();
-    const visible = await inboxNavItem.isVisible().catch(() => false);
-
-    if (!visible) {
-      test.skip(true, 'Inbox navigation item not visible for supervisor role');
-    } else {
-      await expect(inboxNavItem).toBeVisible();
-    }
-  });
-
-  test('superadmin sees Inbox in sidebar navigation', async ({ page }) => {
-    await page.addInitScript(() => {
-      localStorage.setItem('token', 'test-token');
-      localStorage.setItem(
-        'user',
-        JSON.stringify({
-          id: 'u4',
-          email: 'superadmin@test.com',
-          username: 'superadmin@test.com',
-          role: 'superadmin',
-          fullName: 'Test Superadmin',
-          legalConsentAccepted: true,
-        })
-      );
-    });
-
-    await page.goto('http://127.0.0.1:5173/');
-    await page.waitForLoadState('networkidle');
-
-    const inboxNavItem = page
-      .locator('nav, aside, [role="navigation"]')
-      .filter({ hasText: /inbox/i })
-      .first();
-    const visible = await inboxNavItem.isVisible().catch(() => false);
-
-    if (!visible) {
-      test.skip(true, 'Inbox navigation item not visible for superadmin role');
-    } else {
-      await expect(inboxNavItem).toBeVisible();
-    }
-  });
-});
+    await page.getByRole('button', { name: /open settings/i }).click()
+    const settingsDialog = page.getByRole('dialog', { name: /settings/i })
+    await expect(settingsDialog).toBeVisible()
+    await expect(settingsDialog.getByRole('heading', { name: /admin settings|superadmin settings/i }).first()).toBeVisible()
+  })
+})

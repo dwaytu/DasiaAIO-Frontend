@@ -1,7 +1,7 @@
-import { useState, useEffect, FC, FormEvent, ChangeEvent } from 'react'
+import { useState, FC, FormEvent, ChangeEvent } from 'react'
 import SentinelLogo from './SentinelLogo'
 import ParticleBackground from './ParticleBackground'
-import { User } from '../App'
+import type { User } from '../context/AuthContext'
 import { API_BASE_URL } from '../config'
 import { parseResponseBody, storeAuthSession } from '../utils/api'
 
@@ -17,51 +17,11 @@ function isStrongPassword(password: string): boolean {
   return /[^A-Za-z0-9]/.test(password)
 }
 
-// Format phone number to +63-###-###-####
-function formatPhoneNumber(value: string): string {
-  // Remove all non-digits
-  let cleaned = value.replace(/\D/g, '')
-  
-  // If it starts with 0, replace with 63
-  if (cleaned.startsWith('0')) {
-    cleaned = '63' + cleaned.slice(1)
-  }
-  
-  // Ensure it starts with 63
-  if (!cleaned.startsWith('63')) {
-    cleaned = '63' + cleaned
-  }
-  
-  // Limit to 12 digits (63 + 10 digits)
-  cleaned = cleaned.slice(0, 12)
-  
-  // Format as +63-###-###-####
-  if (cleaned.length <= 2) {
-    return '+' + cleaned
-  } else if (cleaned.length <= 5) {
-    return '+' + cleaned.slice(0, 2) + '-' + cleaned.slice(2)
-  } else if (cleaned.length <= 8) {
-    return '+' + cleaned.slice(0, 2) + '-' + cleaned.slice(2, 5) + '-' + cleaned.slice(5)
-  } else {
-    return '+' + cleaned.slice(0, 2) + '-' + cleaned.slice(2, 5) + '-' + cleaned.slice(5, 8) + '-' + cleaned.slice(8)
-  }
-}
-
 const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
   const [identifier, setIdentifier] = useState<string>('')
   const [password, setPassword] = useState<string>('')
-  const [username, setUsername] = useState<string>('')
-  const [fullName, setFullName] = useState<string>('')
-  const [email, setEmail] = useState<string>('')
-  const [phoneNumber, setPhoneNumber] = useState<string>('')
-  const [licenseNumber, setLicenseNumber] = useState<string>('')
-  const [licenseIssuedDate, setLicenseIssuedDate] = useState<string>('')
-  const [licenseExpiryDate, setLicenseExpiryDate] = useState<string>('')
-  const [address, setAddress] = useState<string>('')
-  const [role, setRole] = useState<string>('guard')
   const [error, setError] = useState<string>('')
   const [isLoading, setIsLoading] = useState<boolean>(false)
-  const [isRegistering, setIsRegistering] = useState<boolean>(false)
   const [requiresVerification, setRequiresVerification] = useState<boolean>(false)
   const [verificationCode, setVerificationCode] = useState<string>('')
   const [verificationEmail, setVerificationEmail] = useState<string>('')
@@ -70,18 +30,6 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
   const [resetCode, setResetCode] = useState<string>('')
   const [newPassword, setNewPassword] = useState<string>('')
   const [confirmPassword, setConfirmPassword] = useState<string>('')
-  const [monitoringNodes, setMonitoringNodes] = useState<number>(48)
-
-  useEffect(() => {
-    const values = [48, 49, 48]
-    let idx = 0
-    const ticker = window.setInterval(() => {
-      idx = (idx + 1) % values.length
-      setMonitoringNodes(values[idx])
-    }, 7000)
-
-    return () => window.clearInterval(ticker)
-  }, [])
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -118,127 +66,43 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
         return
       }
 
-      if (isRegistering) {
-        if (!email || !password || !username || !role) {
-          setError('All fields are required')
-          setIsLoading(false)
-          return
-        }
-
-        if (!fullName || !phoneNumber) {
-          setError('Full name and phone number are required')
-          setIsLoading(false)
-          return
-        }
-
-        if (!licenseNumber || !licenseIssuedDate || !licenseExpiryDate) {
-          setError('License number, issued date, and expiry date are required for guard registration')
-          setIsLoading(false)
-          return
-        }
-
-        if (!email.endsWith('@gmail.com')) {
-          setError('You must use a Gmail account (email must end with @gmail.com)')
-          setIsLoading(false)
-          return
-        }
-
-        if (!isStrongPassword(password)) {
-          setError('Password must be at least 12 characters and include uppercase, lowercase, number, and special character')
-          setIsLoading(false)
-          return
-        }
-
-        const requestBody: any = { 
-          email, 
-          password, 
-          username, 
-          role,
-          fullName,
-          phoneNumber
-        }
-
-        requestBody.licenseNumber = licenseNumber
-        requestBody.licenseIssuedDate = licenseIssuedDate
-        requestBody.licenseExpiryDate = licenseExpiryDate
-        requestBody.address = address
-        
-        const response = await fetch(`${API_BASE_URL}/api/register`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(requestBody)
-        })
-
-        const data = await parseResponseBody(response)
-
-        if (!response.ok) {
-          setError(data.error || data.message || 'Registration failed')
-          setIsLoading(false)
-          return
-        }
-
-        if (data.requiresVerification) {
-          setRequiresVerification(true)
-          setVerificationEmail(email)
-          setError('Check your Gmail for the confirmation code!')
-          setIdentifier('')
-          setEmail('')
-          setPassword('')
-          setUsername('')
-          setFullName('')
-          setPhoneNumber('')
-          setLicenseNumber('')
-          setLicenseIssuedDate('')
-          setLicenseExpiryDate('')
-          setAddress('')
-          setIsLoading(false)
-          return
-        }
-
-        setIsRegistering(false)
-        setPassword('')
-        setError('Registration successful! Please login.')
+      if (!identifier || !password) {
+        setError('Email, username, phone number, and password are required')
         setIsLoading(false)
         return
-      } else {
-        if (!identifier || !password) {
-          setError('Email, username, phone number, and password are required')
-          setIsLoading(false)
-          return
-        }
-
-        const response = await fetch(`${API_BASE_URL}/api/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ identifier, password })
-        })
-
-        const data = await parseResponseBody(response)
-
-        if (!response.ok) {
-          if (data.requiresVerification) {
-            setRequiresVerification(true)
-            setVerificationEmail(email)
-            setError('Please verify your email first. Check your Gmail for the confirmation code.')
-            setPassword('')
-            setIsLoading(false)
-            return
-          }
-          setError(data.error || 'Login failed')
-          setIsLoading(false)
-          return
-        }
-
-        setIsLoading(false)
-        const user: User = {
-          ...data.user,
-          role: data.user.role as 'superadmin' | 'admin' | 'supervisor' | 'guard' | 'user'
-        }
-        if (data.token) {
-          storeAuthSession(data.token, data.refreshToken)
-        }
-        onLogin(user)
       }
+
+      const response = await fetch(`${API_BASE_URL}/api/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identifier, password })
+      })
+
+      const data = await parseResponseBody(response)
+
+      if (!response.ok) {
+        if (data.requiresVerification) {
+          setRequiresVerification(true)
+          setVerificationEmail(identifier)
+          setError('Please verify your email first. Check your email for the confirmation code.')
+          setPassword('')
+          setIsLoading(false)
+          return
+        }
+        setError(data.error || 'Login failed')
+        setIsLoading(false)
+        return
+      }
+
+      setIsLoading(false)
+      const user: User = {
+        ...data.user,
+        role: data.user.role as 'superadmin' | 'admin' | 'supervisor' | 'guard' | 'user'
+      }
+      if (data.token) {
+        storeAuthSession(data.token, data.refreshToken)
+      }
+      onLogin(user)
     } catch (err) {
       setError('Error: ' + (err instanceof Error ? err.message : String(err)))
       setIsLoading(false)
@@ -540,87 +404,11 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
                 setVerificationCode('')
                 setVerificationEmail('')
                 setError('')
-                setIsRegistering(false)
                 setIdentifier('')
               }}
               disabled={isLoading}
             >
               Back to Login
-            </button>
-          </div>
-        </>
-      ) : isRegistering ? (
-        <>
-          <div>
-            <label htmlFor="username" className={`${labelClass} text-text-secondary`}>Username</label>
-            <input id="username" type="text" value={username} onChange={(e: ChangeEvent<HTMLInputElement>) => setUsername(e.target.value)} placeholder="Enter your username" disabled={isLoading} className={inputClass} />
-          </div>
-
-          <div>
-            <label htmlFor="fullName" className={`${labelClass} text-text-secondary`}>Full Name</label>
-            <input id="fullName" type="text" value={fullName} onChange={(e: ChangeEvent<HTMLInputElement>) => setFullName(e.target.value)} placeholder="Enter your full name" disabled={isLoading} className={inputClass} />
-          </div>
-
-          <div>
-            <label htmlFor="phoneNumber" className={`${labelClass} text-text-secondary`}>Phone Number</label>
-            <input id="phoneNumber" type="text" value={phoneNumber} onChange={(e: ChangeEvent<HTMLInputElement>) => setPhoneNumber(formatPhoneNumber(e.target.value))} placeholder="+63-###-###-####" disabled={isLoading} className={inputClass} />
-          </div>
-
-          <>
-            <div>
-              <label htmlFor="licenseNumber" className={`${labelClass} text-text-secondary`}>License Number</label>
-              <input id="licenseNumber" type="text" value={licenseNumber} onChange={(e: ChangeEvent<HTMLInputElement>) => setLicenseNumber(e.target.value)} placeholder="Enter your license number" disabled={isLoading} className={inputClass} />
-            </div>
-
-            <div>
-              <label htmlFor="licenseIssuedDate" className={`${labelClass} text-text-secondary`}>License Issued Date</label>
-              <input id="licenseIssuedDate" type="date" value={licenseIssuedDate} onChange={(e: ChangeEvent<HTMLInputElement>) => setLicenseIssuedDate(e.target.value)} disabled={isLoading} className={inputClass} />
-            </div>
-
-            <div>
-              <label htmlFor="licenseExpiryDate" className={`${labelClass} text-text-secondary`}>License Expiry Date</label>
-              <input id="licenseExpiryDate" type="date" value={licenseExpiryDate} onChange={(e: ChangeEvent<HTMLInputElement>) => setLicenseExpiryDate(e.target.value)} disabled={isLoading} className={inputClass} />
-            </div>
-
-            <div>
-              <label htmlFor="address" className={`${labelClass} text-text-secondary`}>Full Address</label>
-              <textarea id="address" value={address} onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setAddress(e.target.value)} placeholder="Enter your complete address" disabled={isLoading} rows={2} className={inputClass} />
-            </div>
-          </>
-
-          <div>
-            <label htmlFor="email" className={`${labelClass} text-text-secondary`}>Email</label>
-            <input id="email" type="email" value={email} onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)} placeholder="Enter your email" disabled={isLoading} className={inputClass} />
-          </div>
-
-          <div>
-            <label htmlFor="password" className={`${labelClass} text-text-secondary`}>Password</label>
-            <input id="password" type="password" value={password} onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)} placeholder="Enter your password" disabled={isLoading} className={inputClass} />
-          </div>
-
-          <div>
-            <label htmlFor="role" className={`${labelClass} text-text-secondary`}>Account Type</label>
-            <select id="role" value={role} onChange={(e: ChangeEvent<HTMLSelectElement>) => setRole(e.target.value)} disabled={isLoading} className={`${inputClass} cursor-pointer`}>
-              <option value="guard">Guard</option>
-            </select>
-            <p className="text-xs mt-2 text-text-secondary">
-              Admin and supervisor accounts are created internally.
-            </p>
-          </div>
-
-          {error && (
-            <div className={`p-3 rounded-lg text-sm border ${error.includes('successful') ? 'soc-auth-alert-success' : 'soc-auth-alert-error'}`}>
-              {error}
-            </div>
-          )}
-
-          <button type="submit" disabled={isLoading} className="soc-btn-primary w-full font-bold py-3 rounded-lg transition-all disabled:opacity-50">
-            {isLoading ? 'Processing...' : 'Create Account'}
-          </button>
-
-          <div className="text-center">
-            <button type="button" className="soc-link-button font-semibold transition-colors disabled:opacity-40 text-sm" onClick={() => { setIsRegistering(false); setError(''); setPassword(''); setIdentifier('') }} disabled={isLoading}>
-              Already have an account? Login
             </button>
           </div>
         </>
@@ -646,11 +434,11 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
             {isLoading ? 'Processing...' : 'Login'}
           </button>
 
-          <div className="text-center">
-            <button type="button" className="soc-link-button font-semibold transition-colors disabled:opacity-40 text-sm" onClick={() => { setIsRegistering(true); setError(''); setPassword(''); setIdentifier('') }} disabled={isLoading}>
-              Don't have an account? Register
-            </button>
-          </div>
+          <p className="text-sm text-text-secondary text-center">
+            Need an account?{' '}
+            <span className="text-accent-primary">Contact your administrator</span>
+            {' '}for access.
+          </p>
 
           <div className="text-center">
             <button
@@ -679,8 +467,8 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
       <div className="relative min-h-screen overflow-hidden">
         <div className="login-atmosphere pointer-events-none absolute inset-0" aria-hidden="true" />
 
-        <div className="pointer-events-none absolute inset-0 opacity-70" aria-hidden="true">
-          <ParticleBackground particleCount={65} color="56, 189, 248" connectDistance={120} mouseRadius={120} />
+        <div className="pointer-events-none absolute inset-0 opacity-70 hidden lg:block" aria-hidden="true">
+          <ParticleBackground particleCount={30} color="56, 189, 248" connectDistance={120} mouseRadius={120} />
         </div>
 
         <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
@@ -694,7 +482,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
                 <SentinelLogo size={62} variant="FullLogo" animated />
               </div>
 
-              {!requiresVerification && !isRegistering && (
+              {!requiresVerification && (
                 <div className="mb-6 text-center">
                   <h1 id="auth-title" className="text-3xl font-bold uppercase tracking-wide text-text-primary">Mission Access Terminal</h1>
                   <p className="mt-2 text-sm font-medium text-text-secondary">Authenticate to enter SENTINEL command operations.</p>
@@ -708,13 +496,6 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
                 </div>
               )}
 
-              {isRegistering && !requiresVerification && (
-                <div className="mb-6 text-center">
-                  <h1 id="auth-title" className="text-3xl font-bold uppercase tracking-wide text-text-primary">Register Guard Profile</h1>
-                  <p className="mt-2 text-sm font-medium text-text-secondary">Provide operator details for approval workflow.</p>
-                </div>
-              )}
-
               {renderForm()}
             </section>
           </main>
@@ -725,63 +506,6 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
               <p className="mt-5 max-w-md text-sm text-text-secondary">
                 Real-time protection platform for mission planning, personnel readiness, and critical asset oversight.
               </p>
-            </div>
-
-            <div className="space-y-4">
-              <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-text-tertiary">System Status</h2>
-              <div className="grid gap-3">
-                {[
-                  {
-                    label: 'System Status',
-                    value: 'Operational',
-                    tone: 'success',
-                    icon: (
-                      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                        <path d="M12 3l7 3v6c0 5-3.4 8.9-7 10-3.6-1.1-7-5-7-10V6l7-3z" />
-                        <path d="M9.5 12.5l1.7 1.7 3.3-3.3" />
-                      </svg>
-                    ),
-                    live: true,
-                  },
-                  {
-                    label: 'Network',
-                    value: 'Secure Link',
-                    tone: 'info',
-                    icon: (
-                      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                        <circle cx="5" cy="12" r="2" />
-                        <circle cx="12" cy="6" r="2" />
-                        <circle cx="19" cy="12" r="2" />
-                        <path d="M7 11l3.5-3M13.5 8l3.5 3M7 13l3.5 3M13.5 16l3.5-3" />
-                      </svg>
-                    ),
-                  },
-                  {
-                    label: 'Monitoring Nodes',
-                    value: `Active: ${monitoringNodes}`,
-                    tone: 'warning',
-                    icon: (
-                      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                        <circle cx="12" cy="12" r="2" />
-                        <path d="M4.5 12a7.5 7.5 0 0115 0" />
-                        <path d="M2 12a10 10 0 0120 0" />
-                      </svg>
-                    ),
-                    ticker: true,
-                  },
-                ].map((item) => (
-                  <div key={item.label} className={`status-live-card ${item.tone === 'success' ? 'status-bar-success' : item.tone === 'warning' ? 'status-bar-warning' : item.tone === 'danger' ? 'status-bar-critical' : 'status-bar-info'}`}>
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-text-secondary">{item.icon}</span>
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-tertiary">{item.label}</p>
-                      </div>
-                      <span className={`status-light ${item.tone === 'success' ? 'status-light-success' : item.tone === 'warning' ? 'status-light-warning' : item.tone === 'danger' ? 'status-light-danger' : 'status-light-info'} ${item.live ? 'status-light-pulse' : ''}`} aria-hidden="true" />
-                    </div>
-                    <p className="mt-2 text-lg font-bold text-text-primary" aria-live={item.ticker ? 'polite' : undefined}>{item.value}</p>
-                  </div>
-                ))}
-              </div>
             </div>
 
             <p className="text-xs font-medium uppercase tracking-[0.16em] text-text-tertiary">Davao Security & Investigation Agency</p>

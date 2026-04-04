@@ -2,7 +2,7 @@ import { useState, useEffect, FC } from 'react'
 import { API_BASE_URL } from '../config'
 import Sidebar from './Sidebar'
 import Header from './Header'
-import { User } from '../App'
+import type { User } from '../context/AuthContext'
 import { getSidebarNav } from '../config/navigation'
 import { logError } from '../utils/logger'
 import { getAuthHeaders } from '../utils/api'
@@ -269,6 +269,9 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
           onLogout={onLogout}
           onMenuClick={() => setMobileMenuOpen(true)}
           user={user}
+          currentView={currentView}
+          onNavigateToInbox={() => onViewChange?.('inbox')}
+          onNavigateToSettings={() => onViewChange?.('settings')}
           onNavigateToProfile={() => onViewChange?.('profile')}
         />
 

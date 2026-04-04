@@ -98,7 +98,7 @@ const Sidebar: FC<SidebarProps> = ({ items, activeView, onNavigate, onLogout, on
       {/* Mobile overlay */}
       {isOpen && onClose && (
         <div
-          className="fixed inset-0 z-[44] bg-black/50 transition-opacity lg:hidden"
+          className="fixed inset-0 z-[var(--z-drawer-backdrop)] bg-black/50 transition-opacity lg:hidden"
           onClick={onClose}
           aria-hidden="true"
         />
@@ -106,12 +106,12 @@ const Sidebar: FC<SidebarProps> = ({ items, activeView, onNavigate, onLogout, on
       
       {/* Sidebar */}
       <aside className={`
-        fixed inset-y-0 left-0 z-[48]
+        fixed inset-y-0 left-0 z-[var(--z-drawer)]
         w-72 flex flex-col overflow-y-auto shadow-2xl soc-sidebar-shell
         transform transition-transform duration-200 ease-out
         lg:transform-none
         ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-      `} ref={asideRef}>
+      `} ref={asideRef} style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
         {/* Top accent line */}
         <div className="h-1 w-full soc-sidebar-accent" />
 

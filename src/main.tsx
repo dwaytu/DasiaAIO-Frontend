@@ -5,13 +5,20 @@ import './index.css'
 import 'leaflet/dist/leaflet.css'
 import { ThemeProvider } from './context/ThemeProvider'
 import { applyPlatformDomAttributes } from './utils/platform'
+import { disableServiceWorkerInDevelopment } from './utils/pushNotifications'
 
 applyPlatformDomAttributes()
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <ThemeProvider>
-      <App />
-    </ThemeProvider>
-  </React.StrictMode>,
-)
+async function bootstrap() {
+  await disableServiceWorkerInDevelopment()
+
+  ReactDOM.createRoot(document.getElementById('root')!).render(
+    <React.StrictMode>
+      <ThemeProvider>
+        <App />
+      </ThemeProvider>
+    </React.StrictMode>,
+  )
+}
+
+void bootstrap()

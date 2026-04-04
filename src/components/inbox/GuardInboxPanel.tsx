@@ -3,6 +3,7 @@ import { ActionInbox, type InboxItem } from './ActionInbox';
 import { WorkflowTimeline, type TimelineEntry } from './WorkflowTimeline';
 import { fetchJsonOrThrow, getAuthHeaders } from '../../utils/api';
 import { API_BASE_URL } from '../../config';
+import { fetchSwapRequestsFeed, type SwapRequestsFeedResult } from '../../utils/swapRequests';
 
 // ── API response shapes ──────────────────────────────────────────────────────
 
@@ -28,6 +29,27 @@ interface SwapRequest {
   created_at: string;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function normalizeSwapRequest(value: unknown): SwapRequest | null {
+  if (!isRecord(value) || typeof value.id !== 'string' || typeof value.status !== 'string') {
+    return null;
+  }
+
+  const createdAt = typeof value.created_at === 'string' ? value.created_at : value.createdAt;
+  if (typeof createdAt !== 'string') {
+    return null;
+  }
+
+  return {
+    id: value.id,
+    status: value.status,
+    created_at: createdAt,
+  };
+}
+
 // ── Props ────────────────────────────────────────────────────────────────────
 
 export interface GuardInboxPanelProps {
@@ -42,10 +64,6 @@ function isShiftArray(data: unknown): data is ShiftItem[] {
 }
 
 function isNotificationArray(data: unknown): data is NotificationItem[] {
-  return Array.isArray(data);
-}
-
-function isSwapRequestArray(data: unknown): data is SwapRequest[] {
   return Array.isArray(data);
 }
 
@@ -137,6 +155,7 @@ export const GuardInboxPanel: React.FC<GuardInboxPanelProps> = ({ userId, onActi
   const [allFailed, setAllFailed] = useState(false);
   const [loadError, setLoadError] = useState('');
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [swapFeedNotice, setSwapFeedNotice] = useState('');
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -165,9 +184,7 @@ export const GuardInboxPanel: React.FC<GuardInboxPanelProps> = ({ userId, onActi
           fetchJsonOrThrow(`${API_BASE_URL}/api/users/${encodeURIComponent(userId)}/notifications`, { headers }, 'Unable to load notifications.').then(
             (r) => r as unknown,
           ),
-          fetchJsonOrThrow(`${API_BASE_URL}/api/shifts/swap-requests`, { headers }, 'Unable to load shift swap requests.').then(
-            (r) => r as unknown,
-          ),
+          fetchSwapRequestsFeed(headers),
         ]);
 
       if (cancelled) return;
@@ -181,14 +198,26 @@ export const GuardInboxPanel: React.FC<GuardInboxPanelProps> = ({ userId, onActi
         isNotificationArray(notificationsResult.value)
           ? notificationsResult.value
           : [];
-      const swapRequests =
-        swapRequestsResult.status === 'fulfilled' && isSwapRequestArray(swapRequestsResult.value)
-          ? swapRequestsResult.value
-          : [];
+      const swapFeed = swapRequestsResult.status === 'fulfilled'
+        ? swapRequestsResult.value as SwapRequestsFeedResult
+        : null;
+      const swapRequests = swapFeed
+        ? swapFeed.swapRequests.map(normalizeSwapRequest).filter((swap): swap is SwapRequest => swap !== null)
+        : [];
 
-      const fulfilledCount = [shiftsResult, notificationsResult, swapRequestsResult].filter(
-        (r) => r.status === 'fulfilled',
-      ).length;
+      if (swapFeed?.feedState === 'unavailable') {
+        setSwapFeedNotice('Shift swap updates are temporarily unavailable. Inbox is showing other mission activity only.');
+      } else if (swapFeed?.feedState === 'stale') {
+        setSwapFeedNotice('Shift swap updates may be out of date right now. Inbox is showing other mission activity only.');
+      } else {
+        setSwapFeedNotice('');
+      }
+
+      const fulfilledCount = [
+        shiftsResult.status === 'fulfilled',
+        notificationsResult.status === 'fulfilled',
+        swapFeed?.feedState === 'ready',
+      ].filter(Boolean).length;
 
       setAllFailed(fulfilledCount === 0);
       if (fulfilledCount === 0) {
@@ -227,6 +256,11 @@ export const GuardInboxPanel: React.FC<GuardInboxPanelProps> = ({ userId, onActi
           {loadError ? (
             <div className="lg:col-span-2 soc-empty-state" role="alert">
               {loadError}
+            </div>
+          ) : null}
+          {swapFeedNotice ? (
+            <div className="lg:col-span-2 rounded-xl border border-warning-border bg-warning-bg p-3 text-sm text-warning-text" role="status" aria-live="polite">
+              {swapFeedNotice}
             </div>
           ) : null}
           <ActionInbox

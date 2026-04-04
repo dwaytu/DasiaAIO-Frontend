@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { User } from '../App'
+import type { User } from '../context/AuthContext'
 import { API_BASE_URL } from '../config'
 import { fetchJsonOrThrow, parseResponseBody, getAuthHeaders } from '../utils/api'
 import { logError } from '../utils/logger'
@@ -347,7 +347,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
       />
 
       <main id="maincontent" tabIndex={-1} className="flex-1 flex min-w-0 min-h-0 flex-col w-full overflow-hidden">
-        <Header title="Armored Car Management" badgeLabel="Armored Cars" onLogout={onLogout} onMenuClick={() => setMobileMenuOpen(true)} user={user} onNavigateToProfile={() => onViewChange('profile')} />
+        <Header title="Armored Car Management" badgeLabel="Armored Cars" onLogout={onLogout} onMenuClick={() => setMobileMenuOpen(true)} user={user} currentView={currentView} onNavigateToInbox={() => onViewChange('inbox')} onNavigateToSettings={() => onViewChange('settings')} onNavigateToProfile={() => onViewChange('profile')} />
 
         {error && (
           <div className="soc-alert-error mx-8 my-4 font-medium flex items-center justify-between">

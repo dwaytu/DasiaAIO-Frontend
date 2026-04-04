@@ -2,7 +2,7 @@ import { useState, useEffect, FC } from 'react'
 import { API_BASE_URL } from '../config'
 import Sidebar from './Sidebar'
 import Header from './Header'
-import { User as AppUser } from '../App'
+import type { User as AppUser } from '../context/AuthContext'
 import { getSidebarNav } from '../config/navigation'
 import { logError } from '../utils/logger'
 import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
@@ -101,7 +101,7 @@ const PerformanceDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeV
       />
 
       <main id="maincontent" tabIndex={-1} className="flex-1 flex min-w-0 min-h-0 flex-col w-full overflow-hidden">
-        <Header title="Performance Dashboard" badgeLabel="Performance" onLogout={onLogout} onMenuClick={() => setMobileMenuOpen(true)} user={user} onNavigateToProfile={() => onViewChange?.('profile')} />
+        <Header title="Performance Dashboard" badgeLabel="Performance" onLogout={onLogout} onMenuClick={() => setMobileMenuOpen(true)} user={user} currentView={currentView} onNavigateToInbox={() => onViewChange?.('inbox')} onNavigateToSettings={() => onViewChange?.('settings')} onNavigateToProfile={() => onViewChange?.('profile')} />
 
         {loading ? (
           <div className="flex-1 flex items-center justify-center text-center">

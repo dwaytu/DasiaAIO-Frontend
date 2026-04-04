@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Bug } from 'lucide-react';
 import { API_BASE_URL } from '../config';
 import { getApiErrorMessage, getAuthHeaders } from '../utils/api';
+import { sanitizeErrorMessage } from '../utils/sanitize';
 
 interface BugReportButtonProps {
   userId: string;
@@ -54,7 +55,7 @@ const BugReportButton: React.FC<BugReportButtonProps> = ({ userId }) => {
         setSuccessMessage('');
       }, 2000);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Failed to submit bug report. Please try again.');
+      setErrorMessage(sanitizeErrorMessage(error instanceof Error ? error.message : 'Failed to submit bug report. Please try again.'));
     } finally {
       setIsSubmitting(false);
     }

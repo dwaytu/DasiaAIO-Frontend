@@ -3,7 +3,7 @@ import EditUserModal from './EditUserModal'
 import EditScheduleModal from './EditScheduleModal'
 import BugReportButton from './BugReportButton'
 import { API_BASE_URL } from '../config'
-import { User as AppUser } from '../App'
+import type { User as AppUser } from '../context/AuthContext'
 import { getSidebarNav } from '../config/navigation'
 import OperationalShell from './layout/OperationalShell'
 import Allowed from './rbac/Allowed'
@@ -541,16 +541,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
         setActiveSection('users')
         onViewChange?.('users')
       }}
-      rightSlot={
-        <button
-          type="button"
-          onClick={handleRefresh}
-          className="hidden min-h-11 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)] md:block"
-          aria-label="Refresh admin dashboard"
-        >
-          Refresh
-        </button>
-      }
+      onRefresh={handleRefresh}
       error={error}
     >
       <div className="animate-fade-in space-y-4">

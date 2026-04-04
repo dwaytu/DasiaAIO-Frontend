@@ -1,5 +1,5 @@
 import { ChangeEvent, FC, useEffect, useRef, useState } from 'react'
-import { User } from '../../App'
+import type { User } from '../../context/AuthContext'
 import { API_BASE_URL } from '../../config'
 import { fetchJsonOrThrow, getAuthHeaders } from '../../utils/api'
 import {

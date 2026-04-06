@@ -4,33 +4,37 @@ import { isElevatedRole, normalizeRole } from '../types/auth'
 export interface NavItem {
   view: string
   label: string
-  group: 'MAIN MENU' | 'OPERATIONS' | 'RESOURCES'
+  group: 'Core' | 'Intelligence' | 'Operations' | 'Resources' | 'Field' | 'System'
   permission?: Permission
 }
 
-const ELEVATED_NAV: NavItem[] = [
-  { view: 'dashboard', label: 'Dashboard', group: 'MAIN MENU' },
-  { view: 'approvals', label: 'Approvals', group: 'MAIN MENU', permission: 'approve_guards' },
-  { view: 'calendar', label: 'Calendar', group: 'MAIN MENU' },
-  { view: 'analytics', label: 'Analytics', group: 'MAIN MENU', permission: 'view_analytics' },
-  { view: 'audit-log', label: 'System Audit Log', group: 'MAIN MENU', permission: 'view_audit_logs' },
-  { view: 'trips', label: 'Trip Management', group: 'OPERATIONS' },
-  { view: 'schedule', label: 'Schedule', group: 'OPERATIONS' },
-  { view: 'missions', label: 'Missions', group: 'OPERATIONS' },
-  { view: 'performance', label: 'Performance', group: 'OPERATIONS' },
-  { view: 'merit', label: 'Merit Scores', group: 'OPERATIONS' },
-  { view: 'firearms', label: 'Firearms', group: 'RESOURCES', permission: 'manage_firearms' },
-  { view: 'allocation', label: 'Allocation', group: 'RESOURCES', permission: 'manage_allocations' },
-  { view: 'permits', label: 'Permits', group: 'RESOURCES', permission: 'manage_permits' },
-  { view: 'maintenance', label: 'Maintenance', group: 'RESOURCES', permission: 'manage_maintenance' },
-  { view: 'armored-cars', label: 'Armored Cars', group: 'RESOURCES', permission: 'manage_armored_cars' },
+const SUPERADMIN_NAV: NavItem[] = [
+  { view: 'dashboard', label: 'Dashboard', group: 'Core' },
+  { view: 'approvals', label: 'Approvals', group: 'Core', permission: 'approve_guards' },
+  { view: 'schedule', label: 'Schedule', group: 'Core' },
+  { view: 'analytics', label: 'Analytics', group: 'Intelligence', permission: 'view_analytics' },
+  { view: 'audit', label: 'Audit', group: 'Intelligence', permission: 'view_audit_logs' },
+  { view: 'firearms', label: 'Firearms', group: 'Resources', permission: 'manage_firearms' },
+  { view: 'armored-cars', label: 'Armored Cars', group: 'Resources', permission: 'manage_armored_cars' },
+  { view: 'settings', label: 'Settings', group: 'System' },
 ]
 
-const GUARD_NAV: NavItem[] = [
-  { view: 'overview', label: 'Mission', group: 'MAIN MENU' },
-  { view: 'resources', label: 'Resources', group: 'MAIN MENU' },
-  { view: 'support', label: 'Support', group: 'MAIN MENU' },
-  { view: 'map', label: 'Map', group: 'MAIN MENU' },
+const ADMIN_NAV: NavItem[] = [
+  { view: 'dashboard', label: 'Dashboard', group: 'Core' },
+  { view: 'approvals', label: 'Approvals', group: 'Core', permission: 'approve_guards' },
+  { view: 'schedule', label: 'Schedule', group: 'Core' },
+  { view: 'allocation', label: 'Allocation', group: 'Operations', permission: 'manage_allocations' },
+  { view: 'firearms', label: 'Firearms', group: 'Resources', permission: 'manage_firearms' },
+  { view: 'armored-cars', label: 'Armored Cars', group: 'Resources', permission: 'manage_armored_cars' },
+  { view: 'maintenance', label: 'Maintenance', group: 'Resources', permission: 'manage_maintenance' },
+]
+
+const SUPERVISOR_NAV: NavItem[] = [
+  { view: 'dashboard', label: 'Dashboard', group: 'Core' },
+  { view: 'schedule', label: 'Schedule', group: 'Core' },
+  { view: 'missions', label: 'Missions', group: 'Field' },
+  { view: 'approvals', label: 'Approvals', group: 'Operations', permission: 'approve_guards' },
+  { view: 'allocation', label: 'Allocation', group: 'Operations', permission: 'manage_allocations' },
 ]
 
 interface NavOptions {
@@ -41,18 +45,14 @@ export function getSidebarNav(roleInput: unknown, options: NavOptions = {}): Nav
   const role = normalizeRole(roleInput)
   const homeView = options.homeView ?? 'dashboard'
 
-  if (!isElevatedRole(role)) {
-    if (homeView === 'dashboard') {
-      return GUARD_NAV
-    }
+  if (!isElevatedRole(role)) return []
 
-    return GUARD_NAV.map((item) => (item.view === 'dashboard' ? { ...item, view: homeView } : item))
-  }
+  const roleNav =
+    role === 'superadmin' ? SUPERADMIN_NAV : role === 'admin' ? ADMIN_NAV : SUPERVISOR_NAV
 
-  const roleFiltered = ELEVATED_NAV.filter((item) => !item.permission || can(role, item.permission))
-  if (homeView === 'dashboard') {
-    return roleFiltered
-  }
+  const filtered = roleNav.filter((item) => !item.permission || can(role, item.permission))
 
-  return roleFiltered.map((item) => (item.view === 'dashboard' ? { ...item, view: homeView } : item))
+  if (homeView === 'dashboard') return filtered
+
+  return filtered.map((item) => (item.view === 'dashboard' ? { ...item, view: homeView } : item))
 }

@@ -44,7 +44,7 @@ const GuardResourcesTab: FC<GuardResourcesTabProps> = ({ firearmItems, permitIte
           subtitle="Review allocation and permit readiness before opening full records."
         />
         <div className="rounded-xl border border-border-subtle bg-surface-elevated p-6 text-center">
-          <p className="text-sm font-semibold text-text-secondary">No resources allocated</p>
+          <p className="text-sm font-semibold text-text-secondary">No resources allocated to this shift yet.</p>
           <p className="mt-1 text-xs text-text-tertiary">Contact your supervisor for firearm assignments or permit processing.</p>
         </div>
       </section>

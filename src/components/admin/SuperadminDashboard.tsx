@@ -12,6 +12,9 @@ import { normalizeRole } from '../../types/auth'
 import CommandCenterDashboard from '../dashboard/CommandCenterDashboard'
 import AssignmentPicker from '../dashboard/AssignmentPicker'
 import LiveFreshnessPill from '../dashboard/ui/LiveFreshnessPill'
+import { TableLoadingState } from '../dashboard/ui/DashboardLoadingState'
+import EmptyState from '../shared/EmptyState'
+import { ClipboardX, CalendarX2, Target } from 'lucide-react'
 import Allowed from '../rbac/Allowed'
 import DeniedFallback from '../rbac/DeniedFallback'
 import OperationalShell from '../layout/OperationalShell'
@@ -656,12 +659,14 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
       if (statusFilter === 'all') return true
       return userStatusById.get(u.id) === statusFilter
     })
-    .filter(u =>
-    !searchQuery ||
-    u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    u.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (u.full_name || '').toLowerCase().includes(searchQuery.toLowerCase())
-    )
+    .filter((u) => {
+      if (!searchQuery) return true
+      const normalizedQuery = searchQuery.toLowerCase()
+      const email = (u.email || '').toLowerCase()
+      const username = (u.username || '').toLowerCase()
+      const fullName = (u.full_name || '').toLowerCase()
+      return email.includes(normalizedQuery) || username.includes(normalizedQuery) || fullName.includes(normalizedQuery)
+    })
     .sort((a, b) => {
       const roleA = normalizeRole(a.role)
       const roleB = normalizeRole(b.role)
@@ -926,7 +931,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
               {/* Table header â€” static, never scrolls */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-5 border-b border-border-subtle flex-shrink-0">
                 <div>
-                  <h2 className="text-lg font-bold text-text-primary">User Management</h2>
+                  <h2 className="soc-section-title">User Management</h2>
                   <p className="text-xs text-text-tertiary mt-0.5">Manage system users, permissions, and security roles</p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -1300,7 +1305,10 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                   </div>
                 </div>
               ) : (
-                <p className="text-center text-text-secondary py-12 italic text-sm">No users found</p>
+                <div className="text-center py-12">
+                  <p className="text-sm text-text-secondary">No users match the current filters.</p>
+                  <p className="mt-1 text-xs text-text-tertiary">Try adjusting your search or filter criteria.</p>
+                </div>
               )}
               <div className="flex items-center justify-between px-5 py-3 border-t border-border-subtle">
                 <p className="text-xs text-text-tertiary">Showing {totalVisibleUsers} of {users.length} users</p>
@@ -1314,12 +1322,17 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
         ) : activeSection === 'approvals' ? (
           <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in">
             {approvalsLoading ? (
-              <div className="text-center py-12 text-text-secondary font-medium">Loading pending approvals...</div>
+              <TableLoadingState
+                title="Pending Guard Registrations"
+                subtitle="Loading approval queue and verification state."
+                rows={4}
+                columns={5}
+              />
             ) : (
               <section className="w-full table-glass rounded-2xl p-6 md:p-8">
                 <h2 className="text-2xl font-bold text-text-primary mb-6">Pending Guard Registrations</h2>
                 <div className="overflow-auto">
-                  <table className="w-full border-collapse min-w-[820px]">
+                  <table className="w-full border-collapse min-w-[640px]">
                     <thead className="thead-glass">
                       <tr>
                         <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Guard Name</th>
@@ -1332,7 +1345,9 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                     <tbody>
                       {pendingApprovals.length === 0 ? (
                         <tr>
-                          <td className="px-4 py-10 text-center text-text-secondary" colSpan={5}>No pending guard approvals.</td>
+                          <td className="px-4 py-10 text-center" colSpan={5}>
+                            <EmptyState icon={ClipboardX} title="No pending approvals" subtitle="All guard registrations have been processed" />
+                          </td>
                         </tr>
                       ) : (
                         pendingApprovals.map((pendingUser) => (
@@ -1384,7 +1399,12 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
         ) : activeSection === 'schedule' ? (
           <div className="flex-1 flex flex-col p-4 md:p-8 overflow-hidden w-full animate-fade-in">
             {shiftsLoading ? (
-              <div className="text-center py-12 text-text-secondary font-medium">Loading schedules...</div>
+              <TableLoadingState
+                title="All Guard Schedules"
+                subtitle="Loading current deployment roster."
+                rows={5}
+                columns={7}
+              />
             ) : (
               <>
                 <section className="flex flex-col flex-1 min-h-0 w-full rounded-2xl overflow-hidden table-glass mb-4">
@@ -1450,7 +1470,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                     </table>
                   </div>
                 ) : (
-                  <p className="text-center text-text-secondary py-8 italic text-sm md:text-base">No schedules found</p>
+                  <EmptyState icon={CalendarX2} title="No schedules found" subtitle="Create a new schedule to get started" />
                 )}
               </section>
 
@@ -1711,7 +1731,12 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
             <section className="w-full table-glass rounded-2xl p-6 md:p-8">
               <h2 className="text-2xl font-bold text-text-primary mb-6">Mission History</h2>
               {missionsLoading ? (
-                <div className="text-center py-12 text-text-secondary font-medium">Loading missions...</div>
+                <TableLoadingState
+                  title="Mission History"
+                  subtitle="Loading assignments, priorities, and field status."
+                  rows={5}
+                  columns={7}
+                />
               ) : missions.length > 0 ? (
                 <div className="overflow-auto">
                   <table className="w-full border-collapse min-w-[600px]">
@@ -1755,13 +1780,13 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                   </table>
                 </div>
               ) : (
-                <p className="text-center text-text-secondary py-8 italic text-sm md:text-base">No missions found</p>
+                <EmptyState icon={Target} title="No missions found" subtitle="Missions will appear here once assigned" />
               )}
             </section>
           </div>
         ) : activeSection === 'analytics' ? (
           <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in">
-            <AnalyticsDashboard />
+            <AnalyticsDashboard user={user} onLogout={onLogout} onViewChange={onViewChange ?? (() => undefined)} activeView={activeView ?? 'analytics'} />
           </div>
         ) : activeSection === 'trips' ? (
           <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in">
@@ -1780,7 +1805,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
               </section>
             }
           >
-            <AuditDashboard />
+            <AuditDashboard user={user} onLogout={onLogout} onViewChange={onViewChange ?? (() => undefined)} activeView={activeView ?? 'audit-log'} />
           </Suspense>
         ) : null}
 

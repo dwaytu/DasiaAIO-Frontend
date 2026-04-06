@@ -1,7 +1,9 @@
 import { useState, useEffect, FC } from 'react'
+import { Award } from 'lucide-react'
 import { API_BASE_URL } from '../config'
-import Sidebar from './Sidebar'
-import Header from './Header'
+import OperationalShell from './layout/OperationalShell'
+import EmptyState from './shared/EmptyState'
+import LoadingSkeleton from './shared/LoadingSkeleton'
 import type { User } from '../context/AuthContext'
 import { getSidebarNav } from '../config/navigation'
 import { logError } from '../utils/logger'
@@ -134,7 +136,6 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
   })
 
   const currentView = activeView || 'merit'
-  const navItems = getSidebarNav(user.role)
 
   useEffect(() => {
     fetchRankings()
@@ -241,43 +242,22 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
     return 'text-red-600'
   }
 
-  const handleNavigate = (view: string) => {
-    if (onViewChange) {
-      onViewChange(view)
-    }
-  }
-
   return (
-    <div className="flex h-[100dvh] w-full overflow-hidden bg-background font-sans">
-      <a href="#maincontent" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[70] focus:rounded-md focus:bg-background focus:px-3 focus:py-2 focus:text-text-primary focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-[var(--color-focus-ring)]">
-        Skip to main content
-      </a>
-      <Sidebar
-        items={navItems}
-        activeView={currentView}
-        onNavigate={handleNavigate}
-        onLogoClick={() => onViewChange?.('dashboard')}
-        onLogout={onLogout}
-        isOpen={mobileMenuOpen}
-        onClose={() => setMobileMenuOpen(false)}
-      />
-
-      <main id="maincontent" tabIndex={-1} className="flex-1 flex min-w-0 min-h-0 flex-col w-full overflow-hidden">
-        <Header
-          title="Merit Score System"
-          badgeLabel="Performance"
-          onLogout={onLogout}
-          onMenuClick={() => setMobileMenuOpen(true)}
-          user={user}
-          currentView={currentView}
-          onNavigateToInbox={() => onViewChange?.('inbox')}
-          onNavigateToSettings={() => onViewChange?.('settings')}
-          onNavigateToProfile={() => onViewChange?.('profile')}
-        />
-
+    <OperationalShell
+      user={user}
+      title="MERIT"
+      navItems={getSidebarNav(user.role)}
+      activeView={currentView}
+      onNavigate={(view) => onViewChange?.(view)}
+      onLogout={onLogout}
+      mobileMenuOpen={mobileMenuOpen}
+      onMenuOpen={() => setMobileMenuOpen(true)}
+      onMenuClose={() => setMobileMenuOpen(false)}
+      onLogoClick={() => onViewChange?.('dashboard')}
+    >
         {loading ? (
-          <div className="flex-1 flex items-center justify-center text-center">
-            <div className="text-indigo-600 text-lg font-medium">Loading merit scores...</div>
+          <div className="flex-1 p-4 md:p-8">
+            <LoadingSkeleton variant="table" />
           </div>
         ) : (
           <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in">
@@ -527,14 +507,13 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
                     </table>
                   </div>
                 ) : (
-                  <p className="text-center text-text-secondary py-8 italic">No merit scores available yet. Guards need to complete shifts first.</p>
+                  <EmptyState icon={Award} title="No merit scores recorded" subtitle="Merit scores will appear after evaluations are submitted" />
                 )}
               </section>
             )}
           </div>
         )}
-      </main>
-    </div>
+    </OperationalShell>
   )
 }
 

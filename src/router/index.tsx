@@ -1,5 +1,5 @@
 import { lazy, Suspense, type ComponentType } from 'react'
-import { createBrowserRouter, Navigate, useNavigate, useLocation } from 'react-router'
+import { createBrowserRouter, Navigate, useNavigate, useLocation, type RouteObject } from 'react-router'
 import { useAuth } from '../hooks/useAuth'
 import { getAuthToken, getRefreshToken } from '../utils/api'
 import { RoleGuard } from './guards'
@@ -80,7 +80,7 @@ function LegacyPage({ Component }: { Component: ComponentType<any> }) {
 }
 
 function ProfileWrapper() {
-  const { user, onLogout } = useLegacyProps()
+  const { user, onLogout, onViewChange, activeView } = useLegacyProps()
   const navigate = useNavigate()
   if (!user) return null
   return (
@@ -88,10 +88,42 @@ function ProfileWrapper() {
       <ProfileDashboard
         user={user}
         onLogout={onLogout}
+        onViewChange={onViewChange}
+        activeView={activeView}
         onBack={() => navigate(user.role === 'guard' ? ROUTES.OVERVIEW : ROUTES.DASHBOARD)}
       />
     </SuspenseWrapper>
   )
+}
+
+function GuardSectionWrapper({ section }: { section: 'inbox' | 'support' }) {
+  const { user, onLogout, onViewChange } = useLegacyProps()
+  if (!user) return null
+
+  return (
+    <SuspenseWrapper>
+      <UserDashboard
+        user={user}
+        onLogout={onLogout}
+        onViewChange={onViewChange}
+        activeView={section}
+      />
+    </SuspenseWrapper>
+  )
+}
+
+function InboxRouteWrapper() {
+  const { user } = useAuth()
+  if (!user) return null
+  if (user.role === 'guard') return <GuardSectionWrapper section="inbox" />
+  return <LegacyPage Component={SuperadminDashboard} />
+}
+
+function SupportRouteWrapper() {
+  const { user } = useAuth()
+  if (!user) return null
+  if (user.role === 'guard') return <GuardSectionWrapper section="support" />
+  return <Navigate to={ROUTES.INBOX} replace />
 }
 
 const ELEVATED_ROLES = ['superadmin', 'admin', 'supervisor']
@@ -99,7 +131,7 @@ const ALL_ROLES = ['superadmin', 'admin', 'supervisor', 'guard']
 const SUPERADMIN_ONLY = ['superadmin']
 const GUARD_ONLY = ['guard']
 
-export const router = createBrowserRouter([
+export const appRoutes: RouteObject[] = [
   {
     path: '/',
     element: <Navigate to={ROUTES.DASHBOARD} replace />,
@@ -140,13 +172,12 @@ export const router = createBrowserRouter([
         children: [
           { path: ROUTES.CALENDAR, element: <LegacyPage Component={CalendarDashboard} /> },
           { path: ROUTES.PERMITS, element: <LegacyPage Component={GuardFirearmPermits} /> },
-          { path: ROUTES.ARMORED_CARS, element: <LegacyPage Component={ArmoredCarDashboard} /> },
+          { path: ROUTES.INBOX, element: <InboxRouteWrapper /> },
           { path: ROUTES.PROFILE, element: <ProfileWrapper /> },
           { path: ROUTES.SETTINGS, element: <LegacyPage Component={SettingsView} /> },
-          { path: ROUTES.SHIFT_SWAPS, element: <div>Shift Swaps</div> },
-          { path: ROUTES.NOTIFICATIONS, element: <div>Notifications</div> },
-          { path: ROUTES.SUPPORT, element: <div>Support</div> },
-          { path: ROUTES.INBOX, element: <LegacyPage Component={SuperadminDashboard} /> },
+          { path: ROUTES.SHIFT_SWAPS, element: <Navigate to={ROUTES.CALENDAR} replace /> },
+          { path: ROUTES.NOTIFICATIONS, element: <Navigate to={ROUTES.INBOX} replace /> },
+          { path: ROUTES.SUPPORT, element: <SupportRouteWrapper /> },
         ],
       },
 
@@ -159,7 +190,8 @@ export const router = createBrowserRouter([
           { path: ROUTES.FIREARMS, element: <LegacyPage Component={FirearmInventory} /> },
           { path: ROUTES.ALLOCATION, element: <LegacyPage Component={FirearmAllocation} /> },
           { path: ROUTES.MAINTENANCE, element: <LegacyPage Component={FirearmMaintenance} /> },
-          { path: ROUTES.ANALYTICS, element: <SuspenseWrapper><AnalyticsDashboard /></SuspenseWrapper> },
+          { path: ROUTES.ARMORED_CARS, element: <LegacyPage Component={ArmoredCarDashboard} /> },
+          { path: ROUTES.ANALYTICS, element: <LegacyPage Component={AnalyticsDashboard} /> },
         ],
       },
 
@@ -167,7 +199,7 @@ export const router = createBrowserRouter([
       {
         element: <RoleGuard roles={SUPERADMIN_ONLY} />,
         children: [
-          { path: ROUTES.AUDIT, element: <SuspenseWrapper><AuditDashboard /></SuspenseWrapper> },
+          { path: ROUTES.AUDIT, element: <LegacyPage Component={AuditDashboard} /> },
         ],
       },
 
@@ -175,4 +207,6 @@ export const router = createBrowserRouter([
       { path: '*', element: <Navigate to={ROUTES.DASHBOARD} replace /> },
     ],
   },
-])
+]
+
+export const router = createBrowserRouter(appRoutes)

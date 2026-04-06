@@ -38,7 +38,7 @@ const Header: FC<HeaderProps> = ({ title, badgeLabel, onLogout, rightSlot, onMen
           <SentinelLogo size={30} variant="IconOnly" animated />
         </div>
         <div className="min-w-0">
-          <h1 className="m-0 truncate text-xl font-bold uppercase tracking-wide text-text-primary md:text-2xl">{title}</h1>
+          <h1 className="m-0 text-xl font-bold uppercase tracking-wide text-text-primary md:text-2xl">{title}</h1>
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-tertiary">Mission Console</p>
         </div>
         {badgeLabel && <div className="hidden sm:block"><SectionBadge label={badgeLabel} /></div>}

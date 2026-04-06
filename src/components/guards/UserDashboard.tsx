@@ -17,13 +17,14 @@ import {
 import { useUI } from '../../hooks/useUI'
 import GuardResourcesTab from '../dashboard/GuardResourcesTab'
 import GuardMapTab from '../dashboard/GuardMapTab'
-import GuardSupportTab from '../dashboard/GuardSupportTab'
+import SupportTickets from './SupportTickets'
 import EmergencyContactsBar from './EmergencyContactsBar'
 import DashboardCard from '../dashboard/ui/DashboardCard'
 import SectionHeader from '../dashboard/ui/SectionHeader'
 import { GuardInboxPanel } from '../inbox/GuardInboxPanel'
 import ProfileModalContent from '../profile/ProfileModalContent'
 import HeaderGlobalActions from '../shared/HeaderGlobalActions'
+import OffDutyPanel from './OffDutyPanel'
 import PanicButton from './PanicButton'
 
 interface UserDashboardProps {
@@ -64,14 +65,6 @@ interface PermitItem {
   issued_date: string
   expiry_date: string
   status: string
-}
-
-interface SupportTicketItem {
-  id: string
-  subject: string
-  message: string
-  status: string
-  created_at: string
 }
 
 type GuardSection = 'inbox' | 'mission' | 'resources' | 'support' | 'map'
@@ -126,26 +119,12 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
   const [scheduleItems, setScheduleItems] = useState<ShiftItem[]>([])
   const [firearmItems, setFirearmItems] = useState<AllocationItem[]>([])
   const [permitItems, setPermitItems] = useState<PermitItem[]>([])
-  const [ticketItems, setTicketItems] = useState<SupportTicketItem[]>([])
 
   const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true)
   const [isSyncing, setIsSyncing] = useState<boolean>(false)
   const [syncError, setSyncError] = useState<string>('')
   const [actionStatus, setActionStatus] = useState<string>('')
   const { isNetworkOnline } = useUI()
-
-  const [scheduleForm, setScheduleForm] = useState({
-    clientSite: '',
-    date: '',
-    startTime: '',
-    endTime: '',
-  })
-  const [scheduleStatus, setScheduleStatus] = useState<string>('')
-  const [scheduleSubmitting, setScheduleSubmitting] = useState<boolean>(false)
-
-  const [ticketForm, setTicketForm] = useState({ subject: '', message: '' })
-  const [ticketStatus, setTicketStatus] = useState<string>('')
-  const [ticketSubmitting, setTicketSubmitting] = useState<boolean>(false)
 
   const [incidentModalOpen, setIncidentModalOpen] = useState<boolean>(false)
   const [incidentForm, setIncidentForm] = useState<IncidentFormState>({
@@ -283,14 +262,9 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
         { headers: getAuthHeaders(), signal },
         'Unable to load permits',
       ),
-      fetchJsonOrThrow<any>(
-        `${API_BASE_URL}/api/support-tickets/${user.id}`,
-        { headers: getAuthHeaders(), signal },
-        'Unable to load support tickets',
-      ),
     ] as const
 
-    const labels = ['attendance', 'schedule', 'firearms', 'permits', 'support tickets']
+    const labels = ['attendance', 'schedule', 'firearms', 'permits']
     const settled = await Promise.allSettled(requests)
     const failures: string[] = []
 
@@ -305,7 +279,6 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
       if (index === 1) setScheduleItems(Array.isArray(data?.shifts) ? data.shifts : [])
       if (index === 2) setFirearmItems(Array.isArray(data?.allocations) ? data.allocations : [])
       if (index === 3) setPermitItems(Array.isArray(data?.permits) ? data.permits : [])
-      if (index === 4) setTicketItems(Array.isArray(data?.tickets) ? data.tickets : [])
     })
 
     if (failures.length > 0) {
@@ -729,109 +702,6 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
     }
   }
 
-  const handleScheduleSubmit = async (event: FormEvent) => {
-    event.preventDefault()
-    if (!user?.id) return
-
-    if (!scheduleForm.clientSite || !scheduleForm.date || !scheduleForm.startTime || !scheduleForm.endTime) {
-      setScheduleStatus('All fields are required.')
-      return
-    }
-
-    const startLocal = new Date(`${scheduleForm.date}T${scheduleForm.startTime}`)
-    const endLocal = new Date(`${scheduleForm.date}T${scheduleForm.endTime}`)
-
-    if (Number.isNaN(startLocal.getTime()) || Number.isNaN(endLocal.getTime())) {
-      setScheduleStatus('Invalid date or time.')
-      return
-    }
-
-    if (endLocal <= startLocal) {
-      setScheduleStatus('End time must be after start time.')
-      return
-    }
-
-    setScheduleSubmitting(true)
-    setScheduleStatus('')
-
-    try {
-      await fetchJsonOrThrow<any>(
-        `${API_BASE_URL}/api/guard-replacement/shifts`,
-        {
-          method: 'POST',
-          headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
-          body: JSON.stringify({
-            guard_id: user.id,
-            start_time: startLocal.toISOString(),
-            end_time: endLocal.toISOString(),
-            client_site: scheduleForm.clientSite,
-          }),
-        },
-        'Failed to request schedule',
-      )
-
-      setScheduleStatus('Schedule request submitted.')
-      setScheduleForm({ clientSite: '', date: '', startTime: '', endTime: '' })
-      await refreshData(false)
-    } catch (error) {
-      if (isOfflineRequestError(error)) {
-        await enqueueOfflineAction({
-          url: `${API_BASE_URL}/api/guard-replacement/shifts`,
-          method: 'POST',
-          headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
-          body: {
-            guard_id: user.id,
-            start_time: startLocal.toISOString(),
-            end_time: endLocal.toISOString(),
-            client_site: scheduleForm.clientSite,
-          },
-        })
-        setScheduleStatus('Schedule request saved — will send when you\'re back online.')
-      } else {
-        setScheduleStatus(sanitizeErrorMessage(error instanceof Error ? error.message : 'Failed to request schedule.'))
-      }
-    } finally {
-      setScheduleSubmitting(false)
-    }
-  }
-
-  const handleTicketSubmit = async (event: FormEvent) => {
-    event.preventDefault()
-    if (!user?.id) return
-
-    if (!ticketForm.subject || !ticketForm.message) {
-      setTicketStatus('Subject and message are required.')
-      return
-    }
-
-    setTicketSubmitting(true)
-    setTicketStatus('')
-
-    try {
-      await fetchJsonOrThrow<any>(
-        `${API_BASE_URL}/api/support-tickets`,
-        {
-          method: 'POST',
-          headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
-          body: JSON.stringify({
-            guard_id: user.id,
-            subject: ticketForm.subject,
-            message: ticketForm.message,
-          }),
-        },
-        'Failed to create support ticket',
-      )
-
-      setTicketStatus('Support ticket submitted.')
-      setTicketForm({ subject: '', message: '' })
-      await refreshData(false)
-    } catch (error) {
-      setTicketStatus(sanitizeErrorMessage(error instanceof Error ? error.message : 'Failed to create support ticket.'))
-    } finally {
-      setTicketSubmitting(false)
-    }
-  }
-
   const missionLocation = currentShift?.client_site || 'No active post'
   const missionShiftTime = currentShift ? formatTimeWindow(currentShift.start_time, currentShift.end_time) : 'No shift today'
   const missionElapsed = currentShift ? elapsedTime[currentShift.id] || '0h 0m' : '0h 0m'
@@ -843,17 +713,6 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
       : !locationTrackingEnabled
         ? 'Confirm tracking and sync before leaving staging.'
         : 'Tracking and sync are ready for this watch.'
-  const shiftSwapOptions = useMemo(
-    () =>
-      scheduleItems
-        .slice()
-        .sort((left, right) => new Date(left.start_time).getTime() - new Date(right.start_time).getTime())
-        .map((shift) => ({
-          id: shift.id,
-          label: `${shift.client_site} • ${formatTimeWindow(shift.start_time, shift.end_time)}`,
-        })),
-    [scheduleItems],
-  )
 
   const navItems: Array<{ key: GuardSection; label: string }> = [
     { key: 'mission', label: 'Mission' },
@@ -948,6 +807,10 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
             <div className="guard-section-frame">
               <SectionHeader title="Mission" />
 
+              {dutyStatus === 'Off Duty' ? (
+                <OffDutyPanel scheduleItems={scheduleItems} />
+              ) : (
+              <>
               {/* Zone 1: StatusHero */}
               <section
                 aria-label="Current duty status"
@@ -989,7 +852,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                     </span>
                   </div>
                 </div>
-                {missionReadinessNote && !(dutyStatus === 'Off Duty') ? (
+                {missionReadinessNote ? (
                   <p className={`mt-3 rounded-lg border border-current/10 px-3 py-2 text-xs font-medium opacity-80 ${dutyStatusConfig.textClass}`}>
                     {missionReadinessNote}
                   </p>
@@ -1118,6 +981,8 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                   <p className="mt-1 text-xs text-text-tertiary">Check the Support tab for schedule requests</p>
                 </div>
               )}
+              </>
+              )}
             </div>
           ) : null}
 
@@ -1126,23 +991,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
           ) : null}
 
           {!isInitialLoading && activeSection === 'support' ? (
-            <GuardSupportTab
-              userId={user.id}
-              userRole={user.role}
-              onInstructionsOpen={() => setInstructionsOpen(true)}
-              scheduleForm={scheduleForm}
-              setScheduleForm={setScheduleForm}
-              scheduleSubmitting={scheduleSubmitting}
-              scheduleStatus={scheduleStatus}
-              onScheduleSubmit={handleScheduleSubmit}
-              ticketForm={ticketForm}
-              setTicketForm={setTicketForm}
-              ticketSubmitting={ticketSubmitting}
-              ticketStatus={ticketStatus}
-              onTicketSubmit={handleTicketSubmit}
-              ticketItems={ticketItems}
-              shiftSwapOptions={shiftSwapOptions}
-            />
+            <SupportTickets userId={user.id} />
           ) : null}
 
           {!isInitialLoading && activeSection === 'map' ? (

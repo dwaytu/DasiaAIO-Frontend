@@ -20,7 +20,7 @@ const SectionPanel: FC<SectionPanelProps> = ({ title, subtitle, actions, childre
         <div className="flex items-start gap-3">
           {icon && <div className="mt-0.5 rounded-md border border-border-subtle bg-surface p-2 text-text-secondary">{icon}</div>}
           <div>
-            <h2 id={headingId} className="text-lg font-bold uppercase tracking-wide text-text-primary">{title}</h2>
+            <h2 id={headingId} className="soc-section-title">{title}</h2>
             {subtitle && <p className="mt-1 text-sm text-text-secondary">{subtitle}</p>}
           </div>
         </div>

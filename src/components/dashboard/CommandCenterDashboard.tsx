@@ -20,9 +20,11 @@ import FirearmsStatusPanel from './FirearmsStatusPanel'
 import SystemStatusBanner from './SystemStatusBanner'
 import SentinelLogo from '../SentinelLogo'
 import SectionHeader from './ui/SectionHeader'
-import StatCard from './ui/StatCard'
 import StatusBadge from './ui/StatusBadge'
 import LiveFreshnessPill from './ui/LiveFreshnessPill'
+import MetricStatCard from './ui/MetricStatCard'
+import { DashboardLoadingState } from './ui/DashboardLoadingState'
+import { formatCompactNumber, formatRatioLabel } from '../../utils/numberFormat'
 import { useOpsSummary } from '../../hooks/useOpsSummary'
 import { getOpsAlerts } from '../../hooks/useOpsAlerts'
 import { useOpsShifts } from '../../hooks/useOpsShifts'
@@ -55,6 +57,12 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
   const alerts = useMemo(() => getOpsAlerts(summary), [summary])
   const now = summaryState.lastUpdated || '--'
   const staleNote = `Last updated ${now}`
+  const isBootstrapping =
+    summaryState.loading &&
+    shiftsState.loading &&
+    assetsState.loading &&
+    incidentsState.loading &&
+    predictiveAlertsState.loading
 
   useEffect(() => {
     const timer = window.setInterval(() => setClock(new Date()), 1000)
@@ -117,6 +125,8 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
       : 'Low'
   const systemTone = systemStatus === 'Critical' ? 'danger' : systemStatus === 'Warning' ? 'warning' : 'success'
   const threatTone = threatLevel === 'High' ? 'danger' : threatLevel === 'Medium' ? 'warning' : 'info'
+  const onlineServices = Object.values(serviceState.services).filter((status) => status === 'online').length
+  const totalServices = Object.keys(serviceState.services).length
 
   const formatTime = (value: Date | string) =>
     new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -221,10 +231,30 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
     return combined.slice(0, 25)
   }, [alerts, displayIncidents])
 
+  if (isBootstrapping) {
+    return (
+      <DashboardLoadingState
+        title="Security Operations Command Center"
+        subtitle="Unified tactical view for incidents, deployments, and predictive risk activity."
+        heroCards={4}
+        lowerSections={2}
+      />
+    )
+  }
+
   return (
     <OperationalEventProvider>
       <main className="space-y-6" aria-label="Security operations command center overview">
-      <section className="soc-surface p-4 md:p-5" aria-labelledby="command-center-title">
+      <SystemStatusBanner
+        status={systemHealthState}
+        guardsActive={summary.activeGuardsOnDuty}
+        guardsCapacity={guardsCapacity}
+        activeIncidents={activeIncidents}
+        firearmsCheckedOut={summary.firearmsCurrentlyIssued}
+        vehiclesDeployed={summary.activeArmoredCarTrips}
+      />
+
+      <section className="animate-section-enter soc-surface p-4 md:p-5" aria-labelledby="command-center-title">
         <SectionHeader
           title="Security Operations Command Center"
           subtitle="Unified tactical view for incidents, deployments, and predictive risk activity."
@@ -237,21 +267,42 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
           }
         />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <StatCard label="System" value={systemStatus} tone="analytics" hint={staleNote} />
-          <StatCard label="Threat" value={threatLevel} tone={threatLevel === 'High' ? 'maintenance' : threatLevel === 'Medium' ? 'vehicle' : 'guard'} hint={staleNote} />
-          <StatCard label="Incidents" value={activeIncidents} tone="mission" hint="Open or active incident threads" />
-          <StatCard label="Clock" value={clock.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} tone="default" hint="Command time" />
+          <MetricStatCard
+            label="System"
+            value={systemStatus}
+            tone="analytics"
+            hint={staleNote}
+            meter={{
+              value: onlineServices,
+              max: totalServices,
+              label: formatRatioLabel(onlineServices, totalServices, 'services online'),
+            }}
+          />
+          <MetricStatCard
+            label="Threat"
+            value={threatLevel}
+            tone={threatLevel === 'High' ? 'maintenance' : threatLevel === 'Medium' ? 'vehicle' : 'guard'}
+            hint={`${formatCompactNumber(alerts.length)} active alerts`}
+          />
+          <MetricStatCard
+            label="Incidents"
+            value={formatCompactNumber(activeIncidents)}
+            tone="mission"
+            hint="Open or active incident threads"
+            meter={{
+              value: activeIncidents,
+              max: Math.max(summary.activeGuardsOnDuty, 1),
+              label: `${formatCompactNumber(summary.activeGuardsOnDuty)} active guards covering the field`,
+            }}
+          />
+          <MetricStatCard
+            label="Clock"
+            value={clock.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            tone="default"
+            hint="Command time"
+          />
         </div>
       </section>
-
-      <SystemStatusBanner
-        status={systemHealthState}
-        guardsActive={summary.activeGuardsOnDuty}
-        guardsCapacity={guardsCapacity}
-        activeIncidents={activeIncidents}
-        firearmsCheckedOut={summary.firearmsCurrentlyIssued}
-        vehiclesDeployed={summary.activeArmoredCarTrips}
-      />
 
       <SectionPanel
         title="Live Operations"

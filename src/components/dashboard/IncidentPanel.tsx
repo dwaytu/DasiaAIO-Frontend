@@ -218,9 +218,9 @@ const IncidentPanel: FC = () => {
         )}
 
         {!loading && !error && displayed.length === 0 && (
-          <p className="px-4 py-6 text-center font-mono text-xs text-[color:var(--color-muted-text)]">
-            No incidents found.
-          </p>
+          <div className="px-4 py-6 text-center">
+            <p className="font-mono text-xs text-[color:var(--color-muted-text)]">No incidents reported — all zones are clear.</p>
+          </div>
         )}
 
         {!loading && !error && displayed.length > 0 && (

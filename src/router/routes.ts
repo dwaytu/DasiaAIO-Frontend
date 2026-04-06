@@ -31,9 +31,8 @@ export type RoutePath = (typeof ROUTES)[keyof typeof ROUTES]
  * to the new URL-based route paths.
  *
  * Keys here match the string literals passed to setActiveView() throughout
- * App.tsx and SuperadminDashboard.tsx. Internal SuperadminDashboard sections
- * (approvals, schedule, missions, trips, inbox) stay internal and are not
- * mapped here — they will be handled as sub-routes or query params later.
+ * App.tsx and SuperadminDashboard.tsx. Legacy notifications intent now resolves
+ * to inbox to avoid dead-end routing.
  */
 export const VIEW_TO_ROUTE: Record<string, RoutePath> = {
   'dashboard': ROUTES.DASHBOARD,
@@ -51,7 +50,7 @@ export const VIEW_TO_ROUTE: Record<string, RoutePath> = {
   'analytics': ROUTES.ANALYTICS,
   'audit-log': ROUTES.AUDIT,
   'shift-swaps': ROUTES.SHIFT_SWAPS,
-  'notifications': ROUTES.NOTIFICATIONS,
+  'notifications': ROUTES.INBOX,
   'support': ROUTES.SUPPORT,
   'approvals': ROUTES.APPROVALS,
   'schedule': ROUTES.SCHEDULE,

@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo, useCallback, FC } from 'react'
+import { Calendar } from 'lucide-react'
 import { API_BASE_URL } from '../config'
 import { parseResponseBody, getAuthHeaders } from '../utils/api'
-import Sidebar from './Sidebar'
-import Header from './Header'
+import OperationalShell from './layout/OperationalShell'
 import type { User } from '../context/AuthContext'
 import SecurityBentoGrid from './SecurityBentoGrid'
 import BentoGrid, { BentoCard } from './BentoGrid'
@@ -13,6 +13,8 @@ import StatusBadge from './dashboard/ui/StatusBadge'
 import LiveFreshnessPill from './dashboard/ui/LiveFreshnessPill'
 import { isElevatedRole } from '../types/auth'
 import { getSidebarNav } from '../config/navigation'
+import EmptyState from './shared/EmptyState'
+import LoadingSkeleton from './shared/LoadingSkeleton'
 import { logError } from '../utils/logger'
 
 interface CalendarDashboardProps {
@@ -176,8 +178,6 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false)
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState<boolean>(false)
   const [lastRefreshAt, setLastRefreshAt] = useState<number>(() => Date.now())
-
-  const navItems = getSidebarNav(user.role)
 
   const fetchShifts = useCallback(async (): Promise<ShiftEvent[]> => {
     try {
@@ -444,49 +444,25 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
   const getDateKey = (day: number) =>
     `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 
-  // Handle navigation
   const handleNavigate = (view: string) => {
-    // Only calendar stays internal to CalendarDashboard
-    // All other views (schedule, dashboard, firearms, etc.) route to parent
-    if (view === 'calendar') {
-      return
-    }
+    if (view === 'calendar') return
     onViewChange?.(view)
   }
 
-  // Calendardashboard always shows activeView as calendar since it's always internal
-  const currentActiveView = 'calendar'
-
   return (
-    <div className="flex h-[100dvh] w-full overflow-hidden bg-background">
-      <a href="#maincontent" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[70] focus:rounded-md focus:bg-background focus:px-3 focus:py-2 focus:text-text-primary focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-[var(--color-focus-ring)]">
-        Skip to main content
-      </a>
-      {/* Sidebar */}
-      <Sidebar
-        items={navItems}
-        activeView={currentActiveView}
-        onNavigate={handleNavigate}
-        onLogoClick={() => handleNavigate('dashboard')}
-        onLogout={onLogout}
-        isOpen={mobileMenuOpen}
-        onClose={() => setMobileMenuOpen(false)}
-      />
-
-      {/* Main content */}
-      <div className="flex-1 flex min-w-0 min-h-0 flex-col overflow-hidden">
-        <Header
-          user={user}
-          onLogout={onLogout}
-          title={isAdmin ? 'Operations Calendar' : 'My Schedule Calendar'}
-          onMenuClick={() => setMobileMenuOpen(true)}
-          currentView={currentActiveView}
-          onNavigateToInbox={() => onViewChange?.('inbox')}
-          onNavigateToSettings={() => onViewChange?.('settings')}
-          onNavigateToProfile={onViewChange ? () => onViewChange('profile') : undefined}
-        />
-
-        <main id="maincontent" tabIndex={-1} className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-6 bg-background">
+    <OperationalShell
+      user={user}
+      title={isAdmin ? 'Operations Calendar' : 'My Schedule Calendar'}
+      navItems={getSidebarNav(user.role)}
+      activeView="calendar"
+      onNavigate={handleNavigate}
+      onLogout={onLogout}
+      mobileMenuOpen={mobileMenuOpen}
+      onMenuOpen={() => setMobileMenuOpen(true)}
+      onMenuClose={() => setMobileMenuOpen(false)}
+      onLogoClick={() => onViewChange?.('dashboard')}
+      error={error || undefined}
+    >
           <section className="soc-surface mb-6 p-4 md:p-5">
             <SectionHeader
               title="Operations Calendar"
@@ -510,10 +486,6 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
               <StatCard label="Maintenance" value={eventStats.maintenance} tone="maintenance" />
             </div>
           </section>
-
-          {error && (
-            <div className="mb-4 soc-alert-error">{error}</div>
-          )}
 
           {/* Security Bento Grid - Mission-Critical Dashboard */}
           <div className="mb-8">
@@ -615,7 +587,7 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
 
               {/* Calendar cells */}
               {loading ? (
-                <div className="flex items-center justify-center py-16 text-text-secondary text-sm">Loading events&hellip;</div>
+                <div className="p-4"><LoadingSkeleton variant="card" count={3} /></div>
               ) : (
                 <>
                   <div className="hidden grid-cols-7 gap-1 p-3 bg-gradient-to-br from-background to-surface/30 md:grid">
@@ -679,7 +651,7 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
                   <div className="space-y-2 p-3 md:hidden">
                     <h3 className="soc-card-title">Mobile Agenda</h3>
                     {mobileAgendaEvents.length === 0 ? (
-                      <p className="soc-empty-state">No upcoming events.</p>
+                      <EmptyState icon={Calendar} title="No events scheduled" subtitle="Create events to populate the calendar" />
                     ) : (
                       mobileAgendaEvents.map((ev) => {
                         const c = EVENT_COLORS[ev.type]
@@ -730,13 +702,7 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
                 </div>
                 <div className="flex-1 overflow-y-auto p-4 space-y-3">
                   {selectedDateEvents.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-12 text-center">
-                      <svg className="w-12 h-12 text-text-tertiary/40 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      <p className="text-text-tertiary text-sm font-medium">No events scheduled</p>
-                      <p className="text-text-tertiary/60 text-xs mt-1">Pick another day or create a new event</p>
-                    </div>
+                    <EmptyState icon={Calendar} title="No events scheduled" subtitle="Pick another day or create a new event" />
                   ) : (
                     selectedDateEvents.map(ev => {
                       const c = EVENT_COLORS[ev.type]
@@ -811,10 +777,8 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
               </BentoCard>
             )}
           </BentoGrid>
-        </main>
-      </div>
 
-      {/* Event detail modal */}
+          {/* Event detail modal */}
       {selectedEvent && (
         <div
           className="soc-modal-backdrop"
@@ -885,7 +849,7 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
           </div>
         </div>
       )}
-    </div>
+    </OperationalShell>
   )
 }
 

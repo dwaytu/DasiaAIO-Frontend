@@ -1,7 +1,9 @@
 import { useState, useEffect, FC } from 'react'
+import { TrendingUp } from 'lucide-react'
 import { API_BASE_URL } from '../config'
-import Sidebar from './Sidebar'
-import Header from './Header'
+import OperationalShell from './layout/OperationalShell'
+import EmptyState from './shared/EmptyState'
+import LoadingSkeleton from './shared/LoadingSkeleton'
 import type { User as AppUser } from '../context/AuthContext'
 import { getSidebarNav } from '../config/navigation'
 import { logError } from '../utils/logger'
@@ -29,7 +31,6 @@ const PerformanceDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeV
   const [loading, setLoading] = useState<boolean>(true)
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false)
   const currentView = activeView || 'performance'
-  const navItems = getSidebarNav(user.role)
 
   useEffect(() => {
     fetchPerformance()
@@ -71,12 +72,6 @@ const PerformanceDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeV
     }
   }
 
-  const handleNavigate = (view: string) => {
-    if (onViewChange) {
-      onViewChange(view)
-    }
-  }
-
   const averageAttendance = performance.length > 0
     ? Math.round(performance.reduce((sum, row) => sum + row.attendanceRate, 0) / performance.length)
     : 0
@@ -86,26 +81,21 @@ const PerformanceDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeV
   const activeGuards = performance.length
 
   return (
-    <div className="flex h-[100dvh] w-full overflow-hidden bg-background font-sans">
-      <a href="#maincontent" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[70] focus:rounded-md focus:bg-background focus:px-3 focus:py-2 focus:text-text-primary focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-[var(--color-focus-ring)]">
-        Skip to main content
-      </a>
-      <Sidebar
-        items={navItems}
-        activeView={currentView}
-        onNavigate={handleNavigate}
-        onLogoClick={() => onViewChange?.('dashboard')}
-        onLogout={onLogout}
-        isOpen={mobileMenuOpen}
-        onClose={() => setMobileMenuOpen(false)}
-      />
-
-      <main id="maincontent" tabIndex={-1} className="flex-1 flex min-w-0 min-h-0 flex-col w-full overflow-hidden">
-        <Header title="Performance Dashboard" badgeLabel="Performance" onLogout={onLogout} onMenuClick={() => setMobileMenuOpen(true)} user={user} currentView={currentView} onNavigateToInbox={() => onViewChange?.('inbox')} onNavigateToSettings={() => onViewChange?.('settings')} onNavigateToProfile={() => onViewChange?.('profile')} />
-
+    <OperationalShell
+      user={user}
+      title="PERFORMANCE"
+      navItems={getSidebarNav(user.role)}
+      activeView={currentView}
+      onNavigate={(view) => onViewChange?.(view)}
+      onLogout={onLogout}
+      mobileMenuOpen={mobileMenuOpen}
+      onMenuOpen={() => setMobileMenuOpen(true)}
+      onMenuClose={() => setMobileMenuOpen(false)}
+      onLogoClick={() => onViewChange?.('dashboard')}
+    >
         {loading ? (
-          <div className="flex-1 flex items-center justify-center text-center">
-            <div className="text-text-secondary text-lg font-medium">Loading performance data...</div>
+          <div className="flex-1 p-4 md:p-8">
+            <LoadingSkeleton variant="table" />
           </div>
         ) : (
           <div className="flex-1 flex flex-col p-4 md:p-8 overflow-hidden w-full animate-fade-in">
@@ -162,13 +152,12 @@ const PerformanceDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeV
                   </table>
                 </div>
               ) : (
-                <p className="text-center text-text-secondary py-8 italic">No performance data available</p>
+                <EmptyState icon={TrendingUp} title="No performance data available" subtitle="Performance metrics will appear after guard evaluations" />
               )}
             </section>
           </div>
         )}
-      </main>
-    </div>
+    </OperationalShell>
   )
 }
 

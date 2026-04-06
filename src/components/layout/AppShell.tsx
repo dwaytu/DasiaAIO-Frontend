@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router'
+import { LayoutDashboard, ClipboardCheck, Calendar, Bell, MoreHorizontal, X } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useUI } from '../../hooks/useUI'
 import { useLocationConsent } from '../../hooks/useLocationConsent'
 import { normalizeRole } from '../../types/auth'
 import { APP_VERSION } from '../../config'
+import { getSidebarNav } from '../../config/navigation'
 import { getLocationConsentStatus } from '../../utils/location'
 import { VIEW_TO_ROUTE } from '../../router/routes'
 import ToastContainer from '../shared/ToastContainer'
@@ -52,6 +54,7 @@ export default function AppShell() {
 
   // Local checkbox state for the ToA location consent check (UI-only, not persisted yet)
   const [localLocationConsent, setLocalLocationConsent] = useState(locationConsentPersisted)
+  const [moreDrawerOpen, setMoreDrawerOpen] = useState(false)
 
   const normalizedRole = normalizeRole(user?.role)
 
@@ -91,28 +94,42 @@ export default function AppShell() {
   const isGuardWorkspaceView =
     normalizedRole === 'guard' && !['inbox', 'settings', 'profile'].includes(activeView)
 
-  const mobileNavItems =
-    normalizedRole === 'guard'
-      ? [
-          { key: 'overview', label: 'Overview' },
-          { key: 'calendar', label: 'Calendar' },
-          { key: 'support', label: 'Support' },
-          { key: 'profile', label: 'Profile' },
-        ]
-      : [
-          { key: 'dashboard', label: 'Dashboard' },
-          { key: 'calendar', label: 'Calendar' },
-          { key: 'firearms', label: 'Firearms' },
-          { key: 'armored-cars', label: 'Vehicles' },
-          { key: 'profile', label: 'Profile' },
-        ]
+  const isElevatedRole = normalizedRole !== null && normalizedRole !== 'guard'
+  const operationalShellViews = new Set([
+    'dashboard',
+    'approvals',
+    'schedule',
+    'inbox',
+    'support',
+    'notifications',
+    'missions',
+    'trips',
+    'performance',
+    'merit',
+    'firearms',
+    'allocation',
+    'permits',
+    'maintenance',
+    'armored-cars',
+    'analytics',
+    'audit',
+    'calendar',
+    'profile',
+    'settings',
+  ])
+  const showAppShellMobileNav = isElevatedRole && !operationalShellViews.has(activeView)
 
-  const mobileQuickNavColumns =
-    mobileNavItems.length <= 3
-      ? 'grid-cols-3'
-      : mobileNavItems.length === 4
-        ? 'grid-cols-4'
-        : 'grid-cols-5'
+  const mobileBottomTabs = [
+    { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { key: 'approvals', label: 'Approvals', icon: ClipboardCheck },
+    { key: 'schedule', label: 'Schedule', icon: Calendar },
+    { key: 'inbox', label: 'Alerts', icon: Bell },
+  ]
+
+  const bottomTabKeys = new Set(['dashboard', 'approvals', 'schedule', 'inbox'])
+  const moreNavItems = isElevatedRole
+    ? getSidebarNav(normalizedRole).filter(item => !bottomTabKeys.has(item.view))
+    : []
 
   const mobileSafeBottomOffset = 'calc(5rem + env(safe-area-inset-bottom, 0px))'
   const guardStickySafeBottomOffset = isGuardWorkspaceView
@@ -134,7 +151,7 @@ export default function AppShell() {
 
   return (
     <div
-      className={`h-[100dvh] w-full overflow-hidden bg-background ${!isGuardWorkspaceView ? 'pb-24 md:pb-0' : 'pb-4 md:pb-0'}`}
+      className={`h-[100dvh] w-full overflow-hidden bg-background ${showAppShellMobileNav ? 'pb-24 md:pb-0' : 'pb-4 md:pb-0'}`}
     >
       <Outlet />
 
@@ -145,8 +162,7 @@ export default function AppShell() {
           onClick={() => {
             void checkForUpdates(true)
           }}
-          className="fixed right-4 z-[var(--z-floating)] hidden min-h-11 rounded-md border border-border-elevated bg-surface px-3 py-2 text-xs font-semibold text-text-primary shadow-md transition-colors hover:bg-surface-hover md:block md:bottom-6"
-          style={{ bottom: guardStickySafeBottomOffset }}
+          className="fixed bottom-4 right-4 z-[var(--z-floating)] hidden min-h-9 rounded-full border border-border bg-surface/80 px-3 py-1.5 text-xs font-medium text-text-secondary shadow-sm backdrop-blur transition-all hover:bg-surface hover:text-text-primary hover:shadow-md md:block"
           aria-label="Check for updates"
         >
           Check for Updates
@@ -470,32 +486,85 @@ export default function AppShell() {
         </div>
       ) : null}
 
-      {/* ── Mobile bottom nav ────────────────────────────────────────────── */}
-      {!isGuardWorkspaceView ? (
-        <nav
-          aria-label="Mobile quick navigation"
-          className="fixed bottom-0 left-0 right-0 z-[var(--z-mobile-nav)] border-t border-border-elevated bg-surface px-2 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] pt-2 md:hidden"
-        >
-          <ul className={`grid ${mobileQuickNavColumns} gap-1`}>
-            {mobileNavItems.map((item) => {
-              const itemRoute = VIEW_TO_ROUTE[item.key] || `/${item.key}`
-              const isActive = location.pathname === itemRoute
-              return (
-                <li key={item.key}>
-                  <button
-                    type="button"
-                    onClick={() => navigate(itemRoute)}
-                    className={`min-h-11 w-full rounded-md px-2 py-2 text-xs font-semibold transition-colors duration-150 ${
-                      isActive ? 'bg-info text-white' : 'bg-surface-elevated text-text-secondary'
-                    }`}
-                  >
-                    {item.label}
+      {/* ── Mobile bottom nav (elevated roles only) ──────────────────────── */}
+      {showAppShellMobileNav ? (
+        <>
+          {/* More overlay */}
+          {moreDrawerOpen ? (
+            <div className="fixed inset-0 z-[63] md:hidden" onClick={() => setMoreDrawerOpen(false)}>
+              <div className="absolute inset-0 bg-black/40" />
+              <div
+                className="absolute bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] left-2 right-2 rounded-xl border border-border bg-surface p-2 shadow-lg"
+                onClick={e => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between px-3 py-2 mb-1">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-text-secondary">More</span>
+                  <button type="button" onClick={() => setMoreDrawerOpen(false)} className="p-1 text-text-secondary hover:text-text-primary">
+                    <X className="h-4 w-4" aria-hidden="true" />
+                    <span className="sr-only">Close menu</span>
                   </button>
-                </li>
-              )
-            })}
-          </ul>
-        </nav>
+                </div>
+                <ul className="grid grid-cols-3 gap-1">
+                  {moreNavItems.map(item => {
+                    const itemRoute = VIEW_TO_ROUTE[item.view] || `/${item.view}`
+                    return (
+                      <li key={item.view}>
+                        <button
+                          type="button"
+                          onClick={() => { navigate(itemRoute); setMoreDrawerOpen(false) }}
+                          className="min-h-11 w-full rounded-lg px-2 py-2 text-xs font-semibold text-text-secondary hover:bg-surface-elevated hover:text-text-primary transition-colors"
+                        >
+                          {item.label}
+                        </button>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </div>
+            </div>
+          ) : null}
+
+          {/* Bottom tab bar */}
+          <nav
+            aria-label="Mobile navigation"
+            className="fixed bottom-0 left-0 right-0 z-[var(--z-mobile-nav)] border-t border-border-elevated bg-surface/95 backdrop-blur-md px-2 pb-[calc(0.25rem+env(safe-area-inset-bottom,0px))] pt-1 md:hidden"
+          >
+            <ul className="grid grid-cols-5 gap-0.5">
+              {mobileBottomTabs.map(tab => {
+                const tabRoute = VIEW_TO_ROUTE[tab.key] || `/${tab.key}`
+                const isActive = location.pathname === tabRoute
+                const Icon = tab.icon
+                return (
+                  <li key={tab.key}>
+                    <button
+                      type="button"
+                      onClick={() => navigate(tabRoute)}
+                      className={`flex min-h-11 w-full flex-col items-center justify-center gap-0.5 rounded-md py-1 text-[10px] font-semibold transition-colors ${
+                        isActive ? 'text-[var(--color-info)]' : 'text-text-secondary'
+                      }`}
+                    >
+                      <Icon className="h-5 w-5" aria-hidden="true" />
+                      {tab.label}
+                    </button>
+                  </li>
+                )
+              })}
+              {/* More tab */}
+              <li>
+                <button
+                  type="button"
+                  onClick={() => setMoreDrawerOpen(prev => !prev)}
+                  className={`flex min-h-11 w-full flex-col items-center justify-center gap-0.5 rounded-md py-1 text-[10px] font-semibold transition-colors ${
+                    moreDrawerOpen ? 'text-[var(--color-info)]' : 'text-text-secondary'
+                  }`}
+                >
+                  <MoreHorizontal className="h-5 w-5" aria-hidden="true" />
+                  More
+                </button>
+              </li>
+            </ul>
+          </nav>
+        </>
       ) : null}
 
       {/* ── Toast notifications ──────────────────────────────────────────── */}

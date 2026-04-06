@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react'
+import { Truck } from 'lucide-react'
 import type { User } from '../context/AuthContext'
 import { API_BASE_URL } from '../config'
 import { fetchJsonOrThrow, parseResponseBody, getAuthHeaders } from '../utils/api'
 import { logError } from '../utils/logger'
-import Sidebar from './Sidebar'
-import Header from './Header'
+import OperationalShell from './layout/OperationalShell'
+import EmptyState from './shared/EmptyState'
+import LoadingSkeleton from './shared/LoadingSkeleton'
+import { getSidebarNav } from '../config/navigation'
 
 interface ArmoredCar {
   id: string
@@ -309,45 +312,25 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
     return `status-${status.toLowerCase()}`
   }
 
-  const currentView = activeView || 'armored-cars'
-  const navItems = [
-    { view: 'dashboard', label: 'Dashboard', group: 'MAIN MENU' },
-    { view: 'approvals', label: 'Approvals', group: 'MAIN MENU' },
-    { view: 'calendar', label: 'Calendar', group: 'MAIN MENU' },
-    { view: 'analytics', label: 'Analytics', group: 'MAIN MENU' },
-    { view: 'trips', label: 'Trip Management', group: 'OPERATIONS' },
-    { view: 'schedule', label: 'Schedule', group: 'OPERATIONS' },
-    { view: 'missions', label: 'Missions', group: 'OPERATIONS' },
-    { view: 'performance', label: 'Performance', group: 'OPERATIONS' },
-    { view: 'merit', label: 'Merit Scores', group: 'OPERATIONS' },
-    { view: 'firearms', label: 'Firearms', group: 'RESOURCES' },
-    { view: 'allocation', label: 'Allocation', group: 'RESOURCES' },
-    { view: 'permits', label: 'Permits', group: 'RESOURCES' },
-    { view: 'maintenance', label: 'Maintenance', group: 'RESOURCES' },
-    { view: 'armored-cars', label: 'Armored Cars', group: 'RESOURCES' },
-  ]
+
   const availableCars = cars.filter((c) => c.status === 'available').length
   const allocatedCars = cars.filter((c) => c.status === 'allocated').length
   const maintenanceCars = cars.filter((c) => c.status === 'maintenance').length
   const activeTrips = trips.filter((t) => t.status === 'in_transit').length
 
   return (
-    <div className="flex h-[100dvh] w-full overflow-hidden bg-background font-sans">
-      <a href="#maincontent" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[70] focus:rounded-md focus:bg-background focus:px-3 focus:py-2 focus:text-text-primary focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-[var(--color-focus-ring)]">
-        Skip to main content
-      </a>
-      <Sidebar
-        items={navItems}
-        activeView={currentView}
-        onNavigate={onViewChange}
-        onLogoClick={() => onViewChange?.('dashboard')}
-        onLogout={onLogout}
-        isOpen={mobileMenuOpen}
-        onClose={() => setMobileMenuOpen(false)}
-      />
-
-      <main id="maincontent" tabIndex={-1} className="flex-1 flex min-w-0 min-h-0 flex-col w-full overflow-hidden">
-        <Header title="Armored Car Management" badgeLabel="Armored Cars" onLogout={onLogout} onMenuClick={() => setMobileMenuOpen(true)} user={user} currentView={currentView} onNavigateToInbox={() => onViewChange('inbox')} onNavigateToSettings={() => onViewChange('settings')} onNavigateToProfile={() => onViewChange('profile')} />
+    <OperationalShell
+      user={user}
+      title="ARMORED CARS"
+      navItems={getSidebarNav(user.role)}
+      activeView={activeView || 'armored-cars'}
+      onNavigate={(view) => onViewChange?.(view)}
+      onLogout={onLogout}
+      mobileMenuOpen={mobileMenuOpen}
+      onMenuOpen={() => setMobileMenuOpen(true)}
+      onMenuClose={() => setMobileMenuOpen(false)}
+      onLogoClick={() => onViewChange?.('dashboard')}
+    >
 
         {error && (
           <div className="soc-alert-error mx-8 my-4 font-medium flex items-center justify-between">
@@ -506,11 +489,9 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
               <div className="table-glass rounded-lg p-4 md:p-6">
                 <h2 className="text-lg md:text-xl font-bold text-text-primary mb-4 md:mb-6 pb-3 border-b border-border">Vehicle Inventory</h2>
                 {loading ? (
-                  <div className="flex justify-center py-8">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-                  </div>
+                  <LoadingSkeleton variant="table" />
                 ) : cars.length === 0 ? (
-                  <div className="text-center py-8 text-text-secondary text-sm md:text-base">No vehicles found</div>
+                  <EmptyState icon={Truck} title="No vehicles in fleet" subtitle="Register armored vehicles to manage the fleet" />
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full min-w-[600px]">
@@ -796,8 +777,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
             </div>
           )}
         </div>
-      </main>
-    </div>
+    </OperationalShell>
   )
 }
 

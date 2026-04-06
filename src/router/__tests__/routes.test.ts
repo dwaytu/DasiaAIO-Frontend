@@ -20,6 +20,7 @@ describe('ROUTES', () => {
     expect(ROUTES.SHIFT_SWAPS).toBe('/shift-swaps')
     expect(ROUTES.NOTIFICATIONS).toBe('/notifications')
     expect(ROUTES.SUPPORT).toBe('/support')
+    expect(ROUTES.INBOX).toBe('/inbox')
   })
 
   it('has only string values starting with /', () => {
@@ -46,6 +47,8 @@ describe('VIEW_TO_ROUTE', () => {
     expect(VIEW_TO_ROUTE['settings']).toBe(ROUTES.SETTINGS)
     expect(VIEW_TO_ROUTE['analytics']).toBe(ROUTES.ANALYTICS)
     expect(VIEW_TO_ROUTE['audit-log']).toBe(ROUTES.AUDIT)
+    expect(VIEW_TO_ROUTE['inbox']).toBe(ROUTES.INBOX)
+    expect(VIEW_TO_ROUTE['notifications']).toBe(ROUTES.INBOX)
     expect(VIEW_TO_ROUTE['support']).toBe(ROUTES.SUPPORT)
   })
 

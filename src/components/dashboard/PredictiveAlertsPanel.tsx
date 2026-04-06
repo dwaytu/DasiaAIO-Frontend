@@ -49,15 +49,17 @@ const getStringListContext = (context: PredictiveAlert['context'], key: string):
 }
 
 const getSuggestedAction = (alert: PredictiveAlert): string => {
+  const category = (alert.category || '').toLowerCase()
+
   if (alert.severity === 'critical') {
     return 'Escalate to command lead and dispatch field verification immediately.'
   }
 
-  if (alert.category.toLowerCase().includes('permit')) {
+  if (category.includes('permit')) {
     return 'Queue permit validation checks and notify scheduling coordinators.'
   }
 
-  if (alert.category.toLowerCase().includes('maintenance')) {
+  if (category.includes('maintenance')) {
     return 'Review maintenance queue and hold non-essential vehicle assignments.'
   }
 
@@ -120,6 +122,8 @@ const PredictiveAlertsPanel: FC<PredictiveAlertsPanelProps> = ({
             {alerts.map((alert) => {
               const severityClass = severityStyles[alert.severity] ?? severityStyles.info
               const icon = severityIcon[alert.severity] ?? severityIcon.info
+              const categoryLabel = alert.category || 'Forecast'
+              const message = alert.message || 'No predictive alert narrative was provided.'
               const count = getNumericContext(alert.context, 'count')
               const guardNames = getStringListContext(alert.context, 'guards')
               const detectedLabel = alert.detectedAt
@@ -138,7 +142,7 @@ const PredictiveAlertsPanel: FC<PredictiveAlertsPanelProps> = ({
                     <div className="space-y-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="rounded-full border border-white/30 px-2 py-0.5 text-[11px] uppercase tracking-wide text-white/90">
-                          {alert.category}
+                          {categoryLabel}
                         </span>
                         {count !== null && (
                           <span className="font-mono text-[11px] text-white/80">Count: {count}</span>
@@ -147,7 +151,7 @@ const PredictiveAlertsPanel: FC<PredictiveAlertsPanelProps> = ({
                           <span className="font-mono text-[11px] text-white/60">Detected {detectedLabel}</span>
                         )}
                       </div>
-                      <p className="font-mono text-sm text-white">{alert.message}</p>
+                      <p className="font-mono text-sm text-white">{message}</p>
                       {guardNames.length > 0 && (
                         <p className="font-mono text-[11px] text-white/70">
                           Focus: {guardNames.slice(0, 3).join(', ')}

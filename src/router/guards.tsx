@@ -1,6 +1,17 @@
-import { Navigate, Outlet } from 'react-router'
+import { Navigate, Outlet, useLocation } from 'react-router'
 import { useAuth } from '../hooks/useAuth'
 import { ROUTES } from './routes'
+
+const GUARD_ALLOWED_PATHS = new Set([
+  ROUTES.OVERVIEW,
+  ROUTES.CALENDAR,
+  ROUTES.INBOX,
+  ROUTES.NOTIFICATIONS,
+  ROUTES.PERMITS,
+  ROUTES.PROFILE,
+  ROUTES.SETTINGS,
+  ROUTES.SUPPORT,
+])
 
 export function AuthGuard() {
   const { isLoggedIn, isLoading } = useAuth()
@@ -31,9 +42,19 @@ export function AuthGuard() {
 
 export function RoleGuard({ roles }: { roles: string[] }) {
   const { user } = useAuth()
+  const location = useLocation()
 
   if (!user || !roles.includes(user.role)) {
+    // Guards get silent redirect to /overview instead of AccessDenied
+    if (user?.role === 'guard') {
+      return <Navigate to={ROUTES.OVERVIEW} replace />
+    }
     return <AccessDenied />
+  }
+
+  // Extra safety: guard on a route not in their allowed set
+  if (user.role === 'guard' && !GUARD_ALLOWED_PATHS.has(location.pathname as any)) {
+    return <Navigate to={ROUTES.OVERVIEW} replace />
   }
 
   return <Outlet />

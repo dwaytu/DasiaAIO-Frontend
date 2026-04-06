@@ -2,8 +2,8 @@ import { useState, useEffect, FC } from 'react'
 import { API_BASE_URL } from '../config'
 import { logError } from '../utils/logger'
 import { getAuthHeaders } from '../utils/api'
-import Sidebar from './Sidebar'
-import Header from './Header'
+import OperationalShell from './layout/OperationalShell'
+import { getSidebarNav } from '../config/navigation'
 
 interface Permit {
   id: string
@@ -27,23 +27,6 @@ const GuardFirearmPermits: FC<Props> = ({ user, onLogout, onViewChange, activeVi
   const [permits, setPermits] = useState<Permit[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false)
-  const currentView = activeView || 'permits'
-  const navItems = [
-    { view: 'dashboard', label: 'Dashboard', group: 'MAIN MENU' },
-    { view: 'approvals', label: 'Approvals', group: 'MAIN MENU' },
-    { view: 'calendar', label: 'Calendar', group: 'MAIN MENU' },
-    { view: 'analytics', label: 'Analytics', group: 'MAIN MENU' },
-    { view: 'trips', label: 'Trip Management', group: 'OPERATIONS' },
-    { view: 'schedule', label: 'Schedule', group: 'OPERATIONS' },
-    { view: 'missions', label: 'Missions', group: 'OPERATIONS' },
-    { view: 'performance', label: 'Performance', group: 'OPERATIONS' },
-    { view: 'merit', label: 'Merit Scores', group: 'OPERATIONS' },
-    { view: 'firearms', label: 'Firearms', group: 'RESOURCES' },
-    { view: 'allocation', label: 'Allocation', group: 'RESOURCES' },
-    { view: 'permits', label: 'Permits', group: 'RESOURCES' },
-    { view: 'maintenance', label: 'Maintenance', group: 'RESOURCES' },
-    { view: 'armored-cars', label: 'Armored Cars', group: 'RESOURCES' },
-  ]
 
   useEffect(() => {
     fetchPermits()
@@ -66,12 +49,6 @@ const GuardFirearmPermits: FC<Props> = ({ user, onLogout, onViewChange, activeVi
     }
   }
 
-  const handleNavigate = (view: string) => {
-    if (onViewChange) {
-      onViewChange(view)
-    }
-  }
-
   const isExpired = (expiryDate: string) => {
     return new Date(expiryDate) < new Date()
   }
@@ -86,19 +63,18 @@ const GuardFirearmPermits: FC<Props> = ({ user, onLogout, onViewChange, activeVi
   }
 
   return (
-    <div className="flex h-[100dvh] w-full overflow-hidden bg-background font-sans">
-      <Sidebar
-        items={navItems}
-        activeView={currentView}
-        onNavigate={handleNavigate}
-        onLogoClick={() => onViewChange?.('dashboard')}
-        onLogout={onLogout}
-        isOpen={mobileMenuOpen}
-        onClose={() => setMobileMenuOpen(false)}
-      />
-
-      <main className="flex-1 flex min-w-0 min-h-0 flex-col w-full overflow-hidden">
-        <Header title="Guard Firearm Permits" badgeLabel="Permits" onLogout={onLogout} onMenuClick={() => setMobileMenuOpen(true)} user={user} currentView={currentView} onNavigateToInbox={onViewChange ? () => onViewChange('inbox') : undefined} onNavigateToSettings={onViewChange ? () => onViewChange('settings') : undefined} onNavigateToProfile={onViewChange ? () => onViewChange('profile') : undefined} />
+    <OperationalShell
+      user={user}
+      title="PERMITS"
+      navItems={getSidebarNav(user.role)}
+      activeView={activeView || 'permits'}
+      onNavigate={(view) => onViewChange?.(view)}
+      onLogout={onLogout}
+      mobileMenuOpen={mobileMenuOpen}
+      onMenuOpen={() => setMobileMenuOpen(true)}
+      onMenuClose={() => setMobileMenuOpen(false)}
+      onLogoClick={() => onViewChange?.('dashboard')}
+    >
 
         {loading ? (
           <div className="flex-1 flex items-center justify-center text-center">
@@ -149,8 +125,7 @@ const GuardFirearmPermits: FC<Props> = ({ user, onLogout, onViewChange, activeVi
             </section>
           </div>
         )}
-      </main>
-    </div>
+    </OperationalShell>
   )
 }
 

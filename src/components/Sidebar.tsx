@@ -146,7 +146,7 @@ const Sidebar: FC<SidebarProps> = ({ items, activeView, onNavigate, onLogout, on
                 if (!grouped[g]) grouped[g] = []
                 grouped[g].push(item)
               })
-              const groupOrder = ['MAIN MENU', 'OPERATIONS', 'RESOURCES', '']
+              const groupOrder = ['Core', 'Intelligence', 'Operations', 'Resources', 'Field', 'System', '']
               const visibleGroups = groupOrder.filter(g => grouped[g]?.length)
               return visibleGroups.map((groupName, index) => (
                 <div key={groupName || 'other'} className="mb-3">

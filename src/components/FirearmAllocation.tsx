@@ -2,8 +2,8 @@ import { useState, useEffect, FC } from 'react'
 import { API_BASE_URL } from '../config'
 import { logError } from '../utils/logger'
 import { getAuthHeaders } from '../utils/api'
-import Sidebar from './Sidebar'
-import Header from './Header'
+import OperationalShell from './layout/OperationalShell'
+import { getSidebarNav } from '../config/navigation'
 
 interface Allocation {
   id: string
@@ -46,22 +46,6 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
     firearmId: '',
   })
   const currentView = activeView || 'allocation'
-  const navItems = [
-    { view: 'dashboard', label: 'Dashboard', group: 'MAIN MENU' },
-    { view: 'approvals', label: 'Approvals', group: 'MAIN MENU' },
-    { view: 'calendar', label: 'Calendar', group: 'MAIN MENU' },
-    { view: 'analytics', label: 'Analytics', group: 'MAIN MENU' },
-    { view: 'trips', label: 'Trip Management', group: 'OPERATIONS' },
-    { view: 'schedule', label: 'Schedule', group: 'OPERATIONS' },
-    { view: 'missions', label: 'Missions', group: 'OPERATIONS' },
-    { view: 'performance', label: 'Performance', group: 'OPERATIONS' },
-    { view: 'merit', label: 'Merit Scores', group: 'OPERATIONS' },
-    { view: 'firearms', label: 'Firearms', group: 'RESOURCES' },
-    { view: 'allocation', label: 'Allocation', group: 'RESOURCES' },
-    { view: 'permits', label: 'Permits', group: 'RESOURCES' },
-    { view: 'maintenance', label: 'Maintenance', group: 'RESOURCES' },
-    { view: 'armored-cars', label: 'Armored Cars', group: 'RESOURCES' },
-  ]
 
   useEffect(() => {
     initializeData()
@@ -165,12 +149,6 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
     }
   }
 
-  const handleNavigate = (view: string) => {
-    if (onViewChange) {
-      onViewChange(view)
-    }
-  }
-
   const getStatusBadgeColor = (status: string) => {
     switch (status?.toLowerCase()) {
       case 'active': return 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30'
@@ -181,20 +159,18 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
   }
 
   return (
-    <div className="flex h-[100dvh] w-full overflow-hidden bg-background font-sans">
-      <Sidebar
-        items={navItems}
-        activeView={currentView}
-        onNavigate={handleNavigate}
-        onLogoClick={() => onViewChange?.('dashboard')}
-        onLogout={onLogout}
-        isOpen={mobileMenuOpen}
-        onClose={() => setMobileMenuOpen(false)}
-      />
-
-      <main className="flex-1 flex min-w-0 min-h-0 flex-col w-full overflow-hidden">
-        <Header title="Firearm Allocation" badgeLabel="Allocation" onLogout={onLogout} onMenuClick={() => setMobileMenuOpen(true)} user={user} currentView={currentView} onNavigateToInbox={onViewChange ? () => onViewChange('inbox') : undefined} onNavigateToSettings={onViewChange ? () => onViewChange('settings') : undefined} onNavigateToProfile={onViewChange ? () => onViewChange('profile') : undefined} />
-
+    <OperationalShell
+      user={user}
+      title="ALLOCATION"
+      navItems={getSidebarNav(user.role)}
+      activeView={currentView}
+      onNavigate={(view) => onViewChange?.(view)}
+      onLogout={onLogout}
+      mobileMenuOpen={mobileMenuOpen}
+      onMenuOpen={() => setMobileMenuOpen(true)}
+      onMenuClose={() => setMobileMenuOpen(false)}
+      onLogoClick={() => onViewChange?.('dashboard')}
+    >
         {loading ? (
           <div className="flex-1 flex items-center justify-center text-center">
             <div className="text-indigo-600 text-lg font-medium">Loading allocations...</div>
@@ -290,8 +266,7 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
             </section>
           </div>
         )}
-      </main>
-    </div>
+    </OperationalShell>
   )
 }
 

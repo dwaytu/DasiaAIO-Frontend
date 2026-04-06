@@ -104,7 +104,7 @@ describe('AuthGuard', () => {
 })
 
 describe('RoleGuard', () => {
-  it('renders access denied when role is not in the allowed list', () => {
+  it('redirects guards to overview when role is not in the allowed list', () => {
     const auth = makeAuthValue({
       isLoggedIn: true,
       isLoading: false,
@@ -115,10 +115,11 @@ describe('RoleGuard', () => {
         element: <RoleGuard roles={['superadmin', 'admin']} />,
         children: [{ path: '/admin', element: <div>Admin Only</div> }],
       },
+      { path: ROUTES.OVERVIEW, element: <div>Guard Overview</div> },
     ], ['/admin'])
 
     expect(screen.queryByText('Admin Only')).toBeNull()
-    expect(screen.getByText('Access Denied')).toBeTruthy()
+    expect(screen.getByText('Guard Overview')).toBeTruthy()
   })
 
   it('renders children when role is allowed', () => {
@@ -147,5 +148,75 @@ describe('RoleGuard', () => {
     ], ['/admin'])
 
     expect(screen.getByText('Access Denied')).toBeTruthy()
+  })
+
+  it('allows guards to open inbox deep links', () => {
+    const auth = makeAuthValue({
+      isLoggedIn: true,
+      isLoading: false,
+      user: { id: '1', email: 'a@b.com', username: 'guard1', role: 'guard' as Role },
+    })
+
+    renderWithRouter(auth, [
+      {
+        element: <RoleGuard roles={['guard']} />,
+        children: [{ path: ROUTES.INBOX, element: <div>Guard Inbox</div> }],
+      },
+    ], [ROUTES.INBOX])
+
+    expect(screen.getByText('Guard Inbox')).toBeTruthy()
+  })
+
+  it('allows guards to open support deep links', () => {
+    const auth = makeAuthValue({
+      isLoggedIn: true,
+      isLoading: false,
+      user: { id: '1', email: 'a@b.com', username: 'guard1', role: 'guard' as Role },
+    })
+
+    renderWithRouter(auth, [
+      {
+        element: <RoleGuard roles={['guard']} />,
+        children: [{ path: ROUTES.SUPPORT, element: <div>Guard Support</div> }],
+      },
+    ], [ROUTES.SUPPORT])
+
+    expect(screen.getByText('Guard Support')).toBeTruthy()
+  })
+
+  it('allows guards to pass through legacy notifications route', () => {
+    const auth = makeAuthValue({
+      isLoggedIn: true,
+      isLoading: false,
+      user: { id: '1', email: 'a@b.com', username: 'guard1', role: 'guard' as Role },
+    })
+
+    renderWithRouter(auth, [
+      {
+        element: <RoleGuard roles={['guard']} />,
+        children: [{ path: ROUTES.NOTIFICATIONS, element: <div>Legacy Notifications</div> }],
+      },
+    ], [ROUTES.NOTIFICATIONS])
+
+    expect(screen.getByText('Legacy Notifications')).toBeTruthy()
+  })
+
+  it('redirects guard away from elevated-only routes such as armored cars', () => {
+    const auth = makeAuthValue({
+      isLoggedIn: true,
+      isLoading: false,
+      user: { id: '1', email: 'a@b.com', username: 'guard1', role: 'guard' as Role },
+    })
+
+    renderWithRouter(auth, [
+      {
+        element: <RoleGuard roles={['guard']} />,
+        children: [{ path: ROUTES.ARMORED_CARS, element: <div>Armored Cars</div> }],
+      },
+      { path: ROUTES.OVERVIEW, element: <div>Guard Overview</div> },
+    ], [ROUTES.ARMORED_CARS])
+
+    expect(screen.queryByText('Armored Cars')).toBeNull()
+    expect(screen.getByText('Guard Overview')).toBeTruthy()
   })
 })

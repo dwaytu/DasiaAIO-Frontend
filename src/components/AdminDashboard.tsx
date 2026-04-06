@@ -11,6 +11,7 @@ import DeniedFallback from './rbac/DeniedFallback'
 import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
 import CommandCenterDashboard from './dashboard/CommandCenterDashboard'
 import LiveFreshnessPill from './dashboard/ui/LiveFreshnessPill'
+import { TableLoadingState } from './dashboard/ui/DashboardLoadingState'
 import { normalizeRole } from '../types/auth'
 
 interface User {
@@ -403,12 +404,14 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
       if (statusFilter === 'all') return true
       return userStatusById.get(u.id) === statusFilter
     })
-    .filter(u =>
-      !searchQuery ||
-      u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (u.full_name || '').toLowerCase().includes(searchQuery.toLowerCase())
-    )
+    .filter((u) => {
+      if (!searchQuery) return true
+      const normalizedQuery = searchQuery.toLowerCase()
+      const email = (u.email || '').toLowerCase()
+      const username = (u.username || '').toLowerCase()
+      const fullName = (u.full_name || '').toLowerCase()
+      return email.includes(normalizedQuery) || username.includes(normalizedQuery) || fullName.includes(normalizedQuery)
+    })
     .sort((a, b) => {
       const roleA = normalizeRole(a.role)
       const roleB = normalizeRole(b.role)
@@ -562,7 +565,12 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
               />
 
               {loading && (
-                <div className="text-center py-12 text-text-secondary font-medium">Loading users...</div>
+                <TableLoadingState
+                  title="User Management"
+                  subtitle="Hydrating roster, role, and approval data."
+                  rows={6}
+                  columns={7}
+                />
               )}
 
               {!loading && (
@@ -884,7 +892,10 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                       </div>
                     </div>
                   ) : (
-                    <p className="py-12 text-center text-sm italic text-text-secondary">No users found</p>
+                    <div className="text-center py-12">
+                      <p className="text-sm text-text-secondary">No users match the current filters.</p>
+                      <p className="mt-1 text-xs text-text-tertiary">Try adjusting your search or filter criteria.</p>
+                    </div>
                   )}
 
                   <div className="flex items-center justify-between border-t border-border-subtle px-5 py-3">
@@ -903,7 +914,12 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
           {activeSection === 'approvals' && (
             <>
               {approvalsLoading && (
-                <div className="text-center py-12 text-text-secondary font-medium">Loading pending approvals...</div>
+                <TableLoadingState
+                  title="Pending Guard Registrations"
+                  subtitle="Loading approval queue and verification state."
+                  rows={4}
+                  columns={5}
+                />
               )}
 
               {!approvalsLoading && (
@@ -923,7 +939,9 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                       <tbody>
                         {pendingApprovals.length === 0 ? (
                           <tr>
-                            <td className="px-4 py-10 text-center text-text-secondary" colSpan={5}>No pending guard approvals.</td>
+                            <td className="px-4 py-10 text-center" colSpan={5}>
+                              <p className="text-sm text-text-secondary">No pending approvals — all guard registrations have been processed.</p>
+                            </td>
                           </tr>
                         ) : (
                           pendingApprovals.map((pendingUser) => (
@@ -971,7 +989,9 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
 
                     <div className="space-y-3 md:hidden" data-mobile-stack="cards">
                       {pendingApprovals.length === 0 ? (
-                        <p className="rounded-lg border border-border-subtle bg-background p-4 text-center text-sm text-text-secondary">No pending guard approvals.</p>
+                        <div className="rounded-lg border border-border-subtle bg-background p-4 text-center">
+                          <p className="text-sm text-text-secondary">No pending approvals — all guard registrations have been processed.</p>
+                        </div>
                       ) : (
                         pendingApprovals.map((pendingUser) => (
                           <article key={`pending-mobile-${pendingUser.id}`} className="rounded-xl border border-border-subtle bg-background p-4">
@@ -1023,7 +1043,12 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
           {activeSection === 'schedule' && (
             <>
               {shiftsLoading && (
-                <div className="text-center py-12 text-text-secondary font-medium">Loading schedules...</div>
+                <TableLoadingState
+                  title="All Guard Schedules"
+                  subtitle="Loading current deployment roster."
+                  rows={5}
+                  columns={7}
+                />
               )}
 
               {!shiftsLoading && (
@@ -1113,7 +1138,10 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                       </div>
                     </div>
                   ) : (
-                    <p className="text-text-secondary text-center py-8">No schedules found</p>
+                    <div className="text-center py-8">
+                      <p className="text-sm text-text-secondary">No schedules found — create a new schedule to get started.</p>
+                      <p className="mt-1 text-xs text-text-tertiary">Schedules will appear here once created.</p>
+                    </div>
                   )}
                 </div>
               )}
@@ -1188,4 +1216,3 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
 }
 
 export default AdminDashboard
-

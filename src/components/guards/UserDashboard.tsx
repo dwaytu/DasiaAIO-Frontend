@@ -1037,7 +1037,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
         </section>
       </div>
 
-      <PanicButton userId={user.id} />
+      <PanicButton userId={user.id} userDisplayName={user.full_name || user.username || user.id} />
 
       {profileModalOpen ? (
         <div className="fixed inset-0 z-[var(--z-overlay)] flex items-center justify-center bg-black/50 p-4" role="presentation">

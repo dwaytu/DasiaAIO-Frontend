@@ -28,7 +28,7 @@ const SidebarBrand: FC<SidebarBrandProps> = ({ onClick, compact = false, status 
         <SentinelLogo size={30} variant="IconOnly" animated className="drop-shadow-[0_0_8px_rgba(34,211,238,0.45)]" />
       </span>
 
-      <span className={`min-w-0 items-center gap-2 ${compact ? 'hidden' : 'inline-flex'}`}>
+      <span className={`min-w-0 items-center gap-2 ${compact ? 'inline-flex lg:hidden' : 'inline-flex'}`}>
         <span className="truncate text-[19px] font-bold uppercase tracking-[0.12em] text-text-primary">SENTINEL</span>
         <span
           className={`status-light status-light-pulse h-2.5 w-2.5 rounded-full ${statusClass[status]}`}

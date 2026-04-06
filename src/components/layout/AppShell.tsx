@@ -5,7 +5,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { useUI } from '../../hooks/useUI'
 import { useLocationConsent } from '../../hooks/useLocationConsent'
 import { normalizeRole } from '../../types/auth'
-import { APP_VERSION } from '../../config'
+import { APP_VERSION, detectRuntimePlatform } from '../../config'
 import { getSidebarNav } from '../../config/navigation'
 import { getLocationConsentStatus } from '../../utils/location'
 import { VIEW_TO_ROUTE } from '../../router/routes'
@@ -51,6 +51,7 @@ export default function AppShell() {
   const navigate = useNavigate()
   const location = useLocation()
   const activeView = location.pathname.replace(/^\//, '') || 'dashboard'
+  const runtimePlatform = detectRuntimePlatform()
 
   // Local checkbox state for the ToA location consent check (UI-only, not persisted yet)
   const [localLocationConsent, setLocalLocationConsent] = useState(locationConsentPersisted)
@@ -136,6 +137,8 @@ export default function AppShell() {
     ? 'calc(var(--guard-sticky-region-height) + 1rem + env(safe-area-inset-bottom, 0px))'
     : mobileSafeBottomOffset
 
+  const updateCheckLabel = runtimePlatform === 'tauri' ? 'Check for Updates' : 'Check Latest Release'
+
   const handleToaAccept = async () => {
     if (!toaChecked) {
       setToaError('Please confirm that you have read and agree to the Terms of Agreement.')
@@ -163,9 +166,9 @@ export default function AppShell() {
             void checkForUpdates(true)
           }}
           className="fixed bottom-4 right-4 z-[var(--z-floating)] hidden min-h-9 rounded-full border border-border bg-surface/80 px-3 py-1.5 text-xs font-medium text-text-secondary shadow-sm backdrop-blur transition-all hover:bg-surface hover:text-text-primary hover:shadow-md md:block"
-          aria-label="Check for updates"
+          aria-label={updateCheckLabel}
         >
-          Check for Updates
+          {updateCheckLabel}
         </button>
       ) : null}
 
@@ -455,11 +458,12 @@ export default function AppShell() {
             className="soc-modal-panel w-full max-w-lg rounded-2xl border border-border-elevated bg-surface p-5 shadow-modal sm:p-6"
           >
             <h2 id="update-title" className="text-xl font-bold text-text-primary">
-              New update available
+              {releasePrompt.platform === 'tauri' ? 'New update available' : 'New release available'}
             </h2>
             <p className="mt-2 text-sm text-text-secondary">
-              Version {releasePrompt.tag} is available. You are currently using {APP_VERSION}.
-              Download the latest update to continue with new fixes and features.
+              {releasePrompt.platform === 'tauri'
+                ? `Version ${releasePrompt.tag} is available. You are currently using ${APP_VERSION}. Download the latest update to continue with new fixes and features.`
+                : `Version ${releasePrompt.tag} is available. You are currently using ${APP_VERSION}. Open the release page to review release notes and download the latest build.`}
             </p>
             {releasePrompt.changelog ? (
               <p className="mt-2 text-xs text-text-secondary">{releasePrompt.changelog}</p>
@@ -479,7 +483,7 @@ export default function AppShell() {
                 }}
                 className="min-h-11 rounded-md bg-info px-4 py-2 text-sm font-semibold text-white"
               >
-                {releasePrompt.platform === 'tauri' ? 'Update now' : 'Download update'}
+                {releasePrompt.platform === 'tauri' ? 'Update now' : 'Open release page'}
               </button>
             </div>
           </section>

@@ -7,9 +7,10 @@ import { useRoleSettingsRole } from './useRoleSettings'
 
 type AdminSettingsProps = {
   user: User
+  compact?: boolean
 }
 
-export const AdminSettings: FC<AdminSettingsProps> = ({ user }) => {
+export const AdminSettings: FC<AdminSettingsProps> = ({ user, compact = false }) => {
   const role = useRoleSettingsRole(user.role)
   const [notifications, setNotifications] = useState<NotificationSettings>(() =>
     loadRoleSettings(role, 'notifications', defaultNotificationSettings),
@@ -23,6 +24,7 @@ export const AdminSettings: FC<AdminSettingsProps> = ({ user }) => {
     <SettingsDashboard
       title="Admin Settings"
       description="Keep the notification MVP consistent while reserving room for later administrative governance controls."
+      compact={compact}
     >
       <NotificationSettingsSection settings={notifications} onChange={setNotifications} />
       <section className="command-panel p-4 md:p-6">

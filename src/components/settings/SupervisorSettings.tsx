@@ -14,9 +14,10 @@ import { useRoleSettingsRole } from './useRoleSettings'
 
 type SupervisorSettingsProps = {
   user: User
+  compact?: boolean
 }
 
-export const SupervisorSettings: FC<SupervisorSettingsProps> = ({ user }) => {
+export const SupervisorSettings: FC<SupervisorSettingsProps> = ({ user, compact = false }) => {
   const role = useRoleSettingsRole(user.role)
   const [notifications, setNotifications] = useState<NotificationSettings>(() =>
     loadRoleSettings(role, 'notifications', defaultNotificationSettings),
@@ -44,6 +45,7 @@ export const SupervisorSettings: FC<SupervisorSettingsProps> = ({ user }) => {
     <SettingsDashboard
       title="Supervisor Settings"
       description="Tune notification flow for approvals, incident escalations, and shift oversight without changing the current RBAC model."
+      compact={compact}
     >
       <NotificationSettingsSection settings={notifications} onChange={setNotifications} />
 

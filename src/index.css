@@ -151,6 +151,8 @@
   --guard-sticky-region-height: 12rem;
   /* Header height: typically 4.25rem (header size + safe spacing) */
   --guard-main-reserved-height: 4.25rem;
+  --sidebar-width-expanded: 18rem;
+  --sidebar-width-collapsed: 4rem;
 
   --bg-primary: var(--color-background);
   --bg-surface: var(--color-surface);
@@ -1016,6 +1018,10 @@
   .soc-sidebar-shell {
     background: color-mix(in srgb, var(--color-surface) 94%, transparent);
     border-right: 1px solid var(--color-border);
+  }
+
+  .soc-sidebar-width-transition {
+    transition: width 200ms ease;
   }
 
   .soc-settings-drawer {

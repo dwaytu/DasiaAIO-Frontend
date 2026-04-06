@@ -129,6 +129,7 @@ interface UseOperationalMapDataResult {
   wsConnectionState: WsConnectionState
   loading: boolean
   error: string
+  hasTrackingAccess: boolean
   refresh: () => Promise<void>
   lastUpdated: string
   createClientSite: (input: ClientSiteInput) => Promise<void>
@@ -530,6 +531,7 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
       wsConnectionState,
       loading,
       error,
+      hasTrackingAccess,
       refresh: load,
       lastUpdated,
       createClientSite,
@@ -548,6 +550,7 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
       wsConnectionState,
       loading,
       error,
+      hasTrackingAccess,
       load,
       lastUpdated,
       createClientSite,

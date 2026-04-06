@@ -1,5 +1,6 @@
 import { FC, useMemo, useState } from 'react'
 import { API_BASE_URL } from '../../config'
+import { useOperationalEvent } from '../../context/OperationalEventContext'
 import { fetchJsonOrThrow, getAuthHeaders } from '../../utils/api'
 import type { Incident } from '../../hooks/useIncidents'
 
@@ -26,6 +27,7 @@ const IncidentSeverityClassifier: FC<IncidentSeverityClassifierProps> = ({ incid
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [result, setResult] = useState<ClassifyResult | null>(null)
+  const { selectEvent } = useOperationalEvent()
 
   const candidateIncident = useMemo(
     () => incidents.find((item) => item.status !== 'resolved') || incidents[0],
@@ -66,6 +68,15 @@ const IncidentSeverityClassifier: FC<IncidentSeverityClassifierProps> = ({ incid
   const severity = (result?.severity || '').toLowerCase()
   const riskLevel = (result?.riskLevel || severity || '').toLowerCase()
   const tone = severityTone[severity] || 'border-border-subtle bg-surface-elevated text-text-primary'
+
+  const handleRecommendedAction = (action: string) => {
+    if (!candidateIncident) return
+    selectEvent({
+      id: candidateIncident.id,
+      type: 'incident',
+      title: action,
+    })
+  }
 
   return (
     <section className="command-panel rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-surface)]" aria-label="Incident severity classifier">
@@ -109,7 +120,7 @@ const IncidentSeverityClassifier: FC<IncidentSeverityClassifierProps> = ({ incid
                     <button
                       key={i}
                       type="button"
-                      onClick={() => alert(`Action: ${action}`)}
+                      onClick={() => handleRecommendedAction(action)}
                       className="rounded border border-info-border bg-info-bg px-2 py-1 font-mono text-[11px] text-info-text transition-colors hover:bg-info-bg focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--color-focus-ring)]"
                       title={action}
                     >

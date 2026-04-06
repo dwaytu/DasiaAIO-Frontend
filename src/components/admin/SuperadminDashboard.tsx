@@ -317,7 +317,8 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
 
   useEffect(() => {
     if (!activeView) return
-    const viewToSection: Record<string, 'dashboard' | 'approvals' | 'schedule' | 'missions' | 'analytics' | 'trips' | 'audit-log'> = {
+    const viewToSection: Record<string, 'inbox' | 'dashboard' | 'approvals' | 'schedule' | 'missions' | 'analytics' | 'trips' | 'audit-log'> = {
+      inbox: 'inbox',
       users: 'dashboard',
       dashboard: 'dashboard',
       approvals: 'approvals',
@@ -328,8 +329,8 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
       'audit-log': 'audit-log'
     }
     const nextSection = viewToSection[activeView]
-    if (nextSection && nextSection !== activeSection) {
-      setActiveSection(nextSection)
+    if (nextSection) {
+      setActiveSection((previousSection) => previousSection === nextSection ? previousSection : nextSection)
     }
   }, [activeView])
 

@@ -1,16 +1,41 @@
-import { FC, FormEvent, Fragment, useEffect, useMemo, useState } from 'react'
+import { FC, FormEvent, Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import L from 'leaflet'
 import { Circle, CircleMarker, MapContainer, Marker, Polyline, Popup, TileLayer, useMap, useMapEvents } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import { ClientSiteInput, useOperationalMapData } from '../../hooks/useOperationalMapData'
 import { getPersonRecencyMinutes, getTrackingAccuracyMode, getVehicleRecencyMinutes } from '../../utils/trackingPolicy'
 import { useTheme } from '../../context/ThemeProvider'
+import { useOperationalEvent } from '../../context/OperationalEventContext'
 import { getOperationalMapTileUrl } from './mapTileUrls'
 
 interface OperationalMapPanelProps {
   activeTrips: number
   activeGuards: number
 }
+
+interface SelectedGuardEventMatch {
+  guardId?: string
+  userId?: string
+  guardName?: string
+  latitude: number
+  longitude: number
+}
+
+const eventTypeBadgeClass: Record<'incident' | 'alert' | 'guard' | 'vehicle', string> = {
+  incident: 'border-danger-border bg-danger-bg text-danger-text',
+  alert: 'border-warning-border bg-warning-bg text-warning-text',
+  guard: 'border-info-border bg-info-bg text-info-text',
+  vehicle: 'border-warning-border bg-warning-bg text-warning-text',
+}
+
+const eventTypeLabel: Record<'incident' | 'alert' | 'guard' | 'vehicle', string> = {
+  incident: 'Incident',
+  alert: 'Alert',
+  guard: 'Guard',
+  vehicle: 'Vehicle',
+}
+
+const normalizeEventToken = (value?: string): string => value?.trim().toLowerCase() ?? ''
 
 const DAVAO_CENTER: [number, number] = [7.0731, 125.6128]
 
@@ -83,6 +108,7 @@ const currentUserPin = L.divIcon({
 
 const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, activeGuards }) => {
   const { theme } = useTheme()
+  const { selectedEvent, clearSelection } = useOperationalEvent()
   const {
     clientSites,
     trackingPoints,
@@ -96,6 +122,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
     fetchGuardPath,
     fetchActiveGuards,
     isElevatedUser,
+    hasTrackingAccess,
   } = useOperationalMapData()
   const [siteForm, setSiteForm] = useState<ClientSiteInput>(INITIAL_FORM)
   const [editingSiteId, setEditingSiteId] = useState<string>('')
@@ -104,11 +131,13 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
   const [focusCenter, setFocusCenter] = useState<[number, number] | null>(null)
   const [selectedGuardId, setSelectedGuardId] = useState<string>('')
   const [selectedGuardPath, setSelectedGuardPath] = useState<Array<{ latitude: number; longitude: number; recordedAt: string; movementStatus?: string }>>([])
-  const [activeGuardsIntel, setActiveGuardsIntel] = useState<Array<{ guardId: string; guardName?: string; latitude: number; longitude: number; movementStatus: string; recordedAt: string }>>([])
+  const [activeGuardsIntel, setActiveGuardsIntel] = useState<Array<{ id?: string; guardId: string; userId?: string; guardName?: string; latitude: number; longitude: number; movementStatus: string; recordedAt: string }>>([])
   const [playbackEnabled, setPlaybackEnabled] = useState<boolean>(false)
   const [playbackIndex, setPlaybackIndex] = useState<number>(0)
   const [saving, setSaving] = useState<boolean>(false)
   const [formError, setFormError] = useState<string>('')
+  const [dismissedDegradedError, setDismissedDegradedError] = useState<string>('')
+  const selectedEventPanelRef = useRef<HTMLElement | null>(null)
   const trackingMode = getTrackingAccuracyMode()
   const personRecencyMinutes = getPersonRecencyMinutes(trackingMode)
   const vehicleRecencyMinutes = getVehicleRecencyMinutes(trackingMode)
@@ -168,6 +197,139 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
     return positions.length > 0 ? positions : [DAVAO_CENTER]
   }, [clientSites, visibleTrackingPoints])
 
+  const selectedGuardEventMatch = useMemo<SelectedGuardEventMatch | null>(() => {
+    if (!selectedEvent || selectedEvent.type !== 'guard') {
+      return null
+    }
+
+    const selectedIdToken = normalizeEventToken(selectedEvent.id)
+    const selectedTitleToken = normalizeEventToken(selectedEvent.title)
+
+    const identityMatch = activeGuardsIntel.find((guard) => {
+      const guardIdToken = normalizeEventToken(guard.guardId)
+      const userIdToken = normalizeEventToken(guard.userId)
+
+      if (!selectedIdToken) return false
+      return guardIdToken === selectedIdToken || userIdToken === selectedIdToken
+    })
+
+    if (identityMatch) {
+      return {
+        guardId: identityMatch.guardId,
+        userId: identityMatch.userId,
+        guardName: identityMatch.guardName,
+        latitude: identityMatch.latitude,
+        longitude: identityMatch.longitude,
+      }
+    }
+
+    const titleMatch = activeGuardsIntel.find((guard) => {
+      const guardNameToken = normalizeEventToken(guard.guardName)
+      return Boolean(guardNameToken) && selectedTitleToken.includes(guardNameToken)
+    })
+
+    if (titleMatch) {
+      return {
+        guardId: titleMatch.guardId,
+        userId: titleMatch.userId,
+        guardName: titleMatch.guardName,
+        latitude: titleMatch.latitude,
+        longitude: titleMatch.longitude,
+      }
+    }
+
+    const trackingMatch = visibleTrackingPoints.find((point) => {
+      if (point.entityType === 'vehicle') return false
+
+      const entityIdToken = normalizeEventToken(point.entityId)
+      const userIdToken = normalizeEventToken(point.userId)
+
+      if (!selectedIdToken) return false
+      return entityIdToken === selectedIdToken || userIdToken === selectedIdToken
+    })
+
+    if (!trackingMatch) {
+      return null
+    }
+
+    return {
+      guardId: trackingMatch.entityId,
+      userId: trackingMatch.userId,
+      guardName: trackingMatch.label,
+      latitude: trackingMatch.latitude,
+      longitude: trackingMatch.longitude,
+    }
+  }, [activeGuardsIntel, selectedEvent, visibleTrackingPoints])
+
+  const selectedGuardMarkerTokens = useMemo(() => {
+    if (!selectedEvent || selectedEvent.type !== 'guard' || !selectedGuardEventMatch) {
+      return [] as string[]
+    }
+
+    return [selectedEvent.id, selectedGuardEventMatch.guardId, selectedGuardEventMatch.userId]
+      .map((value) => normalizeEventToken(value))
+      .filter((value) => value.length > 0)
+  }, [selectedEvent, selectedGuardEventMatch])
+
+  const isSelectedGuardTrackingPoint = (point: { entityType: string; entityId: string; userId?: string; latitude: number; longitude: number }) => {
+    if (selectedEvent?.type !== 'guard' || point.entityType === 'vehicle') {
+      return false
+    }
+
+    const entityIdToken = normalizeEventToken(point.entityId)
+    const userIdToken = normalizeEventToken(point.userId)
+    if (selectedGuardMarkerTokens.includes(entityIdToken) || selectedGuardMarkerTokens.includes(userIdToken)) {
+      return true
+    }
+
+    if (!selectedGuardEventMatch) {
+      return false
+    }
+
+    const latClose = Math.abs(point.latitude - selectedGuardEventMatch.latitude) < 0.0002
+    const lngClose = Math.abs(point.longitude - selectedGuardEventMatch.longitude) < 0.0002
+    return latClose && lngClose
+  }
+
+  useEffect(() => {
+    if (!selectedEvent) return
+
+    selectedEventPanelRef.current?.focus()
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      clearSelection()
+    }
+
+    window.addEventListener('keydown', handleEscape)
+    return () => {
+      window.removeEventListener('keydown', handleEscape)
+    }
+  }, [clearSelection, selectedEvent])
+
+  useEffect(() => {
+    if (selectedEvent?.type !== 'guard' || !selectedGuardEventMatch) {
+      return
+    }
+
+    setFocusCenter((previous) => {
+      const next: [number, number] = [selectedGuardEventMatch.latitude, selectedGuardEventMatch.longitude]
+      if (
+        previous &&
+        Math.abs(previous[0] - next[0]) < 0.0001 &&
+        Math.abs(previous[1] - next[1]) < 0.0001
+      ) {
+        return previous
+      }
+
+      return next
+    })
+
+    if (selectedGuardEventMatch.guardId) {
+      setSelectedGuardId((previous) => (previous === selectedGuardEventMatch.guardId ? previous : selectedGuardEventMatch.guardId ?? previous))
+    }
+  }, [selectedEvent?.type, selectedGuardEventMatch])
+
   useEffect(() => {
     let disposed = false
 
@@ -177,7 +339,9 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
         if (disposed) return
         setActiveGuardsIntel(
           guards.map((guard) => ({
+          id: guard.id,
             guardId: guard.guardId,
+          userId: guard.userId,
             guardName: guard.guardName,
             latitude: guard.latitude,
             longitude: guard.longitude,
@@ -260,6 +424,12 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
     }
   }, [playbackEnabled, selectedGuardPath.length])
 
+  useEffect(() => {
+    if (!error) {
+      setDismissedDegradedError('')
+    }
+  }, [error])
+
   const clusteredTrackingPoints = useMemo(() => {
     if (mapZoom >= 11) return []
 
@@ -303,6 +473,10 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
   }, [playbackEnabled, playbackIndex, selectedGuardPath])
 
   const geofenceFeed = useMemo(() => geofenceAlerts.slice(0, 6), [geofenceAlerts])
+  const showNoTrackingAccessOverlay = !loading && !hasTrackingAccess
+  const showNoPersonnelOverlay = !loading && hasTrackingAccess && !error && visibleTrackingPoints.length === 0
+  const showDegradedBanner = Boolean(error) && hasTrackingAccess && dismissedDegradedError !== error
+  const shouldPromptClientSiteSetup = showNoPersonnelOverlay && clientSites.length === 0
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -468,6 +642,20 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
             />
           ) : null}
 
+          {selectedEvent?.type === 'guard' && selectedGuardEventMatch ? (
+            <CircleMarker
+              center={[selectedGuardEventMatch.latitude, selectedGuardEventMatch.longitude]}
+              radius={12}
+              pathOptions={{ color: 'var(--color-info)', fillColor: 'var(--color-info)', fillOpacity: 0.15, weight: 2 }}
+            >
+              <Popup>
+                <strong>Selected Guard</strong>
+                <div>{selectedGuardEventMatch.guardName || selectedGuardEventMatch.guardId || selectedEvent.id}</div>
+                <div>Focused from operational event stream.</div>
+              </Popup>
+            </CircleMarker>
+          ) : null}
+
           {playbackPoint ? (
             <CircleMarker
               center={[playbackPoint.latitude, playbackPoint.longitude]}
@@ -497,7 +685,9 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
               ))
             : visibleTrackingPoints.map((point) => {
             const isCurrentUser = currentUserId && point.entityId === currentUserId
+            const isSelectedGuardPoint = isSelectedGuardTrackingPoint(point)
             const tone = movementTone(point.entityType, point.movementStatus)
+            const markerColor = isSelectedGuardPoint ? 'var(--color-info)' : tone.color
             const pointAgeSeconds = Math.max(0, Math.floor((Date.now() - new Date(point.recordedAt).getTime()) / 1000))
             const sourceLabel = point.entityType === 'vehicle' ? 'Vehicle telemetry' : 'Device geolocation'
 
@@ -522,16 +712,18 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
               <CircleMarker
                 key={`track-${point.id}`}
                 center={[point.latitude, point.longitude]}
-                radius={6}
+                radius={isSelectedGuardPoint ? 8 : 6}
                 pathOptions={{
-                  color: tone.color,
-                  fillColor: tone.fillColor,
-                  fillOpacity: 0.8,
+                  color: markerColor,
+                  fillColor: markerColor,
+                  fillOpacity: isSelectedGuardPoint ? 0.95 : 0.8,
+                  weight: isSelectedGuardPoint ? 3 : 1,
                 }}
               >
                 <Popup>
                   <strong>{point.entityType === 'vehicle' ? 'Armored Vehicle' : 'Guard'}</strong>
                   <div>{point.label || point.entityId}</div>
+                  {isSelectedGuardPoint ? <div>Linked to selected operational event</div> : null}
                   {point.status ? <div>Status: {point.status}</div> : null}
                   {point.movementStatus ? <div>Movement: {point.movementStatus}</div> : null}
                   <div>Source: {sourceLabel}</div>
@@ -562,7 +754,91 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
         </MapContainer>
 
         {loading ? (
-          <div className="pointer-events-none absolute inset-0 grid place-items-center bg-black/25 text-sm font-semibold text-white backdrop-blur-[1px]">Loading map telemetry...</div>
+          <div className="pointer-events-none absolute inset-0 z-[360] grid place-items-center bg-surface/70 backdrop-blur-[1px]">
+            <div className="rounded-md border border-border-subtle bg-surface-elevated px-4 py-3 text-center shadow-sm">
+              <p className="text-sm font-semibold text-text-primary">Loading live map data</p>
+              <p className="mt-1 text-xs text-text-secondary">Synchronizing guard, vehicle, and client site positions.</p>
+            </div>
+          </div>
+        ) : null}
+
+        {showNoTrackingAccessOverlay ? (
+          <div className="pointer-events-none absolute inset-0 z-[330] flex items-center justify-center p-4">
+            <div className="max-w-md rounded-lg border border-border bg-surface-elevated px-4 py-3 text-center shadow-sm">
+              <p className="text-sm font-semibold text-text-primary">Live tracking unavailable for this account</p>
+              <p className="mt-1 text-xs text-text-secondary">Live tracking is available for field supervisors and guards.</p>
+              <p className="mt-1 text-xs text-text-secondary">Sign in with a supervisor or guard account to view live positions.</p>
+            </div>
+          </div>
+        ) : null}
+
+        {showNoPersonnelOverlay ? (
+          <div className="pointer-events-none absolute inset-0 z-[320] flex items-center justify-center p-4">
+            <div className="max-w-md rounded-lg border border-border bg-surface-elevated px-4 py-3 text-center shadow-sm">
+              <p className="text-sm font-semibold text-text-primary">No active field personnel</p>
+              <p className="mt-1 text-xs text-text-secondary">Guards with the mobile app will appear here when they start their shift.</p>
+              <p className="mt-1 text-xs text-text-secondary">
+                {shouldPromptClientSiteSetup
+                  ? 'No client sites are configured yet. Supervisors can add client sites using the map controls.'
+                  : 'Client sites are configured and waiting for incoming guard location updates.'}
+              </p>
+            </div>
+          </div>
+        ) : null}
+
+        {showDegradedBanner ? (
+          <div className="absolute left-3 right-3 top-3 z-[420]">
+            <div className="flex items-start justify-between gap-3 rounded-lg border border-warning-border bg-warning-bg px-3 py-2 shadow-sm" role="status" aria-live="polite">
+              <p className="text-sm text-text-secondary">Live tracking data temporarily unavailable - map shows last known positions.</p>
+              <button
+                type="button"
+                onClick={() => setDismissedDegradedError(error)}
+                className="min-h-11 rounded-md border border-warning-border bg-warning-bg px-2 py-1 text-xs font-semibold uppercase tracking-wide text-warning-text"
+                aria-label="Dismiss live tracking degraded state notice"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {selectedEvent ? (
+          <aside
+            ref={selectedEventPanelRef}
+            tabIndex={0}
+            aria-label="Selected operational event details"
+            onKeyDown={(event) => {
+              if (event.key !== 'Escape') return
+              event.preventDefault()
+              clearSelection()
+            }}
+            className="absolute right-3 top-3 z-[500] w-full max-w-[280px] rounded-lg border border-border bg-surface-elevated p-3 shadow-lg outline-none focus-visible:ring-2 focus-visible:ring-focus"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] ${eventTypeBadgeClass[selectedEvent.type]}`}>
+                {eventTypeLabel[selectedEvent.type]}
+              </span>
+              <button
+                type="button"
+                onClick={clearSelection}
+                className="min-h-11 rounded-md border border-border-subtle px-2 py-1 text-xs font-semibold uppercase tracking-wide text-text-secondary"
+                aria-label="Dismiss selected event details"
+              >
+                X
+              </button>
+            </div>
+
+            <p className="mt-2 text-sm font-semibold text-text-primary">{selectedEvent.title}</p>
+            <p className="mt-1 text-[11px] uppercase tracking-[0.14em] text-text-tertiary">Event ID: <span className="font-semibold normal-case tracking-normal text-text-secondary">{selectedEvent.id}</span></p>
+
+            {selectedEvent.type === 'guard' ? (
+              <p className="mt-2 text-xs text-text-secondary">
+                {selectedGuardEventMatch
+                  ? 'Matched active guard telemetry. Map focus and marker emphasis applied.'
+                  : 'Guard event selected, but no active guard telemetry match is currently available.'}
+              </p>
+            ) : null}
+          </aside>
         ) : null}
       </div>
 
@@ -665,8 +941,6 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
         <span className="inline-flex items-center gap-1"><span className="status-light status-light-danger" aria-hidden="true" /> Your location</span>
         <span className="w-full text-text-tertiary normal-case tracking-normal sm:ml-auto sm:w-auto">Tip: use guard chips to zoom and replay patrol trail</span>
       </div>
-
-      {error ? <p className="mt-3 text-xs text-danger-text">{error}</p> : null}
 
       {isElevatedUser ? (
         <div className="mt-4 rounded-lg border border-border-subtle bg-surface-elevated p-3">

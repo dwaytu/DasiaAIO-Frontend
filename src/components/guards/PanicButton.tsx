@@ -5,11 +5,12 @@ import { enqueueOfflineAction } from '../../utils/offlineQueue'
 
 interface PanicButtonProps {
   userId: string
+  userDisplayName?: string
 }
 
 type ButtonState = 'idle' | 'sending' | 'sent'
 
-const PanicButton: FC<PanicButtonProps> = ({ userId }) => {
+const PanicButton: FC<PanicButtonProps> = ({ userId, userDisplayName }) => {
   const [state, setState] = useState<ButtonState>('idle')
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -39,7 +40,7 @@ const PanicButton: FC<PanicButtonProps> = ({ userId }) => {
 
     const payload = {
       title: '\u{1F6A8} SOS EMERGENCY',
-      description: `Emergency panic alert triggered by guard (${userId})`,
+      description: `Emergency panic alert triggered by guard (${userDisplayName || userId})`,
       location,
       priority: 'critical',
     }
@@ -73,7 +74,7 @@ const PanicButton: FC<PanicButtonProps> = ({ userId }) => {
       setState('idle')
       resetTimerRef.current = null
     }, 3000)
-  }, [state, userId])
+  }, [state, userDisplayName, userId])
 
   return (
     <div className="fixed bottom-32 right-4 z-40 flex flex-col items-center gap-1">

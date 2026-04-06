@@ -1,4 +1,4 @@
-import { FC, useEffect, useMemo, useRef } from 'react'
+import { CSSProperties, FC, useEffect, useMemo, useRef } from 'react'
 import SidebarBrand from './SidebarBrand'
 import { useServiceHealth } from '../hooks/useServiceHealth'
 
@@ -16,6 +16,8 @@ interface SidebarProps {
   onLogoClick?: () => void
   isOpen?: boolean
   onClose?: () => void
+  collapsed?: boolean
+  onToggle?: () => void
 }
 
 const navGlyphs: Record<string, string> = {
@@ -38,11 +40,26 @@ const navGlyphs: Record<string, string> = {
   support: 'CT',
 }
 
-const Sidebar: FC<SidebarProps> = ({ items, activeView, onNavigate, onLogout, onLogoClick, isOpen = true, onClose }) => {
+const Sidebar: FC<SidebarProps> = ({
+  items,
+  activeView,
+  onNavigate,
+  onLogout,
+  onLogoClick,
+  isOpen = true,
+  onClose,
+  collapsed = false,
+  onToggle,
+}) => {
   const asideRef = useRef<HTMLElement | null>(null)
   const navRef = useRef<HTMLElement | null>(null)
   const scrollStorageKey = 'dasi.sidebar.scrollTop'
   const { services } = useServiceHealth()
+  const desktopSidebarWidth = collapsed ? 'var(--sidebar-width-collapsed)' : 'var(--sidebar-width-expanded)'
+  const sidebarStyle: CSSProperties & Record<string, string> = {
+    paddingTop: 'env(safe-area-inset-top, 0px)',
+    '--sidebar-width': desktopSidebarWidth,
+  }
 
   const systemStatus = useMemo<'operational' | 'degraded' | 'critical'>(() => {
     const statuses = [
@@ -107,15 +124,16 @@ const Sidebar: FC<SidebarProps> = ({ items, activeView, onNavigate, onLogout, on
       {/* Sidebar */}
       <aside className={`
         fixed inset-y-0 left-0 z-[var(--z-drawer)]
-        w-72 flex flex-col overflow-y-auto shadow-2xl soc-sidebar-shell
+        w-72 lg:w-[var(--sidebar-width)] soc-sidebar-width-transition
+        flex flex-col overflow-y-auto shadow-2xl soc-sidebar-shell
         transform transition-transform duration-200 ease-out
         lg:transform-none
         ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-      `} ref={asideRef} style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+      `} ref={asideRef} style={sidebarStyle}>
         {/* Top accent line */}
         <div className="h-1 w-full soc-sidebar-accent" />
 
-        <div className="flex flex-1 flex-col overflow-hidden p-4 md:p-6">
+        <div className={`flex flex-1 flex-col overflow-hidden p-4 md:p-6 ${collapsed ? 'lg:px-2 lg:py-4' : 'lg:px-6 lg:py-6'}`}>
           {/* Close button for mobile */}
           {onClose && (
             <button
@@ -130,10 +148,10 @@ const Sidebar: FC<SidebarProps> = ({ items, activeView, onNavigate, onLogout, on
             </button>
           )}
           
-          <div className="mb-4 flex-shrink-0 border-b border-border-subtle pb-4">
+          <div className={`mb-4 flex-shrink-0 border-b border-border-subtle pb-4 ${collapsed ? 'lg:flex lg:justify-center' : ''}`}>
             <SidebarBrand
               onClick={onLogoClick}
-              compact={false}
+              compact={collapsed}
               status={systemStatus}
             />
           </div>
@@ -149,9 +167,9 @@ const Sidebar: FC<SidebarProps> = ({ items, activeView, onNavigate, onLogout, on
               const groupOrder = ['Core', 'Intelligence', 'Operations', 'Resources', 'Field', 'System', '']
               const visibleGroups = groupOrder.filter(g => grouped[g]?.length)
               return visibleGroups.map((groupName, index) => (
-                <div key={groupName || 'other'} className="mb-3">
+                <div key={groupName || 'other'} className={`mb-3 ${collapsed ? 'lg:mb-2' : ''}`}>
                   {groupName && (
-                    <p className="soc-sidebar-heading px-3 pb-2 pt-1 text-[11px] font-bold uppercase tracking-[0.2em]">
+                    <p className={`soc-sidebar-heading px-3 pb-2 pt-1 text-[11px] font-bold uppercase tracking-[0.2em] ${collapsed ? 'lg:hidden' : ''}`}>
                       {groupName}
                     </p>
                   )}
@@ -161,42 +179,57 @@ const Sidebar: FC<SidebarProps> = ({ items, activeView, onNavigate, onLogout, on
                         key={view}
                         className={`soc-sidebar-nav-item cursor-pointer select-none px-3 py-2.5 text-left text-sm font-semibold uppercase tracking-wide ${
                           view === activeView ? 'soc-sidebar-nav-item-active' : ''
-                        }`}
+                        } ${collapsed ? 'lg:px-2 lg:py-2' : ''}`}
                         onClick={() => handleNavigate(view)}
                         type="button"
+                        title={collapsed ? label : undefined}
+                        aria-label={collapsed ? label : undefined}
                       >
-                        <span className="flex items-center gap-2">
+                        <span className={`flex items-center gap-2 ${collapsed ? 'lg:justify-center' : ''}`}>
                           <span className="inline-flex h-5 w-5 items-center justify-center rounded-md border border-border-subtle bg-surface-elevated text-[11px] font-bold tracking-wide text-text-tertiary" aria-hidden="true">
                             {navGlyphs[view] || 'NV'}
                           </span>
-                          <span>{label}</span>
+                          <span className={collapsed ? 'lg:hidden' : ''}>{label}</span>
                         </span>
                       </button>
                     ))}
                   </div>
                   {index < visibleGroups.length - 1 && (
-                    <div className="mt-2 border-t border-border-subtle" aria-hidden="true" />
+                    <div className={`mt-2 border-t border-border-subtle ${collapsed ? 'lg:hidden' : ''}`} aria-hidden="true" />
                   )}
                 </div>
               ))
             })()}
           </nav>
 
+          {onToggle && (
+            <button
+              type="button"
+              onClick={onToggle}
+              className="mt-3 hidden min-h-11 flex-shrink-0 items-center justify-center rounded-lg border border-border-subtle bg-surface-elevated px-3 py-2 text-sm font-semibold uppercase tracking-wide text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)] lg:flex"
+              aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              <span aria-hidden="true" className="text-base font-bold leading-none">
+                {collapsed ? '»' : '«'}
+              </span>
+            </button>
+          )}
+
           <button 
             type="button"
             onClick={onLogout} 
-            className="soc-sidebar-logout mt-3 flex min-h-11 flex-shrink-0 cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold uppercase tracking-wide"
+            className={`soc-sidebar-logout mt-3 flex min-h-11 flex-shrink-0 cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold uppercase tracking-wide ${collapsed ? 'lg:justify-center lg:px-2' : ''}`}
+            title={collapsed ? 'Logout' : undefined}
+            aria-label="Logout"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
             </svg>
-            Logout
+            <span className={collapsed ? 'lg:hidden' : ''}>Logout</span>
           </button>
         </div>
       </aside>
-
-      {/* Desktop spacer for fixed sidebar */}
-      <div className="hidden w-72 flex-shrink-0 lg:block" aria-hidden="true" />
     </>
   )
 }

@@ -1,8 +1,10 @@
-import { FC, ReactNode, useMemo, useState } from 'react'
+import { CSSProperties, FC, ReactNode, useEffect, useMemo, useState } from 'react'
 import { Bell, Calendar, ClipboardCheck, LayoutDashboard, MoreHorizontal, X } from 'lucide-react'
 import Sidebar, { SidebarItem } from '../Sidebar'
 import Header from '../shared/Header'
 import type { User } from '../../context/AuthContext'
+
+const SIDEBAR_COLLAPSED_STORAGE_KEY = 'dasi.sidebar.collapsed'
 
 interface OperationalShellProps {
   user: User
@@ -39,6 +41,17 @@ const OperationalShell: FC<OperationalShellProps> = ({
   error,
   children,
 }) => {
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+    if (typeof window === 'undefined') {
+      return false
+    }
+
+    try {
+      return window.localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === 'true'
+    } catch {
+      return false
+    }
+  })
   const [moreDrawerOpen, setMoreDrawerOpen] = useState(false)
   const isElevatedRole = user.role !== 'guard'
   const mobileBottomTabs = [
@@ -53,6 +66,26 @@ const OperationalShell: FC<OperationalShellProps> = ({
     return navItems.filter((item) => !bottomTabKeys.has(item.view))
   }, [navItems])
 
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    try {
+      window.localStorage.setItem(SIDEBAR_COLLAPSED_STORAGE_KEY, String(sidebarCollapsed))
+    } catch {
+      // Ignore storage failures (private mode, restricted context) and keep in-memory behavior.
+    }
+  }, [sidebarCollapsed])
+
+  const desktopSidebarWidth = sidebarCollapsed
+    ? 'var(--sidebar-width-collapsed)'
+    : 'var(--sidebar-width-expanded)'
+
+  const sidebarSpacerStyle: CSSProperties & Record<string, string> = {
+    '--sidebar-width': desktopSidebarWidth,
+  }
+
   return (
     <div className="flex h-[100dvh] w-full overflow-hidden bg-background font-sans">
       <a href="#maincontent" className="skip-link">Skip to main content</a>
@@ -64,6 +97,14 @@ const OperationalShell: FC<OperationalShellProps> = ({
         onLogout={onLogout}
         isOpen={mobileMenuOpen}
         onClose={onMenuClose}
+        collapsed={sidebarCollapsed}
+        onToggle={() => setSidebarCollapsed((prev) => !prev)}
+      />
+
+      <div
+        className="hidden w-72 flex-shrink-0 lg:block lg:w-[var(--sidebar-width)] soc-sidebar-width-transition"
+        style={sidebarSpacerStyle}
+        aria-hidden="true"
       />
 
       <main id="maincontent" tabIndex={-1} className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">

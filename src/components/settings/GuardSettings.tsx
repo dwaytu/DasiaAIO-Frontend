@@ -7,9 +7,10 @@ import { useRoleSettingsRole } from './useRoleSettings'
 
 type GuardSettingsProps = {
   user: User
+  compact?: boolean
 }
 
-export const GuardSettings: FC<GuardSettingsProps> = ({ user }) => {
+export const GuardSettings: FC<GuardSettingsProps> = ({ user, compact = false }) => {
   const role = useRoleSettingsRole(user.role)
   const [notifications, setNotifications] = useState<NotificationSettings>(() =>
     loadRoleSettings(role, 'notifications', defaultNotificationSettings),
@@ -23,6 +24,7 @@ export const GuardSettings: FC<GuardSettingsProps> = ({ user }) => {
     <SettingsDashboard
       title="Guard Settings"
       description="Manage how operational updates follow you through active shifts, recovery periods, and support workflows."
+      compact={compact}
     >
       <NotificationSettingsSection settings={notifications} onChange={setNotifications} />
     </SettingsDashboard>

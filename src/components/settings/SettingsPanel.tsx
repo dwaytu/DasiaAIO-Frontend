@@ -70,7 +70,7 @@ const SettingsPanel: FC<SettingsPanelProps> = ({ user, open, onClose, onOpenFull
         </div>
 
         <div className="soc-scroll-area flex-1 overflow-y-auto px-4 py-4 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] sm:px-6">
-          <RoleSettingsContent user={user} />
+          <RoleSettingsContent user={user} compact />
         </div>
       </aside>
     </div>,

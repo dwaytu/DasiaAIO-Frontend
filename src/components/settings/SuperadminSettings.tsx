@@ -7,9 +7,10 @@ import { useRoleSettingsRole } from './useRoleSettings'
 
 type SuperadminSettingsProps = {
   user: User
+  compact?: boolean
 }
 
-export const SuperadminSettings: FC<SuperadminSettingsProps> = ({ user }) => {
+export const SuperadminSettings: FC<SuperadminSettingsProps> = ({ user, compact = false }) => {
   const role = useRoleSettingsRole(user.role)
   const [notifications, setNotifications] = useState<NotificationSettings>(() =>
     loadRoleSettings(role, 'notifications', defaultNotificationSettings),
@@ -23,6 +24,7 @@ export const SuperadminSettings: FC<SuperadminSettingsProps> = ({ user }) => {
     <SettingsDashboard
       title="Superadmin Settings"
       description="Reserve space for future system-wide governance controls while keeping notification delivery preferences available today."
+      compact={compact}
     >
       <NotificationSettingsSection settings={notifications} onChange={setNotifications} />
       <section className="command-panel p-4 md:p-6">

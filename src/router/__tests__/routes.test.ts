@@ -1,4 +1,4 @@
-import { ROUTES, VIEW_TO_ROUTE } from '../routes'
+import { ELEVATED_URL_ONLY_ROUTES, ROUTES, VIEW_TO_ROUTE } from '../routes'
 
 describe('ROUTES', () => {
   it('exports all expected route paths', () => {
@@ -57,5 +57,19 @@ describe('VIEW_TO_ROUTE', () => {
     for (const value of Object.values(VIEW_TO_ROUTE)) {
       expect(routeValues.has(value)).toBe(true)
     }
+  })
+})
+
+describe('ELEVATED_URL_ONLY_ROUTES', () => {
+  it('documents URL-accessible routes intentionally excluded from elevated sidebar navigation', () => {
+    expect(ELEVATED_URL_ONLY_ROUTES).toEqual([
+      ROUTES.PERMITS,
+      ROUTES.INBOX,
+      ROUTES.PROFILE,
+      ROUTES.SUPPORT,
+      ROUTES.SHIFT_SWAPS,
+      ROUTES.NOTIFICATIONS,
+      ROUTES.TRIPS,
+    ])
   })
 })

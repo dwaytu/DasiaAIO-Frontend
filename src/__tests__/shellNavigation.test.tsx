@@ -7,6 +7,7 @@ describe('shell navigation chrome', () => {
     expect(labels).toContain('Dashboard')
     expect(labels).toContain('Approvals')
     expect(labels).toContain('Schedule')
+    expect(labels).toContain('Calendar')
     expect(labels).not.toContain('Inbox')
     expect(labels).not.toContain('Settings')
   })
@@ -23,7 +24,8 @@ describe('shell navigation chrome', () => {
     expect(labels).toContain('Settings')
     expect(labels).toContain('Audit')
     expect(labels).toContain('Analytics')
-    expect(labels).toHaveLength(8)
+    expect(labels).toContain('Calendar')
+    expect(labels).toHaveLength(9)
   })
 
   it('returns supervisor nav with Missions', () => {
@@ -31,8 +33,9 @@ describe('shell navigation chrome', () => {
 
     expect(labels).toContain('Missions')
     expect(labels).toContain('Approvals')
+    expect(labels).toContain('Calendar')
     expect(labels).not.toContain('Firearms')
-    expect(labels).toHaveLength(5)
+    expect(labels).toHaveLength(6)
   })
 
   it('applies homeView override for elevated roles', () => {

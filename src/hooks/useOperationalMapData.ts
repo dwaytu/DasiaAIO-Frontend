@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { API_BASE_URL } from '../config'
 import { detectRuntimePlatform } from '../config'
 import { fetchJsonOrThrow, getAuthHeaders, getAuthToken } from '../utils/api'
-import { normalizeRole } from '../types/auth'
+import { isElevatedRole, normalizeRole } from '../types/auth'
 import {
   hasAcceptedLocationConsent,
   LOCATION_TRACKING_TOGGLE_KEY,
@@ -167,8 +167,8 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
     try {
       const user = JSON.parse(storedUser)
       const role = normalizeRole(user?.role)
-      setIsElevatedUser(role === 'supervisor')
-      setHasTrackingAccess(role === 'supervisor' || role === 'guard')
+      setIsElevatedUser(isElevatedRole(role))
+      setHasTrackingAccess(isElevatedRole(role) || role === 'guard')
     } catch {
       setIsElevatedUser(false)
       setHasTrackingAccess(false)

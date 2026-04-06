@@ -58,3 +58,17 @@ export const VIEW_TO_ROUTE: Record<string, RoutePath> = {
   'trips': ROUTES.TRIPS,
   'inbox': ROUTES.INBOX,
 }
+
+/**
+ * URL-accessible elevated routes that are intentionally excluded from the elevated sidebar.
+ * These paths are surfaced through header actions, role-specific deep links, or alias redirects.
+ */
+export const ELEVATED_URL_ONLY_ROUTES: RoutePath[] = [
+  ROUTES.PERMITS,
+  ROUTES.INBOX,
+  ROUTES.PROFILE,
+  ROUTES.SUPPORT,
+  ROUTES.SHIFT_SWAPS,
+  ROUTES.NOTIFICATIONS,
+  ROUTES.TRIPS,
+]

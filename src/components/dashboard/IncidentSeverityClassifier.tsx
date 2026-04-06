@@ -16,10 +16,10 @@ interface ClassifyResult {
 }
 
 const severityTone: Record<string, string> = {
-  critical: 'border-red-500/40 bg-red-500/10 text-red-200',
-  high: 'border-orange-400/40 bg-orange-500/10 text-orange-200',
-  medium: 'border-amber-400/40 bg-amber-500/10 text-amber-200',
-  low: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200',
+  critical: 'border-danger-border bg-danger-bg text-danger-text',
+  high: 'border-warning-border bg-warning-bg text-warning-text',
+  medium: 'border-warning-border bg-warning-bg text-warning-text',
+  low: 'border-success-border bg-success-bg text-success-text',
 }
 
 const IncidentSeverityClassifier: FC<IncidentSeverityClassifierProps> = ({ incidents }) => {
@@ -65,52 +65,52 @@ const IncidentSeverityClassifier: FC<IncidentSeverityClassifierProps> = ({ incid
 
   const severity = (result?.severity || '').toLowerCase()
   const riskLevel = (result?.riskLevel || severity || '').toLowerCase()
-  const tone = severityTone[severity] || 'border-[color:var(--color-border)] text-[color:var(--color-text)]'
+  const tone = severityTone[severity] || 'border-border-subtle bg-surface-elevated text-text-primary'
 
   return (
     <section className="command-panel rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-surface)]" aria-label="Incident severity classifier">
       <div className="flex items-center justify-between border-b border-[color:var(--color-border)] px-4 py-3">
         <div>
-          <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-text)]">Incident Severity Classifier</p>
-          <p className="font-mono text-[11px] text-[color:var(--color-muted-text)]">AI severity estimation for active incident flow</p>
+          <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-text-primary">Incident Severity Classifier</p>
+          <p className="font-mono text-[11px] text-text-secondary">AI severity estimation for active incident flow</p>
         </div>
       </div>
 
       <div className="space-y-3 px-4 py-3">
         {candidateIncident ? (
           <>
-            <p className="truncate font-mono text-xs text-[color:var(--color-text)]">{candidateIncident.title}</p>
+            <p className="truncate font-mono text-xs text-text-primary">{candidateIncident.title}</p>
             <button
               type="button"
               onClick={runClassification}
               disabled={loading}
-              className="min-h-11 rounded-md border border-cyan-400/40 bg-cyan-500/10 px-3 py-2 font-mono text-xs font-semibold uppercase tracking-wide text-cyan-200 disabled:opacity-60"
+              className="min-h-11 rounded-md border border-info-border bg-info-bg px-3 py-2 font-mono text-xs font-semibold uppercase tracking-wide text-info-text disabled:opacity-60"
             >
               {loading ? 'Classifying...' : 'Run Classifier'}
             </button>
           </>
         ) : (
-          <p className="font-mono text-xs text-[color:var(--color-muted-text)]">No incidents available for classification.</p>
+          <p className="font-mono text-xs text-text-secondary">No incidents available for classification.</p>
         )}
 
         {result && (
-          <div className="space-y-1 rounded-md border border-[color:var(--color-border)]/60 bg-[color:var(--color-bg)]/30 px-3 py-2">
+          <div className="space-y-1 rounded-md border border-border-subtle bg-surface-elevated px-3 py-2">
             <p className={`inline-flex rounded-full border px-2 py-0.5 font-mono text-[11px] uppercase ${tone}`}>
               Severity: {severity}
             </p>
-            <p className="font-mono text-[11px] text-[color:var(--color-muted-text)]">Risk level: {riskLevel || 'unknown'}</p>
-            <p className="font-mono text-[11px] text-[color:var(--color-muted-text)]">Confidence: {Math.round((result.confidence || 0) * 100)}%</p>
-            <p className="font-mono text-[11px] text-[color:var(--color-muted-text)]">Explanation: {result.explanation || 'No explanation returned.'}</p>
+            <p className="font-mono text-[11px] text-text-secondary">Risk level: {riskLevel || 'unknown'}</p>
+            <p className="font-mono text-[11px] text-text-secondary">Confidence: {Math.round((result.confidence || 0) * 100)}%</p>
+            <p className="font-mono text-[11px] text-text-secondary">Explanation: {result.explanation || 'No explanation returned.'}</p>
             {Array.isArray(result.suggestedActions) && result.suggestedActions.length > 0 && (
               <div className="mt-2 space-y-1">
-                <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-[color:var(--color-muted-text)]">Recommended Actions:</p>
+                <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-text-secondary">Recommended Actions:</p>
                 <div className="flex flex-wrap gap-1">
                   {result.suggestedActions.slice(0, 3).map((action, i) => (
                     <button
                       key={i}
                       type="button"
                       onClick={() => alert(`Action: ${action}`)}
-                      className="rounded border border-cyan-400/40 bg-cyan-500/10 px-2 py-1 font-mono text-[11px] text-cyan-200 transition-colors hover:bg-cyan-500/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-400"
+                      className="rounded border border-info-border bg-info-bg px-2 py-1 font-mono text-[11px] text-info-text transition-colors hover:bg-info-bg focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--color-focus-ring)]"
                       title={action}
                     >
                       {action.length > 40 ? action.slice(0, 40) + '\u2026' : action}
@@ -123,7 +123,7 @@ const IncidentSeverityClassifier: FC<IncidentSeverityClassifierProps> = ({ incid
         )}
 
         {error && (
-          <p role="alert" className="font-mono text-xs text-red-400">
+          <p role="alert" className="font-mono text-xs text-danger-text">
             {error}
           </p>
         )}

@@ -11,9 +11,9 @@ interface PredictiveAlertsPanelProps {
 }
 
 const severityStyles: Record<string, string> = {
-  critical: 'border-red-500/70 bg-red-500/5 text-red-100',
-  warning: 'border-amber-400/70 bg-amber-500/5 text-amber-100',
-  info: 'border-sky-400/70 bg-sky-500/5 text-sky-100',
+  critical: 'border-danger-border bg-danger-bg',
+  warning: 'border-warning-border bg-warning-bg',
+  info: 'border-info-border bg-info-bg',
 }
 
 const severityIcon: Record<string, string> = {
@@ -98,14 +98,14 @@ const PredictiveAlertsPanel: FC<PredictiveAlertsPanelProps> = ({
     >
       <div className="flex items-center justify-between border-b border-[color:var(--color-border)] px-4 py-3">
         <div>
-          <p className="font-mono text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--color-text)]">{title}</p>
-          <p className="font-mono text-[11px] text-[color:var(--color-muted-text)]">{subtitle}</p>
+          <p className="font-mono text-xs font-semibold uppercase tracking-[0.2em] text-text-primary">{title}</p>
+          <p className="font-mono text-[11px] text-text-secondary">{subtitle}</p>
         </div>
-        {timestamp && <span className="font-mono text-[11px] text-[color:var(--color-muted-text)]">{timestamp}</span>}
+        {timestamp && <span className="font-mono text-[11px] text-text-secondary">{timestamp}</span>}
       </div>
 
       <div className="max-h-80 space-y-3 overflow-y-auto px-4 py-4 pr-3" role="region" aria-live="polite">
-        {loading && <p className="text-center font-mono text-xs text-[color:var(--color-muted-text)]">Scanning signals...</p>}
+        {loading && <p className="text-center font-mono text-xs text-text-secondary">Scanning signals...</p>}
 
         {!loading && error && (
           <p role="alert" className="text-center font-mono text-xs text-red-400">
@@ -114,7 +114,7 @@ const PredictiveAlertsPanel: FC<PredictiveAlertsPanelProps> = ({
         )}
 
         {!loading && !error && alerts.length === 0 && (
-          <p className="text-center font-mono text-xs text-[color:var(--color-muted-text)]">No predictive risks detected.</p>
+          <p className="text-center font-mono text-xs text-text-secondary">No predictive risks detected.</p>
         )}
 
         {!loading && !error && alerts.length > 0 && (
@@ -133,7 +133,7 @@ const PredictiveAlertsPanel: FC<PredictiveAlertsPanelProps> = ({
               return (
                 <li
                   key={alert.id}
-                  className={`rounded-lg border px-4 py-3 shadow-inner shadow-black/20 ${severityClass}`}
+                  className={`rounded-lg border px-4 py-3 shadow-sm ${severityClass}`}
                 >
                   <div className="flex items-start gap-3">
                     <span aria-hidden="true" className="text-lg" title={alert.severity}>
@@ -141,27 +141,27 @@ const PredictiveAlertsPanel: FC<PredictiveAlertsPanelProps> = ({
                     </span>
                     <div className="space-y-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="rounded-full border border-white/30 px-2 py-0.5 text-[11px] uppercase tracking-wide text-white/90">
+                        <span className="rounded-full border border-border-subtle bg-surface px-2 py-0.5 text-[11px] uppercase tracking-wide text-text-secondary">
                           {categoryLabel}
                         </span>
                         {count !== null && (
-                          <span className="font-mono text-[11px] text-white/80">Count: {count}</span>
+                          <span className="font-mono text-[11px] text-text-secondary">Count: {count}</span>
                         )}
                         {detectedLabel && (
-                          <span className="font-mono text-[11px] text-white/60">Detected {detectedLabel}</span>
+                          <span className="font-mono text-[11px] text-text-tertiary">Detected {detectedLabel}</span>
                         )}
                       </div>
-                      <p className="font-mono text-sm text-white">{message}</p>
+                      <p className="font-mono text-sm text-text-primary">{message}</p>
                       {guardNames.length > 0 && (
-                        <p className="font-mono text-[11px] text-white/70">
+                        <p className="font-mono text-[11px] text-text-secondary">
                           Focus: {guardNames.slice(0, 3).join(', ')}
                           {guardNames.length > 3 ? '…' : ''}
                         </p>
                       )}
-                      <p className="font-mono text-[11px] text-white/80">Risk level: {alert.severity.toUpperCase()}</p>
-                      <p className="font-mono text-[11px] text-white/80">Confidence: {(getConfidence(alert) * 100).toFixed(0)}%</p>
-                      <p className="font-mono text-[11px] text-white/70">Explanation: {getExplanation(alert)}</p>
-                      <p className="font-mono text-[11px] text-white/80">
+                      <p className="font-mono text-[11px] font-semibold text-text-primary">Risk level: {alert.severity.toUpperCase()}</p>
+                      <p className="font-mono text-[11px] text-text-secondary">Confidence: {(getConfidence(alert) * 100).toFixed(0)}%</p>
+                      <p className="font-mono text-[11px] text-text-secondary">Explanation: {getExplanation(alert)}</p>
+                      <p className="font-mono text-[11px] text-text-secondary">
                         Suggested action: {getSuggestedAction(alert)}
                       </p>
                     </div>

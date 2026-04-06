@@ -68,44 +68,44 @@ const IncidentSummaryGenerator: FC<IncidentSummaryGeneratorProps> = ({ incidents
     <section className="command-panel rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-surface)]" aria-label="Incident summary generator">
       <div className="flex items-center justify-between border-b border-[color:var(--color-border)] px-4 py-3">
         <div>
-          <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-text)]">Incident Summary Generator</p>
-          <p className="font-mono text-[11px] text-[color:var(--color-muted-text)]">AI brief for shift handoff and operator reports</p>
+          <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-text-primary">Incident Summary Generator</p>
+          <p className="font-mono text-[11px] text-text-secondary">AI brief for shift handoff and operator reports</p>
         </div>
       </div>
 
       <div className="space-y-3 px-4 py-3">
         {candidateIncident ? (
           <>
-            <p className="truncate font-mono text-xs text-[color:var(--color-text)]">{candidateIncident.title}</p>
+            <p className="truncate font-mono text-xs text-text-primary">{candidateIncident.title}</p>
             <button
               type="button"
               onClick={runSummary}
               disabled={loading}
-              className="min-h-11 rounded-md border border-cyan-400/40 bg-cyan-500/10 px-3 py-2 font-mono text-xs font-semibold uppercase tracking-wide text-cyan-200 disabled:opacity-60"
+              className="min-h-11 rounded-md border border-info-border bg-info-bg px-3 py-2 font-mono text-xs font-semibold uppercase tracking-wide text-info-text disabled:opacity-60"
             >
               {loading ? 'Summarizing...' : 'Generate Summary'}
             </button>
           </>
         ) : (
-          <p className="font-mono text-xs text-[color:var(--color-muted-text)]">No incidents available for summarization.</p>
+          <p className="font-mono text-xs text-text-secondary">No incidents available for summarization.</p>
         )}
 
         {summary && (
-          <div className="rounded-md border border-[color:var(--color-border)]/60 bg-[color:var(--color-bg)]/30 px-3 py-2">
-            <p className="font-mono text-[11px] text-[color:var(--color-text)]">{summary}</p>
-            <p className="mt-1 font-mono text-[11px] text-[color:var(--color-muted-text)]">Risk level: {riskLevel || 'unknown'}</p>
-            <p className="mt-1 font-mono text-[11px] text-[color:var(--color-muted-text)]">Confidence: {Math.round(confidence * 100)}%</p>
-            <p className="mt-1 font-mono text-[11px] text-[color:var(--color-muted-text)]">Explanation: {explanation || 'No explanation returned.'}</p>
+          <div className="rounded-md border border-border-subtle bg-surface-elevated px-3 py-2">
+            <p className="font-mono text-[11px] text-text-primary">{summary}</p>
+            <p className="mt-1 font-mono text-[11px] text-text-secondary">Risk level: {riskLevel || 'unknown'}</p>
+            <p className="mt-1 font-mono text-[11px] text-text-secondary">Confidence: {Math.round(confidence * 100)}%</p>
+            <p className="mt-1 font-mono text-[11px] text-text-secondary">Explanation: {explanation || 'No explanation returned.'}</p>
             {suggestedActions.length > 0 && (
               <div className="mt-2 space-y-1">
-                <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-[color:var(--color-muted-text)]">Recommended Actions:</p>
+                <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-text-secondary">Recommended Actions:</p>
                 <div className="flex flex-wrap gap-1">
                   {suggestedActions.slice(0, 3).map((action, i) => (
                     <button
                       key={i}
                       type="button"
                       onClick={() => alert(`Action: ${action}`)}
-                      className="rounded border border-cyan-400/40 bg-cyan-500/10 px-2 py-1 font-mono text-[11px] text-cyan-200 transition-colors hover:bg-cyan-500/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-400"
+                      className="rounded border border-info-border bg-info-bg px-2 py-1 font-mono text-[11px] text-info-text transition-colors hover:bg-info-bg focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--color-focus-ring)]"
                       title={action}
                     >
                       {action.length > 40 ? action.slice(0, 40) + '\u2026' : action}
@@ -115,7 +115,7 @@ const IncidentSummaryGenerator: FC<IncidentSummaryGeneratorProps> = ({ incidents
               </div>
             )}
             {keyPhrases.length > 0 && (
-              <p className="mt-1 font-mono text-[11px] text-[color:var(--color-muted-text)]">
+              <p className="mt-1 font-mono text-[11px] text-text-secondary">
                 Key: {keyPhrases.slice(0, 4).join(', ')}
               </p>
             )}
@@ -123,7 +123,7 @@ const IncidentSummaryGenerator: FC<IncidentSummaryGeneratorProps> = ({ incidents
         )}
 
         {error && (
-          <p role="alert" className="font-mono text-xs text-red-400">
+          <p role="alert" className="font-mono text-xs text-danger-text">
             {error}
           </p>
         )}

@@ -12,6 +12,7 @@ const SUPERADMIN_NAV: NavItem[] = [
   { view: 'dashboard', label: 'Dashboard', group: 'Core' },
   { view: 'approvals', label: 'Approvals', group: 'Core', permission: 'approve_guards' },
   { view: 'schedule', label: 'Schedule', group: 'Core' },
+  { view: 'calendar', label: 'Calendar', group: 'Core' },
   { view: 'analytics', label: 'Analytics', group: 'Intelligence', permission: 'view_analytics' },
   { view: 'audit', label: 'Audit', group: 'Intelligence', permission: 'view_audit_logs' },
   { view: 'firearms', label: 'Firearms', group: 'Resources', permission: 'manage_firearms' },
@@ -23,6 +24,7 @@ const ADMIN_NAV: NavItem[] = [
   { view: 'dashboard', label: 'Dashboard', group: 'Core' },
   { view: 'approvals', label: 'Approvals', group: 'Core', permission: 'approve_guards' },
   { view: 'schedule', label: 'Schedule', group: 'Core' },
+  { view: 'calendar', label: 'Calendar', group: 'Core' },
   { view: 'allocation', label: 'Allocation', group: 'Operations', permission: 'manage_allocations' },
   { view: 'firearms', label: 'Firearms', group: 'Resources', permission: 'manage_firearms' },
   { view: 'armored-cars', label: 'Armored Cars', group: 'Resources', permission: 'manage_armored_cars' },
@@ -32,6 +34,7 @@ const ADMIN_NAV: NavItem[] = [
 const SUPERVISOR_NAV: NavItem[] = [
   { view: 'dashboard', label: 'Dashboard', group: 'Core' },
   { view: 'schedule', label: 'Schedule', group: 'Core' },
+  { view: 'calendar', label: 'Calendar', group: 'Core' },
   { view: 'missions', label: 'Missions', group: 'Field' },
   { view: 'approvals', label: 'Approvals', group: 'Operations', permission: 'approve_guards' },
   { view: 'allocation', label: 'Allocation', group: 'Operations', permission: 'manage_allocations' },
@@ -46,6 +49,8 @@ export function getSidebarNav(roleInput: unknown, options: NavOptions = {}): Nav
   const homeView = options.homeView ?? 'dashboard'
 
   if (!isElevatedRole(role)) return []
+
+  // Sidebar nav is limited to high-frequency destinations. URL-only flows are documented in ELEVATED_URL_ONLY_ROUTES.
 
   const roleNav =
     role === 'superadmin' ? SUPERADMIN_NAV : role === 'admin' ? ADMIN_NAV : SUPERVISOR_NAV

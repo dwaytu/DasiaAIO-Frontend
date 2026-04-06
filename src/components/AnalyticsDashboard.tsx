@@ -112,7 +112,7 @@ function SimpleBarChart({ data, height = 200, barColor = 'var(--color-info-borde
               x={x + barWidth / 2}
               y={y - 6}
               textAnchor="middle"
-              className="fill-text-secondary"
+              fill="var(--color-text-primary)"
               style={{ fontSize: '11px', fontWeight: 600 }}
             >
               {d.value}
@@ -121,7 +121,7 @@ function SimpleBarChart({ data, height = 200, barColor = 'var(--color-info-borde
               x={x + barWidth / 2}
               y={chartHeight - 8}
               textAnchor="middle"
-              className="fill-text-tertiary"
+              fill="var(--color-text-secondary)"
               style={{ fontSize: '10px' }}
             >
               {d.label}
@@ -134,7 +134,7 @@ function SimpleBarChart({ data, height = 200, barColor = 'var(--color-info-borde
         y1={padding.top + innerH}
         x2={padding.left + innerW}
         y2={padding.top + innerH}
-        className="stroke-border"
+        stroke="var(--color-border-elevated)"
         strokeWidth={1}
       />
     </svg>
@@ -191,7 +191,7 @@ function SimpleLineChart({ data, height = 200, lineColor = 'var(--color-success-
             x={p.x}
             y={chartHeight - 8}
             textAnchor="middle"
-            className="fill-text-tertiary"
+            fill="var(--color-text-secondary)"
             style={{ fontSize: '10px' }}
           >
             {data[i].label}
@@ -203,7 +203,7 @@ function SimpleLineChart({ data, height = 200, lineColor = 'var(--color-success-
         y1={padding.top + innerH}
         x2={padding.left + innerW}
         y2={padding.top + innerH}
-        className="stroke-border"
+        stroke="var(--color-border-elevated)"
         strokeWidth={1}
       />
     </svg>

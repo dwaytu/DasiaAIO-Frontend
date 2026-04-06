@@ -246,7 +246,7 @@ async function fetchAdminSummary(userId: string): Promise<QuickInboxSummary> {
   const headers = getAuthHeaders({ 'Content-Type': 'application/json' })
   const [approvals, firearmsPrimary, notifications] = await Promise.all([
     safeFetchPendingApprovals(`${API_BASE_URL}/api/users/pending-approvals`, headers),
-    safeFetch<FirearmItem>(`${API_BASE_URL}/api/firearms/allocations`, headers),
+    safeFetch<FirearmItem>(`${API_BASE_URL}/api/firearm-allocations`, headers),
     safeFetch<NotificationRecord>(`${API_BASE_URL}/api/users/${encodeURIComponent(userId)}/notifications`, headers),
   ])
   const firearms = firearmsPrimary.length > 0 ? firearmsPrimary : await safeFetch<FirearmItem>(`${API_BASE_URL}/api/firearms`, headers)

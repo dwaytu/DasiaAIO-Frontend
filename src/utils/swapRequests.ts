@@ -8,6 +8,12 @@ export interface SwapRequestsFeedResult {
   swapRequests: unknown[]
 }
 
+let swapRequestsFeedUnsupported = false
+
+export function __resetSwapRequestsFeedSupportForTests(): void {
+  swapRequestsFeedUnsupported = false
+}
+
 async function parseJsonSafe(response: Response): Promise<unknown> {
   try {
     return await response.json()
@@ -17,6 +23,13 @@ async function parseJsonSafe(response: Response): Promise<unknown> {
 }
 
 export async function fetchSwapRequestsFeed(headers: HeadersInit): Promise<SwapRequestsFeedResult> {
+  if (swapRequestsFeedUnsupported) {
+    return {
+      feedState: 'unavailable',
+      swapRequests: [],
+    }
+  }
+
   let response: Response
 
   try {
@@ -29,6 +42,7 @@ export async function fetchSwapRequestsFeed(headers: HeadersInit): Promise<SwapR
   }
 
   if (response.status === 404 || response.status === 501) {
+    swapRequestsFeedUnsupported = true
     return {
       feedState: 'unavailable',
       swapRequests: [],

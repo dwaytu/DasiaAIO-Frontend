@@ -172,7 +172,7 @@ export const AdminInboxPanel = ({ userId, onAction }: AdminInboxPanelProps): Rea
             '/api/users/pending-approvals',
             headers,
           ),
-          safeFetch<FirearmItem>('/api/firearms/allocations', headers).then((data) =>
+          safeFetch<FirearmItem>('/api/firearm-allocations', headers).then((data) =>
             data.length > 0
               ? data
               : safeFetch<FirearmItem>('/api/firearms', headers),

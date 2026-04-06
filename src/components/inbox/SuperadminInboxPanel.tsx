@@ -5,6 +5,7 @@ import type { InboxItem } from './ActionInbox';
 import { WorkflowTimeline } from './WorkflowTimeline';
 import type { TimelineEntry } from './WorkflowTimeline';
 import { getAuthHeaders } from '../../utils/api';
+import { parsePendingApprovalsPayload, type PendingApprovalRecord } from './pendingApprovals';
 
 // ─── API response types ────────────────────────────────────────────────────
 
@@ -16,12 +17,7 @@ interface Notification {
   created_at: string;
 }
 
-interface PendingApproval {
-  id: string;
-  created_at: string;
-  description?: string;
-  status: string;
-}
+type PendingApproval = PendingApprovalRecord;
 
 interface Incident {
   id: string;
@@ -71,7 +67,7 @@ export const SuperadminInboxPanel = ({
         fetch(`/api/users/${encodeURIComponent(userId)}/notifications`, { headers }).then<Notification[]>((r) =>
           r.ok ? r.json() : Promise.reject(r.status)
         ),
-        fetch('/api/guard-replacement/pending-approvals', { headers }).then<PendingApproval[]>(
+        fetch('/api/users/pending-approvals', { headers }).then<unknown>(
           (r) => (r.ok ? r.json() : Promise.reject(r.status))
         ),
         fetch('/api/incidents', { headers }).then<Incident[]>((r) =>
@@ -82,7 +78,7 @@ export const SuperadminInboxPanel = ({
       const notifications: Notification[] =
         notifResult.status === 'fulfilled' ? notifResult.value : [];
       const approvals: PendingApproval[] =
-        approvalResult.status === 'fulfilled' ? approvalResult.value : [];
+        approvalResult.status === 'fulfilled' ? parsePendingApprovalsPayload(approvalResult.value) : [];
       const incidents: Incident[] =
         incidentResult.status === 'fulfilled' ? incidentResult.value : [];
 
@@ -116,14 +112,20 @@ export const SuperadminInboxPanel = ({
       }
 
       for (const approval of approvals) {
-        const age = now - new Date(approval.created_at).getTime();
+        const approvalTimestamp = approval.requested_at ?? approval.created_at;
+        const approvalTime = approvalTimestamp ? new Date(approvalTimestamp).getTime() : Number.NaN;
+        const age = Number.isFinite(approvalTime) ? now - approvalTime : 0;
         items.push({
           id: approval.id,
           priority: age >= MS_48H ? 'urgent' : 'high',
           category: 'approval',
           title: 'Pending System Approval',
-          description: approval.description ?? `Approval request #${approval.id}`,
-          timestamp: approval.created_at,
+          description:
+            approval.description ??
+            approval.reason ??
+            approval.guard_name ??
+            `Approval request #${approval.id}`,
+          timestamp: approvalTimestamp ?? new Date().toISOString(),
           actionLabel: 'Approve',
           onAction: () => onAction?.('approval', approval.id),
           statusChip: age >= MS_48H ? { label: 'Overdue', tone: 'danger' } : undefined,

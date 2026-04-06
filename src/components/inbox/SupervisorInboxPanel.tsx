@@ -2,19 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { ActionInbox, InboxItem } from './ActionInbox';
 import { WorkflowTimeline, TimelineEntry, TimelineStatus } from './WorkflowTimeline';
 import { getAuthHeaders } from '../../utils/api';
+import { parsePendingApprovalsPayload, type PendingApprovalRecord } from './pendingApprovals';
 
 export interface SupervisorInboxPanelProps {
   userId: string;
   onAction?: (type: string, id: string) => void;
 }
 
-interface PendingApproval {
-  id: string;
-  guard_name?: string;
-  role?: string;
-  created_at?: string;
-  requested_at?: string;
-}
+type PendingApproval = PendingApprovalRecord;
 
 interface Incident {
   id: string;
@@ -159,7 +154,7 @@ export const SupervisorInboxPanel = ({
 
       const [approvalsResult, incidentsResult, shiftsResult, notificationsResult] =
         await Promise.allSettled([
-          fetch('/api/guard-replacement/pending-approvals', { headers }).then((r) => r.json() as Promise<unknown>),
+          fetch('/api/users/pending-approvals', { headers }).then((r) => r.json() as Promise<unknown>),
           fetch('/api/incidents', { headers }).then((r) => r.json() as Promise<unknown>),
           fetch('/api/guard-replacement/shifts', { headers }).then((r) => r.json() as Promise<unknown>),
           fetch(`/api/users/${encodeURIComponent(userId)}/notifications`, { headers }).then((r) => r.json() as Promise<unknown>),
@@ -178,8 +173,8 @@ export const SupervisorInboxPanel = ({
       }
 
       const approvals: PendingApproval[] =
-        approvalsResult.status === 'fulfilled' && Array.isArray(approvalsResult.value)
-          ? (approvalsResult.value as PendingApproval[])
+        approvalsResult.status === 'fulfilled'
+          ? parsePendingApprovalsPayload(approvalsResult.value)
           : [];
 
       const incidentsRaw: Incident[] =

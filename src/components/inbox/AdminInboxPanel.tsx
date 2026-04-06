@@ -2,19 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { ActionInbox, InboxItem } from './ActionInbox';
 import { WorkflowTimeline, TimelineEntry } from './WorkflowTimeline';
 import { getAuthHeaders } from '../../utils/api';
+import { parsePendingApprovalsPayload, type PendingApprovalRecord } from './pendingApprovals';
 
 interface AdminInboxPanelProps {
   userId: string;
   onAction?: (type: string, id: string) => void;
 }
 
-interface PendingApproval {
-  id: string;
-  guard_name?: string;
-  requested_at?: string;
-  created_at?: string;
-  reason?: string;
-}
+type PendingApproval = PendingApprovalRecord;
 
 interface FirearmItem {
   id: string;
@@ -49,6 +44,17 @@ async function safeFetch<T>(url: string, headers: HeadersInit): Promise<T[]> {
     if (!res.ok) return [];
     const data: unknown = await res.json();
     return Array.isArray(data) ? (data as T[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+async function safeFetchPendingApprovals(url: string, headers: HeadersInit): Promise<PendingApproval[]> {
+  try {
+    const res = await fetch(url, { headers });
+    if (!res.ok) return [];
+    const data: unknown = await res.json();
+    return parsePendingApprovalsPayload(data);
   } catch {
     return [];
   }
@@ -162,8 +168,8 @@ export const AdminInboxPanel = ({ userId, onAction }: AdminInboxPanelProps): Rea
 
       const [approvalsResult, firearmsResult, notificationsResult, metricsResult] =
         await Promise.allSettled([
-          safeFetch<PendingApproval>(
-            '/api/guard-replacement/pending-approvals',
+          safeFetchPendingApprovals(
+            '/api/users/pending-approvals',
             headers,
           ),
           safeFetch<FirearmItem>('/api/firearms/allocations', headers).then((data) =>

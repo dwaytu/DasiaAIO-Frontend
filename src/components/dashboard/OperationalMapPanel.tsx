@@ -5,6 +5,7 @@ import 'leaflet/dist/leaflet.css'
 import { ClientSiteInput, useOperationalMapData } from '../../hooks/useOperationalMapData'
 import { getPersonRecencyMinutes, getTrackingAccuracyMode, getVehicleRecencyMinutes } from '../../utils/trackingPolicy'
 import { useTheme } from '../../context/ThemeProvider'
+import { getOperationalMapTileUrl } from './mapTileUrls'
 
 interface OperationalMapPanelProps {
   activeTrips: number
@@ -434,7 +435,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
 
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-            url={theme === 'dark' ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' : 'https://{s}.basemaps.cartocdn.com/voyager/{z}/{x}/{y}{r}.png'}
+            url={getOperationalMapTileUrl(theme)}
           />
 
           {clientSites.map((site) => (

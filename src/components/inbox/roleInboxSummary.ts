@@ -3,6 +3,7 @@ import { normalizeRole } from '../../types/auth'
 import { fetchJsonOrThrow, getAuthHeaders } from '../../utils/api'
 import { fetchSwapRequestsFeed } from '../../utils/swapRequests'
 import type { InboxItem } from './ActionInbox'
+import { parsePendingApprovalsPayload, type PendingApprovalRecord } from './pendingApprovals'
 
 type QuickInboxSummary = {
   items: InboxItem[]
@@ -35,15 +36,7 @@ type SwapRequest = {
   created_at: string
 }
 
-type PendingApproval = {
-  id: string
-  guard_name?: string
-  role?: string
-  reason?: string
-  requested_at?: string
-  created_at?: string
-  description?: string
-}
+type PendingApproval = PendingApprovalRecord
 
 type Incident = {
   id: string
@@ -110,6 +103,17 @@ async function safeFetch<T>(url: string, headers: HeadersInit): Promise<T[]> {
     if (!response.ok) return []
     const data: unknown = await response.json()
     return Array.isArray(data) ? (data as T[]) : []
+  } catch {
+    return []
+  }
+}
+
+async function safeFetchPendingApprovals(url: string, headers: HeadersInit): Promise<PendingApproval[]> {
+  try {
+    const response = await fetch(url, { headers })
+    if (!response.ok) return []
+    const data: unknown = await response.json()
+    return parsePendingApprovalsPayload(data)
   } catch {
     return []
   }
@@ -194,7 +198,7 @@ async function fetchGuardSummary(userId: string): Promise<QuickInboxSummary> {
 async function fetchSupervisorSummary(userId: string): Promise<QuickInboxSummary> {
   const headers = getAuthHeaders({ 'Content-Type': 'application/json' })
   const [approvals, incidents, shifts, notifications] = await Promise.all([
-    safeFetch<PendingApproval>(`${API_BASE_URL}/api/guard-replacement/pending-approvals`, headers),
+    safeFetchPendingApprovals(`${API_BASE_URL}/api/users/pending-approvals`, headers),
     safeFetch<Incident>(`${API_BASE_URL}/api/incidents`, headers),
     safeFetch<Shift>(`${API_BASE_URL}/api/guard-replacement/shifts`, headers),
     safeFetch<NotificationRecord>(`${API_BASE_URL}/api/users/${encodeURIComponent(userId)}/notifications`, headers),
@@ -241,7 +245,7 @@ async function fetchSupervisorSummary(userId: string): Promise<QuickInboxSummary
 async function fetchAdminSummary(userId: string): Promise<QuickInboxSummary> {
   const headers = getAuthHeaders({ 'Content-Type': 'application/json' })
   const [approvals, firearmsPrimary, notifications] = await Promise.all([
-    safeFetch<PendingApproval>(`${API_BASE_URL}/api/guard-replacement/pending-approvals`, headers),
+    safeFetchPendingApprovals(`${API_BASE_URL}/api/users/pending-approvals`, headers),
     safeFetch<FirearmItem>(`${API_BASE_URL}/api/firearms/allocations`, headers),
     safeFetch<NotificationRecord>(`${API_BASE_URL}/api/users/${encodeURIComponent(userId)}/notifications`, headers),
   ])
@@ -285,7 +289,7 @@ async function fetchSuperadminSummary(userId: string): Promise<QuickInboxSummary
   const headers = getAuthHeaders({ 'Content-Type': 'application/json' })
   const [notifications, approvals, incidents] = await Promise.all([
     safeFetch<NotificationRecord>(`${API_BASE_URL}/api/users/${encodeURIComponent(userId)}/notifications`, headers),
-    safeFetch<PendingApproval>(`${API_BASE_URL}/api/guard-replacement/pending-approvals`, headers),
+    safeFetchPendingApprovals(`${API_BASE_URL}/api/users/pending-approvals`, headers),
     safeFetch<Incident>(`${API_BASE_URL}/api/incidents`, headers),
   ])
 

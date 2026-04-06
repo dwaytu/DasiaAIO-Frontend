@@ -27,3 +27,12 @@ export function isElevatedRole(role: unknown): boolean {
   const normalized = normalizeRole(role)
   return normalized === 'superadmin' || normalized === 'admin' || normalized === 'supervisor'
 }
+
+export function hasTrackingEndpointAccess(role: unknown): boolean {
+  const normalized = normalizeRole(role)
+  return normalized === 'supervisor' || normalized === 'guard'
+}
+
+export function canManageTrackingSites(role: unknown): boolean {
+  return normalizeRole(role) === 'supervisor'
+}

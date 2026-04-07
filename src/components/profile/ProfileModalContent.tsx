@@ -336,7 +336,7 @@ export const ProfileModalContent: FC<ProfileModalContentProps> = ({
                 <button
                   type="button"
                   onClick={onBack}
-                  className="min-h-11 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-semibold text-text-primary hover:bg-surface-hover"
+                  className="min-h-11 rounded border border-border bg-surface px-3 py-2 text-sm font-semibold text-text-primary hover:bg-surface-hover"
                   aria-label="Back to mission shell"
                 >
                   Back to Mission Shell
@@ -346,7 +346,7 @@ export const ProfileModalContent: FC<ProfileModalContentProps> = ({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="min-h-11 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-semibold text-text-primary hover:bg-surface-hover"
+                  className="min-h-11 rounded border border-border bg-surface px-3 py-2 text-sm font-semibold text-text-primary hover:bg-surface-hover"
                   aria-label="Close profile"
                 >
                   Close
@@ -358,7 +358,7 @@ export const ProfileModalContent: FC<ProfileModalContentProps> = ({
       </section>
 
       {message ? (
-        <div className={`rounded-lg p-4 ${isErrorMessage ? 'soc-alert-error' : 'soc-alert-success'}`}>
+        <div className={`rounded p-4 ${isErrorMessage ? 'soc-alert-error' : 'soc-alert-success'}`}>
           {message}
         </div>
       ) : null}
@@ -415,7 +415,7 @@ export const ProfileModalContent: FC<ProfileModalContentProps> = ({
                 <button
                   type="button"
                   onClick={() => void handleRemovePhoto()}
-                  className="min-h-11 rounded-lg border border-danger-border bg-surface px-6 py-2.5 font-semibold text-danger-text transition-colors hover:bg-danger-bg"
+                  className="min-h-11 rounded border border-danger-border bg-surface px-6 py-2.5 font-semibold text-danger-text transition-colors hover:bg-danger-bg"
                 >
                   Remove Photo
                 </button>
@@ -429,7 +429,7 @@ export const ProfileModalContent: FC<ProfileModalContentProps> = ({
         <div className="command-panel p-4 md:p-6">
           <h3 className="mb-1 text-xl font-bold text-text-primary md:text-2xl">Availability Status</h3>
           <p className="mb-4 text-sm text-text-secondary">Signal to supervisors whether you are available for shift assignments or replacements.</p>
-          <div className="flex items-center justify-between gap-4 rounded-lg border border-border bg-surface p-4">
+          <div className="flex items-center justify-between gap-4 rounded border border-border bg-surface p-4">
             <div>
               <p className="font-semibold text-text-primary">
                 {isAvailable ? 'Available for Duty' : 'Not Available'}
@@ -505,7 +505,7 @@ export const ProfileModalContent: FC<ProfileModalContentProps> = ({
               name="fullName"
               value={formData.fullName}
               onChange={handleInputChange}
-              className="w-full rounded-lg border border-border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full rounded border border-border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               placeholder="Enter your full name"
             />
           </div>
@@ -518,7 +518,7 @@ export const ProfileModalContent: FC<ProfileModalContentProps> = ({
               name="email"
               value={formData.email}
               onChange={handleInputChange}
-              className="w-full rounded-lg border border-border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full rounded border border-border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               placeholder="Enter your email"
             />
           </div>
@@ -531,7 +531,7 @@ export const ProfileModalContent: FC<ProfileModalContentProps> = ({
               name="phoneNumber"
               value={formData.phoneNumber}
               onChange={handleInputChange}
-              className="w-full rounded-lg border border-border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full rounded border border-border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               placeholder="+63-###-###-####"
             />
           </div>
@@ -543,7 +543,7 @@ export const ProfileModalContent: FC<ProfileModalContentProps> = ({
               type="text"
               value={user.username}
               disabled
-              className="w-full rounded-lg border border-border bg-surface-elevated px-4 py-2.5 text-text-tertiary"
+              className="w-full rounded border border-border bg-surface-elevated px-4 py-2.5 text-text-tertiary"
             />
           </div>
 
@@ -557,7 +557,7 @@ export const ProfileModalContent: FC<ProfileModalContentProps> = ({
                   name="licenseNumber"
                   value={formData.licenseNumber}
                   onChange={handleInputChange}
-                  className="w-full rounded-lg border border-border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full rounded border border-border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   placeholder="Enter license number"
                 />
               </div>
@@ -570,7 +570,7 @@ export const ProfileModalContent: FC<ProfileModalContentProps> = ({
                   name="licenseIssuedDate"
                   value={formData.licenseIssuedDate}
                   onChange={handleInputChange}
-                  className="w-full rounded-lg border border-border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full rounded border border-border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
 
@@ -582,7 +582,7 @@ export const ProfileModalContent: FC<ProfileModalContentProps> = ({
                   name="licenseExpiryDate"
                   value={formData.licenseExpiryDate}
                   onChange={handleInputChange}
-                  className="w-full rounded-lg border border-border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full rounded border border-border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
 
@@ -594,7 +594,7 @@ export const ProfileModalContent: FC<ProfileModalContentProps> = ({
                   value={formData.address}
                   onChange={handleInputChange}
                   rows={2}
-                  className="w-full rounded-lg border border-border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full rounded border border-border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   placeholder="Enter complete address"
                 />
               </div>
@@ -608,7 +608,7 @@ export const ProfileModalContent: FC<ProfileModalContentProps> = ({
               type="text"
               value={user.role.toUpperCase()}
               disabled
-              className="w-full rounded-lg border border-border bg-surface-elevated px-4 py-2.5 text-text-tertiary"
+              className="w-full rounded border border-border bg-surface-elevated px-4 py-2.5 text-text-tertiary"
             />
           </div>
 
@@ -619,7 +619,7 @@ export const ProfileModalContent: FC<ProfileModalContentProps> = ({
               type="text"
               value={user.id}
               disabled
-              className="w-full rounded-lg border border-border bg-surface-elevated px-4 py-2.5 text-sm text-text-tertiary"
+              className="w-full rounded border border-border bg-surface-elevated px-4 py-2.5 text-sm text-text-tertiary"
             />
           </div>
         </div>

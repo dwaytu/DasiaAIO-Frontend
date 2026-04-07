@@ -5,7 +5,7 @@ interface SkeletonBlockProps {
 }
 
 export const SkeletonBlock: FC<SkeletonBlockProps> = ({ className = '' }) => (
-  <div className={`animate-pulse rounded-lg bg-surface-elevated ${className}`.trim()} aria-hidden="true" />
+  <div className={`animate-pulse rounded bg-surface-elevated ${className}`.trim()} aria-hidden="true" />
 )
 
 interface DashboardLoadingStateProps {
@@ -56,7 +56,7 @@ export const DashboardLoadingState: FC<DashboardLoadingStateProps> = ({
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {Array.from({ length: 4 }).map((_, index) => (
-              <div key={`metric-skeleton-${index}`} className="rounded-xl border border-border-subtle bg-surface p-4">
+              <div key={`metric-skeleton-${index}`} className="rounded border border-border-subtle bg-surface p-4">
                 <SkeletonBlock className="h-3 w-16" />
                 <SkeletonBlock className="mt-3 h-7 w-20" />
                 <SkeletonBlock className="mt-4 h-1.5 w-full" />
@@ -72,7 +72,7 @@ export const DashboardLoadingState: FC<DashboardLoadingStateProps> = ({
           </div>
           <div className="space-y-3">
             {Array.from({ length: 4 }).map((_, index) => (
-              <div key={`rail-skeleton-${index}`} className="rounded-lg border border-border-subtle bg-surface p-3">
+              <div key={`rail-skeleton-${index}`} className="rounded border border-border-subtle bg-surface p-3">
                 <SkeletonBlock className="h-3 w-24" />
                 <SkeletonBlock className="mt-3 h-2 w-full" />
               </div>
@@ -88,7 +88,7 @@ export const DashboardLoadingState: FC<DashboardLoadingStateProps> = ({
           </div>
           <div className="space-y-3">
             {Array.from({ length: 3 }).map((__, rowIndex) => (
-              <div key={`lower-skeleton-${index}-${rowIndex}`} className="rounded-lg border border-border-subtle bg-surface p-3">
+              <div key={`lower-skeleton-${index}-${rowIndex}`} className="rounded border border-border-subtle bg-surface p-3">
                 <SkeletonBlock className="h-3 w-28" />
                 <SkeletonBlock className="mt-3 h-2 w-full" />
                 <SkeletonBlock className="mt-2 h-2 w-5/6" />
@@ -115,12 +115,12 @@ export const TableLoadingState: FC<TableLoadingStateProps> = ({
   columns = 5,
 }) => {
   return (
-    <section className="w-full table-glass rounded-2xl p-6 md:p-8" aria-live="polite" aria-busy="true">
+    <section className="w-full table-glass rounded p-6 md:p-8" aria-live="polite" aria-busy="true">
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-text-primary">{title}</h2>
         {subtitle ? <p className="mt-1 text-sm text-text-secondary">{subtitle}</p> : null}
       </div>
-      <div className="overflow-hidden rounded-xl border border-border-subtle">
+      <div className="overflow-hidden rounded border border-border-subtle">
         <div className={`grid gap-0 border-b border-border-subtle bg-surface px-4 py-3`} style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
           {Array.from({ length: columns }).map((_, index) => (
             <SkeletonBlock key={`table-head-${index}`} className="h-3 w-16" />

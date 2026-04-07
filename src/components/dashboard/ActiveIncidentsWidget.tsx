@@ -14,23 +14,23 @@ const PRIORITY_CONFIG: Record<
 > = {
   critical: {
     label: 'CRITICAL',
-    rowClass: 'border-l-2 border-red-500/70 bg-red-500/10 critical-glow',
-    badgeClass: 'bg-red-500/20 text-red-300 border border-red-500/40',
+    rowClass: 'border-l-2 border-danger-border bg-danger-bg critical-glow',
+    badgeClass: 'border border-danger-border bg-danger-bg text-danger-text',
   },
   high: {
     label: 'HIGH',
-    rowClass: 'border-l-2 border-orange-400/70 bg-orange-400/10',
-    badgeClass: 'bg-orange-400/20 text-orange-300 border border-orange-400/40',
+    rowClass: 'border-l-2 border-warning-border bg-warning-bg',
+    badgeClass: 'border border-warning-border bg-warning-bg text-warning-text',
   },
   medium: {
     label: 'MED',
-    rowClass: 'border-l-2 border-yellow-400/60 bg-yellow-400/8',
-    badgeClass: 'bg-yellow-400/20 text-yellow-300 border border-yellow-400/40',
+    rowClass: 'border-l-2 border-warning-border bg-warning-bg',
+    badgeClass: 'border border-warning-border bg-warning-bg text-warning-text',
   },
   low: {
     label: 'LOW',
-    rowClass: 'border-l-2 border-green-500/50 bg-green-500/5',
-    badgeClass: 'bg-green-500/20 text-green-300 border border-green-500/40',
+    rowClass: 'border-l-2 border-success-border bg-success-bg',
+    badgeClass: 'border border-success-border bg-success-bg text-success-text',
   },
 }
 
@@ -41,10 +41,10 @@ const STATUS_LABEL: Record<Incident['status'], string> = {
 }
 
 const SEVERITY_DOT_CLASS: Record<Incident['priority'], string> = {
-  critical: 'bg-red-400',
-  high: 'bg-orange-300',
-  medium: 'bg-yellow-300',
-  low: 'bg-green-300',
+  critical: 'bg-danger-text',
+  high: 'bg-warning-text',
+  medium: 'bg-warning-text',
+  low: 'bg-success-text',
 }
 
 const ActiveIncidentsWidget: FC<ActiveIncidentsWidgetProps> = ({
@@ -59,7 +59,7 @@ const ActiveIncidentsWidget: FC<ActiveIncidentsWidgetProps> = ({
 
   return (
     <section
-      className="command-panel rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-surface)]"
+      className="command-panel rounded border border-[color:var(--color-border)] bg-[color:var(--color-surface)]"
       aria-label="Active Incidents"
     >
       {/* Header */}
@@ -68,7 +68,7 @@ const ActiveIncidentsWidget: FC<ActiveIncidentsWidgetProps> = ({
           {/* Alert icon */}
           <svg
             aria-hidden="true"
-            className="h-4 w-4 shrink-0 text-red-400"
+            className="h-4 w-4 shrink-0 text-danger-text"
             fill="none"
             stroke="currentColor"
             strokeWidth={2}
@@ -84,7 +84,7 @@ const ActiveIncidentsWidget: FC<ActiveIncidentsWidgetProps> = ({
             Active Incidents
           </h2>
           {active.length > 0 && (
-            <span className="rounded-full bg-red-500/20 px-2 py-0.5 font-mono text-xs font-bold text-red-300">
+            <span className="rounded-full border border-danger-border bg-danger-bg px-2 py-0.5 font-mono text-xs font-bold text-danger-text">
               {active.length}
             </span>
           )}
@@ -101,7 +101,7 @@ const ActiveIncidentsWidget: FC<ActiveIncidentsWidgetProps> = ({
         )}
 
         {!loading && error && (
-          <p className="px-2 py-4 text-center font-mono text-xs text-amber-300" role="alert">
+          <p className="px-2 py-4 text-center font-mono text-xs text-warning-text" role="alert">
             {error}
           </p>
         )}

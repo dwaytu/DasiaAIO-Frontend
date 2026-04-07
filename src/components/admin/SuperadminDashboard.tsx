@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo, FC, Suspense, lazy } from 'react'
+import { useState, useEffect, useMemo, FC, Suspense, lazy } from 'react'
 import { useNavigate } from 'react-router'
 import EditUserModal from '../EditUserModal'
 import EditScheduleModal from '../EditScheduleModal'
@@ -100,10 +100,10 @@ const UserAvatar: FC<{ user: User }> = ({ user }) => {
   const normalizedRole = user.role === 'user' ? 'guard' : normalizeRole(user.role)
   const initial = (user.full_name || user.username || '?').charAt(0).toUpperCase()
   const avatarColor = normalizedRole === 'superadmin' || normalizedRole === 'admin'
-    ? 'bg-purple-500/20 text-purple-300'
+    ? 'bg-info-bg text-info-text'
     : normalizedRole === 'supervisor'
-      ? 'bg-amber-500/20 text-amber-300'
-      : 'bg-teal-500/20 text-teal-300'
+      ? 'bg-warning-bg text-warning-text'
+      : 'bg-success-bg text-success-text'
 
   return (
     <div className={`h-9 w-9 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${avatarColor}`} aria-hidden="true">
@@ -115,10 +115,10 @@ const UserAvatar: FC<{ user: User }> = ({ user }) => {
 const RoleBadge: FC<{ roleRaw: string }> = ({ roleRaw }) => {
   const role = normalizeRole(roleRaw)
   const rolePill = role === 'superadmin' || role === 'admin'
-    ? 'bg-purple-500/15 text-purple-300 ring-1 ring-purple-500/30'
+    ? 'bg-info-bg text-info-text ring-1 ring-info-border'
     : role === 'supervisor'
-      ? 'bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30'
-      : 'bg-teal-500/15 text-teal-300 ring-1 ring-teal-500/30'
+      ? 'bg-warning-bg text-warning-text ring-1 ring-warning-border'
+      : 'bg-success-bg text-success-text ring-1 ring-success-border'
 
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold uppercase tracking-wide ${rolePill}`}>
@@ -133,10 +133,10 @@ const RoleBadge: FC<{ roleRaw: string }> = ({ roleRaw }) => {
 const StatusIndicator: FC<{ status: UserDerivedStatus }> = ({ status }) => {
   const statusConfig: Record<UserDerivedStatus, { dot: string; glow: string; label: string; pill: string }> = {
     active: {
-      dot: 'bg-emerald-400',
+      dot: 'bg-[color:var(--color-success)]',
       glow: '0 0 6px rgba(52,211,153,0.7)',
       label: 'Active',
-      pill: 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30',
+      pill: 'bg-success-bg text-success-text ring-1 ring-success-border',
     },
     inactive: {
       dot: 'bg-zinc-400',
@@ -145,16 +145,16 @@ const StatusIndicator: FC<{ status: UserDerivedStatus }> = ({ status }) => {
       pill: 'bg-zinc-500/15 text-zinc-300 ring-1 ring-zinc-500/30',
     },
     pending: {
-      dot: 'bg-amber-400',
+      dot: 'bg-[color:var(--color-warning)]',
       glow: '0 0 6px rgba(251,191,36,0.7)',
       label: 'Pending',
-      pill: 'bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30',
+      pill: 'bg-warning-bg text-warning-text ring-1 ring-warning-border',
     },
     suspended: {
-      dot: 'bg-red-400',
+      dot: 'bg-[color:var(--color-danger)]',
       glow: '0 0 6px rgba(248,113,113,0.7)',
       label: 'Suspended',
-      pill: 'bg-red-500/15 text-red-300 ring-1 ring-red-500/30',
+      pill: 'bg-danger-bg text-danger-text ring-1 ring-danger-border',
     },
   }
 
@@ -264,6 +264,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
     return false
   }
   const sectionTitle =
+    activeSection === 'inbox' ? 'Inbox' :
     activeSection === 'dashboard' ? 'Dashboard' :
     activeSection === 'approvals' ? 'Guard Approvals' :
     activeSection === 'schedule' ? 'Guard Schedules' :
@@ -843,7 +844,6 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
         onMenuOpen={() => setMobileMenuOpen(true)}
         onMenuClose={() => setMobileMenuOpen(false)}
         onLogoClick={() => navigate(ROUTES.DASHBOARD)}
-        onRefresh={handleRefresh}
         error={error}
       >
 
@@ -859,7 +859,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
           </div>
         ) : activeSection === 'dashboard' && error ? (
           <div className="flex flex-1 items-center justify-center py-8">
-            <section className="w-full max-w-xl rounded-2xl border border-danger-border bg-danger-bg/70 p-6 text-left shadow-lg backdrop-blur-sm">
+            <section className="w-full max-w-xl rounded border border-danger-border bg-danger-bg/70 p-6 text-left shadow-lg backdrop-blur-sm">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-danger-text/80">Command Overview Unavailable</p>
               <h2 className="mt-2 text-2xl font-bold text-danger-text">SENTINEL cannot reach the backend services.</h2>
               <p className="mt-3 text-sm leading-6 text-danger-text/90">
@@ -869,14 +869,14 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                 <button
                   type="button"
                   onClick={handleRefresh}
-                  className="inline-flex min-h-11 items-center justify-center rounded-lg border border-danger-border bg-surface px-4 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
+                  className="inline-flex min-h-11 items-center justify-center rounded border border-danger-border bg-surface px-4 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
                 >
                   Retry Dashboard
                 </button>
                 <button
                   type="button"
                   onClick={() => handleNavigate('approvals')}
-                  className="inline-flex min-h-11 items-center justify-center rounded-lg border border-border bg-surface-elevated px-4 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
+                  className="inline-flex min-h-11 items-center justify-center rounded border border-border bg-surface-elevated px-4 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
                 >
                   Open Approvals
                 </button>
@@ -888,17 +888,17 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
             {/* Command center skeleton */}
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
               {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="rounded-xl border border-border-subtle bg-surface-elevated px-3 py-4">
+                <div key={i} className="rounded border border-border-subtle bg-surface-elevated px-3 py-4">
                   <div className="h-3 w-20 rounded bg-border-subtle" />
                   <div className="mt-2 h-6 w-12 rounded bg-border-subtle" />
                 </div>
               ))}
             </div>
             {/* Table skeleton */}
-            <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden">
+            <div className="rounded border border-border-subtle bg-surface overflow-hidden">
               <div className="flex items-center justify-between p-5 border-b border-border-subtle">
                 <div className="h-5 w-40 rounded bg-border-subtle" />
-                <div className="h-8 w-44 rounded-lg bg-border-subtle" />
+                <div className="h-8 w-44 rounded bg-border-subtle" />
               </div>
               <div className="divide-y divide-border-subtle">
                 {Array.from({ length: 5 }).map((_, i) => (
@@ -937,7 +937,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                 </div>
                 <div className="flex items-center gap-2">
                   <LiveFreshnessPill updatedAt={lastUserSyncAt} label="Roster sync" />
-                  <label className="flex items-center gap-2 rounded-lg border border-border-subtle bg-background px-2 py-2 text-xs font-semibold text-text-secondary" htmlFor="tracking-accuracy-mode">
+                  <label className="flex items-center gap-2 rounded border border-border-subtle bg-background px-2 py-2 text-xs font-semibold text-text-secondary" htmlFor="tracking-accuracy-mode">
                     Accuracy
                     <select
                       id="tracking-accuracy-mode"
@@ -961,7 +961,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                       placeholder="Search users..."
                       value={searchQuery}
                       onChange={e => setSearchQuery(e.target.value)}
-                      className="pl-9 pr-4 py-2 text-sm bg-background border border-border-subtle rounded-lg text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-[color:var(--color-focus-ring)] w-44"
+                      className="pl-9 pr-4 py-2 text-sm bg-background border border-border-subtle rounded text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-[color:var(--color-focus-ring)] w-44"
                     />
                   </div>
                   <button
@@ -969,7 +969,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                     onClick={() => setFilterMenuOpen((prev) => !prev)}
                     aria-expanded={filterMenuOpen}
                     aria-controls="user-role-filter-menu"
-                    className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium bg-background border border-border-subtle rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium bg-background border border-border-subtle rounded text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" /></svg>
                     Filter: {roleFilter === 'all' ? 'All Roles' : roleFilter}
@@ -979,7 +979,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                     id="user-status-filter"
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value as 'all' | UserDerivedStatus)}
-                    className="rounded-lg border border-border-subtle bg-background px-3 py-2 text-sm font-medium text-text-secondary hover:text-text-primary"
+                    className="rounded border border-border-subtle bg-background px-3 py-2 text-sm font-medium text-text-secondary hover:text-text-primary"
                   >
                     <option value="all">All Statuses</option>
                     <option value="active">Active</option>
@@ -990,19 +990,19 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3 border-b border-border-subtle px-5 py-4 md:grid-cols-4">
-                <div className="rounded-xl border border-border-subtle bg-background px-3 py-3">
+                <div className="rounded border border-border-subtle bg-background px-3 py-3">
                   <div className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">Total Users</div>
                   <div className="mt-1 text-xl font-bold text-text-primary">{summaryStats.total}</div>
                 </div>
-                <div className="rounded-xl border border-border-subtle bg-background px-3 py-3">
+                <div className="rounded border border-border-subtle bg-background px-3 py-3">
                   <div className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">Active</div>
                   <div className="mt-1 text-xl font-bold text-success-text">{summaryStats.active}</div>
                 </div>
-                <div className="rounded-xl border border-border-subtle bg-background px-3 py-3">
+                <div className="rounded border border-border-subtle bg-background px-3 py-3">
                   <div className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">Pending</div>
                   <div className="mt-1 text-xl font-bold text-warning-text">{summaryStats.pending}</div>
                 </div>
-                <div className="rounded-xl border border-border-subtle bg-background px-3 py-3">
+                <div className="rounded border border-border-subtle bg-background px-3 py-3">
                   <div className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">Supervisors</div>
                   <div className="mt-1 text-xl font-bold text-info-text">{summaryStats.supervisors}</div>
                 </div>
@@ -1046,7 +1046,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                       type="button"
                       onClick={handleBulkApproveSelected}
                       disabled={bulkProcessing}
-                      className="rounded-lg border border-success-border bg-success-bg px-3 py-1.5 text-xs font-semibold text-success-text disabled:opacity-60"
+                      className="rounded border border-success-border bg-success-bg px-3 py-1.5 text-xs font-semibold text-success-text disabled:opacity-60"
                     >
                       Approve Selected
                     </button>
@@ -1055,7 +1055,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                       onClick={handleBulkSuspendSelected}
                       disabled={bulkProcessing}
                       title="Coming soon"
-                      className="rounded-lg border border-warning-border bg-warning-bg px-3 py-1.5 text-xs font-semibold text-warning-text opacity-50 cursor-not-allowed disabled:opacity-60"
+                      className="rounded border border-warning-border bg-warning-bg px-3 py-1.5 text-xs font-semibold text-warning-text opacity-50 cursor-not-allowed disabled:opacity-60"
                     >
                       Suspend Selected
                     </button>
@@ -1063,7 +1063,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                       type="button"
                       onClick={handleBulkDeleteSelected}
                       disabled={bulkProcessing}
-                      className="rounded-lg border border-danger-border bg-danger-bg px-3 py-1.5 text-xs font-semibold text-danger-text disabled:opacity-60"
+                      className="rounded border border-danger-border bg-danger-bg px-3 py-1.5 text-xs font-semibold text-danger-text disabled:opacity-60"
                     >
                       Delete Selected
                     </button>
@@ -1071,7 +1071,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                       type="button"
                       onClick={() => setSelectedUserIds([])}
                       disabled={bulkProcessing}
-                      className="rounded-lg border border-border-subtle bg-background px-3 py-1.5 text-xs font-semibold text-text-secondary disabled:opacity-60"
+                      className="rounded border border-border-subtle bg-background px-3 py-1.5 text-xs font-semibold text-text-secondary disabled:opacity-60"
                     >
                       Clear
                     </button>
@@ -1083,7 +1083,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                   <table className="hidden w-full min-w-[980px] md:table">
                     <thead className="thead-glass">
                       <tr className="border-b border-border">
-                        <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">
+                        <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">
                           <label className="inline-flex items-center gap-2">
                             <input
                               type="checkbox"
@@ -1095,12 +1095,12 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                             <span>Select</span>
                           </label>
                         </th>
-                        <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">User Details</th>
-                        <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Username</th>
-                        <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Role</th>
-                        <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Status</th>
-                        <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Last Login</th>
-                        <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-text-tertiary">Actions</th>
+                        <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">User Details</th>
+                        <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Username</th>
+                        <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Role</th>
+                        <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Status</th>
+                        <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Last Login</th>
+                        <th className="px-3 py-2.5 text-right text-xs font-semibold uppercase tracking-wider text-text-tertiary">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border-subtle">
@@ -1112,7 +1112,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                         const pendingApproval = pendingApprovalIds.has(u.id)
                         return (
                           <tr key={u.id} className="transition-colors hover:bg-surface-hover/50">
-                            <td className="px-5 py-3.5 align-top">
+                            <td className="px-3 py-2.5 align-top">
                               <input
                                 type="checkbox"
                                 checked={rowSelected}
@@ -1121,7 +1121,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                                 aria-label={`Select ${u.full_name || u.username || u.email}`}
                               />
                             </td>
-                            <td className="px-5 py-3.5">
+                            <td className="px-3 py-2.5">
                               <div className="flex items-center gap-3">
                                 <UserAvatar user={u} />
                                 <div className="min-w-0">
@@ -1135,20 +1135,20 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                                 </div>
                               </div>
                             </td>
-                            <td className="px-5 py-3.5 text-sm text-text-secondary" title={u.username}>{truncateText(u.username, 22)}</td>
-                            <td className="px-5 py-3.5">
+                            <td className="px-3 py-2.5 text-sm text-text-secondary" title={u.username}>{truncateText(u.username, 22)}</td>
+                            <td className="px-3 py-2.5">
                               <RoleBadge roleRaw={u.role} />
                             </td>
-                            <td className="px-5 py-3.5">
+                            <td className="px-3 py-2.5">
                               <StatusIndicator status={derivedStatus} />
                             </td>
-                            <td className="px-5 py-3.5 text-xs text-text-secondary">
+                            <td className="px-3 py-2.5 text-xs text-text-secondary">
                               <div className="flex flex-col gap-0.5">
                                 <span>{getRelativeLastLogin(u.last_seen_at)}</span>
                                 <span className="text-[11px] text-text-tertiary">Signal {getPreciseLastSeen(u.last_seen_at)}</span>
                               </div>
                             </td>
-                            <td className="px-5 py-3.5">
+                            <td className="px-3 py-2.5">
                               <div className="flex items-center justify-end gap-1">
                                 {pendingApproval && (
                                   <button
@@ -1156,7 +1156,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                                     onClick={() => handleApproveIfPending(u)}
                                     title="Approve pending user"
                                     aria-label={`Approve ${u.full_name || u.username || u.email}`}
-                                    className="min-h-11 min-w-11 rounded-lg p-2 text-text-tertiary transition-colors hover:bg-emerald-500/10 hover:text-emerald-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
+                                    className="min-h-11 min-w-11 rounded p-2 text-text-tertiary transition-colors hover:bg-success-bg hover:text-success-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
                                   >
                                     <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                       <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -1169,7 +1169,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                                     onClick={() => handleEditUser(u)}
                                     title="Edit user"
                                     aria-label={`Edit ${u.full_name || u.username || u.email}`}
-                                    className="min-h-11 min-w-11 rounded-lg p-2 text-text-tertiary transition-colors hover:bg-info-bg hover:text-info focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
+                                    className="min-h-11 min-w-11 rounded p-2 text-text-tertiary transition-colors hover:bg-info-bg hover:text-info-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
                                   >
                                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                                   </button>
@@ -1179,7 +1179,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                                   onClick={() => handleResetPasswordAction(u)}
                                   title="Coming soon"
                                   aria-label={`Reset password for ${u.full_name || u.username || u.email}`}
-                                  className="min-h-11 min-w-11 rounded-lg p-2 text-text-tertiary opacity-50 cursor-not-allowed transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
+                                  className="min-h-11 min-w-11 rounded p-2 text-text-tertiary opacity-50 cursor-not-allowed transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
                                 >
                                   <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 11V7m0 0l-3 3m3-3l3 3M5 12a7 7 0 1114 0v5a2 2 0 01-2 2H7a2 2 0 01-2-2v-5z" />
@@ -1190,7 +1190,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                                   onClick={() => handleSuspendAction(u)}
                                   title="Coming soon"
                                   aria-label={`Suspend ${u.full_name || u.username || u.email}`}
-                                  className="min-h-11 min-w-11 rounded-lg p-2 text-text-tertiary opacity-50 cursor-not-allowed transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
+                                  className="min-h-11 min-w-11 rounded p-2 text-text-tertiary opacity-50 cursor-not-allowed transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
                                 >
                                   <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 5.636l-12.728 12.728M8 7h8a2 2 0 012 2v6a2 2 0 01-2 2H8a2 2 0 01-2-2V9a2 2 0 012-2z" />
@@ -1207,7 +1207,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                                       onClick={() => handleDeleteUser(u.id, u.email)}
                                       title="Delete user"
                                       aria-label={`Delete ${u.full_name || u.username || u.email}`}
-                                      className="min-h-11 min-w-11 rounded-lg p-2 text-text-tertiary transition-colors hover:bg-red-500/10 hover:text-red-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
+                                      className="min-h-11 min-w-11 rounded p-2 text-text-tertiary transition-colors hover:bg-danger-bg hover:text-danger-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
                                     >
                                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                     </button>
@@ -1228,7 +1228,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                       const canDelete = canEditUserRow(u.role) && u.id !== user.id
 
                       return (
-                        <article key={`mobile-${u.id}`} className="rounded-xl border border-border-subtle bg-background p-4">
+                        <article key={`mobile-${u.id}`} className="rounded border border-border-subtle bg-background p-4">
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex items-center gap-3 min-w-0">
                               <input
@@ -1262,7 +1262,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                               <button
                                 type="button"
                                 onClick={() => handleApproveIfPending(u)}
-                                className="min-h-11 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1.5 text-xs font-semibold text-emerald-300"
+                                className="min-h-11 rounded-md border border-success-border bg-success-bg px-2.5 py-1.5 text-xs font-semibold text-success-text"
                               >
                                 Approve
                               </button>
@@ -1270,7 +1270,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                             <button
                               type="button"
                               onClick={() => handleEditUser(u)}
-                              className="min-h-11 rounded-md border border-info-border bg-info-bg px-2.5 py-1.5 text-xs font-semibold text-info"
+                              className="min-h-11 rounded-md border border-info-border bg-info-bg px-2.5 py-1.5 text-xs font-semibold text-info-text"
                             >
                               Edit
                             </button>
@@ -1278,7 +1278,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                               type="button"
                               onClick={() => handleResetPasswordAction(u)}
                               title="Coming soon"
-                              className="min-h-11 rounded-md border border-sky-500/40 bg-sky-500/10 px-2.5 py-1.5 text-xs font-semibold text-sky-300 opacity-50 cursor-not-allowed"
+                              className="min-h-11 rounded-md border border-info-border bg-info-bg px-2.5 py-1.5 text-xs font-semibold text-info-text opacity-50 cursor-not-allowed"
                             >
                               Reset
                             </button>
@@ -1286,7 +1286,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                               type="button"
                               onClick={() => handleSuspendAction(u)}
                               title="Coming soon"
-                              className="min-h-11 rounded-md border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 text-xs font-semibold text-amber-300 opacity-50 cursor-not-allowed"
+                              className="min-h-11 rounded-md border border-warning-border bg-warning-bg px-2.5 py-1.5 text-xs font-semibold text-warning-text opacity-50 cursor-not-allowed"
                             >
                               Suspend
                             </button>
@@ -1294,7 +1294,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                               <button
                                 type="button"
                                 onClick={() => handleDeleteUser(u.id, u.email)}
-                                className="min-h-11 rounded-md border border-red-500/40 bg-red-500/10 px-2.5 py-1.5 text-xs font-semibold text-red-300"
+                                className="min-h-11 rounded-md border border-danger-border bg-danger-bg px-2.5 py-1.5 text-xs font-semibold text-danger-text"
                               >
                                 Delete
                               </button>
@@ -1314,8 +1314,8 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
               <div className="flex items-center justify-between px-5 py-3 border-t border-border-subtle">
                 <p className="text-xs text-text-tertiary">Showing {totalVisibleUsers} of {users.length} users</p>
                 <div className="flex gap-2">
-                  <button type="button" className="min-h-11 rounded-lg border border-border-subtle bg-background px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-hover">Previous</button>
-                  <button type="button" className="min-h-11 rounded-lg border border-border-subtle bg-background px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-hover">Next</button>
+                  <button type="button" className="min-h-11 rounded border border-border-subtle bg-background px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-hover">Previous</button>
+                  <button type="button" className="min-h-11 rounded border border-border-subtle bg-background px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-hover">Next</button>
                 </div>
               </div>
             </section>
@@ -1330,7 +1330,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                 columns={5}
               />
             ) : (
-              <section className="w-full table-glass rounded-2xl p-6 md:p-8">
+              <section className="w-full table-glass rounded p-4 md:p-5">
                 <h2 className="text-2xl font-bold text-text-primary mb-6">Pending Guard Registrations</h2>
                 <div className="overflow-auto">
                   <table className="w-full border-collapse min-w-[640px]">
@@ -1408,12 +1408,12 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
               />
             ) : (
               <>
-                <section className="flex flex-col flex-1 min-h-0 w-full rounded-2xl overflow-hidden table-glass mb-4">
+                <section className="flex flex-col flex-1 min-h-0 w-full rounded overflow-hidden table-glass mb-4">
                   <div className="flex-shrink-0 px-6 py-5 border-b border-border-subtle flex justify-between items-center">
                     <h2 className="text-xl font-bold text-text-primary">All Guard Schedules</h2>
                     <button
                       onClick={() => setShowAddScheduleForm(!showAddScheduleForm)}
-                      className="bg-primary hover:bg-primary-hover text-primary-text px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                      className="bg-primary hover:bg-primary-hover text-primary-text px-4 py-2 rounded text-sm font-medium transition-colors flex items-center gap-2"
                     >
                       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -1448,9 +1448,9 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                             <td className="px-4 py-3 text-text-primary">{new Date(shift.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
                             <td className="px-4 py-3">
                               <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
-                                shift.status === 'completed' ? 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30' :
-                                shift.status === 'scheduled' ? 'bg-blue-500/15 text-blue-300 ring-1 ring-blue-500/30' :
-                                shift.status === 'in_progress' ? 'bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30' :
+                                shift.status === 'completed' ? 'bg-success-bg text-success-text ring-1 ring-success-border' :
+                                shift.status === 'scheduled' ? 'bg-info-bg text-info-text ring-1 ring-info-border' :
+                                shift.status === 'in_progress' ? 'bg-warning-bg text-warning-text ring-1 ring-warning-border' :
                                 'bg-zinc-500/15 text-zinc-400 ring-1 ring-zinc-500/30'
                               }`}>
                                 {shift.status}
@@ -1476,7 +1476,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
               </section>
 
               {showAddScheduleForm && (
-                <section className="w-full table-glass rounded-2xl p-6 md:p-8">
+                <section className="w-full table-glass rounded p-6 md:p-8">
                   <div className="flex justify-between items-center mb-6">
                     <h2 className="text-2xl font-bold text-text-primary">Add New Schedule</h2>
                     <button
@@ -1491,7 +1491,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                   </div>
                   
                   {error && (
-                    <div className="mb-4 p-3 bg-red-50 border border-red-300 text-red-800 rounded-lg text-sm">
+                    <div className="mb-4 p-3 bg-danger-bg border border-danger-border text-danger-text rounded text-sm">
                       {error}
                     </div>
                   )}
@@ -1518,7 +1518,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                         value={scheduleFormData.client_site}
                         onChange={(e) => setScheduleFormData({...scheduleFormData, client_site: e.target.value})}
                         placeholder="Enter site or location"
-                        className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)] focus:border-[color:var(--color-focus-ring)]"
+                        className="w-full px-3 py-2 border border-border rounded bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)] focus:border-[color:var(--color-focus-ring)]"
                       />
                     </div>
 
@@ -1529,7 +1529,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                         required
                         value={scheduleFormData.date}
                         onChange={(e) => setScheduleFormData({...scheduleFormData, date: e.target.value})}
-                        className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)] focus:border-[color:var(--color-focus-ring)]"
+                        className="w-full px-3 py-2 border border-border rounded bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)] focus:border-[color:var(--color-focus-ring)]"
                       />
                     </div>
 
@@ -1540,7 +1540,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                         required
                         value={scheduleFormData.start_time}
                         onChange={(e) => setScheduleFormData({...scheduleFormData, start_time: e.target.value})}
-                        className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)] focus:border-[color:var(--color-focus-ring)]"
+                        className="w-full px-3 py-2 border border-border rounded bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)] focus:border-[color:var(--color-focus-ring)]"
                       />
                     </div>
 
@@ -1551,7 +1551,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                         required
                         value={scheduleFormData.end_time}
                         onChange={(e) => setScheduleFormData({...scheduleFormData, end_time: e.target.value})}
-                        className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)] focus:border-[color:var(--color-focus-ring)]"
+                        className="w-full px-3 py-2 border border-border rounded bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)] focus:border-[color:var(--color-focus-ring)]"
                       />
                     </div>
 
@@ -1559,7 +1559,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                       <button
                         type="submit"
                         disabled={shiftsLoading}
-                        className="w-full bg-primary hover:bg-primary-hover disabled:opacity-50 text-primary-text font-semibold py-3 rounded-lg transition-colors"
+                        className="w-full bg-primary hover:bg-primary-hover disabled:opacity-50 text-primary-text font-semibold py-3 rounded transition-colors"
                       >
                         {shiftsLoading ? 'Creating Schedule...' : 'Create Schedule'}
                       </button>
@@ -1573,16 +1573,16 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
         ) : activeSection === 'missions' ? (
           <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in">
             {/* Mission Assignment Form */}
-            <section className="w-full table-glass rounded-2xl p-6 md:p-8 mb-6">
+            <section className="w-full table-glass rounded p-6 md:p-8 mb-6">
               <h2 className="text-2xl font-bold text-text-primary mb-6">Assign New Mission</h2>
               {error && (
-                <div className="mb-4 p-3 bg-red-50 border border-red-300 text-red-800 rounded-lg text-sm">
+                <div className="mb-4 p-3 bg-danger-bg border border-danger-border text-danger-text rounded text-sm">
                   {error}
                 </div>
               )}
               {missionResponse && (
-                <div className="mb-4 p-4 bg-green-50 border border-green-300 rounded-lg">
-                  <h3 className="font-bold text-green-900 mb-2">Mission Assigned Successfully!</h3>
+                <div className="mb-4 p-4 bg-success-bg border border-success-border rounded">
+                  <h3 className="font-bold text-success-text mb-2">Mission Assigned Successfully!</h3>
                   <p className="text-sm text-text-primary mb-2">Mission ID: {missionResponse.mission_id}</p>
                   <div className="text-sm text-text-primary">
                     <p className="font-semibold">Allocated Resources:</p>
@@ -1594,7 +1594,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                   </div>
                   <button 
                     onClick={() => setMissionResponse(null)}
-                    className="mt-2 text-sm text-green-800 underline"
+                    className="mt-2 text-sm text-success-text underline"
                   >
                     Dismiss
                   </button>
@@ -1609,7 +1609,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                     value={missionFormData.mission_name}
                     onChange={(e) => setMissionFormData({...missionFormData, mission_name: e.target.value})}
                     placeholder="Enter mission name"
-                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)] focus:border-[color:var(--color-focus-ring)]"
+                    className="w-full px-3 py-2 border border-border rounded bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)] focus:border-[color:var(--color-focus-ring)]"
                   />
                 </div>
 
@@ -1621,7 +1621,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                     value={missionFormData.destination}
                     onChange={(e) => setMissionFormData({...missionFormData, destination: e.target.value})}
                     placeholder="Enter destination"
-                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)] focus:border-[color:var(--color-focus-ring)]"
+                    className="w-full px-3 py-2 border border-border rounded bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)] focus:border-[color:var(--color-focus-ring)]"
                   />
                 </div>
 
@@ -1665,7 +1665,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                     required
                     value={missionFormData.date}
                     onChange={(e) => setMissionFormData({...missionFormData, date: e.target.value})}
-                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)] focus:border-[color:var(--color-focus-ring)]"
+                    className="w-full px-3 py-2 border border-border rounded bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)] focus:border-[color:var(--color-focus-ring)]"
                   />
                 </div>
 
@@ -1676,7 +1676,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                     required
                     value={missionFormData.start_time}
                     onChange={(e) => setMissionFormData({...missionFormData, start_time: e.target.value})}
-                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)] focus:border-[color:var(--color-focus-ring)]"
+                    className="w-full px-3 py-2 border border-border rounded bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)] focus:border-[color:var(--color-focus-ring)]"
                   />
                 </div>
 
@@ -1687,7 +1687,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                     required
                     value={missionFormData.end_time}
                     onChange={(e) => setMissionFormData({...missionFormData, end_time: e.target.value})}
-                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)] focus:border-[color:var(--color-focus-ring)]"
+                    className="w-full px-3 py-2 border border-border rounded bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)] focus:border-[color:var(--color-focus-ring)]"
                   />
                 </div>
 
@@ -1696,7 +1696,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                   <select
                     value={missionFormData.priority}
                     onChange={(e) => setMissionFormData({...missionFormData, priority: e.target.value})}
-                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)] focus:border-[color:var(--color-focus-ring)]"
+                    className="w-full px-3 py-2 border border-border rounded bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)] focus:border-[color:var(--color-focus-ring)]"
                   >
                     <option value="low">Low</option>
                     <option value="medium">Medium</option>
@@ -1712,7 +1712,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                     onChange={(e) => setMissionFormData({...missionFormData, special_requirements: e.target.value})}
                     placeholder="Enter any special requirements"
                     rows={3}
-                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)] focus:border-[color:var(--color-focus-ring)]"
+                    className="w-full px-3 py-2 border border-border rounded bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)] focus:border-[color:var(--color-focus-ring)]"
                   />
                 </div>
 
@@ -1720,7 +1720,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                   <button
                     type="submit"
                     disabled={missionsLoading}
-                    className="w-full bg-primary hover:bg-primary-hover disabled:opacity-50 text-primary-text font-semibold py-3 rounded-lg transition-colors"
+                    className="w-full bg-primary hover:bg-primary-hover disabled:opacity-50 text-primary-text font-semibold py-3 rounded transition-colors"
                   >
                     {missionsLoading ? 'Assigning Mission...' : 'Assign Mission'}
                   </button>
@@ -1729,7 +1729,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
             </section>
 
             {/* Mission History */}
-            <section className="w-full table-glass rounded-2xl p-6 md:p-8">
+            <section className="w-full table-glass rounded p-6 md:p-8">
               <h2 className="text-2xl font-bold text-text-primary mb-6">Mission History</h2>
               {missionsLoading ? (
                 <TableLoadingState
@@ -1767,9 +1767,9 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                           <td className="px-4 py-3 text-text-primary">{mission.driver_name || 'N/A'}</td>
                           <td className="px-4 py-3">
                             <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
-                              mission.status === 'completed' ? 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30' :
-                              mission.status === 'scheduled' ? 'bg-blue-500/15 text-blue-300 ring-1 ring-blue-500/30' :
-                              mission.status === 'in_progress' ? 'bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30' :
+                              mission.status === 'completed' ? 'bg-success-bg text-success-text ring-1 ring-success-border' :
+                              mission.status === 'scheduled' ? 'bg-info-bg text-info-text ring-1 ring-info-border' :
+                              mission.status === 'in_progress' ? 'bg-warning-bg text-warning-text ring-1 ring-warning-border' :
                               'bg-zinc-500/15 text-zinc-400 ring-1 ring-zinc-500/30'
                             }`}>
                               {mission.status || 'unknown'}
@@ -1800,7 +1800,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                 className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in"
                 aria-live="polite"
               >
-                <div className="table-glass rounded-2xl p-6 md:p-8">
+                <div className="table-glass rounded p-6 md:p-8">
                   <p className="text-sm text-text-secondary">Loading audit intelligence...</p>
                 </div>
               </section>
@@ -1838,7 +1838,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
               <h3 className="text-xl font-bold text-text-primary">Approval Details</h3>
               <p className="mt-1 text-sm text-text-secondary">Review applicant profile before approval.</p>
 
-              <div className="mt-4 space-y-3 rounded-lg border border-border-subtle bg-background p-4 text-sm">
+              <div className="mt-4 space-y-3 rounded border border-border-subtle bg-background p-4 text-sm">
                 <p><span className="font-semibold">Name:</span> {selectedApproval.full_name || selectedApproval.username}</p>
                 <p><span className="font-semibold">Email:</span> {selectedApproval.email}</p>
                 <p><span className="font-semibold">Phone:</span> {selectedApproval.phone_number || '-'}</p>
@@ -1850,19 +1850,19 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
               <div className="mt-5 flex gap-2">
                 <button
                   onClick={() => handleApprovalAction(selectedApproval.id, 'approve')}
-                  className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+                  className="rounded bg-[color:var(--color-success)] px-3 py-2 text-sm font-semibold text-white hover:opacity-90"
                 >
                   Approve
                 </button>
                 <button
                   onClick={() => handleApprovalAction(selectedApproval.id, 'reject')}
-                  className="rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-700"
+                  className="rounded bg-[color:var(--color-danger)] px-3 py-2 text-sm font-semibold text-white hover:opacity-90"
                 >
                   Reject
                 </button>
                 <button
                   onClick={() => setSelectedApproval(null)}
-                  className="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-text-primary hover:bg-surface-hover"
+                  className="rounded border border-border px-3 py-2 text-sm font-semibold text-text-primary hover:bg-surface-hover"
                 >
                   Close
                 </button>

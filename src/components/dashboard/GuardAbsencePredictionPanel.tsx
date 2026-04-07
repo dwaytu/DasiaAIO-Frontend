@@ -46,7 +46,7 @@ const GuardAbsencePredictionPanel: FC<GuardAbsencePredictionPanelProps> = ({
 }) => {
   return (
     <section
-      className="command-panel rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-surface)]"
+      className="command-panel rounded border border-[color:var(--color-border)] bg-[color:var(--color-surface)]"
       aria-label="Guard absence prediction"
     >
       <div className="flex items-center justify-between border-b border-[color:var(--color-border)] px-4 py-3">

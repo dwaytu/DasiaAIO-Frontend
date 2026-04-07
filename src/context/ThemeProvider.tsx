@@ -191,7 +191,7 @@ export const ThemeToggleButton: React.FC<{
       type="button"
       onClick={toggleTheme}
       className={`
-        flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-lg px-3 py-2
+        flex min-h-11 min-w-11 items-center justify-center gap-2 rounded px-3 py-2
         bg-surface-elevated hover:bg-surface-hover
         border border-border-subtle
         text-text-secondary hover:text-text-primary

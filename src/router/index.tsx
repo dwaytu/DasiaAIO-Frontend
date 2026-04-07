@@ -27,9 +27,9 @@ function LazyFallback() {
     <div className="flex h-screen w-full items-center justify-center bg-background">
       <div className="w-full max-w-xl px-6">
         <div className="animate-pulse space-y-4">
-          <div className="h-10 rounded-lg bg-surface-elevated" />
-          <div className="h-24 rounded-lg bg-surface-elevated" />
-          <div className="h-24 rounded-lg bg-surface-elevated" />
+          <div className="h-10 rounded bg-surface-elevated" />
+          <div className="h-24 rounded bg-surface-elevated" />
+          <div className="h-24 rounded bg-surface-elevated" />
         </div>
       </div>
     </div>

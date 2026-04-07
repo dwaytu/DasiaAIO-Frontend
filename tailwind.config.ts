@@ -159,7 +159,7 @@ const config: Config = {
           'grid-template-columns': 'repeat(auto-fit, minmax(240px, 1fr))',
         },
         '.bento-card': {
-          '@apply bg-surface border border-border-subtle rounded-2xl p-6 shadow-bento transition-all duration-250': {},
+          '@apply bg-surface border border-border-subtle rounded-sm p-6 shadow-bento transition-all duration-250': {},
           '&:hover': {
             '@apply shadow-bento-hover': {},
           },

@@ -52,7 +52,7 @@ const NotificationItem: FC<NotificationProps> = ({ notification, onDismiss }) =>
 
   return (
     <div 
-      className={`${getTypeStyles()} border-l-4 p-4 mb-3 rounded-lg shadow-lg animate-slide-in-right flex items-start justify-between max-w-md`}
+      className={`${getTypeStyles()} border-l-4 p-4 mb-3 rounded shadow-lg animate-slide-in-right flex items-start justify-between max-w-md`}
     >
       <div className="flex items-start gap-3 flex-1">
         <div className="text-2xl font-bold">{getIcon()}</div>

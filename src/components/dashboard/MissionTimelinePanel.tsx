@@ -34,10 +34,10 @@ const MissionTimelinePanel: FC<MissionTimelinePanelProps> = ({ items }) => {
 
       <ol className="space-y-3">
         {items.length === 0 ? (
-          <li className="rounded-lg border border-border-subtle bg-surface-elevated p-3 text-sm text-text-secondary">No mission timeline entries available.</li>
+          <li className="rounded border border-border-subtle bg-surface-elevated p-3 text-sm text-text-secondary">No mission timeline entries available.</li>
         ) : (
           items.map((item) => (
-            <li key={item.id} className="relative rounded-lg border border-border-subtle bg-surface-elevated p-3">
+            <li key={item.id} className="relative rounded border border-border-subtle bg-surface-elevated p-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <span className={dotClass[item.state]} aria-hidden="true" />

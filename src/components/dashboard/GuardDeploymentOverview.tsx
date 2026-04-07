@@ -17,21 +17,21 @@ const GuardDeploymentOverview: FC<GuardDeploymentOverviewProps> = ({ shifts }) =
       </div>
 
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-        <div className="rounded-lg border border-success-border bg-success-bg p-3">
+        <div className="rounded border border-success-border bg-success-bg p-3">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-tertiary">Deployed</p>
           <p className="mt-1 text-2xl font-black text-text-primary">{deployed.length}</p>
         </div>
-        <div className="rounded-lg border border-info-border bg-info-bg p-3">
+        <div className="rounded border border-info-border bg-info-bg p-3">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-tertiary">Scheduled</p>
           <p className="mt-1 text-2xl font-black text-text-primary">{scheduled.length}</p>
         </div>
-        <div className="rounded-lg border border-danger-border bg-danger-bg p-3">
+        <div className="rounded border border-danger-border bg-danger-bg p-3">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-tertiary">Absent</p>
           <p className="mt-1 text-2xl font-black text-text-primary">{absent.length}</p>
         </div>
       </div>
 
-      <div className="mt-3 max-h-44 overflow-y-auto rounded-lg border border-border-subtle">
+      <div className="mt-3 max-h-44 overflow-y-auto rounded border border-border-subtle">
         <table className="w-full min-w-[420px]">
           <thead className="thead-glass">
             <tr>

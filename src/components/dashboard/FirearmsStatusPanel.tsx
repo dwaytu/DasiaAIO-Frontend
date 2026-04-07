@@ -18,7 +18,7 @@ const FirearmsStatusPanel: FC<FirearmsStatusPanelProps> = ({
   const available = Math.max(firearms.length - issued - maintenance, 0)
 
   return (
-    <section className="command-panel rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-surface)]" aria-label="Firearms status">
+    <section className="command-panel rounded border border-[color:var(--color-border)] bg-[color:var(--color-surface)]" aria-label="Firearms status">
       <div className="flex items-center justify-between border-b border-[color:var(--color-border)] px-4 py-3">
         <div>
           <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-text)]">Firearms Status</p>

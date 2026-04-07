@@ -53,7 +53,7 @@ const SettingsPanel: FC<SettingsPanelProps> = ({ user, open, onClose, onOpenFull
                   onOpenFullSettings()
                   onClose()
                 }}
-                className="hidden min-h-11 rounded-lg border border-border bg-surface-elevated px-3 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-surface-hover sm:inline-flex"
+                className="hidden min-h-11 rounded border border-border bg-surface-elevated px-3 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-surface-hover sm:inline-flex"
               >
                 View Full Settings
               </button>
@@ -61,7 +61,7 @@ const SettingsPanel: FC<SettingsPanelProps> = ({ user, open, onClose, onOpenFull
             <button
               type="button"
               onClick={onClose}
-              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-border bg-surface-elevated text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
+              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded border border-border bg-surface-elevated text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
               aria-label="Close settings"
             >
               <X className="h-5 w-5" aria-hidden="true" />

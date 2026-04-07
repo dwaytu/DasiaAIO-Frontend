@@ -39,7 +39,7 @@ const IncidentAlertFeed: FC<IncidentAlertFeedProps> = ({ alerts, nowLabel }) => 
 
       <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
         {alerts.length === 0 ? (
-          <p className="rounded-lg border border-border-subtle bg-surface-elevated p-3 text-sm text-text-secondary">No active incidents. Monitoring remains stable.</p>
+          <p className="rounded border border-border-subtle bg-surface-elevated p-3 text-sm text-text-secondary">No active incidents. Monitoring remains stable.</p>
         ) : (
           alerts.map((alert, index) => {
             const ageMinutes = alert.createdAt
@@ -60,7 +60,7 @@ const IncidentAlertFeed: FC<IncidentAlertFeedProps> = ({ alerts, nowLabel }) => 
                     selectEvent({ id: alert.incidentId ?? alert.id, type: alert.incidentId ? 'incident' : 'alert', title: alert.title })
                   }
                 }}
-                className={`soc-animated-entry cursor-pointer rounded-lg border p-3 transition-all duration-200 ${toneClass[alert.severity]} ${selectedEventId === (alert.incidentId ?? alert.id) ? 'ring-2 ring-cyan-400' : ''} ${isOverdue ? 'animate-pulse border-2' : ''}`}
+                className={`soc-animated-entry cursor-pointer rounded border p-3 transition-all duration-200 ${toneClass[alert.severity]} ${selectedEventId === (alert.incidentId ?? alert.id) ? 'ring-2 ring-cyan-400' : ''} ${isOverdue ? 'animate-pulse border-2' : ''}`}
                 style={{ animationDelay: `${index * 60}ms` }}
                 aria-pressed={selectedEventId === (alert.incidentId ?? alert.id)}
               >

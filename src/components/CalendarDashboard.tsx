@@ -493,7 +493,7 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
               loading={loading}
               data={bentoMetrics}
               activityMapContent={
-                <div className="h-64 overflow-y-auto rounded-lg border border-border-subtle bg-surface p-3">
+                <div className="h-64 overflow-y-auto rounded border border-border-subtle bg-surface p-3">
                   <Timeline title="Activity Timeline" items={timelineItems} />
                 </div>
               }
@@ -565,13 +565,13 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
             <BentoCard isMain className="!p-0 overflow-hidden">
               {/* Month nav */}
               <div className="flex items-center justify-between px-6 py-5 bg-gradient-to-r from-[color:var(--color-surface)] to-[color:var(--color-surface-elevated)] border-b border-border-subtle">
-                <button onClick={prevMonth} aria-label="Previous month" className="p-2 hover:bg-surface-hover rounded-lg text-text-secondary hover:text-text-primary transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-focus-ring)]">
+                <button onClick={prevMonth} aria-label="Previous month" className="p-2 hover:bg-surface-hover rounded text-text-secondary hover:text-text-primary transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-focus-ring)]">
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
                 </button>
                 <h2 className="text-text-primary font-bold text-lg sm:text-2xl tracking-tight">
                   {MONTH_NAMES[currentMonth]} <span className="text-text-secondary">{currentYear}</span>
                 </h2>
-                <button onClick={nextMonth} aria-label="Next month" className="p-2 hover:bg-surface-hover rounded-lg text-text-secondary hover:text-text-primary transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-focus-ring)]">
+                <button onClick={nextMonth} aria-label="Next month" className="p-2 hover:bg-surface-hover rounded text-text-secondary hover:text-text-primary transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-focus-ring)]">
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
                 </button>
               </div>
@@ -593,7 +593,7 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
                   <div className="hidden grid-cols-7 gap-1 p-3 bg-gradient-to-br from-background to-surface/30 md:grid">
                   {calendarCells.map((day, idx) => {
                     if (day === null) {
-                      return <div key={`empty-${idx}`} className="h-24 sm:h-28 rounded-lg bg-surface/20" />
+                      return <div key={`empty-${idx}`} className="h-24 sm:h-28 rounded bg-surface/20" />
                     }
                     const dateKey = getDateKey(day)
                     const dayEvents = filteredEventsByDate[dateKey] || []
@@ -604,7 +604,7 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
                       <button
                         key={dateKey}
                         onClick={() => setSelectedDate(dateKey)}
-                        className={`h-24 sm:h-28 rounded-lg p-2 text-left transition-all relative border-2
+                        className={`h-24 sm:h-28 rounded p-2 text-left transition-all relative border-2
                           ${isToday 
                             ? 'bg-[color:var(--color-info-bg)] border-[color:var(--color-info-border)] shadow-lg shadow-black/20' 
                             : isSelected 
@@ -662,7 +662,7 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
                               setSelectedDate(ev.date)
                               setSelectedEvent(ev)
                             }}
-                            className={`w-full rounded-lg border p-3 text-left ${c.bg} ${c.border}`}
+                            className={`w-full rounded border p-3 text-left ${c.bg} ${c.border}`}
                           >
                             <div className="flex items-center justify-between gap-2">
                               <p className={`truncate text-sm font-semibold ${c.text}`}>{ev.title}</p>
@@ -712,7 +712,7 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
                         <button
                           key={ev.id}
                           onClick={() => setSelectedEvent(ev)}
-                          className={`w-full text-left p-4 rounded-lg border-2 transition-all hover:scale-[1.02] active:scale-95 
+                          className={`w-full text-left p-4 rounded border-2 transition-all hover:scale-[1.02] active:scale-95 
                             ${c.bg} ${c.border} hover:shadow-lg hover:shadow-current/20`}
                         >
                           <div className="flex items-start gap-3">
@@ -785,7 +785,7 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
           onClick={() => setSelectedEvent(null)}
         >
           <div
-            className="soc-modal-panel w-full max-w-sm rounded-xl border border-border bg-surface p-5 shadow-2xl"
+            className="soc-modal-panel w-full max-w-sm rounded border border-border bg-surface p-5 shadow-2xl"
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-start justify-between mb-4">

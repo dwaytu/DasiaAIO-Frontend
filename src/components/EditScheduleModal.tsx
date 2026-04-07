@@ -159,7 +159,7 @@ const EditScheduleModal: FC<EditScheduleModalProps> = ({ shift, onClose, onSave,
 
   return (
     <div className="soc-modal-backdrop" onClick={onClose}>
-      <div className="soc-modal-panel mx-4 w-full max-w-md rounded-lg bg-surface shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div className="soc-modal-panel mx-4 w-full max-w-md rounded bg-surface shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b border-border px-6 py-4">
           <h2 className="text-xl font-bold text-text-primary">Edit Schedule</h2>
           <button 
@@ -184,7 +184,7 @@ const EditScheduleModal: FC<EditScheduleModalProps> = ({ shift, onClose, onSave,
               <button 
                 type="button"
                 onClick={handleDelete}
-                className="flex-1 rounded-lg bg-red-600 py-2 font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex-1 rounded bg-red-600 py-2 font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
                 disabled={loading}
               >
                 {loading ? 'Deleting...' : 'Yes, Delete'}
@@ -192,7 +192,7 @@ const EditScheduleModal: FC<EditScheduleModalProps> = ({ shift, onClose, onSave,
               <button 
                 type="button"
                 onClick={() => setShowDeleteConfirm(false)}
-                className="soc-btn-secondary flex-1 rounded-lg py-2 font-semibold"
+                className="soc-btn-secondary flex-1 rounded py-2 font-semibold"
                 disabled={loading}
               >
                 Cancel
@@ -209,7 +209,7 @@ const EditScheduleModal: FC<EditScheduleModalProps> = ({ shift, onClose, onSave,
                 value={formData.guardId}
                 onChange={handleChange}
                 required
-                className="w-full rounded-lg border border-border px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-info"
+                className="w-full rounded border border-border px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-info"
               >
                 <option value="">Select a guard</option>
                 {guards.map(guard => (
@@ -230,7 +230,7 @@ const EditScheduleModal: FC<EditScheduleModalProps> = ({ shift, onClose, onSave,
                 onChange={handleChange}
                 required
                 placeholder="Enter client site"
-                className="w-full rounded-lg border border-border px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-info"
+                className="w-full rounded border border-border px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-info"
               />
             </div>
 
@@ -243,7 +243,7 @@ const EditScheduleModal: FC<EditScheduleModalProps> = ({ shift, onClose, onSave,
                 value={formData.date}
                 onChange={handleChange}
                 required
-                className="w-full rounded-lg border border-border px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-info"
+                className="w-full rounded border border-border px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-info"
               />
             </div>
 
@@ -257,7 +257,7 @@ const EditScheduleModal: FC<EditScheduleModalProps> = ({ shift, onClose, onSave,
                   value={formData.startTime}
                   onChange={handleChange}
                   required
-                  className="w-full rounded-lg border border-border px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-info"
+                  className="w-full rounded border border-border px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-info"
                 />
               </div>
 
@@ -270,7 +270,7 @@ const EditScheduleModal: FC<EditScheduleModalProps> = ({ shift, onClose, onSave,
                   value={formData.endTime}
                   onChange={handleChange}
                   required
-                  className="w-full rounded-lg border border-border px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-info"
+                  className="w-full rounded border border-border px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-info"
                 />
               </div>
             </div>
@@ -278,14 +278,14 @@ const EditScheduleModal: FC<EditScheduleModalProps> = ({ shift, onClose, onSave,
             <div className="flex gap-3 pt-4">
               <button 
                 type="submit" 
-                className="soc-btn-primary flex-1 rounded-lg py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                className="soc-btn-primary flex-1 rounded py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
                 disabled={loading}
               >
                 {loading ? 'Saving...' : 'Save Changes'}
               </button>
               <button 
                 type="button" 
-                className="flex-1 rounded-lg bg-red-600 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex-1 rounded bg-red-600 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
                 onClick={() => setShowDeleteConfirm(true)}
                 disabled={loading}
               >
@@ -293,7 +293,7 @@ const EditScheduleModal: FC<EditScheduleModalProps> = ({ shift, onClose, onSave,
               </button>
               <button 
                 type="button" 
-                className="soc-btn-secondary flex-1 rounded-lg py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
+                className="soc-btn-secondary flex-1 rounded py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
                 onClick={onClose} 
                 disabled={loading}
               >

@@ -78,7 +78,7 @@ const LiveOperationsFeed: FC<LiveOperationsFeedProps> = ({ items }) => {
 
       <div className="max-h-[26rem] space-y-2 overflow-y-auto pr-1">
         {items.length === 0 ? (
-          <p className="rounded-lg border border-border-subtle bg-surface-elevated p-3 text-sm text-text-secondary">No live operations at this time.</p>
+          <p className="rounded border border-border-subtle bg-surface-elevated p-3 text-sm text-text-secondary">No live operations at this time.</p>
         ) : (
           items.map((item, index) => (
             <article
@@ -87,7 +87,7 @@ const LiveOperationsFeed: FC<LiveOperationsFeedProps> = ({ items }) => {
               tabIndex={0}
               onClick={() => selectEvent({ id: item.id, type: item.category === 'mission' || item.category === 'system' ? 'incident' : item.category === 'guard' ? 'guard' : 'vehicle', title: item.description })}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectEvent({ id: item.id, type: item.category === 'mission' || item.category === 'system' ? 'incident' : item.category === 'guard' ? 'guard' : 'vehicle', title: item.description }) } }}
-              className={`soc-timeline-item soc-animated-entry cursor-pointer rounded-lg border p-3 transition-all duration-200 ${categoryStyles[item.category]} ${selectedEventId === item.id ? 'ring-2 ring-cyan-400' : ''}`}
+              className={`soc-timeline-item soc-animated-entry cursor-pointer rounded border p-3 transition-all duration-200 ${categoryStyles[item.category]} ${selectedEventId === item.id ? 'ring-2 ring-cyan-400' : ''}`}
               style={{ animationDelay: `${index * 70}ms` }}
               aria-pressed={selectedEventId === item.id}
             >

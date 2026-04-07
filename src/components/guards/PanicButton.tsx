@@ -40,7 +40,7 @@ const PanicButton: FC<PanicButtonProps> = ({ userId, userDisplayName }) => {
 
     const payload = {
       title: '\u{1F6A8} SOS EMERGENCY',
-      description: `Emergency panic alert triggered by guard (${userDisplayName || userId})`,
+      description: `Emergency panic alert triggered by ${userDisplayName || userId}`,
       location,
       priority: 'critical',
     }

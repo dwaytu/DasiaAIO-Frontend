@@ -32,7 +32,7 @@ const SystemInfrastructureStatus: FC<SystemInfrastructureStatusProps> = ({ servi
 
       <ul className="space-y-2">
         {services.map((service) => (
-          <li key={service.name} className="rounded-lg border border-border-subtle bg-surface-elevated px-3 py-2.5">
+          <li key={service.name} className="rounded border border-border-subtle bg-surface-elevated px-3 py-2.5">
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold text-text-primary">{service.name}</p>

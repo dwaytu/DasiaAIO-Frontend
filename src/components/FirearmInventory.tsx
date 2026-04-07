@@ -93,10 +93,10 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
 
   const getStatusBadgeColor = (status: string) => {
     switch (status?.toLowerCase()) {
-      case 'available': return 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30'
-      case 'deployed': return 'bg-blue-500/15 text-blue-300 ring-1 ring-blue-500/30'
-      case 'maintenance': return 'bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30'
-      case 'lost': return 'bg-red-500/15 text-red-300 ring-1 ring-red-500/30'
+      case 'available': return 'bg-success-bg text-success-text ring-1 ring-success-border'
+      case 'deployed': return 'bg-info-bg text-info-text ring-1 ring-info-border'
+      case 'maintenance': return 'bg-warning-bg text-warning-text ring-1 ring-warning-border'
+      case 'lost': return 'bg-danger-bg text-danger-text ring-1 ring-danger-border'
       default: return 'bg-zinc-500/15 text-zinc-400 ring-1 ring-zinc-500/30'
     }
   }
@@ -120,22 +120,22 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
           </div>
         ) : (
           <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in">
-            {error && <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">{error}</div>}
-            {success && <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">{success}</div>}
+            {error && <div className="mb-4 p-4 bg-danger-bg border border-danger-border rounded text-danger-text">{error}</div>}
+            {success && <div className="mb-4 p-4 bg-success-bg border border-success-border rounded text-success-text">{success}</div>}
             
-            <section className="table-glass rounded-2xl p-4 md:p-8 w-full mb-6">
+            <section className="table-glass rounded p-4 md:p-8 w-full mb-6">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
                 <h2 className="text-2xl font-bold text-text-primary mb-4 md:mb-0">All Firearms ({firearms.length})</h2>
                 <button
                   onClick={() => setShowAddForm(!showAddForm)}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200"
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded transition duration-200"
                 >
                   {showAddForm ? 'Cancel' : '+ Add Firearm'}
                 </button>
               </div>
 
               {showAddForm && (
-                <form onSubmit={addFirearm} className="bg-surface-elevated p-6 rounded-lg mb-6 border border-border">
+                <form onSubmit={addFirearm} className="bg-surface-elevated p-6 rounded mb-6 border border-border">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                     <div>
                       <label className="block text-sm font-semibold text-text-secondary mb-2">Serial Number</label>
@@ -143,7 +143,7 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
                         type="text"
                         value={newFirearm.serialNumber}
                         onChange={(e) => setNewFirearm({ ...newFirearm, serialNumber: e.target.value })}
-                        className="w-full px-4 py-2 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full px-4 py-2 border border-border rounded bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         placeholder="Enter serial number"
                         required
                       />
@@ -154,7 +154,7 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
                         type="text"
                         value={newFirearm.model}
                         onChange={(e) => setNewFirearm({ ...newFirearm, model: e.target.value })}
-                        className="w-full px-4 py-2 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full px-4 py-2 border border-border rounded bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         placeholder="Enter model"
                         required
                       />
@@ -165,7 +165,7 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
                         type="text"
                         value={newFirearm.caliber}
                         onChange={(e) => setNewFirearm({ ...newFirearm, caliber: e.target.value })}
-                        className="w-full px-4 py-2 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full px-4 py-2 border border-border rounded bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         placeholder="e.g., 9mm, .45 ACP"
                         required
                       />
@@ -174,7 +174,7 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-semibold py-2 rounded-lg transition duration-200"
+                    className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-semibold py-2 rounded transition duration-200"
                   >
                     {loading ? 'Adding...' : 'Add Firearm'}
                   </button>

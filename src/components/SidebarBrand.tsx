@@ -20,7 +20,7 @@ const SidebarBrand: FC<SidebarBrandProps> = ({ onClick, compact = false, status 
     <button
       type="button"
       onClick={onClick}
-      className="group inline-flex min-h-11 w-full items-center gap-2.5 rounded-lg px-1 py-1 text-left transition-colors"
+      className="group inline-flex min-h-11 w-full items-center gap-2.5 rounded px-1 py-1 text-left transition-colors"
       aria-label="Go to dashboard"
       title="SENTINEL"
     >

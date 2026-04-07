@@ -10,8 +10,8 @@ interface ReplacementSuggestionPanelProps {
 }
 
 const availabilityClass: Record<string, string> = {
-  available: 'border-green-500/40 bg-green-500/10 text-green-200',
-  unavailable: 'border-red-500/40 bg-red-500/10 text-red-200',
+  available: 'border-success-border bg-success-bg text-success-text',
+  unavailable: 'border-danger-border bg-danger-bg text-danger-text',
 }
 
 const getRecommendationReason = (item: ReplacementSuggestion): string => {
@@ -47,7 +47,7 @@ const ReplacementSuggestionPanel: FC<ReplacementSuggestionPanelProps> = ({
 }) => {
   return (
     <section
-      className="command-panel rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-surface)]"
+      className="command-panel rounded border border-[color:var(--color-border)] bg-[color:var(--color-surface)]"
       aria-label="Smart guard replacement suggestions"
     >
       <div className="flex items-center justify-between border-b border-[color:var(--color-border)] px-4 py-3">
@@ -66,7 +66,7 @@ const ReplacementSuggestionPanel: FC<ReplacementSuggestionPanelProps> = ({
         )}
 
         {!loading && error && (
-          <p role="alert" className="text-center font-mono text-xs text-red-400">
+          <p role="alert" className="text-center font-mono text-xs text-danger-text">
             {error}
           </p>
         )}
@@ -101,7 +101,7 @@ const ReplacementSuggestionPanel: FC<ReplacementSuggestionPanelProps> = ({
                     <span className={`inline-flex rounded-full border px-2 py-0.5 font-mono text-[11px] ${badge}`}>
                       {item.availability ? 'Available' : 'Unavailable'}
                     </span>
-                    <span className="inline-flex rounded-full border border-sky-500/40 bg-sky-500/10 px-2 py-0.5 font-mono text-[11px] text-sky-200">
+                    <span className="inline-flex rounded-full border border-info-border bg-info-bg px-2 py-0.5 font-mono text-[11px] text-info-text">
                       Permit {item.permitValid ? 'Valid' : 'Invalid'}
                     </span>
                     <span className="inline-flex rounded-full border border-[color:var(--color-border)] px-2 py-0.5 font-mono text-[11px] text-[color:var(--color-muted-text)]">
@@ -117,14 +117,14 @@ const ReplacementSuggestionPanel: FC<ReplacementSuggestionPanelProps> = ({
                       <button
                         type="button"
                         onClick={() => alert(`Assign ${item.guardName} as replacement`)}
-                        className="rounded border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 font-mono text-[11px] font-semibold text-emerald-200 transition-colors hover:bg-emerald-500/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-400"
+                        className="rounded border border-success-border bg-success-bg px-2 py-1 font-mono text-[11px] font-semibold text-success-text transition-colors hover:bg-success-bg focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--color-success)]"
                       >
                         Assign Now
                       </button>
                       <button
                         type="button"
                         onClick={() => alert(`Contact ${item.guardName} for confirmation`)}
-                        className="rounded border border-sky-400/40 bg-sky-500/10 px-2 py-1 font-mono text-[11px] text-sky-200 transition-colors hover:bg-sky-500/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400"
+                        className="rounded border border-info-border bg-info-bg px-2 py-1 font-mono text-[11px] text-info-text transition-colors hover:bg-info-bg focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--color-info)]"
                       >
                         Contact Guard
                       </button>

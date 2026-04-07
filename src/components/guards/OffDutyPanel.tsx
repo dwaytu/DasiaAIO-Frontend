@@ -74,7 +74,7 @@ const OffDutyPanel: FC<OffDutyPanelProps> = ({ scheduleItems }) => {
             {upcomingShifts.map((shift) => (
               <li
                 key={shift.id}
-                className="rounded-xl border border-border-subtle bg-surface-elevated p-3"
+                className="rounded border border-border-subtle bg-surface-elevated p-3"
               >
                 <p className="text-sm font-bold text-text-primary">{shift.client_site}</p>
                 <p className="text-xs text-text-secondary">
@@ -104,7 +104,7 @@ const OffDutyPanel: FC<OffDutyPanelProps> = ({ scheduleItems }) => {
             aria-checked={available}
             aria-label="Available for callout"
             onClick={() => setAvailable((prev) => !prev)}
-            className={`min-h-11 rounded-lg px-4 py-2 text-sm font-bold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-info focus-visible:ring-offset-2 ${
+            className={`min-h-11 rounded px-4 py-2 text-sm font-bold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-info focus-visible:ring-offset-2 ${
               available
                 ? 'border border-success-border bg-success-bg text-success-text'
                 : 'border border-border-subtle bg-surface-elevated text-text-secondary'
@@ -141,7 +141,7 @@ const OffDutyPanel: FC<OffDutyPanelProps> = ({ scheduleItems }) => {
               const Icon = checked ? CheckCircle2 : Circle
               return (
                 <li key={item}>
-                  <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-surface-elevated focus-within:ring-2 focus-within:ring-info">
+                  <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded px-2 py-2 transition-colors hover:bg-surface-elevated focus-within:ring-2 focus-within:ring-info">
                     <input
                       type="checkbox"
                       className="sr-only"

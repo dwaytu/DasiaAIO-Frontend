@@ -65,7 +65,7 @@ const EditUserModal: FC<EditUserModalProps> = ({ user, onClose, onSave }) => {
 
   return (
     <div className="soc-modal-backdrop" onClick={onClose}>
-      <div className="soc-modal-panel mx-4 w-full max-w-md rounded-lg bg-surface shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div className="soc-modal-panel mx-4 w-full max-w-md rounded bg-surface shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b border-border px-6 py-4">
           <h2 className="text-xl font-bold text-text-primary">Edit User: {user.email}</h2>
           <button 
@@ -93,7 +93,7 @@ const EditUserModal: FC<EditUserModalProps> = ({ user, onClose, onSave }) => {
               value={formData.fullName}
               onChange={handleChange}
               placeholder="Enter full name"
-              className="w-full rounded-lg border border-border px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-info"
+              className="w-full rounded border border-border px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-info"
             />
           </div>
 
@@ -106,7 +106,7 @@ const EditUserModal: FC<EditUserModalProps> = ({ user, onClose, onSave }) => {
               value={formData.phoneNumber}
               onChange={handleChange}
               placeholder="Enter phone number"
-              className="w-full rounded-lg border border-border px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-info"
+              className="w-full rounded border border-border px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-info"
             />
           </div>
 
@@ -119,7 +119,7 @@ const EditUserModal: FC<EditUserModalProps> = ({ user, onClose, onSave }) => {
               value={formData.licenseNumber}
               onChange={handleChange}
               placeholder="Enter license number"
-              className="w-full rounded-lg border border-border px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-info"
+              className="w-full rounded border border-border px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-info"
             />
           </div>
 
@@ -131,7 +131,7 @@ const EditUserModal: FC<EditUserModalProps> = ({ user, onClose, onSave }) => {
               name="licenseIssuedDate"
               value={formData.licenseIssuedDate}
               onChange={handleChange}
-              className="w-full rounded-lg border border-border px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-info"
+              className="w-full rounded border border-border px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-info"
             />
           </div>
 
@@ -143,7 +143,7 @@ const EditUserModal: FC<EditUserModalProps> = ({ user, onClose, onSave }) => {
               name="licenseExpiryDate"
               value={formData.licenseExpiryDate}
               onChange={handleChange}
-              className="w-full rounded-lg border border-border px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-info"
+              className="w-full rounded border border-border px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-info"
             />
           </div>
 
@@ -156,21 +156,21 @@ const EditUserModal: FC<EditUserModalProps> = ({ user, onClose, onSave }) => {
               onChange={handleChange}
               placeholder="Enter complete address"
               rows={2}
-              className="w-full rounded-lg border border-border px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-info"
+              className="w-full rounded border border-border px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-info"
             />
           </div>
 
           <div className="flex gap-3 pt-2">
             <button 
               type="submit" 
-              className="soc-btn-primary flex-1 rounded-lg px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+              className="soc-btn-primary flex-1 rounded px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
               disabled={loading}
             >
               {loading ? 'Saving...' : 'Save Changes'}
             </button>
             <button 
               type="button" 
-              className="soc-btn-secondary flex-1 rounded-lg px-3 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
+              className="soc-btn-secondary flex-1 rounded px-3 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
               onClick={onClose} 
               disabled={loading}
             >

@@ -119,7 +119,7 @@ describe('shell header refactor regressions', () => {
     expect(await screen.findByText('Inbox Update')).toBeInTheDocument()
   })
 
-  it('wires inbox and settings header actions through direct firearm inventory header usage', async () => {
+  it('wires inbox header actions through direct firearm inventory header usage', async () => {
     const user = userEvent.setup()
     const onViewChange = jest.fn()
 
@@ -152,11 +152,5 @@ describe('shell header refactor regressions', () => {
     await user.click(await screen.findByRole('button', { name: /view full inbox/i }))
 
     expect(onViewChange).toHaveBeenCalledWith('inbox')
-
-    await user.click(screen.getByRole('button', { name: /open settings/i }))
-    expect(await screen.findByRole('dialog', { name: /settings/i })).toBeInTheDocument()
-
-    await user.click(screen.getByRole('button', { name: /view full settings/i }))
-    expect(onViewChange).toHaveBeenCalledWith('settings')
   })
 })

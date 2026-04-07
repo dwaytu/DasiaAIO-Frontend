@@ -133,11 +133,11 @@ const IncidentSummaryGenerator: FC<IncidentSummaryGeneratorProps> = ({ incidents
   }
 
   return (
-    <section className="command-panel rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-surface)]" aria-label="Incident summary generator">
+    <section className="command-panel rounded border border-[color:var(--color-border)] bg-[color:var(--color-surface)]" aria-label="Incident summary generator">
       <div className="flex items-center justify-between border-b border-[color:var(--color-border)] px-4 py-3">
         <div>
           <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-text-primary">Incident Summary Generator</p>
-          <p className="font-mono text-[11px] text-text-secondary">AI brief for shift handoff and operator reports</p>
+          <p className="font-mono text-[11px] text-text-secondary">AI-assisted brief — review before including in official reports</p>
         </div>
       </div>
 

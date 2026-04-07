@@ -65,17 +65,17 @@ const STATUS_STYLE: Record<SystemHealthState, { label: string; toneClass: string
   operational: {
     label: 'OPERATIONAL',
     toneClass: 'border-[color:var(--color-success-border)] bg-[color:var(--color-success-bg)] text-[color:var(--color-success-text)] status-bar-success',
-    glowClass: 'shadow-[0_0_14px_color-mix(in_srgb,var(--color-success)_28%,transparent)]',
+    glowClass: '',
   },
   warning: {
     label: 'WARNING',
     toneClass: 'border-[color:var(--color-warning-border)] bg-[color:var(--color-warning-bg)] text-[color:var(--color-warning-text)] status-bar-warning',
-    glowClass: 'shadow-[0_0_16px_color-mix(in_srgb,var(--color-warning)_30%,transparent)]',
+    glowClass: '',
   },
   critical: {
     label: 'CRITICAL',
     toneClass: 'border-[color:var(--color-danger-border)] bg-[color:var(--color-danger-bg)] text-[color:var(--color-danger-text)] status-bar-critical',
-    glowClass: 'critical-glow',
+    glowClass: '',
   },
 }
 
@@ -91,7 +91,7 @@ const SystemStatusBanner: FC<SystemStatusBannerProps> = ({
 
   return (
     <section
-      className={`rounded-xl border p-3 md:p-4 ${style.toneClass} ${style.glowClass}`}
+      className={`rounded border p-3 md:p-4 ${style.toneClass} ${style.glowClass}`}
       aria-label="Global system status"
       role="status"
       aria-live="polite"

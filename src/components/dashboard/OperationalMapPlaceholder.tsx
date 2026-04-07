@@ -13,7 +13,7 @@ const OperationalMapPlaceholder: FC<OperationalMapPlaceholderProps> = ({ activeT
         <p className="text-xs uppercase tracking-[0.16em] text-text-tertiary">Animated tactical area monitor</p>
       </div>
 
-      <div className="map-grid-surface relative h-72 overflow-hidden rounded-xl border border-border-elevated bg-surface">
+      <div className="map-grid-surface relative h-72 overflow-hidden rounded border border-border-elevated bg-surface">
         <div className="map-radar-ping" aria-hidden="true" />
         <div className="map-radar-sweep" aria-hidden="true" />
 

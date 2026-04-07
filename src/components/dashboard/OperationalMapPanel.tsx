@@ -594,7 +594,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
         </div>
       </div>
 
-      <div className="relative isolate h-80 overflow-hidden rounded-xl border border-border-elevated bg-surface md:h-96">
+      <div className="relative isolate h-80 overflow-hidden rounded border border-border-elevated bg-surface md:h-96">
         <MapContainer
           center={mapCenter}
           zoom={12}
@@ -650,7 +650,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
             >
               <Popup>
                 <strong>Selected Guard</strong>
-                <div>{selectedGuardEventMatch.guardName || selectedGuardEventMatch.guardId || selectedEvent.id}</div>
+                <div>{selectedGuardEventMatch.guardName || selectedGuardEventMatch.guardId?.slice(0, 8) || 'N/A'}</div>
                 <div>Focused from operational event stream.</div>
               </Popup>
             </CircleMarker>
@@ -696,7 +696,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
                 <Marker key={`track-user-pin-${point.id}`} position={[point.latitude, point.longitude]} icon={currentUserPin}>
                   <Popup>
                     <strong>Your Location</strong>
-                    <div>{point.label || point.entityId}</div>
+                    <div>{point.label || 'Entity'}</div>
                     {point.status ? <div>Status: {point.status}</div> : null}
                     {point.movementStatus ? <div>Movement: {point.movementStatus}</div> : null}
                     <div>Source: {sourceLabel}</div>
@@ -722,7 +722,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
               >
                 <Popup>
                   <strong>{point.entityType === 'vehicle' ? 'Armored Vehicle' : 'Guard'}</strong>
-                  <div>{point.label || point.entityId}</div>
+                  <div>{point.label || 'Entity'}</div>
                   {isSelectedGuardPoint ? <div>Linked to selected operational event</div> : null}
                   {point.status ? <div>Status: {point.status}</div> : null}
                   {point.movementStatus ? <div>Movement: {point.movementStatus}</div> : null}
@@ -764,7 +764,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
 
         {showNoTrackingAccessOverlay ? (
           <div className="pointer-events-none absolute inset-0 z-[330] flex items-center justify-center p-4">
-            <div className="max-w-md rounded-lg border border-border bg-surface-elevated px-4 py-3 text-center shadow-sm">
+            <div className="max-w-md rounded border border-border bg-surface-elevated px-4 py-3 text-center shadow-sm">
               <p className="text-sm font-semibold text-text-primary">Live tracking unavailable for this account</p>
               <p className="mt-1 text-xs text-text-secondary">Live tracking is available for field supervisors and guards.</p>
               <p className="mt-1 text-xs text-text-secondary">Sign in with a supervisor or guard account to view live positions.</p>
@@ -774,7 +774,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
 
         {showNoPersonnelOverlay ? (
           <div className="pointer-events-none absolute inset-0 z-[320] flex items-center justify-center p-4">
-            <div className="max-w-md rounded-lg border border-border bg-surface-elevated px-4 py-3 text-center shadow-sm">
+            <div className="max-w-md rounded border border-border bg-surface-elevated px-4 py-3 text-center shadow-sm">
               <p className="text-sm font-semibold text-text-primary">No active field personnel</p>
               <p className="mt-1 text-xs text-text-secondary">Guards with the mobile app will appear here when they start their shift.</p>
               <p className="mt-1 text-xs text-text-secondary">
@@ -788,7 +788,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
 
         {showDegradedBanner ? (
           <div className="absolute left-3 right-3 top-3 z-[420]">
-            <div className="flex items-start justify-between gap-3 rounded-lg border border-warning-border bg-warning-bg px-3 py-2 shadow-sm" role="status" aria-live="polite">
+            <div className="flex items-start justify-between gap-3 rounded border border-warning-border bg-warning-bg px-3 py-2 shadow-sm" role="status" aria-live="polite">
               <p className="text-sm text-text-secondary">Live tracking data temporarily unavailable - map shows last known positions.</p>
               <button
                 type="button"
@@ -812,7 +812,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
               event.preventDefault()
               clearSelection()
             }}
-            className="absolute right-3 top-3 z-[500] w-full max-w-[280px] rounded-lg border border-border bg-surface-elevated p-3 shadow-lg outline-none focus-visible:ring-2 focus-visible:ring-focus"
+            className="absolute right-3 top-3 z-[500] w-full max-w-[280px] rounded border border-border bg-surface-elevated p-3 outline-none focus-visible:ring-2 focus-visible:ring-focus"
           >
             <div className="flex items-start justify-between gap-2">
               <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] ${eventTypeBadgeClass[selectedEvent.type]}`}>
@@ -829,7 +829,9 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
             </div>
 
             <p className="mt-2 text-sm font-semibold text-text-primary">{selectedEvent.title}</p>
-            <p className="mt-1 text-[11px] uppercase tracking-[0.14em] text-text-tertiary">Event ID: <span className="font-semibold normal-case tracking-normal text-text-secondary">{selectedEvent.id}</span></p>
+            <p className="mt-1 text-[11px] uppercase tracking-wider text-text-tertiary">
+              Ref: <span className="font-semibold normal-case tracking-normal text-text-secondary">{selectedEvent.id?.slice(0, 8)?.toUpperCase() || '—'}</span>
+            </p>
 
             {selectedEvent.type === 'guard' ? (
               <p className="mt-2 text-xs text-text-secondary">
@@ -943,7 +945,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
       </div>
 
       {isElevatedUser ? (
-        <div className="mt-4 rounded-lg border border-border-subtle bg-surface-elevated p-3">
+        <div className="mt-4 rounded border border-border-subtle bg-surface-elevated p-3">
           <h4 className="text-sm font-bold uppercase tracking-wide text-text-primary">Client Location Manager</h4>
           <p className="mt-1 text-xs text-text-tertiary">Add, edit, or delete client locations shown on the operational map.</p>
 

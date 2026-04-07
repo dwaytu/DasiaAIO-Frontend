@@ -3,6 +3,7 @@ import { API_BASE_URL } from '../../config'
 import { useOperationalEvent } from '../../context/OperationalEventContext'
 import { fetchJsonOrThrow, getAuthHeaders } from '../../utils/api'
 import type { Incident } from '../../hooks/useIncidents'
+import { getOperatorFacingIncidentDescription } from '../../utils/incidentPresentation'
 
 interface IncidentSeverityClassifierProps {
   incidents: Incident[]
@@ -34,6 +35,11 @@ const IncidentSeverityClassifier: FC<IncidentSeverityClassifierProps> = ({ incid
     [incidents],
   )
 
+  const incidentDescription = useMemo(
+    () => (candidateIncident ? getOperatorFacingIncidentDescription(candidateIncident) : ''),
+    [candidateIncident],
+  )
+
   const runClassification = async () => {
     if (!candidateIncident) return
 
@@ -51,7 +57,7 @@ const IncidentSeverityClassifier: FC<IncidentSeverityClassifierProps> = ({ incid
           },
           body: JSON.stringify({
             title: candidateIncident.title,
-            description: candidateIncident.description,
+            description: incidentDescription || candidateIncident.description,
           }),
         },
         'Failed to classify incident severity',
@@ -69,21 +75,22 @@ const IncidentSeverityClassifier: FC<IncidentSeverityClassifierProps> = ({ incid
   const riskLevel = (result?.riskLevel || severity || '').toLowerCase()
   const tone = severityTone[severity] || 'border-border-subtle bg-surface-elevated text-text-primary'
 
-  const handleRecommendedAction = (action: string) => {
+  const focusIncident = () => {
     if (!candidateIncident) return
     selectEvent({
       id: candidateIncident.id,
       type: 'incident',
-      title: action,
+      title: candidateIncident.title,
+      detail: incidentDescription || candidateIncident.location,
     })
   }
 
   return (
-    <section className="command-panel rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-surface)]" aria-label="Incident severity classifier">
+    <section className="command-panel rounded border border-[color:var(--color-border)] bg-[color:var(--color-surface)]" aria-label="Incident severity classifier">
       <div className="flex items-center justify-between border-b border-[color:var(--color-border)] px-4 py-3">
         <div>
           <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-text-primary">Incident Severity Classifier</p>
-          <p className="font-mono text-[11px] text-text-secondary">AI severity estimation for active incident flow</p>
+          <p className="font-mono text-[11px] text-text-secondary">Heuristic severity estimation — results are advisory, not authoritative</p>
         </div>
       </div>
 
@@ -95,7 +102,7 @@ const IncidentSeverityClassifier: FC<IncidentSeverityClassifierProps> = ({ incid
               type="button"
               onClick={runClassification}
               disabled={loading}
-              className="min-h-11 rounded-md border border-info-border bg-info-bg px-3 py-2 font-mono text-xs font-semibold uppercase tracking-wide text-info-text disabled:opacity-60"
+              className="soc-btn-primary min-h-11 rounded-md px-3 py-2 font-mono text-xs font-semibold uppercase tracking-wide disabled:opacity-60"
             >
               {loading ? 'Classifying...' : 'Run Classifier'}
             </button>
@@ -115,18 +122,21 @@ const IncidentSeverityClassifier: FC<IncidentSeverityClassifierProps> = ({ incid
             {Array.isArray(result.suggestedActions) && result.suggestedActions.length > 0 && (
               <div className="mt-2 space-y-1">
                 <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-text-secondary">Recommended Actions:</p>
-                <div className="flex flex-wrap gap-1">
+                <ul className="space-y-1 text-[11px] text-text-secondary">
                   {result.suggestedActions.slice(0, 3).map((action, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => handleRecommendedAction(action)}
-                      className="rounded border border-info-border bg-info-bg px-2 py-1 font-mono text-[11px] text-info-text transition-colors hover:bg-info-bg focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--color-focus-ring)]"
-                      title={action}
-                    >
-                      {action.length > 40 ? action.slice(0, 40) + '\u2026' : action}
-                    </button>
+                    <li key={i} className="rounded-md border border-border-subtle bg-background px-2 py-1">
+                      {action}
+                    </li>
                   ))}
+                </ul>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={focusIncident}
+                    className="soc-btn min-h-11 px-3 py-2 font-mono text-[11px]"
+                  >
+                    Focus Incident
+                  </button>
                 </div>
               </div>
             )}

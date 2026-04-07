@@ -222,7 +222,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
     setError('')
   }
 
-  const inputClass = "w-full px-4 py-2.5 rounded-lg bg-surface border border-border text-text-primary focus:outline-none focus:ring-2 focus:ring-[color:var(--color-focus-ring)] transition-colors"
+  const inputClass = "w-full px-4 py-2.5 rounded bg-surface border border-border text-text-primary focus:outline-none focus:ring-2 focus:ring-[color:var(--color-focus-ring)] transition-colors"
   const labelClass = "block text-sm font-semibold mb-2"
 
   const renderForm = () => {
@@ -246,12 +246,12 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
               </div>
 
               {error && (
-                <div className={`p-3 rounded-lg text-sm border ${error.includes('sent') ? 'soc-auth-alert-success' : 'soc-auth-alert-error'}`}>
+                <div className={`p-3 rounded text-sm border ${error.includes('sent') ? 'soc-auth-alert-success' : 'soc-auth-alert-error'}`}>
                   {error}
                 </div>
               )}
 
-              <button type="submit" disabled={isLoading} className="soc-btn-primary w-full font-bold py-3 rounded-lg transition-all disabled:opacity-50">
+              <button type="submit" disabled={isLoading} className="soc-btn-primary w-full font-bold py-3 rounded transition-all disabled:opacity-50">
                 {isLoading ? 'Sending...' : 'Send Reset Code'}
               </button>
             </>
@@ -275,12 +275,12 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
               <p className="text-xs text-text-secondary">Check your email for the 8-digit reset code</p>
 
               {error && (
-                <div className={`p-3 rounded-lg text-sm border ${error.includes('verified') ? 'soc-auth-alert-success' : 'soc-auth-alert-error'}`}>
+                <div className={`p-3 rounded text-sm border ${error.includes('verified') ? 'soc-auth-alert-success' : 'soc-auth-alert-error'}`}>
                   {error}
                 </div>
               )}
 
-              <button type="submit" disabled={isLoading} className="soc-btn-primary w-full font-bold py-3 rounded-lg transition-all disabled:opacity-50">
+              <button type="submit" disabled={isLoading} className="soc-btn-primary w-full font-bold py-3 rounded transition-all disabled:opacity-50">
                 {isLoading ? 'Verifying...' : 'Verify Code'}
               </button>
             </>
@@ -315,12 +315,12 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
               </div>
 
               {error && (
-                <div className={`p-3 rounded-lg text-sm border ${error.includes('successful') ? 'soc-auth-alert-success' : 'soc-auth-alert-error'}`}>
+                <div className={`p-3 rounded text-sm border ${error.includes('successful') ? 'soc-auth-alert-success' : 'soc-auth-alert-error'}`}>
                   {error}
                 </div>
               )}
 
-              <button type="submit" disabled={isLoading} className="soc-btn-primary w-full font-bold py-3 rounded-lg transition-all disabled:opacity-50">
+              <button type="submit" disabled={isLoading} className="soc-btn-primary w-full font-bold py-3 rounded transition-all disabled:opacity-50">
                 {isLoading ? 'Resetting...' : 'Reset Password'}
               </button>
             </>
@@ -359,19 +359,19 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
           </div>
 
           {error && (
-            <div className={`p-3 rounded-lg text-sm border ${error.includes('verified') ? 'soc-auth-alert-success' : 'soc-auth-alert-error'}`}>
+            <div className={`p-3 rounded text-sm border ${error.includes('verified') ? 'soc-auth-alert-success' : 'soc-auth-alert-error'}`}>
               {error}
             </div>
           )}
 
-          <button type="submit" disabled={isLoading} className="soc-btn-primary w-full font-bold py-3 rounded-lg transition-all disabled:opacity-50">
+          <button type="submit" disabled={isLoading} className="soc-btn-primary w-full font-bold py-3 rounded transition-all disabled:opacity-50">
             {isLoading ? 'Verifying...' : 'Verify'}
           </button>
 
           <div className="flex gap-2">
             <button
               type="button"
-              className="soc-btn-secondary flex-1 px-3 py-2 font-semibold rounded-lg transition-colors disabled:opacity-40 text-sm"
+              className="soc-btn-secondary flex-1 px-3 py-2 font-semibold rounded transition-colors disabled:opacity-40 text-sm"
               onClick={async () => {
                 setIsLoading(true)
                 try {
@@ -398,7 +398,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
             </button>
             <button
               type="button"
-              className="soc-btn-secondary flex-1 px-3 py-2 font-semibold rounded-lg transition-colors disabled:opacity-40 text-sm"
+              className="soc-btn-secondary flex-1 px-3 py-2 font-semibold rounded transition-colors disabled:opacity-40 text-sm"
               onClick={() => {
                 setRequiresVerification(false)
                 setVerificationCode('')
@@ -425,7 +425,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
           </div>
 
           {error && (
-            <div className="soc-auth-alert-error p-3 rounded-lg text-sm border">
+            <div className="soc-auth-alert-error p-3 rounded text-sm border">
               {error}
             </div>
           )}
@@ -477,7 +477,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
 
         <div className="relative z-10 grid min-h-screen grid-cols-1 lg:grid-cols-[1.1fr_0.9fr]">
           <main id="auth-main" className="flex items-center justify-center px-4 py-10 sm:px-6 lg:px-10">
-            <section className="w-full max-w-xl rounded-2xl border border-border-elevated bg-surface/85 p-6 shadow-modal backdrop-blur-md sm:p-8" aria-labelledby="auth-title">
+            <section className="w-full max-w-xl rounded border border-border-elevated bg-surface/85 p-6 shadow-modal backdrop-blur-md sm:p-8" aria-labelledby="auth-title">
               <div className="mb-6 flex justify-center">
                 <SentinelLogo size={62} variant="FullLogo" animated />
               </div>

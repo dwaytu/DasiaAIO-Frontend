@@ -35,7 +35,7 @@ const GuardMapTab: FC<GuardMapTabProps> = ({
       />
 
       {mapEmbedUrl ? (
-        <div className="relative overflow-hidden rounded-xl border border-border-subtle bg-surface-elevated">
+        <div className="relative overflow-hidden rounded border border-border-subtle bg-surface-elevated">
           <iframe
             title="Guard location map"
             src={mapEmbedUrl}
@@ -65,7 +65,7 @@ const GuardMapTab: FC<GuardMapTabProps> = ({
           ) : null}
         </div>
       ) : (
-        <div className="rounded-xl border border-border-subtle bg-surface-elevated p-6 text-center">
+        <div className="rounded border border-border-subtle bg-surface-elevated p-6 text-center">
           <MapPin className="mx-auto h-8 w-8 text-text-tertiary" aria-hidden="true" />
           <p className="mt-3 text-sm font-semibold text-text-secondary">Location Not Active</p>
           <p className="mt-1 text-xs text-text-tertiary">Your GPS position will appear here once location tracking is enabled.</p>

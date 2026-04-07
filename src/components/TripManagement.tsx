@@ -132,7 +132,7 @@ const TripManagement: FC = () => {
       )}
 
       {/* Active Trips */}
-      <section className="table-glass rounded-xl p-6">
+      <section className="table-glass rounded p-6">
         <h2 className="mb-6 text-2xl font-bold uppercase tracking-wide text-text-primary">Active Trips</h2>
         {trips.length > 0 ? (
           <div className="overflow-x-auto">
@@ -262,7 +262,7 @@ const TripManagement: FC = () => {
                 {selectedTrip.guards.length > 0 ? (
                   <div className="space-y-2">
                     {selectedTrip.guards.map((guard) => (
-                      <div key={guard.id} className="flex items-center justify-between bg-info-bg p-3 rounded-lg border border-info-border">
+                      <div key={guard.id} className="flex items-center justify-between bg-info-bg p-3 rounded border border-info-border">
                         <div>
                           <p className="font-medium text-text-primary">{guard.name || guard.username}</p>
                           <p className="text-xs text-text-secondary">@{guard.username}</p>
@@ -281,7 +281,7 @@ const TripManagement: FC = () => {
                 {selectedTrip.firearms.length > 0 ? (
                   <div className="space-y-2">
                     {selectedTrip.firearms.map((firearm) => (
-                      <div key={firearm.id} className="flex items-center justify-between bg-warning-bg p-3 rounded-lg border border-warning-border">
+                      <div key={firearm.id} className="flex items-center justify-between bg-warning-bg p-3 rounded border border-warning-border">
                         <div>
                           <p className="font-medium text-text-primary">{firearm.model || 'Unknown Model'} - {firearm.name}</p>
                           <p className="text-xs text-text-secondary">SN: {firearm.serial_number || 'N/A'}</p>

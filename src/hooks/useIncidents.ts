@@ -8,6 +8,7 @@ export interface Incident {
   description: string
   location: string
   reported_by: string
+  reported_by_name?: string
   status: 'open' | 'investigating' | 'resolved'
   priority: 'low' | 'medium' | 'high' | 'critical'
   created_at: string

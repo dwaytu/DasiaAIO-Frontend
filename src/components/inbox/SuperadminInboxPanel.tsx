@@ -249,7 +249,7 @@ const TONE_CLASSES: Record<StatChipProps['tone'], string> = {
 function StatChip({ icon, count, label, tone }: StatChipProps): React.ReactElement {
   return (
     <div
-      className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium ${TONE_CLASSES[tone]}`}
+      className={`inline-flex items-center gap-2 px-3 py-2 rounded border text-sm font-medium ${TONE_CLASSES[tone]}`}
       role="status"
       aria-label={`${count} ${label}`}
     >

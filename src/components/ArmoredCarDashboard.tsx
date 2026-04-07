@@ -387,7 +387,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
           </div>
 
           {/* Tabs */}
-          <div className="mb-6 flex flex-wrap gap-2 rounded-lg border border-border-subtle bg-surface p-2">
+          <div className="mb-6 flex flex-wrap gap-2 rounded border border-border-subtle bg-surface p-2">
             {['inventory', 'allocation', 'maintenance', 'trips'].map((tab) => (
               <button
                 key={tab}
@@ -420,7 +420,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                       value={newCar.licensePlate}
                       onChange={(e) => setNewCar({ ...newCar, licensePlate: e.target.value })}
                       required
-                      className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 text-sm border border-border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
                   <div>
@@ -430,7 +430,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                       value={newCar.vin}
                       onChange={(e) => setNewCar({ ...newCar, vin: e.target.value })}
                       required
-                      className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 text-sm border border-border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
                   <div>
@@ -440,7 +440,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                       value={newCar.model}
                       onChange={(e) => setNewCar({ ...newCar, model: e.target.value })}
                       required
-                      className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 text-sm border border-border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
                   <div>
@@ -450,7 +450,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                       value={newCar.manufacturer}
                       onChange={(e) => setNewCar({ ...newCar, manufacturer: e.target.value })}
                       required
-                      className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 text-sm border border-border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
                   <div>
@@ -460,7 +460,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                       value={newCar.capacityKg}
                       onChange={(e) => setNewCar({ ...newCar, capacityKg: parseInt(e.target.value) })}
                       required
-                      className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 text-sm border border-border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
                   <div>
@@ -472,12 +472,12 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                       required
                       min="1"
                       max="20"
-                      className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 text-sm border border-border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
                   <button 
                     type="submit" 
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-bold py-2 md:py-3 rounded-lg transition-colors text-sm md:text-base mt-4"
+                    className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-bold py-2 md:py-3 rounded transition-colors text-sm md:text-base mt-4"
                     disabled={loading}
                   >
                     {loading ? 'Adding...' : 'Add Vehicle'}
@@ -486,7 +486,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
               </div>
 
               {/* Vehicle Inventory */}
-              <div className="table-glass rounded-lg p-4 md:p-6">
+              <div className="table-glass rounded p-4 md:p-6">
                 <h2 className="text-lg md:text-xl font-bold text-text-primary mb-4 md:mb-6 pb-3 border-b border-border">Vehicle Inventory</h2>
                 {loading ? (
                   <LoadingSkeleton variant="table" />
@@ -537,7 +537,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                       value={newAllocation.car_id}
                       onChange={(e) => setNewAllocation({ ...newAllocation, car_id: e.target.value })}
                       required
-                      className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-surface"
+                      className="w-full px-3 py-2 text-sm border border-border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-surface"
                     >
                       <option value="">Choose a vehicle...</option>
                       {cars
@@ -556,7 +556,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                       value={newAllocation.client_id}
                       onChange={(e) => setNewAllocation({ ...newAllocation, client_id: e.target.value })}
                       required
-                      className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 text-sm border border-border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
                   <div>
@@ -565,7 +565,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                       type="datetime-local"
                       value={newAllocation.expected_return_date}
                       onChange={(e) => setNewAllocation({ ...newAllocation, expected_return_date: e.target.value })}
-                      className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 text-sm border border-border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
                   <div>
@@ -574,12 +574,12 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                       value={newAllocation.notes}
                       onChange={(e) => setNewAllocation({ ...newAllocation, notes: e.target.value })}
                       rows={3}
-                      className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 text-sm border border-border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
                   <button 
                     type="submit" 
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-bold py-2 md:py-3 rounded-lg transition-colors text-sm md:text-base mt-4"
+                    className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-bold py-2 md:py-3 rounded transition-colors text-sm md:text-base mt-4"
                     disabled={loading}
                   >
                     {loading ? 'Allocating...' : 'Allocate Vehicle'}
@@ -588,7 +588,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
               </div>
 
               {/* Active Allocations */}
-              <div className="table-glass rounded-lg p-4 md:p-6">
+              <div className="table-glass rounded p-4 md:p-6">
                 <h2 className="text-lg md:text-xl font-bold text-text-primary mb-4 md:mb-6 pb-3 border-b border-border">Active Allocations</h2>
                 {allocations.length === 0 ? (
                   <div className="text-center py-8 text-text-secondary text-sm md:text-base">No active allocations</div>
@@ -637,7 +637,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                       value={newMaintenance.car_id}
                       onChange={(e) => setNewMaintenance({ ...newMaintenance, car_id: e.target.value })}
                       required
-                      className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-surface"
+                      className="w-full px-3 py-2 text-sm border border-border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-surface"
                     >
                       <option value="">Choose a vehicle...</option>
                       {cars.map((car) => (
@@ -653,7 +653,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                       value={newMaintenance.maintenance_type}
                       onChange={(e) => setNewMaintenance({ ...newMaintenance, maintenance_type: e.target.value })}
                       required
-                      className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-surface"
+                      className="w-full px-3 py-2 text-sm border border-border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-surface"
                     >
                       <option value="">Select type...</option>
                       <option value="routine_service">Routine Service</option>
@@ -670,7 +670,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                       onChange={(e) => setNewMaintenance({ ...newMaintenance, description: e.target.value })}
                       required
                       rows={3}
-                      className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 text-sm border border-border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
                   <div>
@@ -679,7 +679,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                       type="datetime-local"
                       value={newMaintenance.scheduled_date}
                       onChange={(e) => setNewMaintenance({ ...newMaintenance, scheduled_date: e.target.value })}
-                      className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 text-sm border border-border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
                   <div>
@@ -688,12 +688,12 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                       type="number"
                       value={newMaintenance.cost}
                       onChange={(e) => setNewMaintenance({ ...newMaintenance, cost: e.target.value })}
-                      className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 text-sm border border-border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
                   <button 
                     type="submit" 
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-bold py-2 md:py-3 rounded-lg transition-colors text-sm md:text-base mt-4"
+                    className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-bold py-2 md:py-3 rounded transition-colors text-sm md:text-base mt-4"
                     disabled={loading}
                   >
                     {loading ? 'Scheduling...' : 'Schedule Maintenance'}
@@ -702,7 +702,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
               </div>
 
               {/* Maintenance Records */}
-              <div className="table-glass rounded-lg p-4 md:p-6">
+              <div className="table-glass rounded p-4 md:p-6">
                 <h2 className="text-lg md:text-xl font-bold text-text-primary mb-4 md:mb-6 pb-3 border-b border-border">Maintenance Records</h2>
                 {maintenance.length === 0 ? (
                   <div className="text-center py-8 text-text-secondary text-sm md:text-base">No maintenance records</div>
@@ -740,7 +740,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
 
           {/* Trips Tab */}
           {activeTab === 'trips' && (
-            <div className="table-glass rounded-lg p-4 md:p-6">
+            <div className="table-glass rounded p-4 md:p-6">
               <h2 className="text-lg md:text-xl font-bold text-text-primary mb-4 md:mb-6 pb-3 border-b border-border">Trip History</h2>
               {trips.length === 0 ? (
                 <div className="text-center py-8 text-text-secondary text-sm md:text-base">No trips recorded</div>

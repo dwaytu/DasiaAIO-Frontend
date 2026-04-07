@@ -530,7 +530,7 @@ const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onVie
       </section>
 
       {/* ── Filter Bar ─────────────────────────────────── */}
-      <section className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface-elevated px-4 py-3">
+      <section className="flex flex-wrap items-center gap-3 rounded border border-border bg-surface-elevated px-4 py-3">
         <Filter className="h-4 w-4 text-text-tertiary" aria-hidden="true" />
         <div className="flex items-center gap-2">
           <label htmlFor="analytics-date-range" className="text-xs font-medium text-text-secondary">Period</label>
@@ -634,7 +634,7 @@ const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onVie
             <p className="text-sm text-text-secondary">No anomalies detected. All tracked operational indicators are inside command thresholds.</p>
           ) : (
             operationalInsights.map((insight) => (
-              <article key={insight.id} className="rounded-lg border border-border-subtle bg-surface-elevated p-3">
+              <article key={insight.id} className="rounded border border-border-subtle bg-surface-elevated p-3">
                 <div className="flex items-center justify-between gap-2">
                   <h3 className="text-sm font-semibold text-text-primary">{insight.title}</h3>
                   <StatusBadge label={insight.tone === 'danger' ? 'Immediate' : insight.tone === 'warning' ? 'Watch' : insight.tone === 'analytics' ? 'Forecast' : 'Stable'} tone={insight.tone} />

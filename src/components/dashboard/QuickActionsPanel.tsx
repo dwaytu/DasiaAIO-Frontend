@@ -34,7 +34,7 @@ const QuickActionsPanel: FC<QuickActionsPanelProps> = ({ actions }) => {
         <button
           key={action.label}
           onClick={action.onClick}
-          className={`group flex min-h-12 items-center gap-2 rounded-lg border px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide transition-all duration-200 hover:-translate-y-0.5 hover:shadow-bento-hover focus-visible:-translate-y-0.5 focus-visible:shadow-bento-hover ${toneClass[action.tone || 'indigo']}`}
+          className={`group flex min-h-12 items-center gap-2 rounded border px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide transition-colors duration-200 ${toneClass[action.tone || 'indigo']}`}
           aria-label={action.label}
         >
           <span className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-border-subtle bg-surface text-text-primary">

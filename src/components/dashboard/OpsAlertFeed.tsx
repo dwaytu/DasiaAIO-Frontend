@@ -37,7 +37,7 @@ const OpsAlertFeed: FC<OpsAlertFeedProps> = ({ alerts }) => {
           <p className="text-sm text-text-secondary">No active alerts.</p>
         ) : (
           sorted.map((alert) => (
-            <article key={alert.id} className={`rounded-lg border p-3 ${toneClass[alert.severity]}`}>
+            <article key={alert.id} className={`rounded border p-3 ${toneClass[alert.severity]}`}>
               <p className="text-sm font-semibold uppercase tracking-wide">{alert.title}</p>
               <p className="mt-1 text-xs opacity-90">{alert.detail}</p>
             </article>

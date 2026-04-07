@@ -43,7 +43,7 @@ const GuardResourcesTab: FC<GuardResourcesTabProps> = ({ firearmItems, permitIte
           title="Resource Snapshot"
           subtitle="Review allocation and permit readiness before opening full records."
         />
-        <div className="rounded-xl border border-border-subtle bg-surface-elevated p-6 text-center">
+        <div className="rounded border border-border-subtle bg-surface-elevated p-6 text-center">
           <p className="text-sm font-semibold text-text-secondary">No resources allocated to this shift yet.</p>
           <p className="mt-1 text-xs text-text-tertiary">Contact your supervisor for firearm assignments or permit processing.</p>
         </div>
@@ -90,7 +90,7 @@ const GuardResourcesTab: FC<GuardResourcesTabProps> = ({ firearmItems, permitIte
       <DashboardCard title="Your Resources">
         <ul className="space-y-2">
           {firearmItems.map((item) => (
-            <li key={`firearm-${item.id}`} className="rounded-lg border border-border-subtle bg-surface-elevated p-3">
+            <li key={`firearm-${item.id}`} className="rounded border border-border-subtle bg-surface-elevated p-3">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-text-primary">
@@ -108,7 +108,7 @@ const GuardResourcesTab: FC<GuardResourcesTabProps> = ({ firearmItems, permitIte
             </li>
           ))}
           {permitItems.map((item) => (
-            <li key={`permit-${item.id}`} className="rounded-lg border border-border-subtle bg-surface-elevated p-3">
+            <li key={`permit-${item.id}`} className="rounded border border-border-subtle bg-surface-elevated p-3">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-text-primary">{item.permit_type}</p>
@@ -124,7 +124,7 @@ const GuardResourcesTab: FC<GuardResourcesTabProps> = ({ firearmItems, permitIte
             </li>
           ))}
         </ul>
-        <p className="mt-3 rounded-lg border border-border-subtle bg-surface px-3 py-2 text-xs text-text-tertiary">
+        <p className="mt-3 rounded border border-border-subtle bg-surface px-3 py-2 text-xs text-text-tertiary">
           Contact your supervisor for allocation changes or permit renewals.
         </p>
       </DashboardCard>

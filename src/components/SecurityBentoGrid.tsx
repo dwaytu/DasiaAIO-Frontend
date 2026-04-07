@@ -123,7 +123,7 @@ export const SecurityBentoGrid = ({
   const equipmentHealthStatus = data.equipmentHealthStatus;
 
   const activityContent = activityMapContent ?? (
-    <div className="h-64 bg-surface-elevated rounded-lg flex items-center justify-center">
+    <div className="h-64 bg-surface-elevated rounded flex items-center justify-center">
       <p className="text-text-secondary">Activity Map Placeholder</p>
     </div>
   );

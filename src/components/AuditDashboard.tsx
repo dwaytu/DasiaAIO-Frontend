@@ -262,14 +262,14 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
             <button
               type="button"
               onClick={() => fetchLogs(filters).catch(() => undefined)}
-              className="rounded-lg border border-border bg-surface px-3 py-2 text-xs font-semibold text-text-primary hover:bg-surface-hover"
+              className="rounded border border-border bg-surface px-3 py-2 text-xs font-semibold text-text-primary hover:bg-surface-hover"
             >
               Refresh Logs
             </button>
             <button
               type="button"
               onClick={resetFilters}
-              className="rounded-lg border border-border-subtle bg-background px-3 py-2 text-xs font-semibold text-text-secondary hover:bg-surface-hover"
+              className="rounded border border-border-subtle bg-background px-3 py-2 text-xs font-semibold text-text-secondary hover:bg-surface-hover"
             >
               Reset
             </button>
@@ -277,19 +277,19 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
         </div>
 
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          <div className="rounded-lg border border-info-border bg-info-bg px-4 py-3">
+          <div className="rounded border border-info-border bg-info-bg px-4 py-3">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">Total Events</p>
             <p className="text-2xl font-black text-text-primary">{summary.totalEvents}</p>
           </div>
-          <div className="rounded-lg border border-danger-border bg-danger-bg px-4 py-3">
+          <div className="rounded border border-danger-border bg-danger-bg px-4 py-3">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">Failed Actions</p>
             <p className="text-2xl font-black text-text-primary">{summary.failedCount}</p>
           </div>
-          <div className="rounded-lg border border-warning-border bg-warning-bg px-4 py-3">
+          <div className="rounded border border-warning-border bg-warning-bg px-4 py-3">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">Anomalies</p>
             <p className="text-2xl font-black text-text-primary">{summary.anomalyCount}</p>
           </div>
-          <div className="rounded-lg border border-success-border bg-success-bg px-4 py-3">
+          <div className="rounded border border-success-border bg-success-bg px-4 py-3">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">Active Actors</p>
             <p className="text-2xl font-black text-text-primary">{summary.uniqueActors}</p>
           </div>
@@ -306,12 +306,12 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
             value={searchDraft}
             onChange={(event) => setSearchDraft(event.target.value)}
             placeholder="Search actions, resources, actors, IPs..."
-            className="w-full rounded-xl border border-border-subtle bg-surface pl-12 pr-4 py-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent focus:ring-1 focus:ring-accent"
+            className="w-full rounded border border-border-subtle bg-surface pl-12 pr-4 py-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent focus:ring-1 focus:ring-accent"
             aria-label="Search audit logs"
           />
           <button
             type="submit"
-            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg bg-accent px-4 py-1.5 text-xs font-semibold text-white hover:bg-accent/80"
+            className="absolute right-2 top-1/2 -translate-y-1/2 rounded bg-accent px-4 py-1.5 text-xs font-semibold text-white hover:bg-accent/80"
           >
             Search
           </button>
@@ -319,11 +319,11 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
       </form>
 
       {/* Collapsible Filter Panel */}
-      <div className="rounded-xl border border-border-subtle bg-surface">
+      <div className="rounded border border-border-subtle bg-surface">
         <button
           type="button"
           onClick={() => setFiltersExpanded((prev) => !prev)}
-          className="flex w-full items-center justify-between px-4 py-3 text-sm font-semibold text-text-primary hover:bg-surface-hover rounded-xl"
+          className="flex w-full items-center justify-between px-4 py-3 text-sm font-semibold text-text-primary hover:bg-surface-hover rounded"
           aria-expanded={filtersExpanded}
           aria-controls="audit-filter-panel"
         >
@@ -407,7 +407,7 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
               <button
                 type="button"
                 onClick={() => updateFilters({ search: searchDraft.trim() || undefined, from: dateFrom || undefined, to: dateTo || undefined })}
-                className="rounded-lg bg-accent px-4 py-2 text-xs font-semibold text-white hover:bg-accent/80"
+                className="rounded bg-accent px-4 py-2 text-xs font-semibold text-white hover:bg-accent/80"
               >
                 Apply Filters
               </button>
@@ -418,7 +418,7 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
 
       {/* Error Alert */}
       {(error || intelligenceError) ? (
-        <div role="alert" className="rounded-lg border border-danger-border bg-danger-bg/40 px-4 py-3 text-sm text-danger-text">
+        <div role="alert" className="rounded border border-danger-border bg-danger-bg/40 px-4 py-3 text-sm text-danger-text">
           {error || intelligenceError}
         </div>
       ) : null}
@@ -427,7 +427,7 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
       <div className="grid gap-4 xl:grid-cols-[2fr_1fr]">
 
         {/* Left: Log Timeline */}
-        <div className="table-glass rounded-xl p-4 flex flex-col gap-3">
+        <div className="table-glass rounded p-4 flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <h3 className="soc-section-title">Realtime Timeline</h3>
             <span className="text-xs text-text-tertiary">
@@ -567,7 +567,7 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
                 return (
                   <article
                     key={log.id}
-                    className="rounded-lg border border-border-subtle bg-surface-elevated p-3"
+                    className="rounded border border-border-subtle bg-surface-elevated p-3"
                   >
                     <button
                       type="button"
@@ -661,14 +661,14 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
 
         {/* Right: Sidebar */}
         <div className="space-y-4">
-          <section className="rounded-xl border border-border-subtle bg-surface-elevated p-4">
+          <section className="rounded border border-border-subtle bg-surface-elevated p-4">
             <h3 className="soc-section-title">Anomaly Signals</h3>
             <ul className="mt-3 space-y-2 text-xs">
               {anomalies.length === 0 ? (
                 <li className="text-text-tertiary">No anomalies detected in selected window.</li>
               ) : (
                 anomalies.slice(0, 8).map((anomaly, index) => (
-                  <li key={`${anomaly.type}-${index}`} className="rounded-lg border border-border-subtle bg-background px-3 py-2">
+                  <li key={`${anomaly.type}-${index}`} className="rounded border border-border-subtle bg-background px-3 py-2">
                     <div className="flex items-center gap-2">
                       <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase ${severityTone[anomaly.severity] || severityTone.medium}`}>
                         {anomaly.severity}
@@ -688,7 +688,7 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
             </ul>
           </section>
 
-          <section className="rounded-xl border border-border-subtle bg-surface-elevated p-4">
+          <section className="rounded border border-border-subtle bg-surface-elevated p-4">
             <h3 className="soc-section-title">Activity Heatmap (Hour of Day)</h3>
             <div className="mt-3 grid grid-cols-6 gap-1">
               {heatmapCells.map((count, hour) => {
@@ -709,7 +709,7 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
             </div>
           </section>
 
-          <section className="rounded-xl border border-border-subtle bg-surface-elevated p-4">
+          <section className="rounded border border-border-subtle bg-surface-elevated p-4">
             <h3 className="soc-section-title">Operational Story View</h3>
             <ol className="mt-3 space-y-1 text-xs text-text-secondary">
               {operationalStory.length === 0 ? (

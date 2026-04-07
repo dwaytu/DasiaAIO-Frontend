@@ -53,7 +53,7 @@ export default function ToastContainer() {
             aria-live={isAssertive ? 'assertive' : 'polite'}
             className={[
               'pointer-events-auto',
-              'border rounded-lg px-4 py-3 flex items-start gap-3 shadow-lg backdrop-blur-sm',
+              'border rounded px-4 py-3 flex items-start gap-3 shadow-lg backdrop-blur-sm',
               'min-w-[280px] max-w-[400px]',
               'transition-opacity duration-200 opacity-100',
               'text-text-primary',

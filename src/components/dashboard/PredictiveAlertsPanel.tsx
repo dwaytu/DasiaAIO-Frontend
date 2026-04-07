@@ -93,7 +93,7 @@ const PredictiveAlertsPanel: FC<PredictiveAlertsPanelProps> = ({
 
   return (
     <section
-      className="command-panel rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-surface)]"
+      className="command-panel rounded border border-[color:var(--color-border)] bg-[color:var(--color-surface)]"
       aria-label="Predictive operational alerts"
     >
       <div className="flex items-center justify-between border-b border-[color:var(--color-border)] px-4 py-3">
@@ -133,7 +133,7 @@ const PredictiveAlertsPanel: FC<PredictiveAlertsPanelProps> = ({
               return (
                 <li
                   key={alert.id}
-                  className={`rounded-lg border px-4 py-3 shadow-sm ${severityClass}`}
+                  className={`rounded border px-3 py-2 ${severityClass}`}
                 >
                   <div className="flex items-start gap-3">
                     <span aria-hidden="true" className="text-lg" title={alert.severity}>
@@ -141,7 +141,7 @@ const PredictiveAlertsPanel: FC<PredictiveAlertsPanelProps> = ({
                     </span>
                     <div className="space-y-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="rounded-full border border-border-subtle bg-surface px-2 py-0.5 text-[11px] uppercase tracking-wide text-text-secondary">
+                        <span className="rounded border border-border-subtle bg-surface px-2 py-0.5 text-[11px] uppercase tracking-wide text-text-secondary">
                           {categoryLabel}
                         </span>
                         {count !== null && (

@@ -10,8 +10,10 @@ RUN npm ci
 # Accept build-time env vars (Railway injects these as Docker build args)
 ARG VITE_API_BASE_URL=https://backend-production-0c47.up.railway.app
 ARG VITE_APP_VERSION=v0.0.0
+ARG VITE_ALLOW_INSECURE_LOCAL_API=false
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 ENV VITE_APP_VERSION=${VITE_APP_VERSION}
+ENV VITE_ALLOW_INSECURE_LOCAL_API=${VITE_ALLOW_INSECURE_LOCAL_API}
 
 # Build the app
 COPY . .

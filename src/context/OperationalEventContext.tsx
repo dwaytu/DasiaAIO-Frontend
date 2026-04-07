@@ -4,6 +4,7 @@ export interface OperationalEvent {
   id: string
   type: 'incident' | 'alert' | 'guard' | 'vehicle'
   title: string
+  detail?: string
 }
 
 export interface OperationalEventContextValue {

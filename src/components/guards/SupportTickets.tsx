@@ -225,7 +225,7 @@ const SupportTickets: FC<SupportTicketsProps> = ({ userId }) => {
             <button
               type="button"
               onClick={switchToCreate}
-              className="min-h-11 rounded-lg bg-info px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-info/90"
+              className="min-h-11 rounded bg-info px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-info/90"
             >
               New Ticket
             </button>
@@ -233,7 +233,7 @@ const SupportTickets: FC<SupportTicketsProps> = ({ userId }) => {
             <button
               type="button"
               onClick={switchToList}
-              className="min-h-11 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-surface-elevated"
+              className="min-h-11 rounded border border-border bg-surface px-4 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-surface-elevated"
             >
               Back to List
             </button>
@@ -246,7 +246,7 @@ const SupportTickets: FC<SupportTicketsProps> = ({ userId }) => {
           <button
             type="button"
             onClick={switchToList}
-            className="mb-4 inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-surface-elevated"
+            className="mb-4 inline-flex min-h-11 items-center gap-1.5 rounded border border-border bg-surface px-3 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-surface-elevated"
           >
             <ArrowLeft className="h-4 w-4" aria-hidden="true" />
             Back to tickets
@@ -256,11 +256,11 @@ const SupportTickets: FC<SupportTicketsProps> = ({ userId }) => {
             <div className="space-y-3">
               <div className="flex flex-wrap items-center gap-2">
                 {extractCategory(selectedTicket.subject) && (
-                  <span className="rounded-lg border border-border-subtle bg-surface px-2 py-0.5 text-xs text-text-secondary">
+                  <span className="rounded border border-border-subtle bg-surface px-2 py-0.5 text-xs text-text-secondary">
                     {extractCategory(selectedTicket.subject)}
                   </span>
                 )}
-                <span className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${statusBadgeClasses(selectedTicket.status)}`}>
+                <span className={`rounded px-2.5 py-1 text-xs font-semibold ${statusBadgeClasses(selectedTicket.status)}`}>
                   {statusLabel(selectedTicket.status)}
                 </span>
               </div>
@@ -279,7 +279,7 @@ const SupportTickets: FC<SupportTicketsProps> = ({ userId }) => {
               </div>
 
               {selectedTicket.status.toLowerCase() === 'resolved' && (
-                <div className="rounded-lg border border-success-border bg-success-bg px-4 py-2 text-sm text-success-text" role="status">
+                <div className="rounded border border-success-border bg-success-bg px-4 py-2 text-sm text-success-text" role="status">
                   This ticket has been resolved.
                 </div>
               )}
@@ -291,7 +291,7 @@ const SupportTickets: FC<SupportTicketsProps> = ({ userId }) => {
       ) : view === 'list' ? (
         <div ref={listRef} tabIndex={-1} aria-label="Ticket list">
           {submitSuccess && (
-            <div className="mb-4 rounded-lg border border-success-border bg-success-bg px-4 py-2 text-sm text-success-text" role="status">
+            <div className="mb-4 rounded border border-success-border bg-success-bg px-4 py-2 text-sm text-success-text" role="status">
               {submitSuccess}
             </div>
           )}
@@ -299,7 +299,7 @@ const SupportTickets: FC<SupportTicketsProps> = ({ userId }) => {
           {loading ? (
             <div className="space-y-3" aria-busy="true" aria-label="Loading tickets">
               {[0, 1, 2].map((i) => (
-                <div key={i} className="animate-pulse rounded-xl border border-border-subtle bg-surface-elevated p-4">
+                <div key={i} className="animate-pulse rounded border border-border-subtle bg-surface-elevated p-4">
                   <div className="mb-2 h-4 w-2/3 rounded bg-border-subtle" />
                   <div className="mb-2 h-3 w-full rounded bg-border-subtle" />
                   <div className="h-3 w-1/4 rounded bg-border-subtle" />
@@ -313,7 +313,7 @@ const SupportTickets: FC<SupportTicketsProps> = ({ userId }) => {
                 <button
                   type="button"
                   onClick={() => fetchTickets()}
-                  className="min-h-11 rounded-lg bg-info px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-info/90"
+                  className="min-h-11 rounded bg-info px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-info/90"
                 >
                   Retry
                 </button>
@@ -337,16 +337,16 @@ const SupportTickets: FC<SupportTicketsProps> = ({ userId }) => {
                     <button
                       type="button"
                       onClick={() => switchToDetail(ticket)}
-                      className="w-full cursor-pointer rounded-xl border border-border-subtle bg-surface-elevated p-4 text-left transition-colors hover:bg-surface"
+                      className="w-full cursor-pointer rounded border border-border-subtle bg-surface-elevated p-4 text-left transition-colors hover:bg-surface"
                     >
                       <div className="mb-1 flex flex-wrap items-center gap-2">
                         <h3 className="text-sm font-semibold text-text-primary">{displaySubject}</h3>
                         {cat && (
-                          <span className="rounded-lg border border-border-subtle bg-surface px-2 py-0.5 text-xs text-text-secondary">
+                          <span className="rounded border border-border-subtle bg-surface px-2 py-0.5 text-xs text-text-secondary">
                             {cat}
                           </span>
                         )}
-                        <span className={`rounded-lg px-2 py-0.5 text-xs font-semibold ${statusBadgeClasses(ticket.status)}`}>
+                        <span className={`rounded px-2 py-0.5 text-xs font-semibold ${statusBadgeClasses(ticket.status)}`}>
                           {statusLabel(ticket.status)}
                         </span>
                       </div>
@@ -364,7 +364,7 @@ const SupportTickets: FC<SupportTicketsProps> = ({ userId }) => {
           <form onSubmit={handleSubmit} noValidate>
             <div className="space-y-4">
               {submitError && (
-                <div className="rounded-lg border border-danger-border bg-danger-bg px-4 py-2 text-sm text-danger-text" role="alert">
+                <div className="rounded border border-danger-border bg-danger-bg px-4 py-2 text-sm text-danger-text" role="alert">
                   {submitError}
                 </div>
               )}
@@ -381,7 +381,7 @@ const SupportTickets: FC<SupportTicketsProps> = ({ userId }) => {
                   aria-required="true"
                   aria-invalid={categoryInvalid || undefined}
                   aria-describedby={categoryInvalid ? 'category-error' : undefined}
-                  className={`min-h-11 w-full rounded-lg border bg-surface px-3 py-2 text-sm text-text-primary transition-colors ${categoryInvalid ? 'border-danger-border' : 'border-border'}`}
+                  className={`min-h-11 w-full rounded border bg-surface px-3 py-2 text-sm text-text-primary transition-colors ${categoryInvalid ? 'border-danger-border' : 'border-border'}`}
                 >
                   <option value="">Select a category</option>
                   {CATEGORIES.map((c) => (
@@ -406,7 +406,7 @@ const SupportTickets: FC<SupportTicketsProps> = ({ userId }) => {
                   aria-required="true"
                   aria-invalid={subjectInvalid || undefined}
                   aria-describedby={subjectInvalid ? 'subject-error' : undefined}
-                  className={`min-h-11 w-full rounded-lg border bg-surface px-3 py-2 text-sm text-text-primary transition-colors ${subjectInvalid ? 'border-danger-border' : 'border-border'}`}
+                  className={`min-h-11 w-full rounded border bg-surface px-3 py-2 text-sm text-text-primary transition-colors ${subjectInvalid ? 'border-danger-border' : 'border-border'}`}
                 />
                 {subjectInvalid && (
                   <p id="subject-error" className="mt-1 text-xs text-danger">Subject is required.</p>
@@ -426,7 +426,7 @@ const SupportTickets: FC<SupportTicketsProps> = ({ userId }) => {
                   aria-required="true"
                   aria-invalid={descriptionInvalid || undefined}
                   aria-describedby={descriptionInvalid ? 'description-error' : undefined}
-                  className={`min-h-11 w-full rounded-lg border bg-surface px-3 py-2 text-sm text-text-primary transition-colors ${descriptionInvalid ? 'border-danger-border' : 'border-border'}`}
+                  className={`min-h-11 w-full rounded border bg-surface px-3 py-2 text-sm text-text-primary transition-colors ${descriptionInvalid ? 'border-danger-border' : 'border-border'}`}
                 />
                 {descriptionInvalid && (
                   <p id="description-error" className="mt-1 text-xs text-danger">Description must be at least 10 characters.</p>
@@ -437,7 +437,7 @@ const SupportTickets: FC<SupportTicketsProps> = ({ userId }) => {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="min-h-11 rounded-lg bg-info px-6 py-2 text-sm font-semibold text-white transition-colors hover:bg-info/90 disabled:opacity-50"
+                  className="min-h-11 rounded bg-info px-6 py-2 text-sm font-semibold text-white transition-colors hover:bg-info/90 disabled:opacity-50"
                 >
                   {submitting ? 'Submitting...' : 'Submit Ticket'}
                 </button>
@@ -445,7 +445,7 @@ const SupportTickets: FC<SupportTicketsProps> = ({ userId }) => {
                   type="button"
                   onClick={switchToList}
                   disabled={submitting}
-                  className="min-h-11 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-surface-elevated disabled:opacity-50"
+                  className="min-h-11 rounded border border-border bg-surface px-4 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-surface-elevated disabled:opacity-50"
                 >
                   Cancel
                 </button>

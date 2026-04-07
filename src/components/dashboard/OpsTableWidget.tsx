@@ -10,7 +10,7 @@ interface OpsTableWidgetProps {
 
 const OpsTableWidget: FC<OpsTableWidgetProps> = ({ title, subtitle, headers, rows, emptyMessage }) => {
   return (
-    <section className="table-glass rounded-xl">
+    <section className="table-glass rounded">
       <div className="border-b border-border-subtle px-4 py-3">
         <h3 className="text-base font-bold uppercase tracking-wide text-text-primary">{title}</h3>
         {subtitle && <p className="text-xs font-medium uppercase tracking-wide text-text-secondary">{subtitle}</p>}

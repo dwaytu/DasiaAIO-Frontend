@@ -259,7 +259,7 @@ export const GuardInboxPanel: React.FC<GuardInboxPanelProps> = ({ userId, onActi
             </div>
           ) : null}
           {swapFeedNotice ? (
-            <div className="lg:col-span-2 rounded-xl border border-warning-border bg-warning-bg p-3 text-sm text-warning-text" role="status" aria-live="polite">
+            <div className="lg:col-span-2 rounded border border-warning-border bg-warning-bg p-3 text-sm text-warning-text" role="status" aria-live="polite">
               {swapFeedNotice}
             </div>
           ) : null}

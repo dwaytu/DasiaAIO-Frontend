@@ -57,9 +57,9 @@ const FirearmMaintenance: FC<Props> = ({ user, onLogout, onViewChange, activeVie
 
   const getStatusBadgeColor = (status: string) => {
     switch (status?.toLowerCase()) {
-      case 'completed': return 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30'
-      case 'pending': return 'bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30'
-      case 'scheduled': return 'bg-blue-500/15 text-blue-300 ring-1 ring-blue-500/30'
+      case 'completed': return 'bg-success-bg text-success-text ring-1 ring-success-border'
+      case 'pending': return 'bg-warning-bg text-warning-text ring-1 ring-warning-border'
+      case 'scheduled': return 'bg-info-bg text-info-text ring-1 ring-info-border'
       default: return 'bg-zinc-500/15 text-zinc-400 ring-1 ring-zinc-500/30'
     }
   }
@@ -83,7 +83,7 @@ const FirearmMaintenance: FC<Props> = ({ user, onLogout, onViewChange, activeVie
           </div>
         ) : (
           <div className="flex-1 flex flex-col p-4 md:p-8 overflow-hidden w-full animate-fade-in">
-            <section className="flex flex-col flex-1 min-h-0 rounded-2xl overflow-hidden table-glass">
+            <section className="flex flex-col flex-1 min-h-0 rounded overflow-hidden table-glass">
               <div className="flex-shrink-0 px-6 py-5 border-b border-border-subtle">
                 <h2 className="text-xl font-bold text-text-primary">Maintenance Records ({maintenances.length})</h2>
               </div>

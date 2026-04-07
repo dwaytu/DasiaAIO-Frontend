@@ -5,7 +5,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { useUI } from '../../hooks/useUI'
 import { useLocationConsent } from '../../hooks/useLocationConsent'
 import { normalizeRole } from '../../types/auth'
-import { APP_VERSION, detectRuntimePlatform } from '../../config'
+import { APP_VERSION } from '../../config'
 import { getSidebarNav } from '../../config/navigation'
 import { getLocationConsentStatus } from '../../utils/location'
 import { VIEW_TO_ROUTE } from '../../router/routes'
@@ -33,7 +33,6 @@ export default function AppShell() {
     dismissReleasePrompt,
     dismissWhatsNewPrompt,
     downloadUpdate,
-    checkForUpdates,
   } = useUI()
 
   const {
@@ -51,7 +50,6 @@ export default function AppShell() {
   const navigate = useNavigate()
   const location = useLocation()
   const activeView = location.pathname.replace(/^\//, '') || 'dashboard'
-  const runtimePlatform = detectRuntimePlatform()
 
   // Local checkbox state for the ToA location consent check (UI-only, not persisted yet)
   const [localLocationConsent, setLocalLocationConsent] = useState(locationConsentPersisted)
@@ -65,10 +63,10 @@ export default function AppShell() {
       <div className="h-screen overflow-hidden w-full flex items-center justify-center bg-background">
         <div className="w-full max-w-xl px-6">
           <div className="animate-pulse space-y-4">
-            <div className="h-10 rounded-lg bg-surface-elevated" />
-            <div className="h-24 rounded-lg bg-surface-elevated" />
-            <div className="h-24 rounded-lg bg-surface-elevated" />
-            <div className="h-24 rounded-lg bg-surface-elevated" />
+            <div className="h-10 rounded bg-surface-elevated" />
+            <div className="h-24 rounded bg-surface-elevated" />
+            <div className="h-24 rounded bg-surface-elevated" />
+            <div className="h-24 rounded bg-surface-elevated" />
           </div>
           <p className="mt-4 text-sm text-center text-text-secondary">Loading security operations workspace...</p>
         </div>
@@ -137,7 +135,6 @@ export default function AppShell() {
     ? 'calc(var(--guard-sticky-region-height) + 1rem + env(safe-area-inset-bottom, 0px))'
     : mobileSafeBottomOffset
 
-  const updateCheckLabel = runtimePlatform === 'tauri' ? 'Check for Updates' : 'Check Latest Release'
 
   const handleToaAccept = async () => {
     if (!toaChecked) {
@@ -158,24 +155,10 @@ export default function AppShell() {
     >
       <Outlet />
 
-      {/* ── Check for updates button ─────────────────────────────────────── */}
-      {isLoggedIn && !import.meta.env.DEV && !hasBlockingOverlay && normalizedRole !== 'guard' ? (
-        <button
-          type="button"
-          onClick={() => {
-            void checkForUpdates(true)
-          }}
-          className="fixed bottom-4 right-4 z-[var(--z-floating)] hidden min-h-9 rounded-full border border-border bg-surface/80 px-3 py-1.5 text-xs font-medium text-text-secondary shadow-sm backdrop-blur transition-all hover:bg-surface hover:text-text-primary hover:shadow-md md:block"
-          aria-label={updateCheckLabel}
-        >
-          {updateCheckLabel}
-        </button>
-      ) : null}
-
       {/* ── Connectivity banner ──────────────────────────────────────────── */}
       {showConnectivityBanner && !hasBlockingOverlay ? (
         <div
-          className={`pointer-events-none fixed left-[calc(1rem+env(safe-area-inset-left,0px))] right-[calc(1rem+env(safe-area-inset-right,0px))] top-[calc(1rem+env(safe-area-inset-top,0px))] z-[var(--z-toast)] rounded-lg border border-danger-border bg-danger-bg p-3 text-sm text-danger-text shadow-lg ${
+          className={`pointer-events-none fixed left-[calc(1rem+env(safe-area-inset-left,0px))] right-[calc(1rem+env(safe-area-inset-right,0px))] top-[calc(1rem+env(safe-area-inset-top,0px))] z-[var(--z-toast)] rounded border border-danger-border bg-danger-bg p-3 text-sm text-danger-text shadow-lg ${
             isGuardWorkspaceView
               ? 'lg:left-[calc(1rem+env(safe-area-inset-left,0px))] lg:right-auto lg:top-[calc(5rem+env(safe-area-inset-top,0px))] lg:bottom-auto lg:w-[min(24rem,calc(100vw-2rem))]'
               : 'lg:left-[calc(18rem+1rem)] lg:right-auto lg:top-auto lg:bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] lg:w-[min(24rem,calc(100vw-20rem))]'
@@ -200,7 +183,7 @@ export default function AppShell() {
       !hasBlockingOverlay &&
       !locationBannerDismissed ? (
         <div
-          className={`soc-warning-banner fixed left-4 right-4 z-[var(--z-banner)] rounded-lg p-3 text-sm shadow-lg ${
+          className={`soc-warning-banner fixed left-4 right-4 z-[var(--z-banner)] rounded p-3 text-sm shadow-lg ${
             isGuardWorkspaceView
               ? 'md:left-4 md:right-auto md:w-[min(24rem,calc(100vw-2rem))]'
               : 'md:left-auto md:right-4 md:w-[min(28rem,calc(100vw-2rem))]'
@@ -247,7 +230,7 @@ export default function AppShell() {
             aria-modal="true"
             aria-labelledby="toa-title"
             aria-describedby="toa-summary"
-            className="soc-modal-panel w-full max-w-3xl rounded-2xl border border-border-elevated bg-surface p-5 shadow-modal sm:p-7"
+            className="soc-modal-panel w-full max-w-3xl rounded border border-border-elevated bg-surface p-5 shadow-modal sm:p-7"
           >
             <h1 id="toa-title" className="text-2xl font-bold text-text-primary">
               Terms of Agreement
@@ -288,7 +271,7 @@ export default function AppShell() {
               .
             </p>
 
-            <div className="mt-4 max-h-64 space-y-3 overflow-y-auto rounded-xl border border-border-subtle bg-surface-elevated p-4 text-sm text-text-secondary">
+            <div className="mt-4 max-h-64 space-y-3 overflow-y-auto rounded border border-border-subtle bg-surface-elevated p-4 text-sm text-text-secondary">
               <p>You agree to use SENTINEL only for authorized security operations.</p>
               <p>
                 You agree to protect credentials and not share access with unauthorized individuals.
@@ -307,7 +290,7 @@ export default function AppShell() {
               </p>
             </div>
 
-            <div className="mt-4 rounded-lg border border-border-subtle bg-surface-elevated p-3">
+            <div className="mt-4 rounded border border-border-subtle bg-surface-elevated p-3">
               <label
                 htmlFor="toa-agree"
                 className="flex cursor-pointer items-start gap-3 text-sm text-text-primary"
@@ -384,7 +367,7 @@ export default function AppShell() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="location-consent-title"
-            className="soc-modal-panel w-full max-w-lg rounded-2xl border border-border-elevated bg-surface p-5 shadow-modal sm:p-6"
+            className="soc-modal-panel w-full max-w-lg rounded border border-border-elevated bg-surface p-5 shadow-modal sm:p-6"
           >
             <h2 id="location-consent-title" className="text-xl font-bold text-text-primary">
               Location Tracking Consent
@@ -423,7 +406,7 @@ export default function AppShell() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="whats-new-title"
-            className="soc-modal-panel w-full max-w-xl rounded-2xl border border-border-elevated bg-surface p-5 shadow-modal sm:p-6"
+            className="soc-modal-panel w-full max-w-xl rounded border border-border-elevated bg-surface p-5 shadow-modal sm:p-6"
           >
             <h2 id="whats-new-title" className="text-xl font-bold text-text-primary">
               What's New in {whatsNewPrompt.version}
@@ -455,7 +438,7 @@ export default function AppShell() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="update-title"
-            className="soc-modal-panel w-full max-w-lg rounded-2xl border border-border-elevated bg-surface p-5 shadow-modal sm:p-6"
+            className="soc-modal-panel w-full max-w-lg rounded border border-border-elevated bg-surface p-5 shadow-modal sm:p-6"
           >
             <h2 id="update-title" className="text-xl font-bold text-text-primary">
               {releasePrompt.platform === 'tauri' ? 'New update available' : 'New release available'}
@@ -498,7 +481,7 @@ export default function AppShell() {
             <div className="fixed inset-0 z-[63] md:hidden" onClick={() => setMoreDrawerOpen(false)}>
               <div className="absolute inset-0 bg-black/40" />
               <div
-                className="absolute bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] left-2 right-2 rounded-xl border border-border bg-surface p-2 shadow-lg"
+                className="absolute bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] left-2 right-2 rounded border border-border bg-surface p-2 shadow-lg"
                 onClick={e => e.stopPropagation()}
               >
                 <div className="flex items-center justify-between px-3 py-2 mb-1">
@@ -516,7 +499,7 @@ export default function AppShell() {
                         <button
                           type="button"
                           onClick={() => { navigate(itemRoute); setMoreDrawerOpen(false) }}
-                          className="min-h-11 w-full rounded-lg px-2 py-2 text-xs font-semibold text-text-secondary hover:bg-surface-elevated hover:text-text-primary transition-colors"
+                          className="min-h-11 w-full rounded px-2 py-2 text-xs font-semibold text-text-secondary hover:bg-surface-elevated hover:text-text-primary transition-colors"
                         >
                           {item.label}
                         </button>

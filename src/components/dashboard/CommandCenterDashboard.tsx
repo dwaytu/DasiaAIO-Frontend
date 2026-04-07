@@ -40,6 +40,17 @@ interface CommandCenterDashboardProps {
   quickActions: QuickActionItem[]
 }
 
+const humanizeStatus = (status: string): string => {
+  const map: Record<string, string> = {
+    open: 'Open',
+    investigating: 'Under Investigation',
+    resolved: 'Resolved',
+    closed: 'Closed',
+    pending: 'Pending Review',
+  }
+  return map[status?.toLowerCase()] || status
+}
+
 const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions }) => {
   const summaryState = useOpsSummary()
   const shiftsState = useOpsShifts()
@@ -212,7 +223,7 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
             ? 'warning'
             : 'info') as 'critical' | 'warning' | 'info',
         title: incident.title,
-        detail: `${incident.location} • ${incident.status.toUpperCase()}`,
+        detail: `${incident.location} • ${humanizeStatus(incident.status)}`,
         createdAt: incident.created_at || '',
         isPanic: incident.title?.includes('SOS EMERGENCY') ?? false,
       }))
@@ -244,7 +255,7 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
 
   return (
     <OperationalEventProvider>
-      <main className="space-y-6" aria-label="Security operations command center overview">
+      <main className="space-y-4" aria-label="Security operations command center overview">
       <SystemStatusBanner
         status={systemHealthState}
         guardsActive={summary.activeGuardsOnDuty}
@@ -309,14 +320,14 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
         subtitle="Streaming feed, incident escalation, and AI-assisted incident triage"
         icon={<Siren className="h-4 w-4" aria-hidden="true" />}
       >
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
           <LiveOperationsFeed items={liveOperationsItems} />
           <IncidentAlertFeed
             alerts={incidentAlerts}
             nowLabel={clock.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
           />
         </div>
-        <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 sm:grid-flow-dense xl:grid-cols-4">
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:grid-flow-dense xl:grid-cols-4">
           <IncidentSeverityMonitoringPanel
             incidents={displayIncidents}
             loading={incidentsState.loading}
@@ -415,7 +426,7 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
       </SectionPanel>
 
       {(summaryState.error || shiftsState.error || assetsState.error) && (
-        <div className="rounded-lg border border-warning-border bg-warning-bg p-3 text-sm text-warning-text" role="status" aria-live="polite">
+        <div className="rounded border border-warning-border bg-warning-bg p-3 text-sm text-warning-text" role="status" aria-live="polite">
           Command center loaded with partial data. Last service check: {serviceState.services.lastChecked}.
         </div>
       )}

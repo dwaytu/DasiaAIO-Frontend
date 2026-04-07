@@ -78,7 +78,7 @@ const GuardSupportTab: FC<GuardSupportTabProps> = ({
       </DashboardCard>
 
       {/* Field Instructions — one-tap access */}
-      <div className="flex items-center gap-3 rounded-xl border border-info-border bg-info-bg px-4 py-3">
+      <div className="flex items-center gap-3 rounded border border-info-border bg-info-bg px-4 py-3">
         <div className="min-w-0 flex-1">
           <p className="text-sm font-bold text-info-text">Field Instructions</p>
           <p className="text-xs text-info-text opacity-70">Protocol list, escalation chain, radio discipline</p>
@@ -112,7 +112,7 @@ const GuardSupportTab: FC<GuardSupportTabProps> = ({
             <input
               id="schedule-client-site"
               type="text"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-text-primary"
+              className="w-full rounded border border-border bg-background px-3 py-2 text-text-primary"
               value={scheduleForm.clientSite}
               onChange={(event) => setScheduleForm((previous) => ({ ...previous, clientSite: event.target.value }))}
               placeholder="Enter post or client site"
@@ -122,7 +122,7 @@ const GuardSupportTab: FC<GuardSupportTabProps> = ({
             <input
               id="schedule-date"
               type="date"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-text-primary"
+              className="w-full rounded border border-border bg-background px-3 py-2 text-text-primary"
               value={scheduleForm.date}
               onChange={(event) => setScheduleForm((previous) => ({ ...previous, date: event.target.value }))}
             />
@@ -133,7 +133,7 @@ const GuardSupportTab: FC<GuardSupportTabProps> = ({
                 <input
                   id="schedule-start-time"
                   type="time"
-                  className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-text-primary"
+                  className="mt-1 w-full rounded border border-border bg-background px-3 py-2 text-text-primary"
                   value={scheduleForm.startTime}
                   onChange={(event) => setScheduleForm((previous) => ({ ...previous, startTime: event.target.value }))}
                 />
@@ -143,7 +143,7 @@ const GuardSupportTab: FC<GuardSupportTabProps> = ({
                 <input
                   id="schedule-end-time"
                   type="time"
-                  className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-text-primary"
+                  className="mt-1 w-full rounded border border-border bg-background px-3 py-2 text-text-primary"
                   value={scheduleForm.endTime}
                   onChange={(event) => setScheduleForm((previous) => ({ ...previous, endTime: event.target.value }))}
                 />
@@ -184,7 +184,7 @@ const GuardSupportTab: FC<GuardSupportTabProps> = ({
             <input
               id="support-subject"
               type="text"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-text-primary"
+              className="w-full rounded border border-border bg-background px-3 py-2 text-text-primary"
               value={ticketForm.subject}
               onChange={(event) => setTicketForm((previous) => ({ ...previous, subject: event.target.value }))}
               placeholder="Enter ticket subject"
@@ -193,7 +193,7 @@ const GuardSupportTab: FC<GuardSupportTabProps> = ({
             <label className="text-sm font-semibold text-text-secondary" htmlFor="support-message">Message</label>
             <textarea
               id="support-message"
-              className="min-h-24 w-full rounded-lg border border-border bg-background px-3 py-2 text-text-primary"
+              className="min-h-24 w-full rounded border border-border bg-background px-3 py-2 text-text-primary"
               value={ticketForm.message}
               onChange={(event) => setTicketForm((previous) => ({ ...previous, message: event.target.value }))}
               placeholder="Describe your issue"
@@ -211,11 +211,11 @@ const GuardSupportTab: FC<GuardSupportTabProps> = ({
         ) : null}
 
         {ticketItems.length === 0 ? (
-          <p className="rounded-lg border border-border-subtle bg-surface-elevated p-3 text-sm text-text-tertiary">No support tickets yet. Tap "New Ticket" above to report an issue or request assistance.</p>
+          <p className="rounded border border-border-subtle bg-surface-elevated p-3 text-sm text-text-tertiary">No support tickets yet. Tap "New Ticket" above to report an issue or request assistance.</p>
         ) : (
           <ul className="space-y-2">
             {ticketItems.map((ticket) => (
-              <li key={ticket.id} className="rounded-lg border border-border-subtle bg-surface-elevated p-3">
+              <li key={ticket.id} className="rounded border border-border-subtle bg-surface-elevated p-3">
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-sm font-semibold text-text-primary">{ticket.subject}</p>
                   <span className="rounded-full border border-border-subtle bg-background px-2 py-1 text-xs font-semibold text-text-secondary">

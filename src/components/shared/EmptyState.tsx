@@ -17,7 +17,7 @@ const EmptyState: FC<EmptyStateProps> = ({ icon: Icon, title, subtitle, actionLa
       <button
         type="button"
         onClick={onAction}
-        className="rounded-lg bg-info px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-info/90"
+        className="rounded bg-info px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-info/90"
       >
         {actionLabel}
       </button>

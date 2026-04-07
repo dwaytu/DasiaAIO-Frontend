@@ -155,7 +155,7 @@ const IncidentReportForm: FC<IncidentReportFormProps> = ({ onSubmit, onCancel })
       onSubmit={handleSubmit}
       noValidate
       aria-label="Report Incident"
-      className="space-y-4 rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-4"
+      className="space-y-4 rounded border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-4"
     >
       <h3 className="font-mono text-sm font-semibold uppercase tracking-wider text-[color:var(--color-text)]">
         Report Incident
@@ -167,7 +167,7 @@ const IncidentReportForm: FC<IncidentReportFormProps> = ({ onSubmit, onCancel })
           htmlFor="incident-title"
           className="block font-mono text-xs font-medium text-[color:var(--color-text)]"
         >
-          Title <span aria-hidden="true" className="text-red-400">*</span>
+          Title <span aria-hidden="true" className="text-danger-text">*</span>
         </label>
         <input
           id="incident-title"
@@ -182,7 +182,7 @@ const IncidentReportForm: FC<IncidentReportFormProps> = ({ onSubmit, onCancel })
           className="w-full rounded border border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-3 py-2 font-mono text-xs text-[color:var(--color-text)] placeholder-[color:var(--color-muted-text)] focus:border-[color:var(--color-focus-ring)] focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)]"
         />
         {titleError && (
-          <p id="incident-title-error" role="alert" className="font-mono text-xs text-red-400">
+          <p id="incident-title-error" role="alert" className="font-mono text-xs text-danger-text">
             {titleError}
           </p>
         )}
@@ -194,7 +194,7 @@ const IncidentReportForm: FC<IncidentReportFormProps> = ({ onSubmit, onCancel })
           htmlFor="incident-description"
           className="block font-mono text-xs font-medium text-[color:var(--color-text)]"
         >
-          Description <span aria-hidden="true" className="text-red-400">*</span>
+          Description <span aria-hidden="true" className="text-danger-text">*</span>
         </label>
         <textarea
           id="incident-description"
@@ -209,7 +209,7 @@ const IncidentReportForm: FC<IncidentReportFormProps> = ({ onSubmit, onCancel })
           className="w-full resize-y rounded border border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-3 py-2 font-mono text-xs text-[color:var(--color-text)] placeholder-[color:var(--color-muted-text)] focus:border-[color:var(--color-focus-ring)] focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)]"
         />
         {descError && (
-          <p id="incident-description-error" role="alert" className="font-mono text-xs text-red-400">
+          <p id="incident-description-error" role="alert" className="font-mono text-xs text-danger-text">
             {descError}
           </p>
         )}
@@ -221,7 +221,7 @@ const IncidentReportForm: FC<IncidentReportFormProps> = ({ onSubmit, onCancel })
           htmlFor="incident-location"
           className="block font-mono text-xs font-medium text-[color:var(--color-text)]"
         >
-          Location <span aria-hidden="true" className="text-red-400">*</span>
+          Location <span aria-hidden="true" className="text-danger-text">*</span>
         </label>
         <input
           id="incident-location"
@@ -236,7 +236,7 @@ const IncidentReportForm: FC<IncidentReportFormProps> = ({ onSubmit, onCancel })
           className="w-full rounded border border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-3 py-2 font-mono text-xs text-[color:var(--color-text)] placeholder-[color:var(--color-muted-text)] focus:border-[color:var(--color-focus-ring)] focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)]"
         />
         {locationError && (
-          <p id="incident-location-error" role="alert" className="font-mono text-xs text-red-400">
+          <p id="incident-location-error" role="alert" className="font-mono text-xs text-danger-text">
             {locationError}
           </p>
         )}
@@ -284,14 +284,14 @@ const IncidentReportForm: FC<IncidentReportFormProps> = ({ onSubmit, onCancel })
 
       {/* Submit error */}
       {submitError && (
-        <p role="alert" className="font-mono text-xs text-red-400">
+        <p role="alert" className="font-mono text-xs text-danger-text">
           {submitError}
         </p>
       )}
 
       {/* Success message */}
       {success && (
-        <p role="status" className="font-mono text-xs text-green-400">
+        <p role="status" className="font-mono text-xs text-success-text">
           Incident reported successfully.
         </p>
       )}
@@ -301,7 +301,7 @@ const IncidentReportForm: FC<IncidentReportFormProps> = ({ onSubmit, onCancel })
         <button
           type="submit"
           disabled={submitting}
-          className="rounded bg-red-600 px-4 py-1.5 font-mono text-xs font-semibold text-white hover:bg-red-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-400 disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded bg-[color:var(--color-danger)] px-4 py-1.5 font-mono text-xs font-semibold text-white hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-danger)] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {submitting ? 'Submitting…' : 'Submit Report'}
         </button>

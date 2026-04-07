@@ -73,7 +73,7 @@ const ICONS: Record<ActivityKind, JSX.Element> = {
 const OperationalActivityFeed: FC<OperationalActivityFeedProps> = ({ items, title = 'Operational Activity', subtitle = 'Real-time system events' }) => {
   return (
     <section
-      className="command-panel rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-surface)]"
+      className="command-panel rounded border border-[color:var(--color-border)] bg-[color:var(--color-surface)]"
       aria-label="Operational Activity Feed"
     >
       <div className="flex items-center justify-between border-b border-[color:var(--color-border)] px-4 py-3">

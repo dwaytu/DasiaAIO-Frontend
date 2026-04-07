@@ -183,7 +183,7 @@ const GuardShiftSwapPanel: FC<Props> = ({ currentUserId, currentUserRole, shiftO
         : null
 
   return (
-    <section className="rounded-2xl border border-border bg-surface p-4" aria-labelledby="swap-panel-heading">
+    <section className="rounded border border-border bg-surface p-4" aria-labelledby="swap-panel-heading">
       <h2 id="swap-panel-heading" className="text-lg font-bold text-text-primary">
         Shift Swaps
       </h2>
@@ -192,7 +192,7 @@ const GuardShiftSwapPanel: FC<Props> = ({ currentUserId, currentUserRole, shiftO
       </p>
 
       {requestFeedMessage ? (
-        <div className="mt-3 rounded-xl border border-warning-border bg-warning-bg p-3 text-sm text-warning-text" role="status" aria-live="polite">
+        <div className="mt-3 rounded border border-warning-border bg-warning-bg p-3 text-sm text-warning-text" role="status" aria-live="polite">
           {requestFeedMessage}
         </div>
       ) : null}
@@ -214,7 +214,7 @@ const GuardShiftSwapPanel: FC<Props> = ({ currentUserId, currentUserRole, shiftO
               value={shiftId}
               onChange={(e) => setShiftId(e.target.value)}
               disabled={submitting || shiftOptions.length === 0}
-              className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-text-primary"
+              className="mt-1 w-full rounded border border-border bg-background px-3 py-2 text-sm text-text-primary"
             >
               <option value="">Select a shift</option>
               {shiftOptions.map((option) => (
@@ -240,7 +240,7 @@ const GuardShiftSwapPanel: FC<Props> = ({ currentUserId, currentUserRole, shiftO
               value={targetId}
               onChange={(e) => setTargetId(e.target.value)}
               placeholder="Guard user ID from Operations Desk"
-              className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-text-primary"
+              className="mt-1 w-full rounded border border-border bg-background px-3 py-2 text-sm text-text-primary"
             />
             <p className="mt-1 text-xs text-text-tertiary">
               Enter the SENTINEL user ID for the guard covering your post. If you do not know it, confirm with Operations Desk or your site supervisor before submitting.
@@ -255,7 +255,7 @@ const GuardShiftSwapPanel: FC<Props> = ({ currentUserId, currentUserRole, shiftO
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder="Briefly describe the reason"
-              className="mt-1 min-h-[80px] w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-text-primary"
+              className="mt-1 min-h-[80px] w-full rounded border border-border bg-background px-3 py-2 text-sm text-text-primary"
             />
           </div>
           <div className="sm:col-span-2 flex items-center gap-3">
@@ -291,15 +291,15 @@ const GuardShiftSwapPanel: FC<Props> = ({ currentUserId, currentUserRole, shiftO
           <p className="mt-2 text-sm text-text-secondary" aria-live="polite">Loading…</p>
         )}
         {error && !loading && (
-          <p className="mt-2 text-sm text-red-400" role="alert">{error}</p>
+          <p className="mt-2 text-sm text-danger-text" role="alert">{error}</p>
         )}
         {!loading && !error && visibleRequests.length === 0 && requestFeedState !== 'ready' && (
-          <p className="mt-2 rounded-lg border border-border-subtle bg-surface-elevated p-3 text-sm text-text-secondary">
+          <p className="mt-2 rounded border border-border-subtle bg-surface-elevated p-3 text-sm text-text-secondary">
             Swap request history is unavailable right now.
           </p>
         )}
         {!loading && !error && visibleRequests.length === 0 && requestFeedState === 'ready' && (
-          <p className="mt-2 rounded-lg border border-border-subtle bg-surface-elevated p-3 text-sm text-text-secondary">
+          <p className="mt-2 rounded border border-border-subtle bg-surface-elevated p-3 text-sm text-text-secondary">
             No swap requests found.
           </p>
         )}
@@ -309,7 +309,7 @@ const GuardShiftSwapPanel: FC<Props> = ({ currentUserId, currentUserRole, shiftO
             {visibleRequests.map((req) => (
               <li
                 key={req.id}
-                className="rounded-lg border border-border-subtle bg-surface-elevated p-3"
+                className="rounded border border-border-subtle bg-surface-elevated p-3"
               >
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">

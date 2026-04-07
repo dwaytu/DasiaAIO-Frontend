@@ -1,6 +1,20 @@
 const trimTrailingSlash = (url: string) => url.replace(/\/+$/, '')
 const DEFAULT_PRODUCTION_API_BASE_URL = 'https://backend-production-0c47.up.railway.app'
 
+function isTruthyEnvFlag(value: unknown): boolean {
+  const normalized = String(value ?? '').trim().toLowerCase()
+  return normalized === '1' || normalized === 'true' || normalized === 'yes'
+}
+
+function isLocalQaApiOverride(parsed: URL): boolean {
+  if (!import.meta.env.PROD || !isTruthyEnvFlag(import.meta.env.VITE_ALLOW_INSECURE_LOCAL_API)) {
+    return false
+  }
+
+  const normalizedHost = parsed.hostname.trim().toLowerCase()
+  return normalizedHost === 'localhost' || normalizedHost === '127.0.0.1' || normalizedHost === '0.0.0.0'
+}
+
 function isDisallowedProductionHost(hostname: string): boolean {
   const normalizedHost = hostname.trim().toLowerCase()
 
@@ -49,11 +63,13 @@ function validateApiBaseUrl(rawValue: string): string {
     throw new Error('VITE_API_BASE_URL must be a fully-qualified URL (for example: https://api.example.com).')
   }
 
-  if (import.meta.env.PROD && parsed.protocol !== 'https:') {
+  const localQaOverride = isLocalQaApiOverride(parsed)
+
+  if (import.meta.env.PROD && parsed.protocol !== 'https:' && !localQaOverride) {
     throw new Error('Production builds require VITE_API_BASE_URL to use HTTPS.')
   }
 
-  if (import.meta.env.PROD && isDisallowedProductionHost(parsed.hostname)) {
+  if (import.meta.env.PROD && isDisallowedProductionHost(parsed.hostname) && !localQaOverride) {
     throw new Error('Production builds do not allow VITE_API_BASE_URL to point to localhost or private network addresses.')
   }
 

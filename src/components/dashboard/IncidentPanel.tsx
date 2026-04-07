@@ -19,16 +19,16 @@ const PRIORITY_BADGE: Record<
   Incident['priority'],
   { label: string; cls: string }
 > = {
-  critical: { label: 'CRITICAL', cls: 'bg-red-500/20 text-red-300 border border-red-500/40' },
-  high:     { label: 'HIGH',     cls: 'bg-orange-400/20 text-orange-300 border border-orange-400/40' },
-  medium:   { label: 'MED',      cls: 'bg-yellow-400/20 text-yellow-300 border border-yellow-400/40' },
-  low:      { label: 'LOW',      cls: 'bg-green-500/20 text-green-300 border border-green-500/40' },
+  critical: { label: 'CRITICAL', cls: 'bg-danger-bg text-danger-text border border-danger-border' },
+  high:     { label: 'HIGH',     cls: 'bg-warning-bg text-warning-text border border-warning-border' },
+  medium:   { label: 'MED',      cls: 'bg-warning-bg text-warning-text border border-warning-border' },
+  low:      { label: 'LOW',      cls: 'bg-success-bg text-success-text border border-success-border' },
 }
 
 const STATUS_BADGE: Record<Incident['status'], string> = {
-  open:          'bg-red-500/15 text-red-300 border border-red-500/30',
-  investigating: 'bg-yellow-400/15 text-yellow-300 border border-yellow-400/30',
-  resolved:      'bg-green-500/15 text-green-300 border border-green-500/30',
+  open:          'bg-danger-bg text-danger-text border border-danger-border',
+  investigating: 'bg-warning-bg text-warning-text border border-warning-border',
+  resolved:      'bg-success-bg text-success-text border border-success-border',
 }
 
 const NEXT_STATUSES: Record<Incident['status'], Incident['status'][]> = {
@@ -113,7 +113,7 @@ const IncidentPanel: FC = () => {
         <div className="flex items-center gap-2">
           <svg
             aria-hidden="true"
-            className="h-5 w-5 shrink-0 text-red-400"
+            className="h-5 w-5 shrink-0 text-danger-text"
             fill="none"
             stroke="currentColor"
             strokeWidth={2}
@@ -129,7 +129,7 @@ const IncidentPanel: FC = () => {
             Incident Management
           </h2>
           {activeCount > 0 && (
-            <span className="rounded-full bg-red-500/20 px-2 py-0.5 font-mono text-xs font-bold text-red-300">
+            <span className="rounded-full bg-danger-bg px-2 py-0.5 font-mono text-xs font-bold text-danger-text">
               {activeCount} active
             </span>
           )}
@@ -151,7 +151,7 @@ const IncidentPanel: FC = () => {
             type="button"
             onClick={() => setShowForm((v) => !v)}
             aria-expanded={showForm}
-            className="min-h-9 rounded bg-red-600 px-3 py-1.5 font-mono text-[11px] font-semibold uppercase tracking-wide text-white hover:bg-red-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-400"
+            className="min-h-9 rounded bg-[color:var(--color-danger)] px-3 py-1.5 font-mono text-[11px] font-semibold uppercase tracking-wide text-white hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-danger)]"
           >
             {showForm ? 'Cancel' : '+ Report Incident'}
           </button>
@@ -188,20 +188,20 @@ const IncidentPanel: FC = () => {
 
       {/* Status update error */}
       {updateError && (
-        <p role="alert" className="font-mono text-xs text-red-400">
+        <p role="alert" className="font-mono text-xs text-danger-text">
           {updateError}
         </p>
       )}
 
       {summaryError && (
-        <p role="alert" className="font-mono text-xs text-amber-300">
+        <p role="alert" className="font-mono text-xs text-warning-text">
           {summaryError}
         </p>
       )}
 
       {/* Table */}
       <div
-        className="overflow-x-auto rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-surface)]"
+        className="overflow-x-auto rounded border border-[color:var(--color-border)] bg-[color:var(--color-surface)]"
         role="tabpanel"
         aria-label={`Incidents — ${filter}`}
       >
@@ -212,7 +212,7 @@ const IncidentPanel: FC = () => {
         )}
 
         {!loading && error && (
-          <p className="px-4 py-6 text-center font-mono text-xs text-amber-300" role="alert">
+          <p className="px-4 py-6 text-center font-mono text-xs text-warning-text" role="alert">
             {error}
           </p>
         )}

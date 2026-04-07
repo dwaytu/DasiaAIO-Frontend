@@ -151,9 +151,9 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
 
   const getStatusBadgeColor = (status: string) => {
     switch (status?.toLowerCase()) {
-      case 'active': return 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30'
+      case 'active': return 'bg-success-bg text-success-text ring-1 ring-success-border'
       case 'returned': return 'bg-zinc-500/15 text-zinc-400 ring-1 ring-zinc-500/30'
-      case 'pending': return 'bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30'
+      case 'pending': return 'bg-warning-bg text-warning-text ring-1 ring-warning-border'
       default: return 'bg-zinc-500/15 text-zinc-400 ring-1 ring-zinc-500/30'
     }
   }
@@ -177,29 +177,29 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
           </div>
         ) : (
           <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in">
-            {error && <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">{error}</div>}
-            {success && <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">{success}</div>}
+            {error && <div className="mb-4 p-4 bg-danger-bg border border-danger-border rounded text-danger-text">{error}</div>}
+            {success && <div className="mb-4 p-4 bg-success-bg border border-success-border rounded text-success-text">{success}</div>}
             
-            <section className="table-glass rounded-2xl p-6 md:p-8 w-full mb-6">
+            <section className="table-glass rounded p-6 md:p-8 w-full mb-6">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
                 <h2 className="text-2xl font-bold text-text-primary mb-4 md:mb-0">Firearm Allocations ({allocations.length})</h2>
                 <button
                   onClick={() => setShowAllocateForm(!showAllocateForm)}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200"
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded transition duration-200"
                 >
                   {showAllocateForm ? 'Cancel' : '+ Allocate Firearm'}
                 </button>
               </div>
 
               {showAllocateForm && (
-                <form onSubmit={allocateFirearm} className="bg-surface-elevated p-6 rounded-lg mb-6 border border-border">
+                <form onSubmit={allocateFirearm} className="bg-surface-elevated p-6 rounded mb-6 border border-border">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
                       <label className="block text-sm font-semibold text-text-primary mb-2">Guard</label>
                       <select
                         value={newAllocation.guardId}
                         onChange={(e) => setNewAllocation({ ...newAllocation, guardId: e.target.value })}
-                        className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full px-4 py-2 border border-border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         required
                       >
                         <option value="">Select a guard</option>
@@ -213,7 +213,7 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
                       <select
                         value={newAllocation.firearmId}
                         onChange={(e) => setNewAllocation({ ...newAllocation, firearmId: e.target.value })}
-                        className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full px-4 py-2 border border-border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         required
                       >
                         <option value="">Select a firearm</option>
@@ -226,7 +226,7 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-semibold py-2 rounded-lg transition duration-200"
+                    className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-semibold py-2 rounded transition duration-200"
                   >
                     {loading ? 'Allocating...' : 'Allocate Firearm'}
                   </button>

@@ -53,7 +53,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 
     return (
       <main id="maincontent" className="flex h-full items-center justify-center p-4" tabIndex={-1}>
-        <section className="w-full max-w-lg rounded-2xl border border-danger-border bg-surface p-6 shadow-xl" role="alert" aria-live="assertive">
+        <section className="w-full max-w-lg rounded border border-danger-border bg-surface p-6 shadow-xl" role="alert" aria-live="assertive">
           <h2 className="text-2xl font-bold text-text-primary">Section error detected</h2>
           <p className="mt-3 text-sm text-text-secondary">
             SENTINEL could not render the {this.props.sectionLabel.toLowerCase()}. Reload this section to recover.

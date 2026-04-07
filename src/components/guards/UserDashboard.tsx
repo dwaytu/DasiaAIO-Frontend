@@ -735,9 +735,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
             user={user}
             onLogout={onLogout}
             onNavigateToInbox={() => onViewChange?.('inbox')}
-            onNavigateToSettings={() => onViewChange?.('settings')}
             onNavigateToProfile={() => setProfileModalOpen(true)}
-            onRefresh={() => { void refreshData(false) }}
             profileButtonRef={profileTriggerRef}
             guardMode
           />
@@ -751,21 +749,21 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
       >
         <section className="guard-section-frame" aria-label="Guard mission workspace">
           {!isNetworkOnline ? (
-            <div className="rounded-xl border border-danger-border bg-danger-bg p-4 text-danger-text" role="status" aria-live="polite">
+            <div className="rounded border border-danger-border bg-danger-bg p-4 text-danger-text" role="status" aria-live="polite">
               <p className="font-semibold">No connection</p>
               <p className="mt-1 text-sm">You're offline. Your actions are saved and will send when you reconnect.</p>
             </div>
           ) : null}
 
           {pendingCount > 0 ? (
-            <div className="flex items-center gap-2 rounded-xl border border-warning-border bg-warning-bg p-3 text-warning-text text-sm" role="status" aria-live="polite">
+            <div className="flex items-center gap-2 rounded border border-warning-border bg-warning-bg p-3 text-warning-text text-sm" role="status" aria-live="polite">
               <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-warning-text text-warning-bg text-xs font-bold">{pendingCount}</span>
               <span>{pendingCount === 1 ? '1 action waiting to send' : `${pendingCount} actions waiting to send`}</span>
             </div>
           ) : null}
 
           {syncError ? (
-            <div className="rounded-xl border border-warning-border bg-warning-bg p-4 text-warning-text" role="status" aria-live="polite">
+            <div className="rounded border border-warning-border bg-warning-bg p-4 text-warning-text" role="status" aria-live="polite">
               <p className="font-semibold">Partial sync issue</p>
               <p className="mt-1 text-sm">{syncError}</p>
               <button
@@ -779,16 +777,16 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
           ) : null}
 
           {actionStatus ? (
-            <div className="rounded-xl border border-info-border bg-info-bg p-3 text-sm text-info-text" role="status" aria-live="polite">
+            <div className="rounded border border-info-border bg-info-bg p-3 text-sm text-info-text" role="status" aria-live="polite">
               {actionStatus}
             </div>
           ) : null}
 
           {isInitialLoading ? (
             <div className="space-y-3" aria-live="polite">
-              <div className="h-28 animate-pulse rounded-xl bg-surface-elevated" />
-              <div className="h-24 animate-pulse rounded-xl bg-surface-elevated" />
-              <div className="h-24 animate-pulse rounded-xl bg-surface-elevated" />
+              <div className="h-28 animate-pulse rounded bg-surface-elevated" />
+              <div className="h-24 animate-pulse rounded bg-surface-elevated" />
+              <div className="h-24 animate-pulse rounded bg-surface-elevated" />
             </div>
           ) : null}
 
@@ -814,7 +812,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
               {/* Zone 1: StatusHero */}
               <section
                 aria-label="Current duty status"
-                className={`rounded-2xl border p-5 ${dutyStatusConfig.bannerClass}`}
+                className={`rounded border p-5 ${dutyStatusConfig.bannerClass}`}
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0 flex-1">
@@ -853,7 +851,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                   </div>
                 </div>
                 {missionReadinessNote ? (
-                  <p className={`mt-3 rounded-lg border border-current/10 px-3 py-2 text-xs font-medium opacity-80 ${dutyStatusConfig.textClass}`}>
+                  <p className={`mt-3 rounded border border-current/10 px-3 py-2 text-xs font-medium opacity-80 ${dutyStatusConfig.textClass}`}>
                     {missionReadinessNote}
                   </p>
                 ) : null}
@@ -878,7 +876,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                     ) : null}
                   </div>
                 ) : (
-                  <div className="mt-3 rounded-lg border border-warning-border bg-warning-bg px-3 py-2" role="status">
+                  <div className="mt-3 rounded border border-warning-border bg-warning-bg px-3 py-2" role="status">
                     <p className="text-xs font-semibold text-warning-text">Location consent required — enable in your profile settings to start tracking.</p>
                   </div>
                 )}
@@ -890,7 +888,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                   <button
                     type="button"
                     onClick={() => { void handlePrimaryCheckAction() }}
-                    className={`min-h-14 w-full rounded-xl px-4 py-3 text-base font-extrabold tracking-wide ${
+                    className={`min-h-14 w-full rounded px-4 py-3 text-base font-extrabold tracking-wide ${
                       checkInStatus[currentShift.id] === 'checked_in'
                         ? 'border border-danger-border bg-danger-bg text-danger-text'
                         : 'border border-success-border bg-success-bg text-success-text'
@@ -907,14 +905,14 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                     setIncidentStatus('')
                     setIncidentModalOpen(true)
                   }}
-                  className="min-h-12 w-full rounded-lg border-2 border-danger-border bg-danger-bg px-4 py-3 text-sm font-extrabold uppercase tracking-wide text-danger-text"
+                  className="min-h-12 w-full rounded border-2 border-danger-border bg-danger-bg px-4 py-3 text-sm font-extrabold uppercase tracking-wide text-danger-text"
                 >
                   ⚠ Report Incident
                 </button>
                 <button
                   type="button"
                   onClick={() => setInstructionsOpen(true)}
-                  className="min-h-10 w-full rounded-lg border border-info-border bg-info-bg px-4 py-2 text-xs font-semibold text-info-text"
+                  className="min-h-10 w-full rounded border border-info-border bg-info-bg px-4 py-2 text-xs font-semibold text-info-text"
                 >
                   View Instructions
                 </button>
@@ -930,7 +928,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                         return (
                           <li
                             key={shift.id}
-                            className={`rounded-xl border p-4 ${
+                            className={`rounded border p-4 ${
                               checkedIn
                                 ? 'border-success-border bg-success-bg'
                                 : 'border-border-subtle bg-surface-elevated'
@@ -976,7 +974,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                   </section>
                 </DashboardCard>
               ) : (
-                <div className="rounded-xl border border-border-subtle bg-surface-elevated p-4 text-center">
+                <div className="rounded border border-border-subtle bg-surface-elevated p-4 text-center">
                   <p className="text-sm font-semibold text-text-secondary">No shifts scheduled for today</p>
                   <p className="mt-1 text-xs text-text-tertiary">Check the Support tab for schedule requests</p>
                 </div>
@@ -1045,7 +1043,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
             role="dialog"
             aria-modal="true"
             aria-label="Guard profile settings"
-            className="flex max-h-[min(92dvh,960px)] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-xl"
+            className="flex max-h-[min(92dvh,960px)] w-full max-w-5xl flex-col overflow-hidden rounded border border-border bg-background shadow-xl"
           >
             <div className="soc-scroll-area flex-1 overflow-y-auto p-4 md:p-6">
               <ProfileModalContent
@@ -1065,7 +1063,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
             role="dialog"
             aria-modal="true"
             aria-labelledby="guard-instructions-title"
-            className="w-full max-w-xl rounded-2xl border border-border bg-surface p-5 shadow-xl"
+            className="w-full max-w-xl rounded border border-border bg-surface p-5 shadow-xl"
           >
             <h2 id="guard-instructions-title" className="text-xl font-bold text-text-primary">Field Instructions</h2>
             <ul className="mt-3 space-y-2 text-sm text-text-secondary">
@@ -1075,7 +1073,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
               <li>Escalate critical threats to Operations Desk without delay.</li>
               <li>Check out only after formal handoff or shift completion.</li>
             </ul>
-            <div className="mt-4 rounded-lg border border-border-subtle bg-surface-elevated p-3 text-sm text-text-secondary">
+            <div className="mt-4 rounded border border-border-subtle bg-surface-elevated p-3 text-sm text-text-secondary">
               {EMERGENCY_CONTACTS.filter((c) => c.role === 'operations' || c.role === 'supervisor').map((c, i) => (
                 <span key={c.role}>
                   {i > 0 && <br />}
@@ -1101,7 +1099,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
             role="dialog"
             aria-modal="true"
             aria-labelledby="incident-report-title"
-            className="w-full max-w-xl rounded-2xl border border-border bg-surface p-5 shadow-xl"
+            className="w-full max-w-xl rounded border border-border bg-surface p-5 shadow-xl"
           >
             <h2 id="incident-report-title" className="text-xl font-bold text-text-primary">Report Incident</h2>
             <form className="mt-3 space-y-3" onSubmit={handleIncidentSubmit}>
@@ -1111,7 +1109,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                 autoFocus
                 value={incidentForm.description}
                 onChange={(event) => setIncidentForm((previous) => ({ ...previous, description: event.target.value }))}
-                className="min-h-32 w-full rounded-lg border border-border bg-background px-3 py-2 text-text-primary"
+                className="min-h-32 w-full rounded border border-border bg-background px-3 py-2 text-text-primary"
                 placeholder="Describe the situation"
                 required
               />
@@ -1121,7 +1119,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                 id="incident-priority"
                 value={incidentForm.priority}
                 onChange={(event) => setIncidentForm((previous) => ({ ...previous, priority: event.target.value as IncidentPriority }))}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-text-primary"
+                className="w-full rounded border border-border bg-background px-3 py-2 text-text-primary"
               >
                 <option value="critical">Critical</option>
                 <option value="high">High</option>

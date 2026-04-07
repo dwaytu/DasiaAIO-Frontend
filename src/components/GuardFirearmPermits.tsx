@@ -55,9 +55,9 @@ const GuardFirearmPermits: FC<Props> = ({ user, onLogout, onViewChange, activeVi
 
   const getStatusBadgeColor = (status: string) => {
     switch (status?.toLowerCase()) {
-      case 'active': return 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30'
-      case 'expired': return 'bg-red-500/15 text-red-300 ring-1 ring-red-500/30'
-      case 'pending': return 'bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30'
+      case 'active': return 'bg-success-bg text-success-text ring-1 ring-success-border'
+      case 'expired': return 'bg-danger-bg text-danger-text ring-1 ring-danger-border'
+      case 'pending': return 'bg-warning-bg text-warning-text ring-1 ring-warning-border'
       default: return 'bg-zinc-500/15 text-zinc-400 ring-1 ring-zinc-500/30'
     }
   }
@@ -82,7 +82,7 @@ const GuardFirearmPermits: FC<Props> = ({ user, onLogout, onViewChange, activeVi
           </div>
         ) : (
           <div className="flex-1 flex flex-col p-4 md:p-8 overflow-hidden w-full animate-fade-in">
-            <section className="flex flex-col flex-1 min-h-0 rounded-2xl overflow-hidden table-glass">
+            <section className="flex flex-col flex-1 min-h-0 rounded overflow-hidden table-glass">
               <div className="flex-shrink-0 px-6 py-5 border-b border-border-subtle">
                 <h2 className="text-xl font-bold text-text-primary">Active Permits ({permits.length})</h2>
               </div>

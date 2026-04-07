@@ -4,20 +4,22 @@ import {
 } from '../types/auth'
 
 describe('tracking access policy', () => {
-  it('allows tracking endpoint access for supervisor and guard roles', () => {
+  it('allows tracking endpoint access for all operational roles', () => {
+    expect(hasTrackingEndpointAccess('superadmin')).toBe(true)
+    expect(hasTrackingEndpointAccess('admin')).toBe(true)
     expect(hasTrackingEndpointAccess('supervisor')).toBe(true)
     expect(hasTrackingEndpointAccess('guard')).toBe(true)
   })
 
-  it('denies tracking endpoint access for admin and superadmin roles', () => {
-    expect(hasTrackingEndpointAccess('admin')).toBe(false)
-    expect(hasTrackingEndpointAccess('superadmin')).toBe(false)
+  it('normalizes legacy and malformed tracking roles safely', () => {
+    expect(hasTrackingEndpointAccess('user')).toBe(true)
+    expect(hasTrackingEndpointAccess('unknown-role')).toBe(true)
   })
 
-  it('limits client-site management controls to supervisors', () => {
+  it('limits client-site management controls to elevated roles', () => {
+    expect(canManageTrackingSites('superadmin')).toBe(true)
+    expect(canManageTrackingSites('admin')).toBe(true)
     expect(canManageTrackingSites('supervisor')).toBe(true)
     expect(canManageTrackingSites('guard')).toBe(false)
-    expect(canManageTrackingSites('admin')).toBe(false)
-    expect(canManageTrackingSites('superadmin')).toBe(false)
   })
 })

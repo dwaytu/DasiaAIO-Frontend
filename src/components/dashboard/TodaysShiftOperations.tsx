@@ -35,7 +35,7 @@ const TodaysShiftOperations: FC<TodaysShiftOperationsProps> = ({
     .slice(0, 8)
 
   return (
-    <section className="command-panel rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-surface)]" aria-label="Today's shift operations">
+    <section className="command-panel rounded border border-[color:var(--color-border)] bg-[color:var(--color-surface)]" aria-label="Today's shift operations">
       <div className="flex items-center justify-between border-b border-[color:var(--color-border)] px-4 py-3">
         <div>
           <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-text)]">Today's Shifts</p>

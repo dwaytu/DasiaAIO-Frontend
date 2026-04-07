@@ -162,10 +162,10 @@ export const BentoCard = forwardRef<HTMLDivElement, BentoCardProps>(
     const isInteractive = interactive || !!onClick;
 
     const baseClasses = `
-      rounded-lg border transition-all duration-250
+      rounded border transition-all duration-250
       ${getSizeClasses(size)}
       ${getVariantClasses(variant)}
-      ${isInteractive ? 'cursor-pointer hover:shadow-bento-hover hover:bg-surface-hover' : 'shadow-bento'}
+      ${isInteractive ? 'cursor-pointer hover:bg-surface-hover' : 'shadow-bento'}
       ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
       ${glass ? 'glass-card' : ''}
       ${glow ? 'accent-glow' : ''}

@@ -77,7 +77,7 @@ const BugReportButton: React.FC<BugReportButtonProps> = ({ userId }) => {
       {/* Modal */}
       {isOpen && (
         <div className="soc-modal-backdrop">
-          <div className="soc-modal-panel w-full max-w-md rounded-lg bg-surface shadow-xl">
+          <div className="soc-modal-panel w-full max-w-md rounded bg-surface shadow-xl">
             <div className="p-6">
               {/* Header */}
               <div className="flex items-center justify-between mb-4">
@@ -118,7 +118,7 @@ const BugReportButton: React.FC<BugReportButtonProps> = ({ userId }) => {
                   <select
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    className="w-full rounded-lg border border-border px-3 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-danger"
+                    className="w-full rounded border border-border px-3 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-danger"
                     required
                   >
                     <option value="bug">Bug / Error</option>
@@ -136,7 +136,7 @@ const BugReportButton: React.FC<BugReportButtonProps> = ({ userId }) => {
                   <select
                     value={formData.priority}
                     onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-                    className="w-full rounded-lg border border-border px-3 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-danger"
+                    className="w-full rounded border border-border px-3 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-danger"
                     required
                   >
                     <option value="low">Low</option>
@@ -155,7 +155,7 @@ const BugReportButton: React.FC<BugReportButtonProps> = ({ userId }) => {
                     type="text"
                     value={formData.subject}
                     onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                    className="w-full rounded-lg border border-border px-3 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-danger"
+                    className="w-full rounded border border-border px-3 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-danger"
                     placeholder="Brief description of the issue"
                     required
                     maxLength={255}
@@ -170,7 +170,7 @@ const BugReportButton: React.FC<BugReportButtonProps> = ({ userId }) => {
                   <textarea
                     value={formData.message}
                     onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                    className="w-full resize-none rounded-lg border border-border px-3 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-danger"
+                    className="w-full resize-none rounded border border-border px-3 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-danger"
                     placeholder="Please describe the issue in detail..."
                     rows={5}
                     required
@@ -182,14 +182,14 @@ const BugReportButton: React.FC<BugReportButtonProps> = ({ userId }) => {
                   <button
                     type="button"
                     onClick={() => setIsOpen(false)}
-                    className="soc-btn-secondary flex-1 rounded-lg px-4 py-2 font-semibold"
+                    className="soc-btn-secondary flex-1 rounded px-4 py-2 font-semibold"
                     disabled={isSubmitting}
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 rounded-lg bg-red-500 px-4 py-2 font-semibold text-white transition-colors hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="flex-1 rounded bg-red-500 px-4 py-2 font-semibold text-white transition-colors hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-60"
                     disabled={isSubmitting}
                   >
                     {isSubmitting ? 'Submitting...' : 'Submit Report'}

@@ -10,7 +10,7 @@ interface LoadingSkeletonProps {
 const pulse = 'animate-pulse motion-reduce:animate-none bg-surface-elevated';
 
 function CardSkeleton() {
-  return <div className={`${pulse} h-40 w-full rounded-xl`} />;
+  return <div className={`${pulse} h-40 w-full rounded`} />;
 }
 
 const rowWidths = ['w-[80%]', 'w-[60%]', 'w-[90%]', 'w-[70%]', 'w-[85%]'];
@@ -30,14 +30,14 @@ function KpiSkeleton() {
   return (
     <div className="grid grid-cols-4 gap-4">
       {Array.from({ length: 4 }, (_, i) => (
-        <div key={i} className={`${pulse} h-20 rounded-lg`} />
+        <div key={i} className={`${pulse} h-20 rounded`} />
       ))}
     </div>
   );
 }
 
 function HeroSkeleton() {
-  return <div className={`${pulse} h-48 w-full rounded-xl`} />;
+  return <div className={`${pulse} h-48 w-full rounded`} />;
 }
 
 const variants: Record<Variant, FC> = {

@@ -18,7 +18,6 @@ interface OperationalShellProps {
   onMenuOpen: () => void
   onMenuClose: () => void
   onLogoClick: () => void
-  onRefresh?: () => void
   rightSlot?: ReactNode
   error?: string
   children: ReactNode
@@ -36,7 +35,6 @@ const OperationalShell: FC<OperationalShellProps> = ({
   onMenuOpen,
   onMenuClose,
   onLogoClick,
-  onRefresh,
   rightSlot,
   error,
   children,
@@ -86,6 +84,14 @@ const OperationalShell: FC<OperationalShellProps> = ({
     '--sidebar-width': desktopSidebarWidth,
   }
 
+  const handleMenuClick = () => {
+    if (window.matchMedia('(min-width: 1024px)').matches) {
+      setSidebarCollapsed((prev) => !prev)
+    } else {
+      onMenuOpen()
+    }
+  }
+
   return (
     <div className="flex h-[100dvh] w-full overflow-hidden bg-background font-sans">
       <a href="#maincontent" className="skip-link">Skip to main content</a>
@@ -112,13 +118,10 @@ const OperationalShell: FC<OperationalShellProps> = ({
           title={title}
           badgeLabel={badgeLabel}
           onLogout={onLogout}
-          onMenuClick={onMenuOpen}
+          onMenuClick={handleMenuClick}
           user={user}
-          currentView={activeView}
           onNavigateToInbox={() => onNavigate('inbox')}
-          onNavigateToSettings={() => onNavigate('settings')}
           onNavigateToProfile={() => onNavigate('profile')}
-          onRefresh={onRefresh}
           rightSlot={rightSlot}
         />
 
@@ -130,7 +133,7 @@ const OperationalShell: FC<OperationalShellProps> = ({
           } md:p-6`}
         >
           {error && (
-            <div className="mb-4 rounded-lg border border-danger-border bg-danger-bg p-3 text-sm font-medium text-danger-text">{error}</div>
+            <div className="mb-4 rounded border border-danger-border bg-danger-bg p-3 text-sm font-medium text-danger-text">{error}</div>
           )}
           {children}
         </div>
@@ -142,7 +145,7 @@ const OperationalShell: FC<OperationalShellProps> = ({
             <div className="fixed inset-0 z-[63] md:hidden" onClick={() => setMoreDrawerOpen(false)}>
               <div className="absolute inset-0 bg-black/40" />
               <div
-                className="absolute bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] left-2 right-2 rounded-xl border border-border bg-surface p-2 shadow-lg"
+                className="absolute bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] left-2 right-2 rounded border border-border bg-surface p-2 shadow-lg"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="mb-1 flex items-center justify-between px-3 py-2">
@@ -165,7 +168,7 @@ const OperationalShell: FC<OperationalShellProps> = ({
                           onNavigate(item.view)
                           setMoreDrawerOpen(false)
                         }}
-                        className="min-h-11 w-full rounded-lg px-2 py-2 text-xs font-semibold text-text-secondary transition-colors hover:bg-surface-elevated hover:text-text-primary"
+                        className="min-h-11 w-full rounded px-2 py-2 text-xs font-semibold text-text-secondary transition-colors hover:bg-surface-elevated hover:text-text-primary"
                       >
                         {item.label}
                       </button>

@@ -26,7 +26,7 @@ const trendIndicator: Record<string, { symbol: string; className: string }> = {
 
 const StatCard: FC<StatCardProps> = ({ label, value, tone = 'default', hint, icon, trend }) => {
   return (
-    <article className={`soc-dashboard-card ${toneClass[tone]} transition-transform duration-200 hover:-translate-y-0.5`}>
+    <article className={`soc-dashboard-card ${toneClass[tone]}`}>
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="soc-label">{label}</p>

@@ -27,8 +27,8 @@ const entityOptions = [
 ]
 
 const statusChips: Record<string, string> = {
-  success: 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30',
-  failed: 'bg-rose-500/15 text-rose-300 ring-1 ring-rose-500/30',
+  success: 'bg-success-bg text-success-text ring-1 ring-success-border',
+  failed: 'bg-danger-bg text-danger-text ring-1 ring-danger-border',
 }
 
 const formatDateTime = (value: string) => {
@@ -101,7 +101,7 @@ export default function AuditLogViewer() {
 
   return (
     <section className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in" aria-labelledby="audit-log-title">
-      <div className="table-glass rounded-2xl p-6 md:p-8 flex flex-col gap-6">
+      <div className="table-glass rounded p-6 md:p-8 flex flex-col gap-6">
         <header className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
             <p className="text-xs text-text-tertiary uppercase tracking-wider">Operations Oversight</p>
@@ -116,7 +116,7 @@ export default function AuditLogViewer() {
               type="button"
               onClick={handleRefresh}
               disabled={loading}
-              className="flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-xs font-semibold text-text-primary transition-colors hover:bg-surface-hover disabled:opacity-60"
+              className="flex items-center gap-2 rounded border border-border bg-surface px-3 py-2 text-xs font-semibold text-text-primary transition-colors hover:bg-surface-hover disabled:opacity-60"
             >
               <svg className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                 <path d="M21 12a9 9 0 10-3.2 6.9" />
@@ -127,7 +127,7 @@ export default function AuditLogViewer() {
             <button
               type="button"
               onClick={handleReset}
-              className="rounded-lg border border-border-subtle bg-background px-3 py-2 text-xs font-semibold text-text-secondary transition-colors hover:bg-surface-hover"
+              className="rounded border border-border-subtle bg-background px-3 py-2 text-xs font-semibold text-text-secondary transition-colors hover:bg-surface-hover"
             >
               Reset filters
             </button>
@@ -149,7 +149,7 @@ export default function AuditLogViewer() {
                 value={searchDraft}
                 onChange={(event) => setSearchDraft(event.target.value)}
                 placeholder="Search by action, entity, or actor"
-                className="w-full rounded-lg border border-border bg-background py-2 pl-10 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="w-full rounded border border-border bg-background py-2 pl-10 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
             </div>
           </label>
@@ -161,7 +161,7 @@ export default function AuditLogViewer() {
               name="auditResult"
               value={filters.result ?? 'all'}
               onChange={(event) => updateFilter({ page: 1, result: event.target.value === 'all' ? undefined : event.target.value })}
-              className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="rounded border border-border bg-background px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-indigo-500"
             >
               {resultOptions.map((option) => (
                 <option key={option.value} value={option.value}>{option.label}</option>
@@ -176,7 +176,7 @@ export default function AuditLogViewer() {
               name="auditEntityType"
               value={filters.entityType ?? 'all'}
               onChange={(event) => updateFilter({ page: 1, entityType: event.target.value === 'all' ? undefined : event.target.value })}
-              className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="rounded border border-border bg-background px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-indigo-500"
             >
               {entityOptions.map((option) => (
                 <option key={option.value} value={option.value}>{option.label}</option>
@@ -192,7 +192,7 @@ export default function AuditLogViewer() {
                 name="auditPageSize"
                 value={filters.pageSize ?? BASE_FILTERS.pageSize}
                 onChange={(event) => updateFilter({ page: 1, pageSize: Number(event.target.value) })}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="w-full rounded border border-border bg-background px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-indigo-500"
               >
                 {[10, 25, 50, 100].map((size) => (
                   <option key={size} value={size}>{size} per page</option>
@@ -201,7 +201,7 @@ export default function AuditLogViewer() {
             </div>
             <button
               type="submit"
-              className="self-center rounded-lg border border-border bg-surface px-3 py-2 text-xs font-semibold text-text-primary transition-colors hover:bg-surface-hover"
+              className="self-center rounded border border-border bg-surface px-3 py-2 text-xs font-semibold text-text-primary transition-colors hover:bg-surface-hover"
             >
               Apply search
             </button>
@@ -217,7 +217,7 @@ export default function AuditLogViewer() {
                 type="button"
                 onClick={() => handlePageChange('prev')}
                 disabled={(filters.page ?? 1) <= 1 || loading}
-                className="rounded-lg border border-border-subtle bg-background px-3 py-1.5 text-xs font-semibold text-text-secondary transition-colors hover:bg-surface-hover disabled:opacity-60"
+                className="rounded border border-border-subtle bg-background px-3 py-1.5 text-xs font-semibold text-text-secondary transition-colors hover:bg-surface-hover disabled:opacity-60"
               >
                 Previous
               </button>
@@ -225,7 +225,7 @@ export default function AuditLogViewer() {
                 type="button"
                 onClick={() => handlePageChange('next')}
                 disabled={!meta?.hasMore || loading}
-                className="rounded-lg border border-border-subtle bg-background px-3 py-1.5 text-xs font-semibold text-text-secondary transition-colors hover:bg-surface-hover disabled:opacity-60"
+                className="rounded border border-border-subtle bg-background px-3 py-1.5 text-xs font-semibold text-text-secondary transition-colors hover:bg-surface-hover disabled:opacity-60"
               >
                 Next
               </button>
@@ -234,14 +234,14 @@ export default function AuditLogViewer() {
         </div>
 
         {error && (
-          <div role="alert" className="rounded-lg border border-danger-border bg-danger-bg/40 px-4 py-3 text-sm text-danger-text">
+          <div role="alert" className="rounded border border-danger-border bg-danger-bg/40 px-4 py-3 text-sm text-danger-text">
             {error}
           </div>
         )}
 
         <div className="relative">
           {loading && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-background/70 text-sm font-semibold text-text-secondary" role="status" aria-live="polite">
+            <div className="absolute inset-0 z-10 flex items-center justify-center rounded bg-background/70 text-sm font-semibold text-text-secondary" role="status" aria-live="polite">
               Loading audit events…
             </div>
           )}

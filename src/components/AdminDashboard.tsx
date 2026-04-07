@@ -78,10 +78,10 @@ const UserAvatar: FC<{ user: User }> = ({ user }) => {
   const normalizedRole = user.role === 'user' ? 'guard' : normalizeRole(user.role)
   const initial = (user.full_name || user.username || '?').charAt(0).toUpperCase()
   const avatarColor = normalizedRole === 'superadmin' || normalizedRole === 'admin'
-    ? 'bg-purple-500/20 text-purple-300'
+    ? 'bg-info-bg text-info-text'
     : normalizedRole === 'supervisor'
-      ? 'bg-amber-500/20 text-amber-300'
-      : 'bg-teal-500/20 text-teal-300'
+      ? 'bg-warning-bg text-warning-text'
+      : 'bg-success-bg text-success-text'
 
   return (
     <div className={`h-9 w-9 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${avatarColor}`} aria-hidden="true">
@@ -93,10 +93,10 @@ const UserAvatar: FC<{ user: User }> = ({ user }) => {
 const RoleBadge: FC<{ roleRaw: string }> = ({ roleRaw }) => {
   const role = normalizeRole(roleRaw)
   const rolePill = role === 'superadmin' || role === 'admin'
-    ? 'bg-purple-500/15 text-purple-300 ring-1 ring-purple-500/30'
+    ? 'bg-info-bg text-info-text ring-1 ring-info-border'
     : role === 'supervisor'
-      ? 'bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30'
-      : 'bg-teal-500/15 text-teal-300 ring-1 ring-teal-500/30'
+      ? 'bg-warning-bg text-warning-text ring-1 ring-warning-border'
+      : 'bg-success-bg text-success-text ring-1 ring-success-border'
 
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold uppercase tracking-wide ${rolePill}`}>
@@ -111,10 +111,10 @@ const RoleBadge: FC<{ roleRaw: string }> = ({ roleRaw }) => {
 const StatusIndicator: FC<{ status: UserDerivedStatus }> = ({ status }) => {
   const statusConfig: Record<UserDerivedStatus, { dot: string; glow: string; label: string; pill: string }> = {
     active: {
-      dot: 'bg-emerald-400',
+      dot: 'bg-[color:var(--color-success)]',
       glow: '0 0 6px rgba(52,211,153,0.7)',
       label: 'Active',
-      pill: 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30',
+      pill: 'bg-success-bg text-success-text ring-1 ring-success-border',
     },
     inactive: {
       dot: 'bg-zinc-400',
@@ -123,16 +123,16 @@ const StatusIndicator: FC<{ status: UserDerivedStatus }> = ({ status }) => {
       pill: 'bg-zinc-500/15 text-zinc-300 ring-1 ring-zinc-500/30',
     },
     pending: {
-      dot: 'bg-amber-400',
+      dot: 'bg-[color:var(--color-warning)]',
       glow: '0 0 6px rgba(251,191,36,0.7)',
       label: 'Pending',
-      pill: 'bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30',
+      pill: 'bg-warning-bg text-warning-text ring-1 ring-warning-border',
     },
     suspended: {
-      dot: 'bg-red-400',
+      dot: 'bg-[color:var(--color-danger)]',
       glow: '0 0 6px rgba(248,113,113,0.7)',
       label: 'Suspended',
-      pill: 'bg-red-500/15 text-red-300 ring-1 ring-red-500/30',
+      pill: 'bg-danger-bg text-danger-text ring-1 ring-danger-border',
     },
   }
   const current = statusConfig[status]
@@ -291,17 +291,6 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
       return
     }
     onViewChange?.(view)
-  }
-
-  const handleRefresh = () => {
-    if (activeSection === 'users') {
-      fetchUsers()
-      fetchPendingApprovals()
-    } else if (activeSection === 'approvals') {
-      fetchPendingApprovals()
-    } else {
-      fetchShifts()
-    }
   }
 
   const handleApprovalAction = async (targetUserId: string, action: 'approve' | 'reject') => {
@@ -544,7 +533,6 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
         setActiveSection('users')
         onViewChange?.('users')
       }}
-      onRefresh={handleRefresh}
       error={error}
     >
       <div className="animate-fade-in space-y-4">
@@ -589,7 +577,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                           placeholder="Search users..."
                           value={searchQuery}
                           onChange={e => setSearchQuery(e.target.value)}
-                          className="w-44 rounded-lg border border-border-subtle bg-background py-2 pl-9 pr-4 text-sm text-text-primary placeholder:text-text-tertiary focus:border-indigo-500 focus:outline-none"
+                          className="w-44 rounded border border-border-subtle bg-background py-2 pl-9 pr-4 text-sm text-text-primary placeholder:text-text-tertiary focus:border-indigo-500 focus:outline-none"
                         />
                       </div>
                       <button
@@ -597,7 +585,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                         onClick={() => setFilterMenuOpen((prev) => !prev)}
                         aria-expanded={filterMenuOpen}
                         aria-controls="admin-user-role-filter-menu"
-                        className="flex items-center gap-1.5 rounded-lg border border-border-subtle bg-background px-3 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
+                        className="flex items-center gap-1.5 rounded border border-border-subtle bg-background px-3 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
                       >
                         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" /></svg>
                         Filter: {roleFilter === 'all' ? 'All Roles' : roleFilter}
@@ -607,7 +595,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                         id="admin-user-status-filter"
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value as 'all' | UserDerivedStatus)}
-                        className="rounded-lg border border-border-subtle bg-background px-3 py-2 text-sm font-medium text-text-secondary hover:text-text-primary"
+                        className="rounded border border-border-subtle bg-background px-3 py-2 text-sm font-medium text-text-secondary hover:text-text-primary"
                       >
                         <option value="all">All Statuses</option>
                         <option value="active">Active</option>
@@ -619,19 +607,19 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                   </div>
 
                   <div className="grid grid-cols-2 gap-3 border-b border-border-subtle px-5 py-4 md:grid-cols-4">
-                    <div className="rounded-xl border border-border-subtle bg-background px-3 py-3">
+                    <div className="rounded border border-border-subtle bg-background px-3 py-3">
                       <div className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">Total Users</div>
                       <div className="mt-1 text-xl font-bold text-text-primary">{summaryStats.total}</div>
                     </div>
-                    <div className="rounded-xl border border-border-subtle bg-background px-3 py-3">
+                    <div className="rounded border border-border-subtle bg-background px-3 py-3">
                       <div className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">Active</div>
                       <div className="mt-1 text-xl font-bold text-success-text">{summaryStats.active}</div>
                     </div>
-                    <div className="rounded-xl border border-border-subtle bg-background px-3 py-3">
+                    <div className="rounded border border-border-subtle bg-background px-3 py-3">
                       <div className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">Pending</div>
                       <div className="mt-1 text-xl font-bold text-warning-text">{summaryStats.pending}</div>
                     </div>
-                    <div className="rounded-xl border border-border-subtle bg-background px-3 py-3">
+                    <div className="rounded border border-border-subtle bg-background px-3 py-3">
                       <div className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">Supervisors</div>
                       <div className="mt-1 text-xl font-bold text-info-text">{summaryStats.supervisors}</div>
                     </div>
@@ -676,7 +664,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                           type="button"
                           onClick={handleBulkApproveSelected}
                           disabled={bulkProcessing}
-                          className="rounded-lg border border-success-border bg-success-bg px-3 py-1.5 text-xs font-semibold text-success-text disabled:opacity-60"
+                          className="rounded border border-success-border bg-success-bg px-3 py-1.5 text-xs font-semibold text-success-text disabled:opacity-60"
                         >
                           Approve Selected
                         </button>
@@ -684,7 +672,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                           type="button"
                           onClick={handleBulkSuspendSelected}
                           disabled={bulkProcessing}
-                          className="rounded-lg border border-warning-border bg-warning-bg px-3 py-1.5 text-xs font-semibold text-warning-text disabled:opacity-60"
+                          className="rounded border border-warning-border bg-warning-bg px-3 py-1.5 text-xs font-semibold text-warning-text disabled:opacity-60"
                         >
                           Suspend Selected
                         </button>
@@ -692,7 +680,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                           type="button"
                           onClick={handleBulkDeleteSelected}
                           disabled={bulkProcessing}
-                          className="rounded-lg border border-danger-border bg-danger-bg px-3 py-1.5 text-xs font-semibold text-danger-text disabled:opacity-60"
+                          className="rounded border border-danger-border bg-danger-bg px-3 py-1.5 text-xs font-semibold text-danger-text disabled:opacity-60"
                         >
                           Delete Selected
                         </button>
@@ -700,7 +688,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                           type="button"
                           onClick={() => setSelectedUserIds([])}
                           disabled={bulkProcessing}
-                          className="rounded-lg border border-border-subtle bg-background px-3 py-1.5 text-xs font-semibold text-text-secondary disabled:opacity-60"
+                          className="rounded border border-border-subtle bg-background px-3 py-1.5 text-xs font-semibold text-text-secondary disabled:opacity-60"
                         >
                           Clear
                         </button>
@@ -780,7 +768,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                                         onClick={() => handleApproveIfPending(u)}
                                         title="Approve pending user"
                                         aria-label={`Approve ${u.full_name || u.username || u.email}`}
-                                        className="min-h-11 min-w-11 rounded-lg p-2 text-text-tertiary transition-colors hover:bg-emerald-500/10 hover:text-emerald-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
+                                        className="min-h-11 min-w-11 rounded p-2 text-text-tertiary transition-colors hover:bg-success-bg hover:text-success-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
                                       >
                                         <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                                       </button>
@@ -791,7 +779,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                                         onClick={() => handleEditUser(u)}
                                         title="Edit user"
                                         aria-label={`Edit ${u.full_name || u.username || u.email}`}
-                                        className="min-h-11 min-w-11 rounded-lg p-2 text-text-tertiary transition-colors hover:bg-indigo-500/10 hover:text-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
+                                        className="min-h-11 min-w-11 rounded p-2 text-text-tertiary transition-colors hover:bg-info-bg hover:text-info-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
                                       >
                                         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                                       </button>
@@ -801,7 +789,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                                       onClick={() => handleResetPasswordAction(u)}
                                       title="Reset password"
                                       aria-label={`Reset password for ${u.full_name || u.username || u.email}`}
-                                      className="min-h-11 min-w-11 rounded-lg p-2 text-text-tertiary transition-colors hover:bg-sky-500/10 hover:text-sky-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
+                                      className="min-h-11 min-w-11 rounded p-2 text-text-tertiary transition-colors hover:bg-info-bg hover:text-info-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
                                     >
                                       <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 11V7m0 0l-3 3m3-3l3 3M5 12a7 7 0 1114 0v5a2 2 0 01-2 2H7a2 2 0 01-2-2v-5z" /></svg>
                                     </button>
@@ -810,7 +798,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                                       onClick={() => handleSuspendAction(u)}
                                       title="Suspend user"
                                       aria-label={`Suspend ${u.full_name || u.username || u.email}`}
-                                      className="min-h-11 min-w-11 rounded-lg p-2 text-text-tertiary transition-colors hover:bg-amber-500/10 hover:text-amber-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
+                                      className="min-h-11 min-w-11 rounded p-2 text-text-tertiary transition-colors hover:bg-warning-bg hover:text-warning-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
                                     >
                                       <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M18.364 5.636l-12.728 12.728M8 7h8a2 2 0 012 2v6a2 2 0 01-2 2H8a2 2 0 01-2-2V9a2 2 0 012-2z" /></svg>
                                     </button>
@@ -825,7 +813,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                                           onClick={() => handleDeleteUser(u.id, u.email)}
                                           title="Delete user"
                                           aria-label={`Delete ${u.full_name || u.username || u.email}`}
-                                          className="min-h-11 min-w-11 rounded-lg p-2 text-text-tertiary transition-colors hover:bg-red-500/10 hover:text-red-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
+                                          className="min-h-11 min-w-11 rounded p-2 text-text-tertiary transition-colors hover:bg-danger-bg hover:text-danger-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
                                         >
                                           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                         </button>
@@ -847,7 +835,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                           const canDelete = canEditUserRow(u.role) && u.id !== user.id
 
                           return (
-                            <article key={`admin-mobile-${u.id}`} className="rounded-xl border border-border-subtle bg-background p-4">
+                            <article key={`admin-mobile-${u.id}`} className="rounded border border-border-subtle bg-background p-4">
                               <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0 flex items-center gap-3">
                                   <input
@@ -877,13 +865,13 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                               </div>
                               <div className="mt-3 flex flex-wrap gap-2">
                                 {pendingApproval ? (
-                                  <button type="button" onClick={() => handleApproveIfPending(u)} className="min-h-11 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1.5 text-xs font-semibold text-emerald-300">Approve</button>
+                                  <button type="button" onClick={() => handleApproveIfPending(u)} className="min-h-11 rounded-md border border-success-border bg-success-bg px-2.5 py-1.5 text-xs font-semibold text-success-text">Approve</button>
                                 ) : null}
-                                <button type="button" onClick={() => handleEditUser(u)} className="min-h-11 rounded-md border border-indigo-500/40 bg-indigo-500/10 px-2.5 py-1.5 text-xs font-semibold text-indigo-300">Edit</button>
-                                <button type="button" onClick={() => handleResetPasswordAction(u)} className="min-h-11 rounded-md border border-sky-500/40 bg-sky-500/10 px-2.5 py-1.5 text-xs font-semibold text-sky-300">Reset</button>
-                                <button type="button" onClick={() => handleSuspendAction(u)} className="min-h-11 rounded-md border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 text-xs font-semibold text-amber-300">Suspend</button>
+                                <button type="button" onClick={() => handleEditUser(u)} className="min-h-11 rounded-md border border-info-border bg-info-bg px-2.5 py-1.5 text-xs font-semibold text-info-text">Edit</button>
+                                <button type="button" onClick={() => handleResetPasswordAction(u)} className="min-h-11 rounded-md border border-info-border bg-info-bg px-2.5 py-1.5 text-xs font-semibold text-info-text">Reset</button>
+                                <button type="button" onClick={() => handleSuspendAction(u)} className="min-h-11 rounded-md border border-warning-border bg-warning-bg px-2.5 py-1.5 text-xs font-semibold text-warning-text">Suspend</button>
                                 {canDelete ? (
-                                  <button type="button" onClick={() => handleDeleteUser(u.id, u.email)} className="min-h-11 rounded-md border border-red-500/40 bg-red-500/10 px-2.5 py-1.5 text-xs font-semibold text-red-300">Delete</button>
+                                  <button type="button" onClick={() => handleDeleteUser(u.id, u.email)} className="min-h-11 rounded-md border border-danger-border bg-danger-bg px-2.5 py-1.5 text-xs font-semibold text-danger-text">Delete</button>
                                 ) : null}
                               </div>
                             </article>
@@ -901,8 +889,8 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                   <div className="flex items-center justify-between border-t border-border-subtle px-5 py-3">
                     <p className="text-xs text-text-tertiary">Showing {filteredUsers.length} of {users.length} users</p>
                     <div className="flex gap-2">
-                      <button type="button" className="min-h-11 rounded-lg border border-border-subtle bg-background px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-hover">Previous</button>
-                      <button type="button" className="min-h-11 rounded-lg border border-border-subtle bg-background px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-hover">Next</button>
+                      <button type="button" className="min-h-11 rounded border border-border-subtle bg-background px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-hover">Previous</button>
+                      <button type="button" className="min-h-11 rounded border border-border-subtle bg-background px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-hover">Next</button>
                     </div>
                   </div>
                 </section>
@@ -923,7 +911,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
               )}
 
               {!approvalsLoading && (
-                <div className="bg-surface rounded-lg shadow-md p-6">
+                <div className="bg-surface rounded shadow-md p-6">
                   <h2 className="text-xl font-bold text-text-primary mb-6 pb-3 border-b border-border">Pending Guard Registrations</h2>
                   <div className="overflow-x-auto">
                     <table className="hidden w-full min-w-[800px] md:table">
@@ -989,12 +977,12 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
 
                     <div className="space-y-3 md:hidden" data-mobile-stack="cards">
                       {pendingApprovals.length === 0 ? (
-                        <div className="rounded-lg border border-border-subtle bg-background p-4 text-center">
+                        <div className="rounded border border-border-subtle bg-background p-4 text-center">
                           <p className="text-sm text-text-secondary">No pending approvals — all guard registrations have been processed.</p>
                         </div>
                       ) : (
                         pendingApprovals.map((pendingUser) => (
-                          <article key={`pending-mobile-${pendingUser.id}`} className="rounded-xl border border-border-subtle bg-background p-4">
+                          <article key={`pending-mobile-${pendingUser.id}`} className="rounded border border-border-subtle bg-background p-4">
                             <h3 className="text-sm font-semibold text-text-primary">{pendingUser.full_name || pendingUser.username}</h3>
                             <p className="mt-0.5 text-xs text-text-tertiary">{pendingUser.email}</p>
                             <dl className="mt-3 grid grid-cols-1 gap-2 text-xs text-text-secondary">
@@ -1052,7 +1040,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
               )}
 
               {!shiftsLoading && (
-                <div className="bg-surface rounded-lg shadow-md p-6">
+                <div className="bg-surface rounded shadow-md p-6">
                   <h2 className="text-xl font-bold text-text-primary mb-6 pb-3 border-b border-border">All Guard Schedules</h2>
                   {shifts.length > 0 ? (
                     <div className="overflow-x-auto">
@@ -1081,9 +1069,9 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                               <td className="px-6 py-3 text-text-primary">{new Date(shift.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
                               <td className="px-6 py-3">
                                 <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
-                                  shift.status === 'completed' ? 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30' :
-                                  shift.status === 'scheduled' ? 'bg-blue-500/15 text-blue-300 ring-1 ring-blue-500/30' :
-                                  shift.status === 'in_progress' ? 'bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30' :
+                                  shift.status === 'completed' ? 'bg-success-bg text-success-text ring-1 ring-success-border' :
+                                  shift.status === 'scheduled' ? 'bg-info-bg text-info-text ring-1 ring-info-border' :
+                                  shift.status === 'in_progress' ? 'bg-warning-bg text-warning-text ring-1 ring-warning-border' :
                                   'bg-surface-hover text-text-primary'
                                 }`}>
                                   {shift.status}
@@ -1091,7 +1079,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                               </td>
                               <td className="px-6 py-3">
                                 <button
-                                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded text-sm font-medium transition-colors"
+                                  className="bg-[color:var(--color-info)] hover:opacity-90 text-white px-4 py-1.5 rounded text-sm font-medium transition-colors"
                                   onClick={() => setEditingShift(shift)}
                                   title="Edit shift"
                                 >
@@ -1105,7 +1093,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
 
                       <div className="space-y-3 md:hidden" data-mobile-stack="cards">
                         {shifts.map((shift: any) => (
-                          <article key={`schedule-mobile-${shift.id}`} className="rounded-xl border border-border-subtle bg-background p-4">
+                          <article key={`schedule-mobile-${shift.id}`} className="rounded border border-border-subtle bg-background p-4">
                             <h3 className="text-sm font-semibold text-text-primary">{shift.guard_name || shift.guard_username}</h3>
                             <p className="mt-0.5 text-xs text-text-tertiary">{shift.client_site}</p>
                             <dl className="mt-3 grid grid-cols-2 gap-2 text-xs text-text-secondary">
@@ -1127,7 +1115,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                               </div>
                             </dl>
                             <button
-                              className="mt-3 rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-indigo-700"
+                              className="mt-3 rounded-md bg-[color:var(--color-info)] px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:opacity-90"
                               onClick={() => setEditingShift(shift)}
                               title="Edit shift"
                             >
@@ -1176,7 +1164,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                 <h3 className="text-xl font-bold text-text-primary">Approval Details</h3>
                 <p className="mt-1 text-sm text-text-secondary">Review applicant information before deciding.</p>
 
-                <div className="mt-4 space-y-3 rounded-lg border border-border-subtle bg-background p-4 text-sm">
+                <div className="mt-4 space-y-3 rounded border border-border-subtle bg-background p-4 text-sm">
                   <p><span className="font-semibold">Name:</span> {selectedApproval.full_name || selectedApproval.username}</p>
                   <p><span className="font-semibold">Email:</span> {selectedApproval.email}</p>
                   <p><span className="font-semibold">Phone:</span> {selectedApproval.phone_number || '-'}</p>
@@ -1188,19 +1176,19 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                 <div className="mt-5 flex gap-2">
                   <button
                     onClick={() => handleApprovalAction(selectedApproval.id, 'approve')}
-                    className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+                    className="rounded bg-[color:var(--color-success)] px-3 py-2 text-sm font-semibold text-white hover:opacity-90"
                   >
                     Approve
                   </button>
                   <button
                     onClick={() => handleApprovalAction(selectedApproval.id, 'reject')}
-                    className="rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-700"
+                    className="rounded bg-[color:var(--color-danger)] px-3 py-2 text-sm font-semibold text-white hover:opacity-90"
                   >
                     Reject
                   </button>
                   <button
                     onClick={() => setSelectedApproval(null)}
-                    className="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-text-primary hover:bg-surface-hover"
+                    className="rounded border border-border px-3 py-2 text-sm font-semibold text-text-primary hover:bg-surface-hover"
                   >
                     Close
                   </button>

@@ -367,7 +367,7 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
                             value={evaluationData.evaluatorName}
                             onChange={(e) => setEvaluationData({ ...evaluationData, evaluatorName: e.target.value })}
                             placeholder="Your name"
-                            className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            className="w-full px-4 py-2 border border-border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
                           />
                         </div>
 
@@ -376,7 +376,7 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
                           <select
                             value={evaluationData.rating}
                             onChange={(e) => setEvaluationData({ ...evaluationData, rating: parseInt(e.target.value) })}
-                            className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            className="w-full px-4 py-2 border border-border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
                           >
                             <option value="1">1 ★ Poor</option>
                             <option value="2">2 ★ Fair</option>
@@ -393,7 +393,7 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
                             onChange={(e) => setEvaluationData({ ...evaluationData, comment: e.target.value })}
                             placeholder="Add your feedback..."
                             rows={3}
-                            className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            className="w-full px-4 py-2 border border-border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
                           />
                         </div>
 
@@ -429,7 +429,7 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
               </div>
             ) : (
               // Rankings View
-              <section className="table-glass rounded-2xl p-6 md:p-8">
+              <section className="table-glass rounded p-6 md:p-8">
                 <h2 className="text-2xl font-bold text-text-primary mb-6">Guard Merit Score Rankings</h2>
 
                 {rankings.length > 0 ? (

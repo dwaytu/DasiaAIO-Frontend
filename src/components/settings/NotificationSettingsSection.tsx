@@ -48,7 +48,7 @@ export const NotificationSettingsSection: FC<NotificationSettingsSectionProps> =
           const checked = settings[row.key]
 
           return (
-            <div key={row.key} className="flex items-center justify-between gap-4 rounded-lg border border-border bg-surface p-4">
+            <div key={row.key} className="flex items-center justify-between gap-4 rounded border border-border bg-surface p-4">
               <div>
                 <p className="font-semibold text-text-primary">{row.title}</p>
                 <p className="text-xs text-text-secondary">{row.description}</p>

@@ -721,6 +721,61 @@
     filter: saturate(108%);
   }
 
+  /* Login page panel — refined surface with subtle edge definition */
+  .login-panel {
+    background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--color-border-subtle) 30%, transparent),
+      0 8px 32px color-mix(in srgb, var(--color-background) 40%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  /* Login aside — subtle divider and depth */
+  .login-aside {
+    border-left: 1px solid color-mix(in srgb, var(--color-border) 40%, transparent);
+  }
+
+  /* Login capability cards */
+  .login-capability-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    border-radius: var(--radius-card);
+    border: 1px solid color-mix(in srgb, var(--color-border) 50%, transparent);
+    background: color-mix(in srgb, var(--color-surface) 50%, transparent);
+    transition: border-color 180ms ease;
+  }
+
+  .login-capability-card:hover {
+    border-color: var(--color-border-elevated);
+  }
+
+  .login-capability-icon {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: var(--radius-card);
+    background: color-mix(in srgb, var(--color-info) 12%, transparent);
+    color: var(--color-info);
+  }
+
+  /* Login status strip */
+  .login-status-strip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.625rem 0.75rem;
+    border-radius: var(--radius-card);
+    border: 1px solid color-mix(in srgb, var(--color-border) 40%, transparent);
+    background: color-mix(in srgb, var(--color-surface) 30%, transparent);
+  }
+
   .status-live-card {
     border-radius: var(--radius-card);
     border: 1px solid var(--color-border);

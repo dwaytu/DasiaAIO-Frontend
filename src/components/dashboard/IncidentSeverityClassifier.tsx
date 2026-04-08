@@ -102,7 +102,7 @@ const IncidentSeverityClassifier: FC<IncidentSeverityClassifierProps> = ({ incid
               type="button"
               onClick={runClassification}
               disabled={loading}
-              className="soc-btn-primary min-h-11 rounded-md px-3 py-2 font-mono text-xs font-semibold uppercase tracking-wide disabled:opacity-60"
+              className="soc-btn-primary min-h-11 rounded px-3 py-2 font-mono text-xs font-semibold uppercase tracking-wide disabled:opacity-60"
             >
               {loading ? 'Classifying...' : 'Run Classifier'}
             </button>
@@ -112,7 +112,7 @@ const IncidentSeverityClassifier: FC<IncidentSeverityClassifierProps> = ({ incid
         )}
 
         {result && (
-          <div className="space-y-1 rounded-md border border-border-subtle bg-surface-elevated px-3 py-2">
+          <div className="space-y-1 rounded border border-border-subtle bg-surface-elevated px-3 py-2">
             <p className={`inline-flex rounded-full border px-2 py-0.5 font-mono text-[11px] uppercase ${tone}`}>
               Severity: {severity}
             </p>
@@ -124,7 +124,7 @@ const IncidentSeverityClassifier: FC<IncidentSeverityClassifierProps> = ({ incid
                 <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-text-secondary">Recommended Actions:</p>
                 <ul className="space-y-1 text-[11px] text-text-secondary">
                   {result.suggestedActions.slice(0, 3).map((action, i) => (
-                    <li key={i} className="rounded-md border border-border-subtle bg-background px-2 py-1">
+                    <li key={i} className="rounded border border-border-subtle bg-background px-2 py-1">
                       {action}
                     </li>
                   ))}

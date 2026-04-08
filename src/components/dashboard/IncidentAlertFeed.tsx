@@ -5,6 +5,7 @@ import { useOperationalEvent } from '../../context/OperationalEventContext'
 interface IncidentAlertFeedProps {
   alerts: OpsAlert[]
   nowLabel: string
+  onUpdateStatus?: (incidentId: string, status: 'investigating' | 'resolved') => Promise<void>
 }
 
 const toneClass: Record<OpsAlert['severity'], string> = {
@@ -13,7 +14,7 @@ const toneClass: Record<OpsAlert['severity'], string> = {
   info: 'status-bar-info border-info-border bg-info-bg text-info-text',
 }
 
-const IncidentAlertFeed: FC<IncidentAlertFeedProps> = ({ alerts, nowLabel }) => {
+const IncidentAlertFeed: FC<IncidentAlertFeedProps> = ({ alerts, nowLabel, onUpdateStatus }) => {
   const { selectedEventId, selectEvent } = useOperationalEvent()
   const criticalCount = alerts.filter((a) => a.severity === 'critical').length
 
@@ -23,7 +24,7 @@ const IncidentAlertFeed: FC<IncidentAlertFeedProps> = ({ alerts, nowLabel }) => 
         {criticalCount > 0 ? (
           <>
             <h3 className="text-base font-bold uppercase tracking-wide text-danger-text">
-              🚨 Needs Attention Now
+              Needs Attention Now
             </h3>
             <p className="text-xs uppercase tracking-[0.16em] text-danger-text/80">
               {criticalCount} critical alert{criticalCount !== 1 ? 's' : ''} active
@@ -77,6 +78,33 @@ const IncidentAlertFeed: FC<IncidentAlertFeedProps> = ({ alerts, nowLabel }) => 
                 </div>
                 <p className="mt-1 text-sm font-semibold text-text-primary">{alert.title}</p>
                 <p className="mt-1 text-xs opacity-90">{alert.detail}</p>
+
+                {alert.incidentId && onUpdateStatus && (
+                  <div className="mt-2 flex gap-2" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        void onUpdateStatus(alert.incidentId!, 'investigating')
+                      }}
+                      className="inline-flex items-center gap-1 rounded border border-info-border bg-info-bg px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-info-text transition-colors hover:brightness-110"
+                      aria-label={`Acknowledge ${alert.title}`}
+                    >
+                      Acknowledge
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        void onUpdateStatus(alert.incidentId!, 'resolved')
+                      }}
+                      className="inline-flex items-center gap-1 rounded border border-success-border bg-success-bg px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-success-text transition-colors hover:brightness-110"
+                      aria-label={`Resolve ${alert.title}`}
+                    >
+                      Resolve
+                    </button>
+                  </div>
+                )}
               </div>
             )
           })

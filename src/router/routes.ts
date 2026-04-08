@@ -22,6 +22,8 @@ export const ROUTES = {
   MISSIONS: '/missions',
   TRIPS: '/trips',
   INBOX: '/inbox',
+  MANAGE: '/manage',
+  OPERATIONS_MAP: '/operations-map',
 } as const
 
 export type RoutePath = (typeof ROUTES)[keyof typeof ROUTES]
@@ -57,6 +59,8 @@ export const VIEW_TO_ROUTE: Record<string, RoutePath> = {
   'missions': ROUTES.MISSIONS,
   'trips': ROUTES.TRIPS,
   'inbox': ROUTES.INBOX,
+  'manage': ROUTES.MANAGE,
+  'operations-map': ROUTES.OPERATIONS_MAP,
 }
 
 /**

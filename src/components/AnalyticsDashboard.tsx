@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useId, FC } from 'react'
+import { useState, useEffect, useCallback, useId, useRef, FC } from 'react'
 import { BarChart3, TrendingUp, Filter, RefreshCw } from 'lucide-react'
 import { API_BASE_URL } from '../config'
 import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
@@ -225,6 +225,9 @@ const DATE_RANGE_OPTIONS = [
   { value: '90', label: 'Last 90 days' },
 ] as const
 
+const BASE_POLL_INTERVAL_MS = 30000
+const MAX_POLL_INTERVAL_MS = 300000
+
 function formatPointDelta(value: number): string {
   if (Math.abs(value) < 0.1) return 'On target'
   return `${value > 0 ? '+' : ''}${value.toFixed(1)} pts vs target`
@@ -241,8 +244,33 @@ const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onVie
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [failCount, setFailCount] = useState(0)
+  const [pollNonce, setPollNonce] = useState(0)
   const [lastRefreshAt, setLastRefreshAt] = useState<number>(() => Date.now())
   const [dateRange, setDateRange] = useState('30')
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const formatTime = useCallback((value: number) => {
+    return new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  }, [])
+
+  const toUserFacingError = useCallback((message: string): string => {
+    const lowerMessage = message.toLowerCase()
+
+    if (lowerMessage.includes('session expired') || lowerMessage.includes('log in again')) {
+      return 'Session expired -- please re-authenticate'
+    }
+
+    if (lowerMessage.includes('timed out')) {
+      return 'Analytics service timed out -- showing last known data'
+    }
+
+    if (lowerMessage.includes('offline')) {
+      return 'You appear to be offline'
+    }
+
+    return 'Unable to refresh analytics -- showing last known data'
+  }, [])
 
   const fetchAnalytics = useCallback(async (signal?: AbortSignal) => {
     try {
@@ -254,25 +282,60 @@ const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onVie
       setAnalytics(data)
       setLastRefreshAt(Date.now())
       setError('')
+      setFailCount(0)
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return
-      setError(sanitizeErrorMessage(err instanceof Error ? err.message : 'Failed to load analytics'))
+      const rawMessage = sanitizeErrorMessage(err instanceof Error ? err.message : 'Failed to load analytics')
+      setError(toUserFacingError(rawMessage))
+      setFailCount((previousCount) => previousCount + 1)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [toUserFacingError])
+
+  const handleRetry = useCallback(() => {
+    if (!analytics) {
+      setLoading(true)
+    }
+    setError('')
+    setFailCount(0)
+    setPollNonce((value) => value + 1)
+    void fetchAnalytics()
+  }, [analytics, fetchAnalytics])
 
   useEffect(() => {
     const controller = new AbortController()
-    fetchAnalytics(controller.signal)
-    const interval = setInterval(() => fetchAnalytics(controller.signal), 30000)
-    return () => { controller.abort(); clearInterval(interval) }
+    void fetchAnalytics(controller.signal)
+    return () => {
+      controller.abort()
+    }
   }, [fetchAnalytics])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    const intervalMs = Math.min(BASE_POLL_INTERVAL_MS * Math.pow(2, failCount), MAX_POLL_INTERVAL_MS)
+
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current)
+    }
+
+    intervalRef.current = setInterval(() => {
+      void fetchAnalytics(controller.signal)
+    }, intervalMs)
+
+    return () => {
+      controller.abort()
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
+    }
+  }, [failCount, fetchAnalytics, pollNonce])
 
   const homeView = user.role === 'guard' ? 'overview' : 'dashboard'
   const navItems = getSidebarNav(user.role, { homeView })
 
-  if (loading) {
+  if (loading && !analytics) {
     return (
       <OperationalShell
         user={user}
@@ -296,7 +359,7 @@ const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onVie
     )
   }
 
-  if (error) {
+  if (!analytics && error) {
     return (
       <OperationalShell
         user={user}
@@ -316,7 +379,7 @@ const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onVie
             <p className="text-xs mt-1">{error}</p>
             <p className="text-xs mt-2">Make sure the backend server is running on port 5000</p>
           </div>
-          <button type="button" onClick={() => fetchAnalytics()} className="soc-btn soc-btn-danger">
+          <button type="button" onClick={handleRetry} className="soc-btn soc-btn-danger">
             Retry
           </button>
         </div>
@@ -324,7 +387,7 @@ const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onVie
     )
   }
 
-  if (!analytics) {
+  if (!analytics && !error) {
     return (
       <OperationalShell
         user={user}
@@ -342,6 +405,9 @@ const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onVie
       </OperationalShell>
     )
   }
+
+  // At this point analytics is guaranteed non-null (guarded above)
+  if (!analytics) return null
 
   const resourceBars = [
     {
@@ -469,7 +535,7 @@ const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onVie
               </span>
             </div>
             <p className="mt-1 text-xs text-text-secondary">
-              {formatCompactNumber(analytics.mission_stats.completed_missions_this_month)} completed · {formatCompactNumber(analytics.mission_stats.pending_missions)} pending
+              {formatCompactNumber(analytics.mission_stats.completed_missions_this_month)} completed / {formatCompactNumber(analytics.mission_stats.pending_missions)} pending
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -478,6 +544,23 @@ const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onVie
           </div>
         </div>
       </section>
+
+      {error && analytics && (
+        <div
+          className="rounded border border-warning-border bg-warning-bg px-3 py-2 text-xs text-warning-text"
+          role="status"
+          aria-live="polite"
+        >
+          <span className="font-semibold">Stale data</span> -- {error}. Showing last known data from {formatTime(lastRefreshAt)}.
+          <button
+            type="button"
+            onClick={handleRetry}
+            className="ml-2 font-semibold underline"
+          >
+            Retry now
+          </button>
+        </div>
+      )}
 
       {/* ── KPI Row ────────────────────────────────────── */}
       <section aria-label="Key performance indicators">
@@ -547,7 +630,7 @@ const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onVie
         </div>
         <button
           type="button"
-          onClick={() => fetchAnalytics()}
+          onClick={handleRetry}
           className="ml-auto flex items-center gap-1.5 rounded border border-border bg-surface px-3 py-1 text-xs font-medium text-text-secondary hover:bg-surface-elevated focus:outline-none focus:ring-2 focus:ring-info-border"
         >
           <RefreshCw className="h-3 w-3" aria-hidden="true" />

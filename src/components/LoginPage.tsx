@@ -223,7 +223,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
   }
 
   const inputClass = "w-full px-4 py-2.5 rounded bg-surface border border-border text-text-primary focus:outline-none focus:ring-2 focus:ring-[color:var(--color-focus-ring)] transition-colors"
-  const labelClass = "block text-sm font-semibold mb-2"
+  const labelClass = "block text-sm font-semibold text-text-secondary mb-2"
 
   const renderForm = () => {
     // Show forgot password form if in forgot password mode
@@ -233,7 +233,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
           {forgotPasswordMode === 'email' && (
             <>
               <div>
-                <label htmlFor="reset-email" className={`${labelClass} text-text-secondary`}>Email Address</label>
+                <label htmlFor="reset-email" className={labelClass}>Email Address</label>
                 <input
                   id="reset-email"
                   type="email"
@@ -260,7 +260,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
           {forgotPasswordMode === 'code' && (
             <>
               <div>
-                <label htmlFor="reset-code" className={`${labelClass} text-text-secondary`}>Reset Code</label>
+                <label htmlFor="reset-code" className={labelClass}>Reset Code</label>
                 <input
                   id="reset-code"
                   type="text"
@@ -289,7 +289,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
           {forgotPasswordMode === 'newPassword' && (
             <>
               <div>
-                <label htmlFor="new-password" className={`${labelClass} text-text-secondary`}>New Password</label>
+                <label htmlFor="new-password" className={labelClass}>New Password</label>
                 <input
                   id="new-password"
                   type="password"
@@ -302,7 +302,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
               </div>
 
               <div>
-                <label htmlFor="confirm-password" className={`${labelClass} text-text-secondary`}>Confirm Password</label>
+                <label htmlFor="confirm-password" className={labelClass}>Confirm Password</label>
                 <input
                   id="confirm-password"
                   type="password"
@@ -345,7 +345,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
       {requiresVerification ? (
         <>
           <div>
-            <label htmlFor="code" className={`${labelClass} text-text-secondary`}>Confirmation Code</label>
+            <label htmlFor="code" className={labelClass}>Confirmation Code</label>
             <input
               id="code"
               type="text"
@@ -415,12 +415,12 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
       ) : (
         <>
           <div>
-            <label htmlFor="identifier" className={`${labelClass} text-text-secondary`}>Email, Username, or Phone Number</label>
+            <label htmlFor="identifier" className={labelClass}>Email, Username, or Phone Number</label>
             <input id="identifier" type="text" value={identifier} onChange={(e: ChangeEvent<HTMLInputElement>) => setIdentifier(e.target.value)} placeholder="Enter your email, username, or phone number" disabled={isLoading} className={inputClass} />
           </div>
 
           <div>
-            <label htmlFor="password" className={`${labelClass} text-text-secondary`}>Password</label>
+            <label htmlFor="password" className={labelClass}>Password</label>
             <input id="password" type="password" value={password} onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)} placeholder="Enter your password" disabled={isLoading} className={inputClass} />
           </div>
 
@@ -430,7 +430,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
             </div>
           )}
 
-          <button type="submit" disabled={isLoading} className="terminal-login-btn w-full py-3 font-bold disabled:opacity-50">
+          <button type="submit" disabled={isLoading} className="soc-btn-primary w-full min-h-11 py-3 font-bold uppercase tracking-wide rounded disabled:opacity-50">
             {isLoading ? 'Processing...' : 'Login'}
           </button>
 
@@ -464,20 +464,14 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
   return (
     <>
       <a href="#auth-main" className="skip-link">Skip to main content</a>
-      <div className="relative min-h-screen overflow-hidden">
-        <div className="login-atmosphere pointer-events-none absolute inset-0" aria-hidden="true" />
-
-        <div className="pointer-events-none absolute inset-0 opacity-70 hidden lg:block" aria-hidden="true">
-          <ParticleBackground particleCount={30} color="56, 189, 248" connectDistance={120} mouseRadius={120} />
-        </div>
-
-        <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
-          <div className="login-radar-sweep" />
-        </div>
-
+      <div className="relative min-h-screen bg-background overflow-hidden">
+        <ParticleBackground className="z-0 opacity-60" />
         <div className="relative z-10 grid min-h-screen grid-cols-1 lg:grid-cols-[1.1fr_0.9fr]">
           <main id="auth-main" className="flex items-center justify-center px-4 py-10 sm:px-6 lg:px-10">
-            <section className="w-full max-w-xl rounded border border-border-elevated bg-surface/85 p-6 shadow-modal backdrop-blur-md sm:p-8" aria-labelledby="auth-title">
+            <section
+              className="login-panel w-full max-w-xl rounded p-6 sm:p-8"
+              aria-labelledby="auth-title"
+            >
               <div className="mb-6 flex justify-center">
                 <SentinelLogo size={62} variant="FullLogo" animated />
               </div>
@@ -500,15 +494,53 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
             </section>
           </main>
 
-          <aside className="hidden bg-surface-elevated/65 p-10 shadow-modal backdrop-blur-sm lg:flex lg:flex-col lg:justify-between">
-            <div>
-              <SentinelLogo size={42} variant="FullLogo" animated />
-              <p className="mt-5 max-w-md text-sm text-text-secondary">
-                Real-time protection platform for mission planning, personnel readiness, and critical asset oversight.
-              </p>
-            </div>
+          <aside className="hidden lg:flex lg:flex-col lg:justify-center login-aside relative overflow-hidden" aria-label="Platform capabilities">
+            <div className="relative z-10 flex flex-col gap-10 px-10 py-12">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent mb-3">Operational Platform</p>
+                <p className="text-lg font-medium text-text-primary leading-relaxed max-w-sm">
+                  Real-time protection, mission oversight, and personnel coordination — in one integrated command surface.
+                </p>
+              </div>
 
-            <p className="text-xs font-medium uppercase tracking-[0.16em] text-text-tertiary">Davao Security & Investigation Agency</p>
+              <div className="grid gap-4" role="list" aria-label="Key capabilities">
+                <div className="login-capability-card" role="listitem">
+                  <div className="login-capability-icon" aria-hidden="true">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-text-primary">Live Guard Tracking</p>
+                    <p className="text-xs text-text-secondary mt-0.5">GPS heartbeat monitoring with geofence alerts</p>
+                  </div>
+                </div>
+                <div className="login-capability-card" role="listitem">
+                  <div className="login-capability-icon" aria-hidden="true">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-text-primary">Incident Intelligence</p>
+                    <p className="text-xs text-text-secondary mt-0.5">AI-assisted classification, severity analysis, and response</p>
+                  </div>
+                </div>
+                <div className="login-capability-card" role="listitem">
+                  <div className="login-capability-icon" aria-hidden="true">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-text-primary">Mission Scheduling</p>
+                    <p className="text-xs text-text-secondary mt-0.5">Shift management, swap workflow, and duty calendar</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="login-status-strip" aria-label="System readiness">
+                <div className="flex items-center gap-2">
+                  <span className="inline-block h-2 w-2 rounded-full bg-success" aria-hidden="true" />
+                  <span className="text-xs font-medium text-text-secondary">Platform ready</span>
+                </div>
+                <span className="text-xs text-text-tertiary tracking-wide uppercase">DAVAO SECURITY & INVESTIGATION AGENCY</span>
+              </div>
+            </div>
           </aside>
         </div>
       </div>

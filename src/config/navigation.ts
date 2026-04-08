@@ -15,6 +15,8 @@ const SUPERADMIN_NAV: NavItem[] = [
   { view: 'calendar', label: 'Calendar', group: 'Core' },
   { view: 'analytics', label: 'Analytics', group: 'Intelligence', permission: 'view_analytics' },
   { view: 'audit', label: 'Audit', group: 'Intelligence', permission: 'view_audit_logs' },
+  { view: 'manage', label: 'Management', group: 'Operations' },
+  { view: 'operations-map', label: 'Operations Map', group: 'Operations' },
   { view: 'firearms', label: 'Firearms', group: 'Resources', permission: 'manage_firearms' },
   { view: 'armored-cars', label: 'Armored Cars', group: 'Resources', permission: 'manage_armored_cars' },
   { view: 'settings', label: 'Settings', group: 'System' },
@@ -26,6 +28,8 @@ const ADMIN_NAV: NavItem[] = [
   { view: 'schedule', label: 'Schedule', group: 'Core' },
   { view: 'calendar', label: 'Calendar', group: 'Core' },
   { view: 'allocation', label: 'Allocation', group: 'Operations', permission: 'manage_allocations' },
+  { view: 'manage', label: 'Management', group: 'Operations' },
+  { view: 'operations-map', label: 'Operations Map', group: 'Operations' },
   { view: 'firearms', label: 'Firearms', group: 'Resources', permission: 'manage_firearms' },
   { view: 'armored-cars', label: 'Armored Cars', group: 'Resources', permission: 'manage_armored_cars' },
   { view: 'maintenance', label: 'Maintenance', group: 'Resources', permission: 'manage_maintenance' },
@@ -38,6 +42,7 @@ const SUPERVISOR_NAV: NavItem[] = [
   { view: 'missions', label: 'Missions', group: 'Field' },
   { view: 'approvals', label: 'Approvals', group: 'Operations', permission: 'approve_guards' },
   { view: 'allocation', label: 'Allocation', group: 'Operations', permission: 'manage_allocations' },
+  { view: 'operations-map', label: 'Operations Map', group: 'Operations' },
 ]
 
 interface NavOptions {

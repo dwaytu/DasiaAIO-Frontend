@@ -12,6 +12,8 @@ export interface LiveFeedItem {
 
 interface LiveOperationsFeedProps {
   items: LiveFeedItem[]
+  onDismiss?: (itemId: string) => void
+  onUpdateIncidentStatus?: (incidentId: string, status: 'investigating' | 'resolved') => Promise<void>
 }
 
 const categoryStyles: Record<FeedCategory, string> = {
@@ -64,7 +66,7 @@ const categoryIcon: Record<FeedCategory, JSX.Element> = {
   ),
 }
 
-const LiveOperationsFeed: FC<LiveOperationsFeedProps> = ({ items }) => {
+const LiveOperationsFeed: FC<LiveOperationsFeedProps> = ({ items, onDismiss, onUpdateIncidentStatus }) => {
   const { selectedEventId, selectEvent } = useOperationalEvent()
 
   return (
@@ -80,28 +82,86 @@ const LiveOperationsFeed: FC<LiveOperationsFeedProps> = ({ items }) => {
         {items.length === 0 ? (
           <p className="rounded border border-border-subtle bg-surface-elevated p-3 text-sm text-text-secondary">No live operations at this time.</p>
         ) : (
-          items.map((item, index) => (
-            <article
-              key={item.id}
-              role="button"
-              tabIndex={0}
-              onClick={() => selectEvent({ id: item.id, type: item.category === 'mission' || item.category === 'system' ? 'incident' : item.category === 'guard' ? 'guard' : 'vehicle', title: item.description })}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectEvent({ id: item.id, type: item.category === 'mission' || item.category === 'system' ? 'incident' : item.category === 'guard' ? 'guard' : 'vehicle', title: item.description }) } }}
-              className={`soc-timeline-item soc-animated-entry cursor-pointer rounded border p-3 transition-all duration-200 ${categoryStyles[item.category]} ${selectedEventId === item.id ? 'ring-2 ring-cyan-400' : ''}`}
-              style={{ animationDelay: `${index * 70}ms` }}
-              aria-pressed={selectedEventId === item.id}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <span className="mt-0.5">{categoryIcon[item.category]}</span>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em]">{categoryLabel[item.category]}</p>
+          items.map((item, index) => {
+            const eventType = item.category === 'mission' || item.category === 'system'
+              ? 'incident'
+              : item.category === 'guard'
+                ? 'guard'
+                : 'vehicle'
+            const isIncidentItem = item.id.startsWith('incident-')
+            const incidentId = isIncidentItem ? item.id.slice('incident-'.length) : ''
+
+            return (
+              <article
+                key={item.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => selectEvent({ id: item.id, type: eventType, title: item.description })}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    selectEvent({ id: item.id, type: eventType, title: item.description })
+                  }
+                }}
+                className={`soc-timeline-item soc-animated-entry cursor-pointer rounded border p-3 transition-all duration-200 ${categoryStyles[item.category]} ${selectedEventId === item.id ? 'ring-2 ring-cyan-400' : ''}`}
+                style={{ animationDelay: `${index * 70}ms` }}
+                aria-pressed={selectedEventId === item.id}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="mt-0.5">{categoryIcon[item.category]}</span>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em]">{categoryLabel[item.category]}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <time className="text-[11px] font-semibold uppercase tracking-wide opacity-90">{item.timestamp}</time>
+                    {!isIncidentItem && onDismiss && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onDismiss(item.id)
+                        }}
+                        className="inline-flex h-5 w-5 items-center justify-center rounded border border-border-subtle bg-surface text-text-tertiary transition-colors hover:border-border hover:text-text-primary"
+                        aria-label={`Dismiss ${item.description}`}
+                      >
+                        x
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <time className="text-[11px] font-semibold uppercase tracking-wide opacity-90">{item.timestamp}</time>
-              </div>
-              <p className="mt-1.5 text-sm font-semibold text-text-primary">{item.description}</p>
-              <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.16em] opacity-85">Operational event stream</p>
-            </article>
-          ))
+                <p className="mt-1.5 text-sm font-semibold text-text-primary">{item.description}</p>
+
+                {isIncidentItem && incidentId && onUpdateIncidentStatus && (
+                  <div className="mt-2 flex gap-2" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        void onUpdateIncidentStatus(incidentId, 'investigating')
+                      }}
+                      className="inline-flex items-center gap-1 rounded border border-info-border bg-info-bg px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-info-text transition-colors hover:brightness-110"
+                      aria-label={`Acknowledge ${item.description}`}
+                    >
+                      Acknowledge
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        void onUpdateIncidentStatus(incidentId, 'resolved')
+                      }}
+                      className="inline-flex items-center gap-1 rounded border border-success-border bg-success-bg px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-success-text transition-colors hover:brightness-110"
+                      aria-label={`Resolve ${item.description}`}
+                    >
+                      Resolve
+                    </button>
+                  </div>
+                )}
+
+                <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.16em] opacity-85">Operational event stream</p>
+              </article>
+            )
+          })
         )}
       </div>
     </section>

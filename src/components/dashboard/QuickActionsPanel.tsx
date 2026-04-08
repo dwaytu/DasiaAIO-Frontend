@@ -4,17 +4,34 @@ export interface QuickActionItem {
   label: string
   onClick: () => void
   tone?: 'indigo' | 'blue' | 'emerald' | 'amber'
+  disabled?: boolean
 }
 
 interface QuickActionsPanelProps {
   actions: QuickActionItem[]
 }
 
-const toneClass: Record<NonNullable<QuickActionItem['tone']>, string> = {
-  indigo: 'border-info-border bg-info-bg text-info-text',
-  blue: 'border-info-border bg-info-bg text-info-text',
-  emerald: 'border-success-border bg-success-bg text-success-text',
-  amber: 'border-warning-border bg-warning-bg text-warning-text',
+const toneStyles: Record<NonNullable<QuickActionItem['tone']>, { base: string; icon: string; hover: string }> = {
+  indigo: {
+    base: 'border-accent-border bg-surface-elevated text-text-primary',
+    icon: 'border-accent-border bg-accent-bg text-accent-text',
+    hover: 'hover:bg-accent-bg hover:border-accent-text hover:shadow-md hover:shadow-accent-bg/20',
+  },
+  blue: {
+    base: 'border-info-border bg-surface-elevated text-text-primary',
+    icon: 'border-info-border bg-info-bg text-info-text',
+    hover: 'hover:bg-info-bg hover:border-info-text hover:shadow-md hover:shadow-info-bg/20',
+  },
+  emerald: {
+    base: 'border-success-border bg-surface-elevated text-text-primary',
+    icon: 'border-success-border bg-success-bg text-success-text',
+    hover: 'hover:bg-success-bg hover:border-success-text hover:shadow-md hover:shadow-success-bg/20',
+  },
+  amber: {
+    base: 'border-warning-border bg-surface-elevated text-text-primary',
+    icon: 'border-warning-border bg-warning-bg text-warning-text',
+    hover: 'hover:bg-warning-bg hover:border-warning-text hover:shadow-md hover:shadow-warning-bg/20',
+  },
 }
 
 const actionIcons: Record<string, JSX.Element> = {
@@ -29,22 +46,27 @@ const actionIcons: Record<string, JSX.Element> = {
 
 const QuickActionsPanel: FC<QuickActionsPanelProps> = ({ actions }) => {
   return (
-    <div className="grid grid-cols-2 gap-2 lg:grid-cols-3">
-      {actions.map((action) => (
-        <button
-          key={action.label}
-          onClick={action.onClick}
-          className={`group flex min-h-12 items-center gap-2 rounded border px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide transition-colors duration-200 ${toneClass[action.tone || 'indigo']}`}
-          aria-label={action.label}
-        >
-          <span className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-border-subtle bg-surface text-text-primary">
-            <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-              {actionIcons[action.label] || <path d="M12 5v14M5 12h14" />}
-            </svg>
-          </span>
-          {action.label}
-        </button>
-      ))}
+    <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-3">
+      {actions.map((action) => {
+        const style = toneStyles[action.tone || 'indigo']
+
+        return (
+          <button
+            key={action.label}
+            onClick={action.onClick}
+            disabled={action.disabled}
+            className={`group flex min-h-[3rem] items-center gap-3 rounded-lg border px-3 py-2.5 text-left text-xs font-bold uppercase tracking-wide transition-all duration-200 ${style.base} ${style.hover} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-text focus-visible:ring-offset-1 focus-visible:ring-offset-surface active:scale-[0.97] disabled:pointer-events-none disabled:opacity-40`}
+            aria-label={action.label}
+          >
+            <span className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border transition-colors duration-200 ${style.icon}`}>
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                {actionIcons[action.label] || <path d="M12 5v14M5 12h14" />}
+              </svg>
+            </span>
+            <span className="leading-tight">{action.label}</span>
+          </button>
+        )
+      })}
     </div>
   )
 }

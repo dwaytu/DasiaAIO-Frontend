@@ -10,6 +10,9 @@ import type { User as AppUser } from '../../context/AuthContext'
 import { getSidebarNav } from '../../config/navigation'
 import { normalizeRole } from '../../types/auth'
 import CommandCenterDashboard from '../dashboard/CommandCenterDashboard'
+import OperationalMapPanel from '../dashboard/OperationalMapPanel'
+import ResourceManagementPanel from './ResourceManagementPanel'
+import { OperationalEventProvider } from '../../context/OperationalEventContext'
 import AssignmentPicker from '../dashboard/AssignmentPicker'
 import LiveFreshnessPill from '../dashboard/ui/LiveFreshnessPill'
 import { TableLoadingState } from '../dashboard/ui/DashboardLoadingState'
@@ -197,7 +200,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [editingShift, setEditingShift] = useState<any | null>(null)
   const [error, setError] = useState<string>('')
-  const [activeSection, setActiveSection] = useState<'inbox' | 'dashboard' | 'approvals' | 'schedule' | 'missions' | 'analytics' | 'trips' | 'audit-log'>('dashboard')
+  const [activeSection, setActiveSection] = useState<'inbox' | 'dashboard' | 'approvals' | 'schedule' | 'missions' | 'analytics' | 'trips' | 'audit-log' | 'manage' | 'operations-map'>('dashboard')
   const [shifts, setShifts] = useState<any[]>([])
   const [shiftsLoading, setShiftsLoading] = useState<boolean>(false)
   const [missions, setMissions] = useState<any[]>([])
@@ -271,12 +274,16 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
     activeSection === 'missions' ? 'Mission Assignment' :
     activeSection === 'analytics' ? 'Analytics & Reports' :
     activeSection === 'trips' ? 'Trip Management' :
-    activeSection === 'audit-log' ? 'System Audit Log' : 'Dashboard'
+    activeSection === 'audit-log' ? 'System Audit Log' :
+    activeSection === 'manage' ? 'Resource Management' :
+    activeSection === 'operations-map' ? 'Operations Map' : 'Dashboard'
   const badgeLabel =
     activeSection === 'dashboard' ? 'Overview' :
     activeSection === 'approvals' ? 'Approvals' :
     activeSection === 'trips' ? 'Trips' :
     activeSection === 'audit-log' ? 'Audit Log' :
+    activeSection === 'manage' ? 'Management' :
+    activeSection === 'operations-map' ? 'Ops Map' :
     activeSection.replace('-', ' ')
 
   const addNotification = (type: 'success' | 'error' | 'info' | 'warning', title: string, message: string) => {
@@ -318,7 +325,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
 
   useEffect(() => {
     if (!activeView) return
-    const viewToSection: Record<string, 'inbox' | 'dashboard' | 'approvals' | 'schedule' | 'missions' | 'analytics' | 'trips' | 'audit-log'> = {
+    const viewToSection: Record<string, 'inbox' | 'dashboard' | 'approvals' | 'schedule' | 'missions' | 'analytics' | 'trips' | 'audit-log' | 'manage' | 'operations-map'> = {
       inbox: 'inbox',
       users: 'dashboard',
       dashboard: 'dashboard',
@@ -327,7 +334,9 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
       missions: 'missions',
       analytics: 'analytics',
       trips: 'trips',
-      'audit-log': 'audit-log'
+      'audit-log': 'audit-log',
+      manage: 'manage',
+      'operations-map': 'operations-map',
     }
     const nextSection = viewToSection[activeView]
     if (nextSection) {
@@ -1808,6 +1817,26 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
           >
             <AuditDashboard user={user} onLogout={onLogout} onViewChange={onViewChange ?? (() => undefined)} activeView={activeView ?? 'audit-log'} />
           </Suspense>
+        ) : activeSection === 'manage' ? (
+          <ResourceManagementPanel
+            users={users}
+            onDeleteUser={handleDeleteUser}
+            canManageUsers={canManageUsers}
+            isSuperadminViewer={isSuperadminViewer}
+          />
+        ) : activeSection === 'operations-map' ? (
+          <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in">
+            <section className="soc-surface p-4 md:p-5 mb-4">
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-text-tertiary">Intelligence</p>
+              <h1 className="text-2xl font-black uppercase tracking-wide text-text-primary">Operations Map</h1>
+              <p className="mt-1 text-sm text-text-secondary">Live geospatial view with guard movement intelligence, geofence alerts, and client location management.</p>
+            </section>
+            <div className="soc-surface p-0 overflow-hidden rounded" style={{ minHeight: '600px' }}>
+              <OperationalEventProvider>
+                <OperationalMapPanel activeTrips={0} activeGuards={0} />
+              </OperationalEventProvider>
+            </div>
+          </div>
         ) : null}
 
         {editingUser && (

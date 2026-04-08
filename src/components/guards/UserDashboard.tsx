@@ -342,7 +342,11 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
           return
         }
 
-        await fetchJsonOrThrow(
+        const heartbeatResponse = await fetchJsonOrThrow<{
+          accepted?: boolean
+          approximate?: boolean
+          message?: string
+        }>(
           `${API_BASE_URL}/api/tracking/heartbeat`,
           {
             method: 'POST',
@@ -364,9 +368,14 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
 
         if (disposed) return
 
-        if (location.source === 'ip') {
+        if (heartbeatResponse.accepted === false) {
+          setLocationTrackingMessage('GPS accuracy too low — move to an open area and wait for signal to stabilize.')
+          return
+        }
+
+        if (heartbeatResponse.approximate || location.source === 'ip') {
           setLocationPermissionState('denied')
-          setLocationTrackingMessage('Location tracking active (approximate).')
+          setLocationTrackingMessage('Location tracking active (approximate position).')
         } else {
           setLocationPermissionState('granted')
           setLocationTrackingMessage('Location tracking active.')

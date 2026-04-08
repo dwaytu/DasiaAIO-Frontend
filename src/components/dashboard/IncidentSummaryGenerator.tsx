@@ -149,7 +149,7 @@ const IncidentSummaryGenerator: FC<IncidentSummaryGeneratorProps> = ({ incidents
               type="button"
               onClick={runSummary}
               disabled={loading}
-              className="min-h-11 rounded-md border border-info-border bg-info-bg px-3 py-2 font-mono text-xs font-semibold uppercase tracking-wide text-info-text disabled:opacity-60"
+              className="soc-btn-primary min-h-11 rounded px-3 py-2 font-mono text-xs font-semibold uppercase tracking-wide disabled:opacity-60"
             >
               {loading ? 'Summarizing...' : 'Generate Summary'}
             </button>
@@ -159,7 +159,7 @@ const IncidentSummaryGenerator: FC<IncidentSummaryGeneratorProps> = ({ incidents
         )}
 
         {summary && (
-          <div className="rounded-md border border-border-subtle bg-surface-elevated px-3 py-2">
+          <div className="rounded border border-border-subtle bg-surface-elevated px-3 py-2">
             <p className="font-mono text-[11px] text-text-primary">{summary}</p>
             <p className="mt-1 font-mono text-[11px] text-text-secondary">Risk level: {riskLevel || 'unknown'}</p>
             <p className="mt-1 font-mono text-[11px] text-text-secondary">Confidence: {Math.round(confidence * 100)}%</p>

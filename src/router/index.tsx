@@ -155,6 +155,8 @@ export const appRoutes: RouteObject[] = [
           { path: ROUTES.SCHEDULE, element: <LegacyPage Component={SuperadminDashboard} /> },
           { path: ROUTES.MISSIONS, element: <LegacyPage Component={SuperadminDashboard} /> },
           { path: ROUTES.TRIPS, element: <LegacyPage Component={SuperadminDashboard} /> },
+          { path: ROUTES.MANAGE, element: <LegacyPage Component={SuperadminDashboard} /> },
+          { path: ROUTES.OPERATIONS_MAP, element: <LegacyPage Component={SuperadminDashboard} /> },
         ],
       },
 

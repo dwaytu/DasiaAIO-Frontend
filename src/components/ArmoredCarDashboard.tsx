@@ -99,15 +99,6 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false)
 
   // Form states
-  const [newCar, setNewCar] = useState({
-    licensePlate: '',
-    vin: '',
-    model: '',
-    manufacturer: '',
-    capacityKg: 0,
-    passengerCapacity: 4,
-  })
-
   const [newAllocation, setNewAllocation] = useState({
     car_id: '',
     client_id: '',
@@ -224,29 +215,6 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
       setTrips(data)
     } catch (err) {
       logError('Failed to fetch trips:', err)
-    }
-  }
-
-  const addCar = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/armored-cars`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...getAuthHeaders(),
-        },
-        body: JSON.stringify(newCar),
-      })
-      if (!response.ok) throw new Error('Failed to add car')
-      setSuccess('Armored car added successfully!')
-      setNewCar({ licensePlate: '', vin: '', model: '', manufacturer: '', capacityKg: 0, passengerCapacity: 4 })
-      fetchCars()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add car')
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -408,90 +376,14 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
 
           {/* Inventory Tab */}
           {activeTab === 'inventory' && (
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8">
-              {/* Add New Vehicle Form */}
-              <div className="command-panel p-6">
-                <h2 className="text-lg md:text-xl font-bold text-text-primary mb-4 md:mb-6 pb-3 border-b border-border">Add New Armored Vehicle</h2>
-                <form onSubmit={addCar} className="space-y-3 md:space-y-4">
-                  <div>
-                    <label className="block text-xs md:text-sm font-semibold text-text-primary mb-1 md:mb-2">License Plate</label>
-                    <input
-                      type="text"
-                      value={newCar.licensePlate}
-                      onChange={(e) => setNewCar({ ...newCar, licensePlate: e.target.value })}
-                      required
-                      className="w-full px-3 py-2 text-sm border border-border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs md:text-sm font-semibold text-text-primary mb-1 md:mb-2">VIN</label>
-                    <input
-                      type="text"
-                      value={newCar.vin}
-                      onChange={(e) => setNewCar({ ...newCar, vin: e.target.value })}
-                      required
-                      className="w-full px-3 py-2 text-sm border border-border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs md:text-sm font-semibold text-text-primary mb-1 md:mb-2">Model</label>
-                    <input
-                      type="text"
-                      value={newCar.model}
-                      onChange={(e) => setNewCar({ ...newCar, model: e.target.value })}
-                      required
-                      className="w-full px-3 py-2 text-sm border border-border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs md:text-sm font-semibold text-text-primary mb-1 md:mb-2">Manufacturer</label>
-                    <input
-                      type="text"
-                      value={newCar.manufacturer}
-                      onChange={(e) => setNewCar({ ...newCar, manufacturer: e.target.value })}
-                      required
-                      className="w-full px-3 py-2 text-sm border border-border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs md:text-sm font-semibold text-text-primary mb-1 md:mb-2">Capacity (kg)</label>
-                    <input
-                      type="number"
-                      value={newCar.capacityKg}
-                      onChange={(e) => setNewCar({ ...newCar, capacityKg: parseInt(e.target.value) })}
-                      required
-                      className="w-full px-3 py-2 text-sm border border-border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs md:text-sm font-semibold text-text-primary mb-1 md:mb-2">Passenger Capacity</label>
-                    <input
-                      type="number"
-                      value={newCar.passengerCapacity}
-                      onChange={(e) => setNewCar({ ...newCar, passengerCapacity: parseInt(e.target.value) || 4 })}
-                      required
-                      min="1"
-                      max="20"
-                      className="w-full px-3 py-2 text-sm border border-border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-                  <button 
-                    type="submit" 
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-bold py-2 md:py-3 rounded transition-colors text-sm md:text-base mt-4"
-                    disabled={loading}
-                  >
-                    {loading ? 'Adding...' : 'Add Vehicle'}
-                  </button>
-                </form>
-              </div>
-
+            <div>
               {/* Vehicle Inventory */}
               <div className="table-glass rounded p-4 md:p-6">
                 <h2 className="text-lg md:text-xl font-bold text-text-primary mb-4 md:mb-6 pb-3 border-b border-border">Vehicle Inventory</h2>
                 {loading ? (
                   <LoadingSkeleton variant="table" />
                 ) : cars.length === 0 ? (
-                  <EmptyState icon={Truck} title="No vehicles in fleet" subtitle="Register armored vehicles to manage the fleet" />
+                  <EmptyState icon={Truck} title="No vehicles in fleet" subtitle="Use the Management panel to register vehicles" />
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full min-w-[600px]">

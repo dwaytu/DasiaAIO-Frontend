@@ -23,6 +23,8 @@ interface SidebarProps {
 const navGlyphs: Record<string, string> = {
   dashboard: 'DG',
   overview: 'DG',
+  feedback: 'FB',
+  'feedback-dashboard': 'FD',
   approvals: 'AP',
   calendar: 'CL',
   analytics: 'AN',

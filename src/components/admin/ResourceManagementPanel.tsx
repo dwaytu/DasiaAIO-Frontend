@@ -1,9 +1,11 @@
-import { FC, FormEvent, useEffect, useState } from 'react'
+import { FC, FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { Shield, Truck, MapPin, Users } from 'lucide-react'
 import { API_BASE_URL } from '../../config'
 import { fetchJsonOrThrow, getAuthHeaders } from '../../utils/api'
 import { logError } from '../../utils/logger'
 import { useOperationalMapData, ClientSiteInput } from '../../hooks/useOperationalMapData'
+import { useAuth } from '../../hooks/useAuth'
+import { normalizeRole, Role } from '../../types/auth'
 import EmptyState from '../shared/EmptyState'
 import LoadingSkeleton from '../shared/LoadingSkeleton'
 
@@ -12,6 +14,7 @@ type ManageTab = 'guards' | 'firearms' | 'vehicles' | 'clients'
 interface ResourceManagementPanelProps {
   users: any[]
   onDeleteUser: (id: string, email: string) => void
+  onUsersChanged?: () => Promise<void> | void
   canManageUsers: boolean
   isSuperadminViewer: boolean
 }
@@ -35,6 +38,33 @@ interface ArmoredCar {
   status: string
 }
 
+type UserCreateRole = 'guard' | 'supervisor' | 'admin' | 'superadmin'
+
+const CREATABLE_ROLES_BY_VIEWER: Record<Role, UserCreateRole[]> = {
+  superadmin: ['admin', 'supervisor', 'guard'],
+  admin: ['supervisor', 'guard'],
+  supervisor: ['guard'],
+  guard: [],
+}
+
+const USER_ROLE_LABEL: Record<UserCreateRole, string> = {
+  superadmin: 'Superadmin',
+  admin: 'Admin',
+  supervisor: 'Supervisor',
+  guard: 'Guard',
+}
+
+type UserCreationFormState = {
+  name: string
+  email: string
+  password: string
+  role: UserCreateRole
+}
+
+type UserCreationField = keyof UserCreationFormState
+
+type UserCreationErrors = Partial<Record<UserCreationField, string>>
+
 const TAB_CONFIG: { key: ManageTab; label: string; icon: FC<{ className?: string }> }[] = [
   { key: 'guards', label: 'Guards', icon: Users },
   { key: 'firearms', label: 'Firearms', icon: Shield },
@@ -45,6 +75,7 @@ const TAB_CONFIG: { key: ManageTab; label: string; icon: FC<{ className?: string
 const ResourceManagementPanel: FC<ResourceManagementPanelProps> = ({
   users,
   onDeleteUser,
+  onUsersChanged,
   canManageUsers,
   isSuperadminViewer,
 }) => {
@@ -80,6 +111,7 @@ const ResourceManagementPanel: FC<ResourceManagementPanelProps> = ({
         <GuardsTab
           users={users}
           onDeleteUser={onDeleteUser}
+          onUsersChanged={onUsersChanged}
           canManageUsers={canManageUsers}
           isSuperadminViewer={isSuperadminViewer}
         />
@@ -94,12 +126,146 @@ const ResourceManagementPanel: FC<ResourceManagementPanelProps> = ({
 const GuardsTab: FC<{
   users: any[]
   onDeleteUser: (id: string, email: string) => void
+  onUsersChanged?: () => Promise<void> | void
   canManageUsers: boolean
   isSuperadminViewer: boolean
-}> = ({ users, onDeleteUser, canManageUsers, isSuperadminViewer }) => {
+}> = ({ users, onDeleteUser, onUsersChanged, canManageUsers, isSuperadminViewer }) => {
+  const { user: currentUser } = useAuth()
   const guards = users.filter(
     (u) => (u.role || '').toLowerCase() === 'guard' || (u.role || '').toLowerCase() === 'user'
   )
+  const viewerRole = useMemo(() => normalizeRole(currentUser?.role), [currentUser?.role])
+  const creatableRoles = CREATABLE_ROLES_BY_VIEWER[viewerRole]
+  const [isAddUserOpen, setIsAddUserOpen] = useState(false)
+  const [isSubmittingUser, setIsSubmittingUser] = useState(false)
+  const [formErrors, setFormErrors] = useState<UserCreationErrors>({})
+  const [createError, setCreateError] = useState('')
+  const [createSuccess, setCreateSuccess] = useState('')
+  const [newUser, setNewUser] = useState<UserCreationFormState>({
+    name: '',
+    email: '',
+    password: '',
+    role: creatableRoles[0] || 'guard',
+  })
+  const nameInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (creatableRoles.length > 0 && !creatableRoles.includes(newUser.role)) {
+      setNewUser((prev) => ({ ...prev, role: creatableRoles[0] }))
+    }
+  }, [creatableRoles, newUser.role])
+
+  useEffect(() => {
+    if (!isAddUserOpen) return
+
+    const previousBodyOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    const focusTimer = window.setTimeout(() => {
+      nameInputRef.current?.focus()
+    }, 0)
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !isSubmittingUser) {
+        setIsAddUserOpen(false)
+      }
+    }
+
+    window.addEventListener('keydown', handleEscape)
+
+    return () => {
+      window.clearTimeout(focusTimer)
+      window.removeEventListener('keydown', handleEscape)
+      document.body.style.overflow = previousBodyOverflow
+    }
+  }, [isAddUserOpen, isSubmittingUser])
+
+  const openAddUserModal = () => {
+    if (creatableRoles.length === 0) return
+    setFormErrors({})
+    setCreateError('')
+    setNewUser({ name: '', email: '', password: '', role: creatableRoles[0] })
+    setIsAddUserOpen(true)
+  }
+
+  const closeAddUserModal = () => {
+    if (isSubmittingUser) return
+    setIsAddUserOpen(false)
+    setFormErrors({})
+    setCreateError('')
+  }
+
+  const validateAddUserForm = (): UserCreationErrors => {
+    const nextErrors: UserCreationErrors = {}
+    const trimmedName = newUser.name.trim()
+    const trimmedEmail = newUser.email.trim()
+
+    if (!trimmedName) {
+      nextErrors.name = 'Name is required.'
+    }
+
+    if (!trimmedEmail) {
+      nextErrors.email = 'Email is required.'
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      nextErrors.email = 'Enter a valid email address.'
+    }
+
+    if (!newUser.password) {
+      nextErrors.password = 'Password is required.'
+    } else if (newUser.password.length < 6) {
+      nextErrors.password = 'Password must be at least 6 characters.'
+    }
+
+    if (!creatableRoles.includes(newUser.role)) {
+      nextErrors.role = 'Select an allowed role for your account permissions.'
+    }
+
+    return nextErrors
+  }
+
+  const handleCreateUser = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setCreateError('')
+    setCreateSuccess('')
+
+    const nextErrors = validateAddUserForm()
+    if (Object.keys(nextErrors).length > 0) {
+      setFormErrors(nextErrors)
+      return
+    }
+
+    setFormErrors({})
+    setIsSubmittingUser(true)
+
+    try {
+      await fetchJsonOrThrow<any>(
+        `${API_BASE_URL}/api/users`,
+        {
+          method: 'POST',
+          headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({
+            name: newUser.name.trim(),
+            email: newUser.email.trim(),
+            password: newUser.password,
+            role: newUser.role,
+          }),
+        },
+        'Failed to create user',
+      )
+
+      if (onUsersChanged) {
+        await Promise.resolve(onUsersChanged())
+      }
+
+      setCreateSuccess('User created successfully.')
+      setIsAddUserOpen(false)
+      setNewUser({ name: '', email: '', password: '', role: creatableRoles[0] || 'guard' })
+    } catch (err) {
+      setCreateError(err instanceof Error ? err.message : 'Failed to create user')
+    } finally {
+      setIsSubmittingUser(false)
+    }
+  }
 
   if (!canManageUsers) {
     return (
@@ -111,7 +277,32 @@ const GuardsTab: FC<{
 
   return (
     <section className="table-glass rounded p-4 md:p-6">
-      <h2 className="soc-section-title mb-4">Guard Roster ({guards.length})</h2>
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="soc-section-title">Guard Roster ({guards.length})</h2>
+        <div className="flex flex-wrap items-center gap-2">
+          {createSuccess && (
+            <span className="rounded border border-success-border bg-success-bg px-3 py-1.5 text-xs font-semibold text-success-text">
+              {createSuccess}
+            </span>
+          )}
+          {creatableRoles.length > 0 && (
+            <button
+              type="button"
+              onClick={openAddUserModal}
+              className="inline-flex min-h-11 items-center justify-center rounded border border-info-border bg-info-bg px-4 py-2 text-sm font-semibold text-info-text transition-opacity hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
+            >
+              + Add User
+            </button>
+          )}
+        </div>
+      </div>
+
+      {createError && (
+        <div className="mb-4 rounded border border-danger-border bg-danger-bg p-3 text-sm text-danger-text" role="alert">
+          {createError}
+        </div>
+      )}
+
       {guards.length === 0 ? (
         <EmptyState icon={Users} title="No guards registered" subtitle="Guards will appear here once approved" />
       ) : (
@@ -149,6 +340,151 @@ const GuardsTab: FC<{
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {isAddUserOpen && (
+        <div
+          className="soc-modal-backdrop"
+          onClick={closeAddUserModal}
+          aria-hidden="true"
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="add-user-dialog-title"
+            aria-describedby="add-user-dialog-description"
+            className="soc-modal-panel mx-4 w-full max-w-lg rounded bg-surface shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-border px-6 py-4">
+              <div>
+                <h3 id="add-user-dialog-title" className="text-lg font-bold text-text-primary">Add User</h3>
+                <p id="add-user-dialog-description" className="mt-1 text-sm text-text-secondary">
+                  Create a new account for personnel access.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeAddUserModal}
+                className="flex min-h-11 min-w-11 items-center justify-center rounded-md text-3xl text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
+                aria-label="Close add user dialog"
+                disabled={isSubmittingUser}
+              >
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateUser} className="space-y-4 p-6" noValidate>
+              <div>
+                <label htmlFor="add-user-name" className="mb-1 block text-sm font-semibold text-text-secondary">
+                  Name <span aria-hidden="true" className="text-danger-text">*</span>
+                </label>
+                <input
+                  id="add-user-name"
+                  ref={nameInputRef}
+                  type="text"
+                  required
+                  aria-required="true"
+                  aria-invalid={formErrors.name ? 'true' : undefined}
+                  aria-describedby={formErrors.name ? 'add-user-name-error' : undefined}
+                  autoComplete="name"
+                  value={newUser.name}
+                  onChange={(event) => setNewUser((prev) => ({ ...prev, name: event.target.value }))}
+                  className="w-full rounded border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-[color:var(--color-focus-ring)]"
+                />
+                {formErrors.name && (
+                  <p id="add-user-name-error" className="mt-1 text-xs text-danger-text">{formErrors.name}</p>
+                )}
+              </div>
+
+              <div>
+                <label htmlFor="add-user-email" className="mb-1 block text-sm font-semibold text-text-secondary">
+                  Email <span aria-hidden="true" className="text-danger-text">*</span>
+                </label>
+                <input
+                  id="add-user-email"
+                  type="email"
+                  required
+                  aria-required="true"
+                  aria-invalid={formErrors.email ? 'true' : undefined}
+                  aria-describedby={formErrors.email ? 'add-user-email-error' : undefined}
+                  autoComplete="email"
+                  value={newUser.email}
+                  onChange={(event) => setNewUser((prev) => ({ ...prev, email: event.target.value }))}
+                  className="w-full rounded border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-[color:var(--color-focus-ring)]"
+                />
+                {formErrors.email && (
+                  <p id="add-user-email-error" className="mt-1 text-xs text-danger-text">{formErrors.email}</p>
+                )}
+              </div>
+
+              <div>
+                <label htmlFor="add-user-password" className="mb-1 block text-sm font-semibold text-text-secondary">
+                  Password <span aria-hidden="true" className="text-danger-text">*</span>
+                </label>
+                <input
+                  id="add-user-password"
+                  type="password"
+                  required
+                  minLength={6}
+                  aria-required="true"
+                  aria-invalid={formErrors.password ? 'true' : undefined}
+                  aria-describedby={formErrors.password ? 'add-user-password-error' : undefined}
+                  autoComplete="new-password"
+                  value={newUser.password}
+                  onChange={(event) => setNewUser((prev) => ({ ...prev, password: event.target.value }))}
+                  className="w-full rounded border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-[color:var(--color-focus-ring)]"
+                />
+                {formErrors.password && (
+                  <p id="add-user-password-error" className="mt-1 text-xs text-danger-text">{formErrors.password}</p>
+                )}
+              </div>
+
+              <div>
+                <label htmlFor="add-user-role" className="mb-1 block text-sm font-semibold text-text-secondary">
+                  Role <span aria-hidden="true" className="text-danger-text">*</span>
+                </label>
+                <select
+                  id="add-user-role"
+                  required
+                  aria-required="true"
+                  aria-invalid={formErrors.role ? 'true' : undefined}
+                  aria-describedby={formErrors.role ? 'add-user-role-error' : undefined}
+                  value={newUser.role}
+                  onChange={(event) => setNewUser((prev) => ({ ...prev, role: event.target.value as UserCreateRole }))}
+                  className="w-full rounded border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-[color:var(--color-focus-ring)]"
+                >
+                  {creatableRoles.map((role) => (
+                    <option key={role} value={role}>
+                      {USER_ROLE_LABEL[role]}
+                    </option>
+                  ))}
+                </select>
+                {formErrors.role && (
+                  <p id="add-user-role-error" className="mt-1 text-xs text-danger-text">{formErrors.role}</p>
+                )}
+              </div>
+
+              <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={closeAddUserModal}
+                  className="inline-flex min-h-11 items-center justify-center rounded border border-border px-4 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
+                  disabled={isSubmittingUser}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="inline-flex min-h-11 items-center justify-center rounded border border-info-border bg-info-bg px-4 py-2 text-sm font-semibold text-info-text transition-opacity hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)] disabled:opacity-60"
+                  disabled={isSubmittingUser}
+                >
+                  {isSubmittingUser ? 'Creating...' : 'Create User'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </section>
@@ -439,8 +775,8 @@ const ClientSitesTab: FC = () => {
   const [success, setSuccess] = useState('')
   const [newSite, setNewSite] = useState<ClientSiteInput>({
     name: '',
-    latitude: 7.0731,
-    longitude: 125.6128,
+    latitude: 7.4478,
+    longitude: 125.8078,
     address: '',
   })
 
@@ -451,7 +787,7 @@ const ClientSitesTab: FC = () => {
     try {
       await createClientSite(newSite)
       setSuccess('Client site created')
-      setNewSite({ name: '', latitude: 7.0731, longitude: 125.6128, address: '' })
+      setNewSite({ name: '', latitude: 7.4478, longitude: 125.8078, address: '' })
       setShowAddForm(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create site')

@@ -101,6 +101,8 @@ export default function AppShell() {
     'dashboard',
     'approvals',
     'schedule',
+    'feedback',
+    'feedback-dashboard',
     'inbox',
     'support',
     'notifications',

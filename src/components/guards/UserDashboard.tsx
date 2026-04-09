@@ -86,6 +86,8 @@ interface LastKnownLocation {
   source: string
 }
 
+const TAGUM_CENTER: [number, number] = [7.4478, 125.8078]
+
 function resolveSectionFromView(activeView?: string): GuardSection {
   if (activeView === 'inbox') return 'inbox'
   if (activeView === 'support') return 'support'
@@ -548,22 +550,24 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
   }, [dutyStatus])
 
   const mapEmbedUrl = useMemo(() => {
-    if (!lastKnownLocation) return ''
+    const latitude = lastKnownLocation?.latitude ?? TAGUM_CENTER[0]
+    const longitude = lastKnownLocation?.longitude ?? TAGUM_CENTER[1]
 
     const delta = 0.008
-    const left = (lastKnownLocation.longitude - delta).toFixed(6)
-    const right = (lastKnownLocation.longitude + delta).toFixed(6)
-    const bottom = (lastKnownLocation.latitude - delta).toFixed(6)
-    const top = (lastKnownLocation.latitude + delta).toFixed(6)
-    const markerLat = lastKnownLocation.latitude.toFixed(6)
-    const markerLon = lastKnownLocation.longitude.toFixed(6)
+    const left = (longitude - delta).toFixed(6)
+    const right = (longitude + delta).toFixed(6)
+    const bottom = (latitude - delta).toFixed(6)
+    const top = (latitude + delta).toFixed(6)
+    const markerLat = latitude.toFixed(6)
+    const markerLon = longitude.toFixed(6)
 
     return `https://www.openstreetmap.org/export/embed.html?bbox=${left}%2C${bottom}%2C${right}%2C${top}&layer=mapnik&marker=${markerLat}%2C${markerLon}`
   }, [lastKnownLocation])
 
   const mapExternalUrl = useMemo(() => {
-    if (!lastKnownLocation) return ''
-    return `https://www.openstreetmap.org/?mlat=${lastKnownLocation.latitude}&mlon=${lastKnownLocation.longitude}#map=16/${lastKnownLocation.latitude}/${lastKnownLocation.longitude}`
+    const latitude = lastKnownLocation?.latitude ?? TAGUM_CENTER[0]
+    const longitude = lastKnownLocation?.longitude ?? TAGUM_CENTER[1]
+    return `https://www.openstreetmap.org/?mlat=${latitude}&mlon=${longitude}#map=16/${latitude}/${longitude}`
   }, [lastKnownLocation])
 
   const handleCheckIn = async (shift: ShiftItem) => {

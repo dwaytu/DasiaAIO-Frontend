@@ -1889,6 +1889,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
           <ResourceManagementPanel
             users={users}
             onDeleteUser={handleDeleteUser}
+            onUsersChanged={fetchData}
             canManageUsers={canManageUsers}
             isSuperadminViewer={isSuperadminViewer}
           />

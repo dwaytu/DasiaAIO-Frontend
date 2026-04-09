@@ -37,13 +37,13 @@ const eventTypeLabel: Record<'incident' | 'alert' | 'guard' | 'vehicle', string>
 
 const normalizeEventToken = (value?: string): string => value?.trim().toLowerCase() ?? ''
 
-const DAVAO_CENTER: [number, number] = [7.0731, 125.6128]
+const TAGUM_CENTER: [number, number] = [7.4478, 125.8078]
 
 const INITIAL_FORM: ClientSiteInput = {
   name: '',
   address: '',
-  latitude: DAVAO_CENTER[0],
-  longitude: DAVAO_CENTER[1],
+  latitude: TAGUM_CENTER[0],
+  longitude: TAGUM_CENTER[1],
   isActive: true,
 }
 
@@ -179,7 +179,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
 
   const mapCenter = useMemo<[number, number]>(() => {
     if (focusCenter) return focusCenter
-    if (!currentUserPoint) return DAVAO_CENTER
+    if (!currentUserPoint) return TAGUM_CENTER
     return [currentUserPoint.latitude, currentUserPoint.longitude]
   }, [focusCenter, currentUserPoint?.latitude, currentUserPoint?.longitude])
 
@@ -194,7 +194,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
       positions.push([point.latitude, point.longitude])
     }
 
-    return positions.length > 0 ? positions : [DAVAO_CENTER]
+    return positions.length > 0 ? positions : [TAGUM_CENTER]
   }, [clientSites, visibleTrackingPoints])
 
   const selectedGuardEventMatch = useMemo<SelectedGuardEventMatch | null>(() => {

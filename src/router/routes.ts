@@ -2,6 +2,8 @@ export const ROUTES = {
   LOGIN: '/login',
   DASHBOARD: '/dashboard',
   OVERVIEW: '/overview',
+  FEEDBACK: '/feedback',
+  FEEDBACK_DASHBOARD: '/feedback-dashboard',
   CALENDAR: '/calendar',
   PERFORMANCE: '/performance',
   MERIT: '/merit',
@@ -40,6 +42,8 @@ export type RoutePath = (typeof ROUTES)[keyof typeof ROUTES]
 export const VIEW_TO_ROUTE: Record<string, RoutePath> = {
   'dashboard': ROUTES.DASHBOARD,
   'overview': ROUTES.OVERVIEW,
+  'feedback': ROUTES.FEEDBACK,
+  'feedback-dashboard': ROUTES.FEEDBACK_DASHBOARD,
   'calendar': ROUTES.CALENDAR,
   'performance': ROUTES.PERFORMANCE,
   'merit': ROUTES.MERIT,

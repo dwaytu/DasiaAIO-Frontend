@@ -9,6 +9,8 @@ import AppShell from '../components/layout/AppShell'
 const LoginPage = lazy(() => import('../components/LoginPage'))
 const SuperadminDashboard = lazy(() => import('../components/admin/SuperadminDashboard'))
 const UserDashboard = lazy(() => import('../components/guards/UserDashboard'))
+const FeedbackForm = lazy(() => import('../components/feedback/FeedbackForm'))
+const FeedbackDashboard = lazy(() => import('../components/feedback/FeedbackDashboard'))
 const CalendarDashboard = lazy(() => import('../components/CalendarDashboard'))
 const PerformanceDashboard = lazy(() => import('../components/PerformanceDashboard'))
 const MeritScoreDashboard = lazy(() => import('../components/MeritScoreDashboard'))
@@ -129,6 +131,7 @@ function SupportRouteWrapper() {
 
 const ELEVATED_ROLES = ['superadmin', 'admin', 'supervisor']
 const ALL_ROLES = ['superadmin', 'admin', 'supervisor', 'guard']
+const FEEDBACK_SUBMIT_ROLES = ['admin', 'supervisor', 'guard']
 const SUPERADMIN_ONLY = ['superadmin']
 const GUARD_ONLY = ['guard']
 
@@ -186,6 +189,14 @@ export const appRoutes: RouteObject[] = [
         ],
       },
 
+      // Feedback submission (guards, supervisors, admins)
+      {
+        element: <RoleGuard roles={FEEDBACK_SUBMIT_ROLES} />,
+        children: [
+          { path: ROUTES.FEEDBACK, element: <LegacyPage Component={FeedbackForm} /> },
+        ],
+      },
+
       // Elevated roles — manage firearms, analytics
       {
         element: <RoleGuard roles={ELEVATED_ROLES} />,
@@ -205,6 +216,7 @@ export const appRoutes: RouteObject[] = [
         element: <RoleGuard roles={SUPERADMIN_ONLY} />,
         children: [
           { path: ROUTES.AUDIT, element: <LegacyPage Component={AuditDashboard} /> },
+          { path: ROUTES.FEEDBACK_DASHBOARD, element: <LegacyPage Component={FeedbackDashboard} /> },
         ],
       },
 

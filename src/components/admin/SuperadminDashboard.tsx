@@ -24,11 +24,18 @@ import OperationalShell from '../layout/OperationalShell'
 import { ROUTES, VIEW_TO_ROUTE } from '../../router/routes'
 import { fetchJsonOrThrow, getAuthHeaders } from '../../utils/api'
 import { can } from '../../utils/permissions'
-import { getTrackingAccuracyMode, setTrackingAccuracyMode, TrackingAccuracyMode } from '../../utils/trackingPolicy'
+import {
+  getPersonRecencyMinutes,
+  getTrackingAccuracyMode,
+  getVehicleRecencyMinutes,
+  setTrackingAccuracyMode,
+  TrackingAccuracyMode,
+} from '../../utils/trackingPolicy'
 import { logError } from '../../utils/logger'
 import { SupervisorInboxPanel } from '../inbox/SupervisorInboxPanel'
 import { AdminInboxPanel } from '../inbox/AdminInboxPanel'
 import { SuperadminInboxPanel } from '../inbox/SuperadminInboxPanel'
+import { useOperationalMapData } from '../../hooks/useOperationalMapData'
 
 const AuditDashboard = lazy(() => import('../AuditDashboard'))
 
@@ -191,6 +198,67 @@ interface SuperadminDashboardProps {
   onLogout: () => void
   onViewChange?: (view: string) => void
   activeView?: string
+}
+
+interface SuperadminOperationsMapSectionProps {
+  trackingAccuracyMode: TrackingAccuracyMode
+}
+
+const SuperadminOperationsMapSection: FC<SuperadminOperationsMapSectionProps> = ({ trackingAccuracyMode }) => {
+  const { trackingPoints, hasTrackingAccess } = useOperationalMapData()
+
+  const mapCounts = useMemo(() => {
+    if (!hasTrackingAccess || trackingPoints.length === 0) {
+      return { activeTrips: 0, activeGuards: 0 }
+    }
+
+    const personRecencyMinutes = getPersonRecencyMinutes(trackingAccuracyMode)
+    const vehicleRecencyMinutes = getVehicleRecencyMinutes(trackingAccuracyMode)
+    const now = Date.now()
+    const activeGuardIds = new Set<string>()
+    const activeTripIds = new Set<string>()
+
+    for (const point of trackingPoints) {
+      const recordedAt = new Date(point.recordedAt).getTime()
+      if (Number.isNaN(recordedAt)) continue
+
+      const pointAgeMinutes = (now - recordedAt) / 60000
+      const pointKey = point.entityId || point.userId || point.id
+      if (!pointKey) continue
+
+      if (point.entityType.toLowerCase() === 'vehicle') {
+        const movementStatus = point.movementStatus?.trim().toLowerCase()
+        if (pointAgeMinutes <= vehicleRecencyMinutes && movementStatus !== 'offline') {
+          activeTripIds.add(pointKey)
+        }
+        continue
+      }
+
+      if (pointAgeMinutes <= personRecencyMinutes) {
+        activeGuardIds.add(pointKey)
+      }
+    }
+
+    return {
+      activeTrips: activeTripIds.size,
+      activeGuards: activeGuardIds.size,
+    }
+  }, [hasTrackingAccess, trackingAccuracyMode, trackingPoints])
+
+  return (
+    <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in">
+      <section className="soc-surface p-4 md:p-5 mb-4">
+        <p className="text-xs font-bold uppercase tracking-[0.2em] text-text-tertiary">Intelligence</p>
+        <h1 className="text-2xl font-black uppercase tracking-wide text-text-primary">Operations Map</h1>
+        <p className="mt-1 text-sm text-text-secondary">Live geospatial view with guard movement intelligence, geofence alerts, and client location management.</p>
+      </section>
+      <div className="soc-surface p-0 overflow-hidden rounded" style={{ minHeight: '600px' }}>
+        <OperationalEventProvider>
+          <OperationalMapPanel activeTrips={mapCounts.activeTrips} activeGuards={mapCounts.activeGuards} />
+        </OperationalEventProvider>
+      </div>
+    </div>
+  )
 }
 
 const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onViewChange, activeView }) => {
@@ -1825,18 +1893,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
             isSuperadminViewer={isSuperadminViewer}
           />
         ) : activeSection === 'operations-map' ? (
-          <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in">
-            <section className="soc-surface p-4 md:p-5 mb-4">
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-text-tertiary">Intelligence</p>
-              <h1 className="text-2xl font-black uppercase tracking-wide text-text-primary">Operations Map</h1>
-              <p className="mt-1 text-sm text-text-secondary">Live geospatial view with guard movement intelligence, geofence alerts, and client location management.</p>
-            </section>
-            <div className="soc-surface p-0 overflow-hidden rounded" style={{ minHeight: '600px' }}>
-              <OperationalEventProvider>
-                <OperationalMapPanel activeTrips={0} activeGuards={0} />
-              </OperationalEventProvider>
-            </div>
-          </div>
+          <SuperadminOperationsMapSection trackingAccuracyMode={trackingAccuracyMode} />
         ) : null}
 
         {editingUser && (

@@ -357,6 +357,10 @@ export async function fetchJsonOrThrow<T>(
       })
       lastNetworkError = null
     } catch (error) {
+      // If the caller's signal caused the abort, re-throw so callers can distinguish cancellation from timeout.
+      if (requestInit?.signal?.aborted && error instanceof DOMException && error.name === 'AbortError') {
+        throw error
+      }
       if (error instanceof DOMException && error.name === 'AbortError') {
         lastNetworkError = new Error(`Request timed out after ${timeoutMs}ms`)
       } else {

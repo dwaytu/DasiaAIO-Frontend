@@ -15,7 +15,7 @@ export function getTrackingAccuracyMode(): TrackingAccuracyMode {
     return envMode
   }
 
-  return 'strict'
+  return 'balanced'
 }
 
 export function setTrackingAccuracyMode(mode: TrackingAccuracyMode): void {

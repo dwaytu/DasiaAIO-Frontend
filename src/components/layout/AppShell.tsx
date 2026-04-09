@@ -4,6 +4,7 @@ import { LayoutDashboard, ClipboardCheck, Calendar, Bell, MoreHorizontal, X } fr
 import { useAuth } from '../../hooks/useAuth'
 import { useUI } from '../../hooks/useUI'
 import { useLocationConsent } from '../../hooks/useLocationConsent'
+import { usePresenceHeartbeat } from '../../hooks/usePresenceHeartbeat'
 import { normalizeRole } from '../../types/auth'
 import { APP_VERSION } from '../../config'
 import { getSidebarNav } from '../../config/navigation'
@@ -12,6 +13,8 @@ import { VIEW_TO_ROUTE } from '../../router/routes'
 import ToastContainer from '../shared/ToastContainer'
 
 export default function AppShell() {
+  usePresenceHeartbeat()
+
   const {
     user,
     isLoggedIn,
@@ -115,8 +118,12 @@ export default function AppShell() {
     'calendar',
     'profile',
     'settings',
+    'mdr-import',
   ])
-  const showAppShellMobileNav = isElevatedRole && !operationalShellViews.has(activeView)
+  const isOperationalShellRoute =
+    operationalShellViews.has(activeView) ||
+    activeView.startsWith('mdr-import/')
+  const showAppShellMobileNav = isElevatedRole && !isOperationalShellRoute
 
   const mobileBottomTabs = [
     { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },

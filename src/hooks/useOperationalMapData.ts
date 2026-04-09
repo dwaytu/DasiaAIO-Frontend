@@ -1,17 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { API_BASE_URL } from '../config'
-import { detectRuntimePlatform } from '../config'
 import { fetchJsonOrThrow, getAuthHeaders, getAuthToken } from '../utils/api'
 import {
   canManageTrackingSites,
   hasTrackingEndpointAccess,
   normalizeRole,
 } from '../types/auth'
-import {
-  hasAcceptedLocationConsent,
-  LOCATION_TRACKING_TOGGLE_KEY,
-  resolveLocationWithFallback,
-} from '../utils/location'
 
 export interface MapClientSite {
   id: string
@@ -160,6 +154,7 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
   const wsReconnectTimerRef = useRef<number | null>(null)
   const wsReconnectAttemptsRef = useRef<number>(0)
   const enableTrackingWs = import.meta.env.VITE_ENABLE_TRACKING_WS === 'true'
+  const currentToken = getAuthToken().trim()
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
@@ -351,7 +346,7 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
 
     let disposed = false
 
-    const token = getAuthToken().trim()
+    const token = currentToken
     if (!token || !enableTrackingWs || !hasTrackingAccess) {
       setWsConnectionState('disabled')
       return () => {
@@ -363,7 +358,7 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
     }
 
     const wsBase = API_BASE_URL.replace(/^http/, 'ws')
-    const wsUrl = `${wsBase}/api/tracking/ws`
+    const wsUrl = `${wsBase}/api/tracking/ws?token=${encodeURIComponent(token)}`
     const wsProtocols = ['sentinel-tracking-v1', `bearer.${token}`]
 
     const scheduleReconnect = (reason: string) => {
@@ -470,58 +465,7 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
       closeSocket()
       setWsConnectionState('disabled')
     }
-  }, [applySnapshot, enableTrackingWs, hasTrackingAccess, load])
-
-  useEffect(() => {
-    const storedUser = localStorage.getItem('user')
-    if (!storedUser) return
-
-    const trackingEnabled = localStorage.getItem(LOCATION_TRACKING_TOGGLE_KEY) === 'true'
-    if (!trackingEnabled || !hasAcceptedLocationConsent()) return
-
-    try {
-      const user = JSON.parse(storedUser)
-      const role = normalizeRole(user?.role)
-      if (role !== 'guard') return
-    } catch {
-      return
-    }
-
-    let lastSent = 0
-    let disposed = false
-    const platform = detectRuntimePlatform()
-
-    const pushHeartbeat = async () => {
-      const now = Date.now()
-      if (now - lastSent < 15000) return
-      lastSent = now
-
-      try {
-        const location = await resolveLocationWithFallback(platform)
-        await sendGuardHeartbeat({
-          latitude: location.latitude,
-          longitude: location.longitude,
-          heading: location.heading ?? undefined,
-          speedKph: location.speedKph ?? undefined,
-          accuracyMeters: location.accuracyMeters ?? undefined,
-          status: 'active',
-        })
-      } catch {
-        // Ignore heartbeat errors to keep polling alive.
-      }
-    }
-
-    void pushHeartbeat()
-    const intervalId = window.setInterval(() => {
-      if (disposed) return
-      void pushHeartbeat()
-    }, 20000)
-
-    return () => {
-      disposed = true
-      window.clearInterval(intervalId)
-    }
-  }, [sendGuardHeartbeat])
+  }, [applySnapshot, currentToken, enableTrackingWs, hasTrackingAccess, load])
 
   return useMemo(
     () => ({

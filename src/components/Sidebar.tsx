@@ -42,6 +42,7 @@ const navGlyphs: Record<string, string> = {
   'armored-cars': 'AC',
   settings: 'ST',
   support: 'CT',
+  'mdr-import': 'MD',
 }
 
 const Sidebar: FC<SidebarProps> = ({

@@ -1,4 +1,4 @@
-import { createContext, useState, useEffect, useCallback, ReactNode } from 'react'
+import { createContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react'
 import { detectRuntimePlatform } from '../config'
 import { API_BASE_URL } from '../config'
 import {
@@ -17,11 +17,13 @@ import { useAuth } from '../hooks/useAuth'
 // ---------------------------------------------------------------------------
 
 export type LocationPermissionState = 'unknown' | 'prompt' | 'granted' | 'denied' | 'unsupported'
+export type LocationHeartbeatStatus = 'active' | 'no-consent' | 'no-permission' | 'no-toa' | 'paused'
 
 export interface LocationContextValue {
   hasLocationConsent: boolean
   locationConsentChecked: boolean
   geoPermissionState: LocationPermissionState
+  locationHeartbeatStatus: LocationHeartbeatStatus
   geoNotice: string
   locationBannerDismissed: boolean
   grantLocationConsent: () => void
@@ -46,6 +48,7 @@ export function LocationProvider({ children }: LocationProviderProps) {
   const [hasLocationConsent, setHasLocationConsent] = useState(false)
   const [locationConsentChecked, setLocationConsentChecked] = useState(false)
   const [geoPermissionState, setGeoPermissionState] = useState<LocationPermissionState>('unknown')
+  const [heartbeatPaused, setHeartbeatPaused] = useState(false)
   const [geoNotice, setGeoNotice] = useState('')
   const [locationBannerDismissed, setLocationBannerDismissed] = useState(() => {
     try {
@@ -113,6 +116,8 @@ export function LocationProvider({ children }: LocationProviderProps) {
       return
     }
 
+    setHeartbeatPaused(false)
+
     let lastSent = 0
     let disposed = false
     const platform = detectRuntimePlatform()
@@ -163,6 +168,7 @@ export function LocationProvider({ children }: LocationProviderProps) {
         )
 
         if (!disposed) {
+          setHeartbeatPaused(false)
           if (location.source === 'ip') {
             setGeoPermissionState('denied')
             setGeoNotice(
@@ -175,6 +181,7 @@ export function LocationProvider({ children }: LocationProviderProps) {
         }
       } catch {
         if (!disposed) {
+          setHeartbeatPaused(true)
           setGeoNotice('Location update paused — check your connection and try again.')
         }
       }
@@ -190,6 +197,21 @@ export function LocationProvider({ children }: LocationProviderProps) {
       window.clearInterval(intervalId)
     }
   }, [hasAcceptedToa, hasLocationConsent, isLoggedIn, user?.id, user?.username, user?.fullName, user?.full_name])
+
+  const locationHeartbeatStatus = useMemo<LocationHeartbeatStatus>(() => {
+    if (!isLoggedIn || !user) return 'paused'
+    if (!hasAcceptedToa) return 'no-toa'
+    if (!hasLocationConsent) return 'no-consent'
+
+    const role = user.role
+    const canSendTrackingHeartbeat = role === 'supervisor' || role === 'guard'
+    if (!canSendTrackingHeartbeat) return 'paused'
+
+    if (heartbeatPaused) return 'paused'
+    if (geoPermissionState === 'denied' || geoPermissionState === 'prompt') return 'no-permission'
+
+    return 'active'
+  }, [geoPermissionState, hasAcceptedToa, hasLocationConsent, heartbeatPaused, isLoggedIn, user])
 
   // ---------------------------------------------------------------------------
   // Handlers
@@ -249,6 +271,7 @@ export function LocationProvider({ children }: LocationProviderProps) {
     hasLocationConsent,
     locationConsentChecked,
     geoPermissionState,
+    locationHeartbeatStatus,
     geoNotice,
     locationBannerDismissed,
     grantLocationConsent,

@@ -21,6 +21,7 @@ const ProfileDashboard = lazy(() => import('../components/ProfileDashboard'))
 const SettingsView = lazy(() => import('../components/settings/SettingsView'))
 const AnalyticsDashboard = lazy(() => import('../components/AnalyticsDashboard'))
 const AuditDashboard = lazy(() => import('../components/AuditDashboard'))
+const MdrImportPage = lazy(() => import('../components/mdr/MdrImportPage'))
 
 function LazyFallback() {
   return (
@@ -157,6 +158,8 @@ export const appRoutes: RouteObject[] = [
           { path: ROUTES.TRIPS, element: <LegacyPage Component={SuperadminDashboard} /> },
           { path: ROUTES.MANAGE, element: <LegacyPage Component={SuperadminDashboard} /> },
           { path: ROUTES.OPERATIONS_MAP, element: <LegacyPage Component={SuperadminDashboard} /> },
+          { path: ROUTES.MDR_IMPORT, element: <LegacyPage Component={MdrImportPage} /> },
+          { path: '/mdr-import/:batchId', element: <LegacyPage Component={MdrImportPage} /> },
         ],
       },
 

@@ -1,6 +1,7 @@
 import { FC, FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { API_BASE_URL, detectRuntimePlatform } from '../../config'
 import { EMERGENCY_CONTACTS, phoneToTelHref } from '../../constants/emergencyContacts'
+import type { LocationHeartbeatStatus } from '../../context/LocationContext'
 import type { User as AppUser } from '../../context/AuthContext'
 import { getRequiredAccuracyMeters, getTrackingAccuracyMode } from '../../utils/trackingPolicy'
 import { logError } from '../../utils/logger'
@@ -15,6 +16,7 @@ import {
   resolveLocationWithFallback,
 } from '../../utils/location'
 import { useUI } from '../../hooks/useUI'
+import { useLocationConsent } from '../../hooks/useLocationConsent'
 import GuardResourcesTab from '../dashboard/GuardResourcesTab'
 import GuardMapTab from '../dashboard/GuardMapTab'
 import SupportTickets from './SupportTickets'
@@ -125,6 +127,10 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
   const [syncError, setSyncError] = useState<string>('')
   const [actionStatus, setActionStatus] = useState<string>('')
   const { isNetworkOnline } = useUI()
+  const {
+    locationHeartbeatStatus,
+    requestGeoPermission: requestGeoPermissionFromContext,
+  } = useLocationConsent()
 
   const [incidentModalOpen, setIncidentModalOpen] = useState<boolean>(false)
   const [incidentForm, setIncidentForm] = useState<IncidentFormState>({
@@ -143,6 +149,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
 
   const [locationTrackingEnabled, setLocationTrackingEnabled] = useState<boolean>(false)
   const [hasLocationConsent, setHasLocationConsent] = useState<boolean>(false)
+  const [dismissedHeartbeatStatus, setDismissedHeartbeatStatus] = useState<LocationHeartbeatStatus | null>(null)
   const [locationTrackingMessage, setLocationTrackingMessage] = useState<string>('')
   const [_locationPermissionState, setLocationPermissionState] = useState<'unknown' | 'prompt' | 'granted' | 'denied'>('unknown')
   const [, setLocationAccuracyMeters] = useState<number | null>(null)
@@ -157,6 +164,18 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
   useEffect(() => {
     setActiveSection(resolveSectionFromView(activeView))
   }, [activeView])
+
+  useEffect(() => {
+    if (locationHeartbeatStatus === 'active') {
+      setDismissedHeartbeatStatus(null)
+      return
+    }
+
+    if (dismissedHeartbeatStatus) {
+      // Keep dismiss temporary so the banner returns until the root cause is fixed.
+      setDismissedHeartbeatStatus(null)
+    }
+  }, [dismissedHeartbeatStatus, locationHeartbeatStatus])
 
   const closeProfileModal = useCallback(() => {
     setProfileModalOpen(false)
@@ -270,6 +289,16 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
 
     settled.forEach((result, index) => {
       if (result.status === 'rejected') {
+        const reason = result.reason
+        const isAbortError =
+          reason?.name === 'AbortError' ||
+          (typeof DOMException !== 'undefined' && reason instanceof DOMException && reason.code === 20)
+
+        // Ignore aborted requests because a re-fired effect will immediately retry.
+        if (isAbortError) {
+          return
+        }
+
         failures.push(labels[index])
         return
       }
@@ -723,6 +752,44 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
         ? 'Confirm tracking and sync before leaving staging.'
         : 'Tracking and sync are ready for this watch.'
 
+  const locationPausedBanner = useMemo(() => {
+    if (locationHeartbeatStatus === 'active') return null
+
+    if (locationHeartbeatStatus === 'no-consent') {
+      return {
+        title: 'Location sharing paused',
+        message: 'Location consent is required before heartbeat updates can run.',
+        action: 'open-profile' as const,
+        actionLabel: 'Enable Consent',
+      }
+    }
+
+    if (locationHeartbeatStatus === 'no-permission') {
+      return {
+        title: 'Location permission required',
+        message: 'Allow location access to resume precise heartbeat updates.',
+        action: 'request-permission' as const,
+        actionLabel: 'Enable Location',
+      }
+    }
+
+    if (locationHeartbeatStatus === 'no-toa') {
+      return {
+        title: 'Location sharing paused',
+        message: 'Accept the Terms of Agreement to enable location heartbeat.',
+        action: 'open-profile' as const,
+        actionLabel: 'Review Terms',
+      }
+    }
+
+    return {
+      title: 'Location sharing paused',
+      message: 'Heartbeat updates are currently paused. Re-enable tracking to continue sharing your location.',
+      action: null,
+      actionLabel: '',
+    }
+  }, [locationHeartbeatStatus])
+
   const navItems: Array<{ key: GuardSection; label: string }> = [
     { key: 'mission', label: 'Mission' },
     { key: 'resources', label: 'Resources' },
@@ -761,6 +828,45 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
             <div className="rounded border border-danger-border bg-danger-bg p-4 text-danger-text" role="status" aria-live="polite">
               <p className="font-semibold">No connection</p>
               <p className="mt-1 text-sm">You're offline. Your actions are saved and will send when you reconnect.</p>
+            </div>
+          ) : null}
+
+          {locationPausedBanner && dismissedHeartbeatStatus !== locationHeartbeatStatus ? (
+            <div className="rounded border border-warning-border bg-warning-bg p-3 text-warning-text" role="status" aria-live="polite">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold">{locationPausedBanner.title}</p>
+                  <p className="mt-1 text-xs">{locationPausedBanner.message}</p>
+                  {locationPausedBanner.action === 'request-permission' ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void requestGeoPermissionFromContext()
+                      }}
+                      className="mt-2 min-h-10 rounded-md border border-warning-border px-3 py-1.5 text-xs font-semibold"
+                    >
+                      {locationPausedBanner.actionLabel}
+                    </button>
+                  ) : null}
+                  {locationPausedBanner.action === 'open-profile' ? (
+                    <button
+                      type="button"
+                      onClick={() => setProfileModalOpen(true)}
+                      className="mt-2 min-h-10 rounded-md border border-warning-border px-3 py-1.5 text-xs font-semibold"
+                    >
+                      {locationPausedBanner.actionLabel}
+                    </button>
+                  ) : null}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setDismissedHeartbeatStatus(locationHeartbeatStatus)}
+                  className="min-h-10 rounded-md border border-warning-border px-2 py-1 text-xs font-semibold"
+                  aria-label="Dismiss location sharing paused notice"
+                >
+                  Dismiss
+                </button>
+              </div>
             </div>
           ) : null}
 

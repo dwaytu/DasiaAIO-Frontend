@@ -55,10 +55,15 @@ const USER_ROLE_LABEL: Record<UserCreateRole, string> = {
 }
 
 type UserCreationFormState = {
-  name: string
+  fullName: string
+  username: string
   email: string
   password: string
+  phoneNumber: string
   role: UserCreateRole
+  licenseNumber: string
+  licenseIssuedDate: string
+  licenseExpiryDate: string
 }
 
 type UserCreationField = keyof UserCreationFormState
@@ -142,10 +147,15 @@ const GuardsTab: FC<{
   const [createError, setCreateError] = useState('')
   const [createSuccess, setCreateSuccess] = useState('')
   const [newUser, setNewUser] = useState<UserCreationFormState>({
-    name: '',
+    fullName: '',
+    username: '',
     email: '',
     password: '',
+    phoneNumber: '',
     role: creatableRoles[0] || 'guard',
+    licenseNumber: '',
+    licenseIssuedDate: '',
+    licenseExpiryDate: '',
   })
   const nameInputRef = useRef<HTMLInputElement>(null)
 
@@ -184,7 +194,17 @@ const GuardsTab: FC<{
     if (creatableRoles.length === 0) return
     setFormErrors({})
     setCreateError('')
-    setNewUser({ name: '', email: '', password: '', role: creatableRoles[0] })
+    setNewUser({
+      fullName: '',
+      username: '',
+      email: '',
+      password: '',
+      phoneNumber: '',
+      role: creatableRoles[0],
+      licenseNumber: '',
+      licenseIssuedDate: '',
+      licenseExpiryDate: '',
+    })
     setIsAddUserOpen(true)
   }
 
@@ -197,17 +217,32 @@ const GuardsTab: FC<{
 
   const validateAddUserForm = (): UserCreationErrors => {
     const nextErrors: UserCreationErrors = {}
-    const trimmedName = newUser.name.trim()
+    const trimmedFullName = newUser.fullName.trim()
+    const trimmedUsername = newUser.username.trim()
     const trimmedEmail = newUser.email.trim()
+    const trimmedPhoneNumber = newUser.phoneNumber.trim()
+    const trimmedLicenseNumber = newUser.licenseNumber.trim()
 
-    if (!trimmedName) {
-      nextErrors.name = 'Name is required.'
+    if (!trimmedFullName) {
+      nextErrors.fullName = 'Full name is required.'
+    }
+
+    if (!trimmedUsername) {
+      nextErrors.username = 'Username is required.'
+    } else if (trimmedUsername.length < 3) {
+      nextErrors.username = 'Username must be at least 3 characters.'
+    } else if (!/^[A-Za-z0-9_]+$/.test(trimmedUsername)) {
+      nextErrors.username = 'Username can only include letters, numbers, and underscores.'
     }
 
     if (!trimmedEmail) {
       nextErrors.email = 'Email is required.'
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
       nextErrors.email = 'Enter a valid email address.'
+    }
+
+    if (!trimmedPhoneNumber) {
+      nextErrors.phoneNumber = 'Phone number is required.'
     }
 
     if (!newUser.password) {
@@ -218,6 +253,20 @@ const GuardsTab: FC<{
 
     if (!creatableRoles.includes(newUser.role)) {
       nextErrors.role = 'Select an allowed role for your account permissions.'
+    }
+
+    if (newUser.role === 'guard') {
+      if (!trimmedLicenseNumber) {
+        nextErrors.licenseNumber = 'License number is required for guard accounts.'
+      }
+
+      if (!newUser.licenseIssuedDate) {
+        nextErrors.licenseIssuedDate = 'License issue date is required for guard accounts.'
+      }
+
+      if (!newUser.licenseExpiryDate) {
+        nextErrors.licenseExpiryDate = 'License expiry date is required for guard accounts.'
+      }
     }
 
     return nextErrors
@@ -244,10 +293,17 @@ const GuardsTab: FC<{
           method: 'POST',
           headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
           body: JSON.stringify({
-            name: newUser.name.trim(),
+            fullName: newUser.fullName.trim(),
+            username: newUser.username.trim(),
             email: newUser.email.trim(),
             password: newUser.password,
+            phoneNumber: newUser.phoneNumber.trim(),
             role: newUser.role,
+            ...(newUser.role === 'guard' && {
+              licenseNumber: newUser.licenseNumber.trim(),
+              licenseIssuedDate: new Date(newUser.licenseIssuedDate).toISOString(),
+              licenseExpiryDate: new Date(newUser.licenseExpiryDate).toISOString(),
+            }),
           }),
         },
         'Failed to create user',
@@ -259,7 +315,17 @@ const GuardsTab: FC<{
 
       setCreateSuccess('User created successfully.')
       setIsAddUserOpen(false)
-      setNewUser({ name: '', email: '', password: '', role: creatableRoles[0] || 'guard' })
+      setNewUser({
+        fullName: '',
+        username: '',
+        email: '',
+        password: '',
+        phoneNumber: '',
+        role: creatableRoles[0] || 'guard',
+        licenseNumber: '',
+        licenseIssuedDate: '',
+        licenseExpiryDate: '',
+      })
     } catch (err) {
       setCreateError(err instanceof Error ? err.message : 'Failed to create user')
     } finally {
@@ -378,7 +444,7 @@ const GuardsTab: FC<{
             <form onSubmit={handleCreateUser} className="space-y-4 p-6" noValidate>
               <div>
                 <label htmlFor="add-user-name" className="mb-1 block text-sm font-semibold text-text-secondary">
-                  Name <span aria-hidden="true" className="text-danger-text">*</span>
+                  Full Name <span aria-hidden="true" className="text-danger-text">*</span>
                 </label>
                 <input
                   id="add-user-name"
@@ -386,15 +452,36 @@ const GuardsTab: FC<{
                   type="text"
                   required
                   aria-required="true"
-                  aria-invalid={formErrors.name ? 'true' : undefined}
-                  aria-describedby={formErrors.name ? 'add-user-name-error' : undefined}
+                  aria-invalid={formErrors.fullName ? 'true' : undefined}
+                  aria-describedby={formErrors.fullName ? 'add-user-name-error' : undefined}
                   autoComplete="name"
-                  value={newUser.name}
-                  onChange={(event) => setNewUser((prev) => ({ ...prev, name: event.target.value }))}
+                  value={newUser.fullName}
+                  onChange={(event) => setNewUser((prev) => ({ ...prev, fullName: event.target.value }))}
                   className="w-full rounded border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-[color:var(--color-focus-ring)]"
                 />
-                {formErrors.name && (
-                  <p id="add-user-name-error" className="mt-1 text-xs text-danger-text">{formErrors.name}</p>
+                {formErrors.fullName && (
+                  <p id="add-user-name-error" className="mt-1 text-xs text-danger-text">{formErrors.fullName}</p>
+                )}
+              </div>
+
+              <div>
+                <label htmlFor="add-user-username" className="mb-1 block text-sm font-semibold text-text-secondary">
+                  Username <span aria-hidden="true" className="text-danger-text">*</span>
+                </label>
+                <input
+                  id="add-user-username"
+                  type="text"
+                  required
+                  aria-required="true"
+                  aria-invalid={formErrors.username ? 'true' : undefined}
+                  aria-describedby={formErrors.username ? 'add-user-username-error' : undefined}
+                  autoComplete="username"
+                  value={newUser.username}
+                  onChange={(event) => setNewUser((prev) => ({ ...prev, username: event.target.value }))}
+                  className="w-full rounded border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-[color:var(--color-focus-ring)]"
+                />
+                {formErrors.username && (
+                  <p id="add-user-username-error" className="mt-1 text-xs text-danger-text">{formErrors.username}</p>
                 )}
               </div>
 
@@ -442,6 +529,27 @@ const GuardsTab: FC<{
               </div>
 
               <div>
+                <label htmlFor="add-user-phone" className="mb-1 block text-sm font-semibold text-text-secondary">
+                  Phone Number <span aria-hidden="true" className="text-danger-text">*</span>
+                </label>
+                <input
+                  id="add-user-phone"
+                  type="tel"
+                  required
+                  aria-required="true"
+                  aria-invalid={formErrors.phoneNumber ? 'true' : undefined}
+                  aria-describedby={formErrors.phoneNumber ? 'add-user-phone-error' : undefined}
+                  autoComplete="tel"
+                  value={newUser.phoneNumber}
+                  onChange={(event) => setNewUser((prev) => ({ ...prev, phoneNumber: event.target.value }))}
+                  className="w-full rounded border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-[color:var(--color-focus-ring)]"
+                />
+                {formErrors.phoneNumber && (
+                  <p id="add-user-phone-error" className="mt-1 text-xs text-danger-text">{formErrors.phoneNumber}</p>
+                )}
+              </div>
+
+              <div>
                 <label htmlFor="add-user-role" className="mb-1 block text-sm font-semibold text-text-secondary">
                   Role <span aria-hidden="true" className="text-danger-text">*</span>
                 </label>
@@ -465,6 +573,68 @@ const GuardsTab: FC<{
                   <p id="add-user-role-error" className="mt-1 text-xs text-danger-text">{formErrors.role}</p>
                 )}
               </div>
+
+              {newUser.role === 'guard' && (
+                <>
+                  <div>
+                    <label htmlFor="add-user-license" className="mb-1 block text-sm font-semibold text-text-secondary">
+                      License Number <span aria-hidden="true" className="text-danger-text">*</span>
+                    </label>
+                    <input
+                      id="add-user-license"
+                      type="text"
+                      required
+                      aria-required="true"
+                      aria-invalid={formErrors.licenseNumber ? 'true' : undefined}
+                      aria-describedby={formErrors.licenseNumber ? 'add-user-license-error' : undefined}
+                      value={newUser.licenseNumber}
+                      onChange={(e) => setNewUser((prev) => ({ ...prev, licenseNumber: e.target.value }))}
+                      className="w-full rounded border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-[color:var(--color-focus-ring)]"
+                    />
+                    {formErrors.licenseNumber && (
+                      <p id="add-user-license-error" className="mt-1 text-xs text-danger-text">{formErrors.licenseNumber}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label htmlFor="add-user-license-issued" className="mb-1 block text-sm font-semibold text-text-secondary">
+                      License Issued Date <span aria-hidden="true" className="text-danger-text">*</span>
+                    </label>
+                    <input
+                      id="add-user-license-issued"
+                      type="date"
+                      required
+                      aria-required="true"
+                      aria-invalid={formErrors.licenseIssuedDate ? 'true' : undefined}
+                      aria-describedby={formErrors.licenseIssuedDate ? 'add-user-license-issued-error' : undefined}
+                      value={newUser.licenseIssuedDate}
+                      onChange={(e) => setNewUser((prev) => ({ ...prev, licenseIssuedDate: e.target.value }))}
+                      className="w-full rounded border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-[color:var(--color-focus-ring)]"
+                    />
+                    {formErrors.licenseIssuedDate && (
+                      <p id="add-user-license-issued-error" className="mt-1 text-xs text-danger-text">{formErrors.licenseIssuedDate}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label htmlFor="add-user-license-expiry" className="mb-1 block text-sm font-semibold text-text-secondary">
+                      License Expiry Date <span aria-hidden="true" className="text-danger-text">*</span>
+                    </label>
+                    <input
+                      id="add-user-license-expiry"
+                      type="date"
+                      required
+                      aria-required="true"
+                      aria-invalid={formErrors.licenseExpiryDate ? 'true' : undefined}
+                      aria-describedby={formErrors.licenseExpiryDate ? 'add-user-license-expiry-error' : undefined}
+                      value={newUser.licenseExpiryDate}
+                      onChange={(e) => setNewUser((prev) => ({ ...prev, licenseExpiryDate: e.target.value }))}
+                      className="w-full rounded border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-[color:var(--color-focus-ring)]"
+                    />
+                    {formErrors.licenseExpiryDate && (
+                      <p id="add-user-license-expiry-error" className="mt-1 text-xs text-danger-text">{formErrors.licenseExpiryDate}</p>
+                    )}
+                  </div>
+                </>
+              )}
 
               <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
                 <button

@@ -2,7 +2,7 @@ import { FC, FormEvent, Fragment, useEffect, useMemo, useRef, useState } from 'r
 import L from 'leaflet'
 import { Circle, CircleMarker, MapContainer, Marker, Polyline, Popup, TileLayer, useMap, useMapEvents } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
-import { ClientSiteInput, useOperationalMapData } from '../../hooks/useOperationalMapData'
+import { type ActiveGuard, type ClientSiteInput, type MapTrackingPoint, useOperationalMapData } from '../../hooks/useOperationalMapData'
 import { getPersonRecencyMinutes, getTrackingAccuracyMode, getVehicleRecencyMinutes } from '../../utils/trackingPolicy'
 import { useTheme } from '../../context/ThemeProvider'
 import { useOperationalEvent } from '../../context/OperationalEventContext'
@@ -19,6 +19,25 @@ interface SelectedGuardEventMatch {
   guardName?: string
   latitude: number
   longitude: number
+}
+
+type HeartbeatState = 'active' | 'stale' | 'offline'
+
+type ScheduleState = 'scheduled' | 'unscheduled'
+
+type LayerVisibility = {
+  guards: boolean
+  vehicles: boolean
+  clientSites: boolean
+  alerts: boolean
+}
+
+type TelemetryEntry = {
+  point: MapTrackingPoint
+  heartbeatState: HeartbeatState
+  scheduleState: ScheduleState
+  ageSeconds: number
+  guardMetadata?: ActiveGuard
 }
 
 const eventTypeBadgeClass: Record<'incident' | 'alert' | 'guard' | 'vehicle', string> = {
@@ -99,12 +118,106 @@ const MapZoomTracker: FC<MapZoomTrackerProps> = ({ onZoomChange }) => {
   return null
 }
 
+interface MapViewCommandControllerProps {
+  commandId: number
+  commandType: 'fit-all' | 'center-tagum' | 'center-user'
+  bounds: [number, number][]
+  currentUserPosition: [number, number] | null
+}
+
+const MapViewCommandController: FC<MapViewCommandControllerProps> = ({
+  commandId,
+  commandType,
+  bounds,
+  currentUserPosition,
+}) => {
+  const map = useMap()
+
+  useEffect(() => {
+    if (commandId === 0) return
+
+    if (commandType === 'center-tagum') {
+      map.stop()
+      map.setView(TAGUM_CENTER, Math.max(map.getZoom(), 12), { animate: true })
+      return
+    }
+
+    if (commandType === 'center-user') {
+      const center = currentUserPosition || TAGUM_CENTER
+      map.stop()
+      map.setView(center, Math.max(map.getZoom(), 13), { animate: true })
+      return
+    }
+
+    const safeBounds = bounds.length > 0 ? bounds : [TAGUM_CENTER]
+    map.stop()
+    map.fitBounds(L.latLngBounds(safeBounds), {
+      animate: true,
+      maxZoom: 15,
+      padding: [36, 36],
+    })
+  }, [bounds, commandId, commandType, currentUserPosition, map])
+
+  return null
+}
+
 const currentUserPin = L.divIcon({
   className: 'current-user-pin',
   html: '<span style="display:block;width:16px;height:16px;border-radius:9999px;background:#dc2626;border:2px solid #ffffff;box-shadow:0 0 0 2px rgba(220,38,38,0.35)"></span>',
   iconSize: [16, 16],
   iconAnchor: [8, 8],
 })
+
+function resolvePointAgeSeconds(point: Pick<MapTrackingPoint, 'ageSeconds' | 'recordedAt'>): number {
+  if (typeof point.ageSeconds === 'number' && Number.isFinite(point.ageSeconds)) {
+    return Math.max(0, Math.round(point.ageSeconds))
+  }
+
+  const recordedAtMs = new Date(point.recordedAt).getTime()
+  if (Number.isNaN(recordedAtMs)) return 0
+  return Math.max(0, Math.floor((Date.now() - recordedAtMs) / 1000))
+}
+
+function normalizeHeartbeatState(
+  point: Pick<MapTrackingPoint, 'heartbeatStatus' | 'entityType' | 'recordedAt' | 'ageSeconds'>,
+  personRecencyMinutes: number,
+  vehicleRecencyMinutes: number,
+): HeartbeatState {
+  const status = point.heartbeatStatus?.trim().toLowerCase()
+  if (status === 'active') return 'active'
+  if (status === 'stale') return 'stale'
+  if (status === 'offline') return 'offline'
+
+  const ageMinutes = resolvePointAgeSeconds(point) / 60
+  const recency = point.entityType === 'vehicle' ? vehicleRecencyMinutes : personRecencyMinutes
+
+  if (ageMinutes <= recency) return 'active'
+  if (point.entityType === 'vehicle') return 'offline'
+  if (ageMinutes <= Math.max(recency * 2, personRecencyMinutes * 2)) return 'stale'
+  return 'offline'
+}
+
+function normalizeScheduleState(rawStatus?: string): ScheduleState {
+  const status = rawStatus?.trim().toLowerCase()
+  if (!status || status === 'unscheduled') return 'unscheduled'
+  return 'scheduled'
+}
+
+function movementTone(entityType: string, heartbeatState: HeartbeatState) {
+  if (entityType === 'vehicle') {
+    return { color: '#2563eb', fillColor: '#2563eb', ring: 'status-light-info' }
+  }
+
+  if (heartbeatState === 'active') {
+    return { color: '#16a34a', fillColor: '#16a34a', ring: 'status-light-success' }
+  }
+
+  if (heartbeatState === 'stale') {
+    return { color: '#f59e0b', fillColor: '#f59e0b', ring: 'status-light-warning' }
+  }
+
+  return { color: '#dc2626', fillColor: '#dc2626', ring: 'status-light-danger' }
+}
 
 const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, activeGuards }) => {
   const { theme } = useTheme()
@@ -124,6 +237,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
     isElevatedUser,
     hasTrackingAccess,
   } = useOperationalMapData()
+
   const [siteForm, setSiteForm] = useState<ClientSiteInput>(INITIAL_FORM)
   const [editingSiteId, setEditingSiteId] = useState<string>('')
   const [mapPickMode, setMapPickMode] = useState<'idle' | 'add' | 'edit'>('idle')
@@ -131,31 +245,28 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
   const [focusCenter, setFocusCenter] = useState<[number, number] | null>(null)
   const [selectedGuardId, setSelectedGuardId] = useState<string>('')
   const [selectedGuardPath, setSelectedGuardPath] = useState<Array<{ latitude: number; longitude: number; recordedAt: string; movementStatus?: string }>>([])
-  const [activeGuardsIntel, setActiveGuardsIntel] = useState<Array<{ id?: string; guardId: string; userId?: string; guardName?: string; latitude: number; longitude: number; movementStatus: string; recordedAt: string }>>([])
+  const [activeGuardsIntel, setActiveGuardsIntel] = useState<ActiveGuard[]>([])
   const [playbackEnabled, setPlaybackEnabled] = useState<boolean>(false)
   const [playbackIndex, setPlaybackIndex] = useState<number>(0)
+  const [followSelectedGuard, setFollowSelectedGuard] = useState<boolean>(true)
+  const [layerVisibility, setLayerVisibility] = useState<LayerVisibility>({
+    guards: true,
+    vehicles: true,
+    clientSites: true,
+    alerts: true,
+  })
+  const [mapViewCommand, setMapViewCommand] = useState<{ id: number; type: 'fit-all' | 'center-tagum' | 'center-user' }>({
+    id: 0,
+    type: 'fit-all',
+  })
   const [saving, setSaving] = useState<boolean>(false)
   const [formError, setFormError] = useState<string>('')
   const [dismissedDegradedError, setDismissedDegradedError] = useState<string>('')
+
   const selectedEventPanelRef = useRef<HTMLElement | null>(null)
   const trackingMode = getTrackingAccuracyMode()
   const personRecencyMinutes = getPersonRecencyMinutes(trackingMode)
   const vehicleRecencyMinutes = getVehicleRecencyMinutes(trackingMode)
-
-  const isPointStale = (point: { entityType: string; recordedAt: string }) => {
-    const recorded = new Date(point.recordedAt).getTime()
-    if (Number.isNaN(recorded)) return true
-    const ageMinutes = (Date.now() - recorded) / 60000
-    const maxAge = point.entityType === 'vehicle' ? vehicleRecencyMinutes : personRecencyMinutes
-    return ageMinutes > maxAge
-  }
-
-  const visibleTrackingPoints = useMemo(
-    () => trackingPoints.filter((point) => !isPointStale(point)),
-    [trackingPoints],
-  )
-
-  const stalePointCount = trackingPoints.length - visibleTrackingPoints.length
 
   const currentUserId = useMemo(() => {
     try {
@@ -168,34 +279,117 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
     }
   }, [])
 
-  const currentUserPoint = useMemo(() => {
+  const guardMetadataById = useMemo(() => {
+    const metadata = new Map<string, ActiveGuard>()
+
+    for (const guard of activeGuardsIntel) {
+      const guardId = guard.guardId?.trim().toLowerCase()
+      const userId = guard.userId?.trim().toLowerCase()
+      if (guardId) metadata.set(guardId, guard)
+      if (userId) metadata.set(userId, guard)
+    }
+
+    return metadata
+  }, [activeGuardsIntel])
+
+  const pointTelemetry = useMemo<TelemetryEntry[]>(() => {
+    return trackingPoints.map((point) => {
+      const guardMetadata =
+        guardMetadataById.get(point.entityId.trim().toLowerCase()) ||
+        (point.userId ? guardMetadataById.get(point.userId.trim().toLowerCase()) : undefined)
+
+      const heartbeatState = normalizeHeartbeatState(point, personRecencyMinutes, vehicleRecencyMinutes)
+      const scheduleState = point.entityType === 'vehicle'
+        ? 'scheduled'
+        : normalizeScheduleState(point.scheduleStatus || guardMetadata?.scheduleStatus)
+
+      return {
+        point,
+        heartbeatState,
+        scheduleState,
+        ageSeconds: resolvePointAgeSeconds(point),
+        guardMetadata,
+      }
+    })
+  }, [guardMetadataById, personRecencyMinutes, trackingPoints, vehicleRecencyMinutes])
+
+  const guardTelemetry = useMemo(
+    () => pointTelemetry.filter((entry) => entry.point.entityType !== 'vehicle'),
+    [pointTelemetry],
+  )
+
+  const visibleTelemetry = useMemo(
+    () => pointTelemetry.filter((entry) => {
+      if (entry.point.entityType === 'vehicle') {
+        return layerVisibility.vehicles
+      }
+      return layerVisibility.guards
+    }),
+    [layerVisibility.guards, layerVisibility.vehicles, pointTelemetry],
+  )
+
+  const currentUserEntry = useMemo(() => {
     if (!currentUserId) return null
+
     return (
-      visibleTrackingPoints
-        .filter((point) => point.entityId === currentUserId)
-        .sort((a, b) => new Date(b.recordedAt).getTime() - new Date(a.recordedAt).getTime())[0] || null
+      pointTelemetry
+        .filter((entry) => entry.point.entityId === currentUserId)
+        .sort((left, right) => {
+          return new Date(right.point.recordedAt).getTime() - new Date(left.point.recordedAt).getTime()
+        })[0] || null
     )
-  }, [visibleTrackingPoints, currentUserId])
+  }, [pointTelemetry, currentUserId])
 
   const mapCenter = useMemo<[number, number]>(() => {
     if (focusCenter) return focusCenter
-    if (!currentUserPoint) return TAGUM_CENTER
-    return [currentUserPoint.latitude, currentUserPoint.longitude]
-  }, [focusCenter, currentUserPoint?.latitude, currentUserPoint?.longitude])
+    if (!currentUserEntry) return TAGUM_CENTER
+    return [currentUserEntry.point.latitude, currentUserEntry.point.longitude]
+  }, [focusCenter, currentUserEntry])
 
-  const bounds = useMemo(() => {
+  const alertMarkers = useMemo(() => {
+    const siteById = new Map(clientSites.map((site) => [site.id, site]))
+
+    return geofenceAlerts
+      .map((alert) => {
+        const site = siteById.get(alert.siteId)
+        if (!site) return null
+
+        return {
+          alert,
+          latitude: site.latitude,
+          longitude: site.longitude,
+        }
+      })
+      .filter(
+        (marker): marker is { alert: (typeof geofenceAlerts)[number]; latitude: number; longitude: number } => marker != null,
+      )
+  }, [clientSites, geofenceAlerts])
+
+  const mapBounds = useMemo(() => {
     const positions: [number, number][] = []
 
-    for (const site of clientSites) {
-      positions.push([site.latitude, site.longitude])
+    if (layerVisibility.clientSites) {
+      for (const site of clientSites) {
+        positions.push([site.latitude, site.longitude])
+      }
     }
 
-    for (const point of visibleTrackingPoints) {
-      positions.push([point.latitude, point.longitude])
+    for (const entry of visibleTelemetry) {
+      positions.push([entry.point.latitude, entry.point.longitude])
+    }
+
+    if (layerVisibility.alerts) {
+      for (const marker of alertMarkers) {
+        positions.push([marker.latitude, marker.longitude])
+      }
+    }
+
+    if (currentUserEntry) {
+      positions.push([currentUserEntry.point.latitude, currentUserEntry.point.longitude])
     }
 
     return positions.length > 0 ? positions : [TAGUM_CENTER]
-  }, [clientSites, visibleTrackingPoints])
+  }, [alertMarkers, clientSites, currentUserEntry, layerVisibility.alerts, layerVisibility.clientSites, visibleTelemetry])
 
   const selectedGuardEventMatch = useMemo<SelectedGuardEventMatch | null>(() => {
     if (!selectedEvent || selectedEvent.type !== 'guard') {
@@ -238,7 +432,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
       }
     }
 
-    const trackingMatch = visibleTrackingPoints.find((point) => {
+    const trackingMatch = pointTelemetry.map((entry) => entry.point).find((point) => {
       if (point.entityType === 'vehicle') return false
 
       const entityIdToken = normalizeEventToken(point.entityId)
@@ -259,7 +453,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
       latitude: trackingMatch.latitude,
       longitude: trackingMatch.longitude,
     }
-  }, [activeGuardsIntel, selectedEvent, visibleTrackingPoints])
+  }, [activeGuardsIntel, pointTelemetry, selectedEvent])
 
   const selectedGuardMarkerTokens = useMemo(() => {
     if (!selectedEvent || selectedEvent.type !== 'guard' || !selectedGuardEventMatch) {
@@ -271,7 +465,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
       .filter((value) => value.length > 0)
   }, [selectedEvent, selectedGuardEventMatch])
 
-  const isSelectedGuardTrackingPoint = (point: { entityType: string; entityId: string; userId?: string; latitude: number; longitude: number }) => {
+  const isSelectedGuardTrackingPoint = (point: Pick<MapTrackingPoint, 'entityType' | 'entityId' | 'userId' | 'latitude' | 'longitude'>) => {
     if (selectedEvent?.type !== 'guard' || point.entityType === 'vehicle') {
       return false
     }
@@ -308,7 +502,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
   }, [clearSelection, selectedEvent])
 
   useEffect(() => {
-    if (selectedEvent?.type !== 'guard' || !selectedGuardEventMatch) {
+    if (!followSelectedGuard || selectedEvent?.type !== 'guard' || !selectedGuardEventMatch) {
       return
     }
 
@@ -326,29 +520,20 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
     })
 
     if (selectedGuardEventMatch.guardId) {
-      setSelectedGuardId((previous) => (previous === selectedGuardEventMatch.guardId ? previous : selectedGuardEventMatch.guardId ?? previous))
+      setSelectedGuardId((previous) => {
+        return previous === selectedGuardEventMatch.guardId ? previous : selectedGuardEventMatch.guardId || previous
+      })
     }
-  }, [selectedEvent?.type, selectedGuardEventMatch])
+  }, [followSelectedGuard, selectedEvent?.type, selectedGuardEventMatch])
 
   useEffect(() => {
     let disposed = false
 
     const loadActiveGuards = async () => {
       try {
-        const guards = await fetchActiveGuards(15)
+        const guards = await fetchActiveGuards(20)
         if (disposed) return
-        setActiveGuardsIntel(
-          guards.map((guard) => ({
-          id: guard.id,
-            guardId: guard.guardId,
-          userId: guard.userId,
-            guardName: guard.guardName,
-            latitude: guard.latitude,
-            longitude: guard.longitude,
-            movementStatus: guard.movementStatus,
-            recordedAt: guard.recordedAt,
-          })),
-        )
+        setActiveGuardsIntel(guards)
       } catch {
         if (!disposed) {
           setActiveGuardsIntel([])
@@ -430,13 +615,14 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
     }
   }, [error])
 
-  const clusteredTrackingPoints = useMemo(() => {
+  const clusteredTelemetry = useMemo(() => {
     if (mapZoom >= 11) return []
 
     const gridSize = mapZoom <= 8 ? 0.16 : 0.08
-    const buckets = new Map<string, { latitude: number; longitude: number; points: typeof visibleTrackingPoints }>()
+    const buckets = new Map<string, { latitude: number; longitude: number; entries: TelemetryEntry[] }>()
 
-    for (const point of visibleTrackingPoints) {
+    for (const entry of visibleTelemetry) {
+      const point = entry.point
       const latBucket = Math.round(point.latitude / gridSize)
       const lngBucket = Math.round(point.longitude / gridSize)
       const key = `${latBucket}:${lngBucket}`
@@ -446,18 +632,18 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
         buckets.set(key, {
           latitude: point.latitude,
           longitude: point.longitude,
-          points: [point],
+          entries: [entry],
         })
         continue
       }
 
-      existing.points.push(point)
-      existing.latitude = (existing.latitude * (existing.points.length - 1) + point.latitude) / existing.points.length
-      existing.longitude = (existing.longitude * (existing.points.length - 1) + point.longitude) / existing.points.length
+      existing.entries.push(entry)
+      existing.latitude = (existing.latitude * (existing.entries.length - 1) + point.latitude) / existing.entries.length
+      existing.longitude = (existing.longitude * (existing.entries.length - 1) + point.longitude) / existing.entries.length
     }
 
     return Array.from(buckets.values())
-  }, [mapZoom, visibleTrackingPoints])
+  }, [mapZoom, visibleTelemetry])
 
   const selectedGuardPolyline = useMemo(() => {
     if (selectedGuardPath.length < 2) return []
@@ -474,9 +660,36 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
 
   const geofenceFeed = useMemo(() => geofenceAlerts.slice(0, 6), [geofenceAlerts])
   const showNoTrackingAccessOverlay = !loading && !hasTrackingAccess
-  const showNoPersonnelOverlay = !loading && hasTrackingAccess && !error && visibleTrackingPoints.length === 0
+  const showNoPersonnelOverlay = !loading && hasTrackingAccess && !error && visibleTelemetry.length === 0
   const showDegradedBanner = Boolean(error) && hasTrackingAccess && dismissedDegradedError !== error
   const shouldPromptClientSiteSetup = showNoPersonnelOverlay && clientSites.length === 0
+
+  const staleGuardCount = useMemo(
+    () => guardTelemetry.filter((entry) => entry.heartbeatState === 'stale').length,
+    [guardTelemetry],
+  )
+
+  const offlineGuardCount = useMemo(
+    () => guardTelemetry.filter((entry) => entry.heartbeatState === 'offline').length,
+    [guardTelemetry],
+  )
+
+  const unscheduledGuardCount = useMemo(
+    () => guardTelemetry.filter((entry) => entry.scheduleState === 'unscheduled').length,
+    [guardTelemetry],
+  )
+
+  const scheduledGuardCount = useMemo(
+    () => guardTelemetry.filter((entry) => entry.scheduleState === 'scheduled').length,
+    [guardTelemetry],
+  )
+
+  const issueMapCommand = (type: 'fit-all' | 'center-tagum' | 'center-user') => {
+    setMapViewCommand((previous) => ({
+      id: previous.id + 1,
+      type,
+    }))
+  }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -547,25 +760,10 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
     setFormError('')
   }
 
-  const movementTone = (entityType: string, movementStatus?: string) => {
-    if (entityType === 'vehicle') {
-      return { color: '#2563eb', fillColor: '#2563eb', ring: 'status-light-info' }
-    }
-
-    if (movementStatus === 'moving') {
-      return { color: '#16a34a', fillColor: '#16a34a', ring: 'status-light-success' }
-    }
-
-    if (movementStatus === 'offline') {
-      return { color: '#dc2626', fillColor: '#dc2626', ring: 'status-light-danger' }
-    }
-
-    return { color: '#f59e0b', fillColor: '#f59e0b', ring: 'status-light-warning' }
-  }
-
   const focusGuard = (guardId: string, latitude: number, longitude: number) => {
     setSelectedGuardId(guardId)
     setFocusCenter([latitude, longitude])
+    setFollowSelectedGuard(true)
   }
 
   return (
@@ -573,9 +771,30 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3 border-b border-border-subtle pb-3">
         <div>
           <h3 className="text-base font-bold uppercase tracking-wide text-text-primary">Operational Map</h3>
-          <p className="text-xs uppercase tracking-[0.16em] text-text-tertiary">OpenStreetMap live field tracking</p>
+          <p className="text-xs uppercase tracking-[0.16em] text-text-tertiary">OpenStreetMap live field tracking and reliability telemetry</p>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => issueMapCommand('fit-all')}
+            className="min-h-11 rounded-md border border-border-subtle bg-surface-elevated px-3 py-2 text-xs font-semibold uppercase tracking-wide text-text-secondary"
+          >
+            Fit All
+          </button>
+          <button
+            type="button"
+            onClick={() => issueMapCommand('center-tagum')}
+            className="min-h-11 rounded-md border border-border-subtle bg-surface-elevated px-3 py-2 text-xs font-semibold uppercase tracking-wide text-text-secondary"
+          >
+            Center Tagum
+          </button>
+          <button
+            type="button"
+            onClick={() => issueMapCommand('center-user')}
+            className="min-h-11 rounded-md border border-border-subtle bg-surface-elevated px-3 py-2 text-xs font-semibold uppercase tracking-wide text-text-secondary"
+          >
+            Center Me
+          </button>
           {isElevatedUser ? (
             <button
               type="button"
@@ -594,16 +813,60 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
         </div>
       </div>
 
+      <div className="mb-3 flex flex-wrap items-center gap-2 rounded border border-border-subtle bg-surface-elevated p-2 text-xs">
+        <button
+          type="button"
+          onClick={() => setLayerVisibility((prev) => ({ ...prev, guards: !prev.guards }))}
+          className={`min-h-10 rounded-md border px-2.5 py-1 font-semibold uppercase tracking-wide ${layerVisibility.guards ? 'border-success-border bg-success-bg text-success-text' : 'border-border-subtle bg-background text-text-secondary'}`}
+        >
+          Guards
+        </button>
+        <button
+          type="button"
+          onClick={() => setLayerVisibility((prev) => ({ ...prev, vehicles: !prev.vehicles }))}
+          className={`min-h-10 rounded-md border px-2.5 py-1 font-semibold uppercase tracking-wide ${layerVisibility.vehicles ? 'border-info-border bg-info-bg text-info-text' : 'border-border-subtle bg-background text-text-secondary'}`}
+        >
+          Vehicles
+        </button>
+        <button
+          type="button"
+          onClick={() => setLayerVisibility((prev) => ({ ...prev, clientSites: !prev.clientSites }))}
+          className={`min-h-10 rounded-md border px-2.5 py-1 font-semibold uppercase tracking-wide ${layerVisibility.clientSites ? 'border-warning-border bg-warning-bg text-warning-text' : 'border-border-subtle bg-background text-text-secondary'}`}
+        >
+          Client Sites
+        </button>
+        <button
+          type="button"
+          onClick={() => setLayerVisibility((prev) => ({ ...prev, alerts: !prev.alerts }))}
+          className={`min-h-10 rounded-md border px-2.5 py-1 font-semibold uppercase tracking-wide ${layerVisibility.alerts ? 'border-danger-border bg-danger-bg text-danger-text' : 'border-border-subtle bg-background text-text-secondary'}`}
+        >
+          Alerts
+        </button>
+        <button
+          type="button"
+          onClick={() => setFollowSelectedGuard((previous) => !previous)}
+          className={`min-h-10 rounded-md border px-2.5 py-1 font-semibold uppercase tracking-wide ${followSelectedGuard ? 'border-info-border bg-info-bg text-info-text' : 'border-border-subtle bg-background text-text-secondary'}`}
+        >
+          Follow Selected Guard: {followSelectedGuard ? 'On' : 'Off'}
+        </button>
+      </div>
+
       <div className="relative isolate h-80 overflow-hidden rounded border border-border-elevated bg-surface md:h-96">
         <MapContainer
           center={mapCenter}
           zoom={12}
           className="h-full w-full"
           scrollWheelZoom
-          bounds={bounds}
+          bounds={mapBounds}
           aria-label="Live operations map with guard, vehicle, and client site markers"
         >
           <MapViewportSync center={mapCenter} />
+          <MapViewCommandController
+            commandId={mapViewCommand.id}
+            commandType={mapViewCommand.type}
+            bounds={mapBounds}
+            currentUserPosition={currentUserEntry ? [currentUserEntry.point.latitude, currentUserEntry.point.longitude] : null}
+          />
           <MapZoomTracker onZoomChange={setMapZoom} />
           <MapClickPicker enabled={isElevatedUser && mapPickMode !== 'idle'} onPick={handleMapPick} />
 
@@ -612,28 +875,53 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
             url={getOperationalMapTileUrl(theme)}
           />
 
-          {clientSites.map((site) => (
-            <Fragment key={`site-group-${site.id}`}>
-              <Circle
-                center={[site.latitude, site.longitude]}
-                radius={1000}
-                pathOptions={{ color: '#facc15', fillColor: '#facc15', fillOpacity: 0.1, weight: 1 }}
-              />
-              <CircleMarker
-                key={`site-${site.id}`}
-                center={[site.latitude, site.longitude]}
-                radius={10}
-                pathOptions={{ color: '#facc15', fillColor: '#facc15', fillOpacity: 0.75 }}
-              >
-                <Popup>
-                  <strong>Client Site</strong>
-                  <div>{site.name}</div>
-                  {site.address ? <div>{site.address}</div> : null}
-                  <div>Radius: 1 km</div>
-                </Popup>
-              </CircleMarker>
-            </Fragment>
-          ))}
+          {layerVisibility.clientSites
+            ? clientSites.map((site) => (
+                <Fragment key={`site-group-${site.id}`}>
+                  <Circle
+                    center={[site.latitude, site.longitude]}
+                    radius={1000}
+                    pathOptions={{ color: '#facc15', fillColor: '#facc15', fillOpacity: 0.1, weight: 1 }}
+                  />
+                  <CircleMarker
+                    key={`site-${site.id}`}
+                    center={[site.latitude, site.longitude]}
+                    radius={10}
+                    pathOptions={{ color: '#facc15', fillColor: '#facc15', fillOpacity: 0.75 }}
+                  >
+                    <Popup>
+                      <strong>Client Site</strong>
+                      <div>{site.name}</div>
+                      {site.address ? <div>{site.address}</div> : null}
+                      <div>Radius: 1 km</div>
+                    </Popup>
+                  </CircleMarker>
+                </Fragment>
+              ))
+            : null}
+
+          {layerVisibility.alerts
+            ? alertMarkers.map((marker) => (
+                <CircleMarker
+                  key={`alert-${marker.alert.id}`}
+                  center={[marker.latitude, marker.longitude]}
+                  radius={7}
+                  pathOptions={{
+                    color: marker.alert.eventType === 'enter' ? '#16a34a' : '#dc2626',
+                    fillColor: marker.alert.eventType === 'enter' ? '#16a34a' : '#dc2626',
+                    fillOpacity: 0.4,
+                    weight: 2,
+                  }}
+                >
+                  <Popup>
+                    <strong>{marker.alert.eventType === 'enter' ? 'Geofence Enter' : 'Geofence Exit'}</strong>
+                    <div>{marker.alert.guardName || marker.alert.guardId}</div>
+                    <div>{marker.alert.siteName}</div>
+                    <div>{new Date(marker.alert.createdAt).toLocaleString()}</div>
+                  </Popup>
+                </CircleMarker>
+              ))
+            : null}
 
           {selectedGuardPolyline.length > 1 ? (
             <Polyline
@@ -670,74 +958,94 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
           ) : null}
 
           {mapZoom < 11
-            ? clusteredTrackingPoints.map((cluster, index) => (
+            ? clusteredTelemetry.map((cluster, index) => (
                 <CircleMarker
                   key={`cluster-${index}`}
                   center={[cluster.latitude, cluster.longitude]}
-                  radius={Math.min(24, 8 + cluster.points.length)}
+                  radius={Math.min(24, 8 + cluster.entries.length)}
                   pathOptions={{ color: '#7c3aed', fillColor: '#7c3aed', fillOpacity: 0.3 }}
                 >
                   <Popup>
-                    <strong>{cluster.points.length} units in this area</strong>
-                    <div>Zoom in for individual guard movement and status.</div>
+                    <strong>{cluster.entries.length} units in this area</strong>
+                    <div>Zoom in for individual guard status, schedule state, and heartbeat age.</div>
                   </Popup>
                 </CircleMarker>
               ))
-            : visibleTrackingPoints.map((point) => {
-            const isCurrentUser = currentUserId && point.entityId === currentUserId
-            const isSelectedGuardPoint = isSelectedGuardTrackingPoint(point)
-            const tone = movementTone(point.entityType, point.movementStatus)
-            const markerColor = isSelectedGuardPoint ? 'var(--color-info)' : tone.color
-            const pointAgeSeconds = Math.max(0, Math.floor((Date.now() - new Date(point.recordedAt).getTime()) / 1000))
-            const sourceLabel = point.entityType === 'vehicle' ? 'Vehicle telemetry' : 'Device geolocation'
+            : visibleTelemetry.map((entry) => {
+                const point = entry.point
+                const isCurrentUser = currentUserId && point.entityId === currentUserId
+                const isSelectedGuardPoint = isSelectedGuardTrackingPoint(point)
+                const tone = movementTone(point.entityType, entry.heartbeatState)
+                const markerColor = isSelectedGuardPoint ? 'var(--color-info)' : tone.color
+                const sourceLabel = point.source || (point.entityType === 'vehicle' ? 'vehicle-telemetry' : 'unknown')
+                const scheduleLabel = point.entityType === 'vehicle'
+                  ? 'scheduled'
+                  : (point.scheduleStatus || entry.guardMetadata?.scheduleStatus || entry.scheduleState)
 
-            if (isCurrentUser) {
-              return (
-                <Marker key={`track-user-pin-${point.id}`} position={[point.latitude, point.longitude]} icon={currentUserPin}>
-                  <Popup>
-                    <strong>Your Location</strong>
-                    <div>{point.label || 'Entity'}</div>
-                    {point.status ? <div>Status: {point.status}</div> : null}
-                    {point.movementStatus ? <div>Movement: {point.movementStatus}</div> : null}
-                    <div>Source: {sourceLabel}</div>
-                    {point.accuracyMeters != null ? <div>Accuracy: {Math.round(point.accuracyMeters)} m</div> : null}
-                    <div>Updated: {pointAgeSeconds}s ago</div>
-                    <div>{new Date(point.recordedAt).toLocaleString()}</div>
-                  </Popup>
-                </Marker>
-              )
-            }
+                if (isCurrentUser) {
+                  return (
+                    <Fragment key={`track-user-group-${point.id}`}>
+                      {point.accuracyMeters != null ? (
+                        <Circle
+                          center={[point.latitude, point.longitude]}
+                          radius={Math.min(Math.max(point.accuracyMeters, 20), 2500)}
+                          pathOptions={{ color: markerColor, fillColor: markerColor, fillOpacity: 0.04, opacity: 0.3, weight: 1 }}
+                        />
+                      ) : null}
+                      <Marker position={[point.latitude, point.longitude]} icon={currentUserPin}>
+                        <Popup>
+                          <strong>Your Location</strong>
+                          <div>{point.label || 'Entity'}</div>
+                          <div>Heartbeat: {entry.heartbeatState}</div>
+                          <div>Schedule: {scheduleLabel}</div>
+                          <div>Source: {sourceLabel}</div>
+                          {point.accuracyMeters != null ? <div>Accuracy: {Math.round(point.accuracyMeters)} m</div> : null}
+                          <div>Updated: {entry.ageSeconds}s ago</div>
+                          <div>{new Date(point.recordedAt).toLocaleString()}</div>
+                        </Popup>
+                      </Marker>
+                    </Fragment>
+                  )
+                }
 
-            return (
-              <CircleMarker
-                key={`track-${point.id}`}
-                center={[point.latitude, point.longitude]}
-                radius={isSelectedGuardPoint ? 8 : 6}
-                pathOptions={{
-                  color: markerColor,
-                  fillColor: markerColor,
-                  fillOpacity: isSelectedGuardPoint ? 0.95 : 0.8,
-                  weight: isSelectedGuardPoint ? 3 : 1,
-                }}
-              >
-                <Popup>
-                  <strong>{point.entityType === 'vehicle' ? 'Armored Vehicle' : 'Guard'}</strong>
-                  <div>{point.label || 'Entity'}</div>
-                  {isSelectedGuardPoint ? <div>Linked to selected operational event</div> : null}
-                  {point.status ? <div>Status: {point.status}</div> : null}
-                  {point.movementStatus ? <div>Movement: {point.movementStatus}</div> : null}
-                  <div>Source: {sourceLabel}</div>
-                  {point.speedKph != null ? <div>Speed: {point.speedKph.toFixed(1)} km/h</div> : null}
-                  {point.accuracyMeters != null ? <div>Accuracy: {Math.round(point.accuracyMeters)} m</div> : null}
-                  {point.accuracyMeters != null && point.accuracyMeters > 60 ? (
-                    <div className="font-semibold text-warning-text">Low GPS precision</div>
-                  ) : null}
-                  <div>Updated: {pointAgeSeconds}s ago</div>
-                  <div>{new Date(point.recordedAt).toLocaleString()}</div>
-                </Popup>
-              </CircleMarker>
-            )
-          })}
+                return (
+                  <Fragment key={`track-${point.id}`}>
+                    {point.accuracyMeters != null ? (
+                      <Circle
+                        center={[point.latitude, point.longitude]}
+                        radius={Math.min(Math.max(point.accuracyMeters, 20), 2500)}
+                        pathOptions={{ color: markerColor, fillColor: markerColor, fillOpacity: 0.05, opacity: 0.35, weight: 1 }}
+                      />
+                    ) : null}
+                    <CircleMarker
+                      center={[point.latitude, point.longitude]}
+                      radius={isSelectedGuardPoint ? 8 : 6}
+                      pathOptions={{
+                        color: markerColor,
+                        fillColor: markerColor,
+                        fillOpacity: isSelectedGuardPoint ? 0.95 : 0.8,
+                        weight: isSelectedGuardPoint ? 3 : 1,
+                        dashArray: point.entityType !== 'vehicle' && entry.scheduleState === 'unscheduled' ? '4 3' : undefined,
+                      }}
+                    >
+                      <Popup>
+                        <strong>{point.entityType === 'vehicle' ? 'Armored Vehicle' : 'Guard'}</strong>
+                        <div>{point.label || entry.guardMetadata?.guardName || 'Entity'}</div>
+                        {isSelectedGuardPoint ? <div>Linked to selected operational event</div> : null}
+                        {point.status ? <div>Status: {point.status}</div> : null}
+                        {point.movementStatus ? <div>Movement: {point.movementStatus}</div> : null}
+                        <div>Heartbeat: {entry.heartbeatState}</div>
+                        <div>Schedule: {scheduleLabel}</div>
+                        <div>Source: {sourceLabel}{point.approximate ? ' (approximate)' : ''}</div>
+                        {point.speedKph != null ? <div>Speed: {point.speedKph.toFixed(1)} km/h</div> : null}
+                        {point.accuracyMeters != null ? <div>Accuracy: {Math.round(point.accuracyMeters)} m</div> : null}
+                        <div>Updated: {entry.ageSeconds}s ago</div>
+                        <div>{new Date(point.recordedAt).toLocaleString()}</div>
+                      </Popup>
+                    </CircleMarker>
+                  </Fragment>
+                )
+              })}
 
           {isElevatedUser ? (
             <CircleMarker
@@ -775,8 +1083,8 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
         {showNoPersonnelOverlay ? (
           <div className="pointer-events-none absolute inset-0 z-[320] flex items-center justify-center p-4">
             <div className="max-w-md rounded border border-border bg-surface-elevated px-4 py-3 text-center shadow-sm">
-              <p className="text-sm font-semibold text-text-primary">No active field personnel</p>
-              <p className="mt-1 text-xs text-text-secondary">Guards with the mobile app will appear here when they start their shift.</p>
+              <p className="text-sm font-semibold text-text-primary">No tracked field units yet</p>
+              <p className="mt-1 text-xs text-text-secondary">Tracked guards appear here as soon as heartbeat updates arrive, even when unscheduled.</p>
               <p className="mt-1 text-xs text-text-secondary">
                 {shouldPromptClientSiteSetup
                   ? 'No client sites are configured yet. Supervisors can add client sites using the map controls.'
@@ -830,21 +1138,21 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
 
             <p className="mt-2 text-sm font-semibold text-text-primary">{selectedEvent.title}</p>
             <p className="mt-1 text-[11px] uppercase tracking-wider text-text-tertiary">
-              Ref: <span className="font-semibold normal-case tracking-normal text-text-secondary">{selectedEvent.id?.slice(0, 8)?.toUpperCase() || '—'}</span>
+              Ref: <span className="font-semibold normal-case tracking-normal text-text-secondary">{selectedEvent.id?.slice(0, 8)?.toUpperCase() || '-'}</span>
             </p>
 
             {selectedEvent.type === 'guard' ? (
               <p className="mt-2 text-xs text-text-secondary">
                 {selectedGuardEventMatch
-                  ? 'Matched active guard telemetry. Map focus and marker emphasis applied.'
-                  : 'Guard event selected, but no active guard telemetry match is currently available.'}
+                  ? `Matched telemetry. ${followSelectedGuard ? 'Follow mode is active.' : 'Follow mode is disabled.'}`
+                  : 'Guard event selected, but no active telemetry match is currently available.'}
               </p>
             ) : null}
           </aside>
         ) : null}
       </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-4">
+      <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-6">
         <div className="rounded-md border border-info-border bg-info-bg px-3 py-2">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">Active Trips</p>
           <p className="text-xl font-black text-text-primary">{activeTrips}</p>
@@ -855,12 +1163,20 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
         </div>
         <div className="rounded-md border border-warning-border bg-warning-bg px-3 py-2">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">Tracked Units</p>
-          <p className="text-xl font-black text-text-primary">{visibleTrackingPoints.length}</p>
-          {stalePointCount > 0 ? <p className="text-[11px] text-text-tertiary">{stalePointCount} stale hidden</p> : null}
+          <p className="text-xl font-black text-text-primary">{visibleTelemetry.length}</p>
+          <p className="text-[11px] text-text-tertiary">Stale and offline remain visible</p>
         </div>
         <div className="rounded-md border border-info-border bg-info-bg px-3 py-2">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">Client Sites</p>
-          <p className="text-xl font-black text-text-primary">{clientSites.length}</p>
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">Scheduled Guards</p>
+          <p className="text-xl font-black text-text-primary">{scheduledGuardCount}</p>
+        </div>
+        <div className="rounded-md border border-warning-border bg-warning-bg px-3 py-2">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">Unscheduled Guards</p>
+          <p className="text-xl font-black text-text-primary">{unscheduledGuardCount}</p>
+        </div>
+        <div className="rounded-md border border-danger-border bg-danger-bg px-3 py-2">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">Stale / Offline</p>
+          <p className="text-xl font-black text-text-primary">{staleGuardCount}/{offlineGuardCount}</p>
         </div>
       </div>
 
@@ -868,20 +1184,25 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
         <section className="rounded-md border border-border-subtle bg-surface-elevated p-3" aria-label="Guard movement controls">
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
             <h4 className="text-xs font-bold uppercase tracking-[0.14em] text-text-primary">Guard Movement Intelligence</h4>
-            <span className="text-[11px] text-text-tertiary">{activeGuardsIntel.length} active in last 15 minutes</span>
+            <span className="text-[11px] text-text-tertiary">{activeGuardsIntel.length} tracked in last 20 minutes</span>
           </div>
 
           <div className="mb-2 flex flex-wrap gap-2">
-            {activeGuardsIntel.slice(0, 8).map((guard) => (
-              <button
-                key={guard.guardId}
-                type="button"
-                onClick={() => focusGuard(guard.guardId, guard.latitude, guard.longitude)}
-                className={`min-h-11 rounded-md border px-2.5 py-1.5 text-xs font-semibold uppercase tracking-wide ${selectedGuardId === guard.guardId ? 'border-success-border bg-success-bg text-success-text' : 'border-border-subtle bg-background text-text-secondary'}`}
-              >
-                {guard.guardName || guard.guardId.slice(0, 8)} ({guard.movementStatus})
-              </button>
-            ))}
+            {activeGuardsIntel.slice(0, 8).map((guard) => {
+              const scheduleState = normalizeScheduleState(guard.scheduleStatus)
+              const heartbeatState = (guard.heartbeatStatus || 'offline').toLowerCase()
+
+              return (
+                <button
+                  key={guard.guardId}
+                  type="button"
+                  onClick={() => focusGuard(guard.guardId, guard.latitude, guard.longitude)}
+                  className={`min-h-11 rounded-md border px-2.5 py-1.5 text-xs font-semibold uppercase tracking-wide ${selectedGuardId === guard.guardId ? 'border-success-border bg-success-bg text-success-text' : 'border-border-subtle bg-background text-text-secondary'}`}
+                >
+                  {guard.guardName || guard.guardId.slice(0, 8)} ({heartbeatState}/{scheduleState})
+                </button>
+              )
+            })}
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -934,14 +1255,14 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2 rounded-md border border-border-subtle bg-surface-elevated px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-text-secondary">
-        <span className="inline-flex items-center gap-1"><span className="status-light status-light-success" aria-hidden="true" /> Guard moving</span>
-        <span className="inline-flex items-center gap-1"><span className="status-light status-light-warning" aria-hidden="true" /> Guard idle</span>
+        <span className="inline-flex items-center gap-1"><span className="status-light status-light-success" aria-hidden="true" /> Guard active</span>
+        <span className="inline-flex items-center gap-1"><span className="status-light status-light-warning" aria-hidden="true" /> Guard stale</span>
         <span className="inline-flex items-center gap-1"><span className="status-light status-light-danger" aria-hidden="true" /> Guard offline</span>
         <span className="inline-flex items-center gap-1"><span className="status-light status-light-info" aria-hidden="true" /> Vehicle</span>
         <span className="inline-flex items-center gap-1"><span className="status-light" aria-hidden="true" style={{ backgroundColor: '#7c3aed' }} /> Clustered units</span>
-        <span className="inline-flex items-center gap-1"><span className="status-light status-light-warning" aria-hidden="true" /> Client Site Radius</span>
+        <span className="inline-flex items-center gap-1"><span className="status-light status-light-warning" aria-hidden="true" /> Client site radius</span>
         <span className="inline-flex items-center gap-1"><span className="status-light status-light-danger" aria-hidden="true" /> Your location</span>
-        <span className="w-full text-text-tertiary normal-case tracking-normal sm:ml-auto sm:w-auto">Tip: use guard chips to zoom and replay patrol trail</span>
+        <span className="w-full text-text-tertiary normal-case tracking-normal sm:ml-auto sm:w-auto">Dashed guard markers indicate unscheduled tracking visibility.</span>
       </div>
 
       {isElevatedUser ? (
@@ -1060,7 +1381,9 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleDelete(site.id)}
+                        onClick={() => {
+                          void handleDelete(site.id)
+                        }}
                         className="min-h-11 rounded-md bg-danger-bg px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-danger-text"
                       >
                         Delete

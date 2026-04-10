@@ -49,7 +49,7 @@ function makeAuthValue(overrides: Partial<AuthContextValue>): AuthContextValue {
     toaError: '',
     login: jest.fn(),
     logout: jest.fn(async () => undefined),
-    acceptToa: jest.fn(async () => undefined),
+    acceptToa: jest.fn(async () => true),
     declineToa: jest.fn(),
     setToaChecked: jest.fn(),
     setToaError: jest.fn(),

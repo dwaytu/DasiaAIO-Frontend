@@ -1,20 +1,11 @@
 import { FC, FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { API_BASE_URL, detectRuntimePlatform } from '../../config'
 import { EMERGENCY_CONTACTS, phoneToTelHref } from '../../constants/emergencyContacts'
-import type { LocationHeartbeatStatus } from '../../context/LocationContext'
 import type { User as AppUser } from '../../context/AuthContext'
-import { getRequiredAccuracyMeters, getTrackingAccuracyMode } from '../../utils/trackingPolicy'
 import { logError } from '../../utils/logger'
 import { sanitizeErrorMessage } from '../../utils/sanitize'
 import { fetchJsonOrThrow, getAuthToken } from '../../utils/api'
 import { enqueueOfflineAction, getPendingCount } from '../../utils/offlineQueue'
-import {
-  getLocationPermissionState,
-  hasAcceptedLocationConsent,
-  LOCATION_TRACKING_TOGGLE_KEY,
-  requestRuntimeLocationPermission,
-  resolveLocationWithFallback,
-} from '../../utils/location'
 import { useUI } from '../../hooks/useUI'
 import { useLocationConsent } from '../../hooks/useLocationConsent'
 import GuardResourcesTab from '../dashboard/GuardResourcesTab'
@@ -130,8 +121,15 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
   const [actionStatus, setActionStatus] = useState<string>('')
   const { isNetworkOnline } = useUI()
   const {
+    hasLocationConsent,
+    geoPermissionState,
+    geoNotice,
     locationHeartbeatStatus,
+    lastResolvedLocation,
+    lastHeartbeatAt,
+    lastHeartbeatApproximate,
     requestGeoPermission: requestGeoPermissionFromContext,
+    retryLocationHeartbeat,
   } = useLocationConsent()
 
   const [incidentModalOpen, setIncidentModalOpen] = useState<boolean>(false)
@@ -149,13 +147,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
   const [elapsedTime, setElapsedTime] = useState<Record<string, string>>({})
   const [checkInSubmitting, setCheckInSubmitting] = useState<Record<string, boolean>>({})
 
-  const [locationTrackingEnabled, setLocationTrackingEnabled] = useState<boolean>(false)
-  const [hasLocationConsent, setHasLocationConsent] = useState<boolean>(false)
-  const [dismissedHeartbeatStatus, setDismissedHeartbeatStatus] = useState<LocationHeartbeatStatus | null>(null)
-  const [locationTrackingMessage, setLocationTrackingMessage] = useState<string>('')
-  const [_locationPermissionState, setLocationPermissionState] = useState<'unknown' | 'prompt' | 'granted' | 'denied'>('unknown')
-  const [, setLocationAccuracyMeters] = useState<number | null>(null)
-  const [lastKnownLocation, setLastKnownLocation] = useState<LastKnownLocation | null>(null)
+  const [dismissedTrackingNoticeKey, setDismissedTrackingNoticeKey] = useState<string | null>(null)
 
 
   const [pendingCount, setPendingCount] = useState<number>(0)
@@ -167,17 +159,21 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
     setActiveSection(resolveSectionFromView(activeView))
   }, [activeView])
 
-  useEffect(() => {
-    if (locationHeartbeatStatus === 'active') {
-      setDismissedHeartbeatStatus(null)
-      return
+  const lastKnownLocation = useMemo<LastKnownLocation | null>(() => {
+    if (!lastResolvedLocation || !lastHeartbeatAt) {
+      return null
     }
 
-    if (dismissedHeartbeatStatus) {
-      // Keep dismiss temporary so the banner returns until the root cause is fixed.
-      setDismissedHeartbeatStatus(null)
+    return {
+      latitude: lastResolvedLocation.latitude,
+      longitude: lastResolvedLocation.longitude,
+      accuracyMeters: lastResolvedLocation.accuracyMeters,
+      recordedAt: lastHeartbeatAt,
+      source: lastHeartbeatApproximate ? 'approximate' : lastResolvedLocation.source,
     }
-  }, [dismissedHeartbeatStatus, locationHeartbeatStatus])
+  }, [lastHeartbeatApproximate, lastHeartbeatAt, lastResolvedLocation])
+
+  const runtimePlatform = useMemo(() => detectRuntimePlatform(), [])
 
   const closeProfileModal = useCallback(() => {
     setProfileModalOpen(false)
@@ -215,27 +211,6 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
     const interval = window.setInterval(() => void poll(), 5000)
     return () => { disposed = true; window.clearInterval(interval) }
   }, [])
-
-  useEffect(() => {
-    const stored = localStorage.getItem(LOCATION_TRACKING_TOGGLE_KEY)
-    setLocationTrackingEnabled(stored === 'true')
-    setHasLocationConsent(hasAcceptedLocationConsent())
-  }, [])
-
-  useEffect(() => {
-    if (!hasLocationConsent) {
-      setLocationPermissionState('unknown')
-      return
-    }
-
-    void getLocationPermissionState().then((state) => {
-      if (state === 'unsupported') {
-        setLocationPermissionState('unknown')
-        return
-      }
-      setLocationPermissionState(state)
-    })
-  }, [hasLocationConsent])
 
   const getAuthHeaders = useCallback((extraHeaders: Record<string, string> = {}) => {
     const token = getAuthToken()
@@ -327,108 +302,6 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
   }, [refreshData])
 
   useEffect(() => {
-    if (!locationTrackingEnabled) return
-    if (!hasLocationConsent) {
-      setLocationTrackingMessage('Location tracking is disabled because location consent has not been accepted.')
-      setLocationTrackingEnabled(false)
-      localStorage.setItem(LOCATION_TRACKING_TOGGLE_KEY, 'false')
-      return
-    }
-
-    const token = getAuthToken()
-    if (!token || !user?.id) return
-
-    let lastSent = 0
-    let disposed = false
-
-    const isMobileClient = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
-    const trackingMode = getTrackingAccuracyMode()
-    const requiredAccuracyMeters = getRequiredAccuracyMeters(isMobileClient, trackingMode)
-    const runtimePlatform = detectRuntimePlatform()
-
-    const sendHeartbeat = async () => {
-      const now = Date.now()
-      if (now - lastSent < 15000) return
-      lastSent = now
-
-      try {
-        const location = await resolveLocationWithFallback(runtimePlatform)
-        if (disposed) return
-
-        setLocationAccuracyMeters(location.accuracyMeters)
-        setLastKnownLocation({
-          latitude: location.latitude,
-          longitude: location.longitude,
-          accuracyMeters: location.accuracyMeters ?? null,
-          recordedAt: new Date().toISOString(),
-          source: location.source,
-        })
-
-        if (
-          location.source !== 'ip' &&
-          location.accuracyMeters != null &&
-          location.accuracyMeters > requiredAccuracyMeters
-        ) {
-          setLocationTrackingMessage('Location fix is too broad for precise tracking. Move to an open area and wait for GPS to stabilize.')
-          return
-        }
-
-        const heartbeatResponse = await fetchJsonOrThrow<{
-          accepted?: boolean
-          approximate?: boolean
-          message?: string
-        }>(
-          `${API_BASE_URL}/api/tracking/heartbeat`,
-          {
-            method: 'POST',
-            headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
-            body: JSON.stringify({
-              entityType: 'guard',
-              entityId: user.id,
-              label: user.fullName || user.full_name || user.username,
-              status: 'active',
-              latitude: location.latitude,
-              longitude: location.longitude,
-              heading: location.heading,
-              speedKph: location.speedKph,
-              accuracyMeters: location.accuracyMeters,
-            }),
-          },
-          'Unable to send location heartbeat',
-        )
-
-        if (disposed) return
-
-        if (heartbeatResponse.accepted === false) {
-          setLocationTrackingMessage('GPS accuracy too low — move to an open area and wait for signal to stabilize.')
-          return
-        }
-
-        if (heartbeatResponse.approximate || location.source === 'ip') {
-          setLocationPermissionState('denied')
-          setLocationTrackingMessage('Location tracking active (approximate position).')
-        } else {
-          setLocationPermissionState('granted')
-          setLocationTrackingMessage('Location tracking active.')
-        }
-      } catch {
-        if (disposed) return
-        setLocationTrackingMessage('Location update paused — will retry automatically.')
-      }
-    }
-
-    void sendHeartbeat()
-    const intervalId = window.setInterval(() => {
-      void sendHeartbeat()
-    }, 20000)
-
-    return () => {
-      disposed = true
-      window.clearInterval(intervalId)
-    }
-  }, [getAuthHeaders, hasLocationConsent, locationTrackingEnabled, user?.fullName, user?.full_name, user?.id, user?.username])
-
-  useEffect(() => {
     const intervalId = window.setInterval(() => {
       Object.entries(checkInTimes).forEach(([shiftId, checkInTime]) => {
         if (checkInStatus[shiftId] === 'checked_in') {
@@ -446,45 +319,16 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
     return () => window.clearInterval(intervalId)
   }, [checkInStatus, checkInTimes])
 
-  const requestLocationPermission = async () => {
-    setLocationTrackingMessage('Requesting location access...')
-    const state = await requestRuntimeLocationPermission(detectRuntimePlatform())
-
-    if (state === 'granted') {
-      setLocationPermissionState('granted')
-      setLocationTrackingMessage('Location access granted. Live tracking is active.')
-      return
+  const trackingStatusLabel = useMemo(() => {
+    if (locationHeartbeatStatus === 'active') {
+      return lastHeartbeatApproximate ? 'Tracking Active (Approximate)' : 'Tracking Active'
     }
 
-    if (state === 'unsupported') {
-      setLocationPermissionState('unknown')
-      setLocationTrackingMessage('Precise location is unavailable in this runtime. IP fallback can still be used.')
-      return
-    }
-
-    setLocationPermissionState('denied')
-    setLocationTrackingMessage('Location access was denied. Tracking can continue with approximate fallback.')
-  }
-
-  const toggleLocationTracking = () => {
-    if (!hasLocationConsent) {
-      setLocationTrackingEnabled(false)
-      localStorage.setItem(LOCATION_TRACKING_TOGGLE_KEY, 'false')
-      setLocationTrackingMessage('Location consent is required before enabling live tracking.')
-      return
-    }
-
-    const nextValue = !locationTrackingEnabled
-    setLocationTrackingEnabled(nextValue)
-    localStorage.setItem(LOCATION_TRACKING_TOGGLE_KEY, String(nextValue))
-
-    if (nextValue) {
-      void requestLocationPermission()
-    } else {
-      setLocationTrackingMessage('Live location tracking is turned off.')
-      setLocationAccuracyMeters(null)
-    }
-  }
+    if (locationHeartbeatStatus === 'no-consent') return 'Tracking Blocked (Consent Required)'
+    if (locationHeartbeatStatus === 'no-toa') return 'Tracking Blocked (Terms Required)'
+    if (locationHeartbeatStatus === 'no-permission') return 'Tracking Waiting for Permission'
+    return 'Tracking Paused'
+  }, [lastHeartbeatApproximate, locationHeartbeatStatus])
 
   const activeShifts = useMemo(() => {
     const today = new Date()
@@ -748,19 +592,39 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
   const missionShiftTime = currentShift ? formatTimeWindow(currentShift.start_time, currentShift.end_time) : 'No shift today'
   const missionElapsed = currentShift ? elapsedTime[currentShift.id] || '0h 0m' : '0h 0m'
   const currentShiftCheckedIn = currentShift ? checkInStatus[currentShift.id] === 'checked_in' : false
+  const isTrackingActiveWithoutSchedule = !currentShift && locationHeartbeatStatus === 'active'
+  const trackingExecutionNote = runtimePlatform === 'capacitor'
+    ? 'Mobile tracking sends updates while SENTINEL stays open in the foreground. Background tracking is not enabled in this build.'
+    : 'Keep this dashboard tab open to continue sending location updates.'
+  const trackingLastUpdateLabel = lastKnownLocation
+    ? new Date(lastKnownLocation.recordedAt).toLocaleString()
+    : 'Waiting for first location heartbeat'
+  const trackingAccuracyLabel = lastKnownLocation?.accuracyMeters != null
+    ? `${Math.round(lastKnownLocation.accuracyMeters)} m`
+    : 'n/a'
+  const trackingSourceLabel = lastKnownLocation?.source || 'unavailable'
   const missionReadinessNote = !isNetworkOnline
     ? 'Reconnect before sending mission updates or reporting new activity.'
-    : !hasLocationConsent
+    : locationHeartbeatStatus === 'no-toa'
+      ? 'Accept the Terms of Agreement so location heartbeat can run.'
+      : !hasLocationConsent
       ? 'Review location consent so operations can verify your patrol position.'
-      : !locationTrackingEnabled
-        ? 'Confirm tracking and sync before leaving staging.'
-        : 'Tracking and sync are ready for this watch.'
+      : locationHeartbeatStatus === 'no-permission'
+        ? 'Allow location permission for precise fixes. Approximate fallback can still run.'
+        : locationHeartbeatStatus === 'paused'
+          ? 'Heartbeat is paused. Retry location to resume updates.'
+          : isTrackingActiveWithoutSchedule
+            ? 'Tracking is active without a scheduled shift so command can still monitor readiness.'
+            : 'Tracking and sync are ready for this watch.'
 
-  const locationPausedBanner = useMemo(() => {
-    if (locationHeartbeatStatus === 'active') return null
+  const locationBlockingNotice = useMemo(() => {
+    if (locationHeartbeatStatus === 'active' && geoPermissionState === 'granted') {
+      return null
+    }
 
     if (locationHeartbeatStatus === 'no-consent') {
       return {
+        key: 'no-consent',
         title: 'Location sharing paused',
         message: 'Location consent is required before heartbeat updates can run.',
         action: 'open-profile' as const,
@@ -768,17 +632,9 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
       }
     }
 
-    if (locationHeartbeatStatus === 'no-permission') {
-      return {
-        title: 'Location permission required',
-        message: 'Allow location access to resume precise heartbeat updates.',
-        action: 'request-permission' as const,
-        actionLabel: 'Enable Location',
-      }
-    }
-
     if (locationHeartbeatStatus === 'no-toa') {
       return {
+        key: 'no-toa',
         title: 'Location sharing paused',
         message: 'Accept the Terms of Agreement to enable location heartbeat.',
         action: 'open-profile' as const,
@@ -786,13 +642,47 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
       }
     }
 
+    if (locationHeartbeatStatus === 'no-permission' || geoPermissionState === 'denied' || geoPermissionState === 'prompt') {
+      return {
+        key: 'no-permission',
+        title: 'Precise location permission required',
+        message: lastHeartbeatAt
+          ? 'Tracking is running with approximate positioning. Allow precise location to improve map accuracy.'
+          : 'Allow location access to start heartbeat updates.',
+        action: 'request-permission' as const,
+        actionLabel: 'Enable Location',
+      }
+    }
+
+    if (locationHeartbeatStatus === 'paused') {
+      return {
+        key: 'paused',
+        title: 'Location heartbeat paused',
+        message: 'A recent location sample failed. Retry now to resume heartbeat updates.',
+        action: 'retry-location' as const,
+        actionLabel: 'Retry Location',
+      }
+    }
+
     return {
+      key: 'tracking-warning',
       title: 'Location sharing paused',
-      message: 'Heartbeat updates are currently paused. Re-enable tracking to continue sharing your location.',
-      action: null,
+      message: 'Heartbeat updates are temporarily unavailable. Retry location to continue sharing your position.',
+      action: 'retry-location' as const,
       actionLabel: '',
     }
-  }, [locationHeartbeatStatus])
+  }, [geoPermissionState, hasLocationConsent, lastHeartbeatAt, locationHeartbeatStatus])
+
+  useEffect(() => {
+    if (!locationBlockingNotice) {
+      setDismissedTrackingNoticeKey(null)
+      return
+    }
+
+    if (dismissedTrackingNoticeKey && dismissedTrackingNoticeKey !== locationBlockingNotice.key) {
+      setDismissedTrackingNoticeKey(null)
+    }
+  }, [dismissedTrackingNoticeKey, locationBlockingNotice])
 
   const navItems: Array<{ key: GuardSection; label: string }> = [
     { key: 'mission', label: 'Mission' },
@@ -836,13 +726,13 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
             </div>
           ) : null}
 
-          {locationPausedBanner && dismissedHeartbeatStatus !== locationHeartbeatStatus ? (
+          {locationBlockingNotice && dismissedTrackingNoticeKey !== locationBlockingNotice.key ? (
             <div className="rounded border border-warning-border bg-warning-bg p-3 text-warning-text" role="status" aria-live="polite">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold">{locationPausedBanner.title}</p>
-                  <p className="mt-1 text-xs">{locationPausedBanner.message}</p>
-                  {locationPausedBanner.action === 'request-permission' ? (
+                  <p className="text-sm font-semibold">{locationBlockingNotice.title}</p>
+                  <p className="mt-1 text-xs">{locationBlockingNotice.message}</p>
+                  {locationBlockingNotice.action === 'request-permission' ? (
                     <button
                       type="button"
                       onClick={() => {
@@ -850,22 +740,33 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                       }}
                       className="mt-2 min-h-10 rounded-md border border-warning-border px-3 py-1.5 text-xs font-semibold"
                     >
-                      {locationPausedBanner.actionLabel}
+                      {locationBlockingNotice.actionLabel}
                     </button>
                   ) : null}
-                  {locationPausedBanner.action === 'open-profile' ? (
+                  {locationBlockingNotice.action === 'open-profile' ? (
                     <button
                       type="button"
                       onClick={() => setProfileModalOpen(true)}
                       className="mt-2 min-h-10 rounded-md border border-warning-border px-3 py-1.5 text-xs font-semibold"
                     >
-                      {locationPausedBanner.actionLabel}
+                      {locationBlockingNotice.actionLabel}
+                    </button>
+                  ) : null}
+                  {locationBlockingNotice.action === 'retry-location' ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void retryLocationHeartbeat()
+                      }}
+                      className="mt-2 min-h-10 rounded-md border border-warning-border px-3 py-1.5 text-xs font-semibold"
+                    >
+                      {locationBlockingNotice.actionLabel || 'Retry Location'}
                     </button>
                   ) : null}
                 </div>
                 <button
                   type="button"
-                  onClick={() => setDismissedHeartbeatStatus(locationHeartbeatStatus)}
+                  onClick={() => setDismissedTrackingNoticeKey(locationBlockingNotice.key)}
                   className="min-h-10 rounded-md border border-warning-border px-2 py-1 text-xs font-semibold"
                   aria-label="Dismiss location sharing paused notice"
                 >
@@ -925,9 +826,8 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
             <div className="guard-section-frame">
               <SectionHeader title="Mission" />
 
-              {dutyStatus === 'Off Duty' ? (
-                <OffDutyPanel scheduleItems={scheduleItems} />
-              ) : (
+              {dutyStatus === 'Off Duty' ? <OffDutyPanel scheduleItems={scheduleItems} /> : null}
+
               <>
               {/* Zone 1: StatusHero */}
               <section
@@ -959,14 +859,14 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                     ) : null}
                     <span
                       className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ${
-                        locationTrackingEnabled && hasLocationConsent
+                        locationHeartbeatStatus === 'active'
                           ? 'border border-success-border bg-success-bg text-success-text'
                           : 'border border-border-subtle bg-surface-elevated text-text-tertiary'
                       }`}
-                      aria-label={locationTrackingEnabled && hasLocationConsent ? 'Location tracking active' : 'Location tracking inactive'}
+                      aria-label={locationHeartbeatStatus === 'active' ? 'Location tracking active' : 'Location tracking not fully active'}
                     >
-                      <span aria-hidden="true">{locationTrackingEnabled && hasLocationConsent ? '●' : '○'}</span>
-                      {locationTrackingEnabled && hasLocationConsent ? 'Tracking' : 'No Track'}
+                      <span aria-hidden="true">{locationHeartbeatStatus === 'active' ? '●' : '○'}</span>
+                      {trackingStatusLabel}
                     </span>
                   </div>
                 </div>
@@ -975,31 +875,30 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                     {missionReadinessNote}
                   </p>
                 ) : null}
-                {hasLocationConsent ? (
-                  <div className="mt-3 flex flex-wrap items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={toggleLocationTracking}
-                      aria-pressed={locationTrackingEnabled}
-                      aria-label={locationTrackingEnabled ? 'Disable location tracking' : 'Enable location tracking'}
-                      className={`min-h-10 rounded-md px-3 py-1.5 text-xs font-bold ${
-                        locationTrackingEnabled
-                          ? 'border border-danger-border bg-danger-bg text-danger-text'
-                          : 'border border-success-border bg-success-bg text-success-text'
-                      }`}
-                    >
-                      <span aria-hidden="true">{locationTrackingEnabled ? '●' : '○'}</span>
-                      {locationTrackingEnabled ? ' Stop Tracking' : ' Start Tracking'}
-                    </button>
-                    {locationTrackingMessage ? (
-                      <p className="text-xs text-text-secondary" role="status">{locationTrackingMessage}</p>
-                    ) : null}
+                <dl className="mt-3 grid grid-cols-1 gap-2 rounded border border-current/10 bg-surface/40 p-3 text-xs sm:grid-cols-2">
+                  <div>
+                    <dt className="font-semibold uppercase tracking-wide opacity-75">Last update</dt>
+                    <dd className="mt-0.5 text-sm font-semibold text-text-primary">{trackingLastUpdateLabel}</dd>
                   </div>
-                ) : (
-                  <div className="mt-3 rounded border border-warning-border bg-warning-bg px-3 py-2" role="status">
-                    <p className="text-xs font-semibold text-warning-text">Location consent required — enable in your profile settings to start tracking.</p>
+                  <div>
+                    <dt className="font-semibold uppercase tracking-wide opacity-75">Accuracy</dt>
+                    <dd className="mt-0.5 text-sm font-semibold text-text-primary">{trackingAccuracyLabel}</dd>
                   </div>
-                )}
+                  <div>
+                    <dt className="font-semibold uppercase tracking-wide opacity-75">Source</dt>
+                    <dd className="mt-0.5 text-sm font-semibold text-text-primary">{trackingSourceLabel}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-semibold uppercase tracking-wide opacity-75">Schedule mode</dt>
+                    <dd className="mt-0.5 text-sm font-semibold text-text-primary">
+                      {isTrackingActiveWithoutSchedule ? 'Active without schedule' : 'Standard tracking mode'}
+                    </dd>
+                  </div>
+                </dl>
+                <p className={`mt-2 text-xs opacity-85 ${dutyStatusConfig.textClass}`}>{trackingExecutionNote}</p>
+                {geoNotice ? (
+                  <p className={`mt-1 text-xs ${dutyStatusConfig.textClass}`}>{geoNotice}</p>
+                ) : null}
               </section>
 
               {/* Zone 2: QuickActions */}
@@ -1100,7 +999,6 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                 </div>
               )}
               </>
-              )}
             </div>
           ) : null}
 
@@ -1117,6 +1015,8 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
               mapEmbedUrl={mapEmbedUrl}
               mapExternalUrl={mapExternalUrl}
               lastKnownLocation={lastKnownLocation}
+              trackingStatusLabel={trackingStatusLabel}
+              trackingActiveWithoutSchedule={isTrackingActiveWithoutSchedule}
               onSwitchToMission={() => setActiveSection('mission')}
             />
           ) : null}

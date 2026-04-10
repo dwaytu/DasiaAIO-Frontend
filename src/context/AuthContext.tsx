@@ -48,7 +48,7 @@ export interface AuthContextValue {
   toaError: string
   login: (userData: User, accessToken: string, refreshToken: string) => void
   logout: () => Promise<void>
-  acceptToa: () => Promise<void>
+  acceptToa: () => Promise<boolean>
   declineToa: () => void
   setToaChecked: (checked: boolean) => void
   setToaError: (error: string) => void
@@ -181,12 +181,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const acceptToa = async () => {
     if (!toaChecked) {
       setToaError('Please confirm that you have read and agree to the Terms of Agreement.')
-      return
+      return false
     }
 
     if (!user) {
       setToaError('No active user session was found. Please log in again.')
-      return
+      return false
     }
 
     const sessionReady = await refreshAuthSessionIfNeeded()
@@ -198,7 +198,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setIsLoggedIn(false)
       setHasAcceptedToa(false)
       setToaError('Session expired. Please log in again.')
-      return
+      return false
     }
 
     try {
@@ -234,12 +234,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const message =
         sanitizeErrorMessage(error instanceof Error ? error.message : 'Failed to record legal consent. Please try again.')
       setToaError(message)
-      return
+      return false
     }
 
     localStorage.setItem(TOA_ACCEPTANCE_KEY, TOA_ACCEPTANCE_VALUE)
     setHasAcceptedToa(true)
     setToaError('')
+    return true
   }
 
   const declineToa = () => {

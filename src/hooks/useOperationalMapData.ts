@@ -29,6 +29,15 @@ export interface MapTrackingPoint {
   heading?: number
   speedKph?: number
   accuracyMeters?: number
+  source?: string
+  approximate?: boolean
+  heartbeatStatus?: string
+  scheduleStatus?: string
+  scheduleShiftId?: string
+  scheduleClientSite?: string
+  scheduleStartTime?: string
+  scheduleEndTime?: string
+  ageSeconds?: number
   recordedAt: string
 }
 
@@ -60,12 +69,24 @@ export interface ActiveGuard {
   guardId: string
   userId?: string
   guardName?: string
+  guardRole?: string
+  label?: string
   movementStatus: string
   latitude: number
   longitude: number
+  heading?: number
   recordedAt: string
   ageSeconds?: number
   speedKph?: number
+  accuracyMeters?: number
+  source?: string
+  approximate?: boolean
+  heartbeatStatus?: string
+  scheduleStatus?: string
+  scheduleShiftId?: string
+  scheduleClientSite?: string
+  scheduleStartTime?: string
+  scheduleEndTime?: string
   status?: string
 }
 
@@ -358,7 +379,7 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
     }
 
     const wsBase = API_BASE_URL.replace(/^http/, 'ws')
-    const wsUrl = `${wsBase}/api/tracking/ws?token=${encodeURIComponent(token)}`
+    const wsUrl = `${wsBase}/api/tracking/ws`
     const wsProtocols = ['sentinel-tracking-v1', `bearer.${token}`]
 
     const scheduleReconnect = (reason: string) => {

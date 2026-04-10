@@ -14,6 +14,8 @@ interface GuardMapTabProps {
   mapEmbedUrl: string | null
   mapExternalUrl: string | null
   lastKnownLocation: LastKnownLocation | null
+  trackingStatusLabel?: string
+  trackingActiveWithoutSchedule?: boolean
   onSwitchToMission?: () => void
 }
 
@@ -21,6 +23,8 @@ const GuardMapTab: FC<GuardMapTabProps> = ({
   mapEmbedUrl,
   mapExternalUrl,
   lastKnownLocation,
+  trackingStatusLabel,
+  trackingActiveWithoutSchedule,
   onSwitchToMission,
 }) => {
   const locationUpdatedAt = lastKnownLocation
@@ -31,8 +35,19 @@ const GuardMapTab: FC<GuardMapTabProps> = ({
     <section className="guard-section-frame" aria-label="Guard map workspace">
       <SectionHeader
         title="Live Map"
-        subtitle={lastKnownLocation ? `Updated ${locationUpdatedAt}` : 'Enable tracking from Mission to see your position'}
+        subtitle={
+          lastKnownLocation
+            ? `Updated ${locationUpdatedAt}`
+            : 'No heartbeat location yet. Showing Tagum City center until your first update arrives.'
+        }
       />
+
+      <div className="mb-3 rounded border border-border-subtle bg-surface-elevated px-3 py-2 text-xs text-text-secondary">
+        <p className="font-semibold text-text-primary">{trackingStatusLabel || 'Tracking status unavailable'}</p>
+        {trackingActiveWithoutSchedule ? (
+          <p className="mt-1">Tracking is active even without a scheduled shift.</p>
+        ) : null}
+      </div>
 
       {mapEmbedUrl ? (
         <div className="relative overflow-hidden rounded border border-border-subtle bg-surface-elevated">
@@ -51,7 +66,11 @@ const GuardMapTab: FC<GuardMapTabProps> = ({
               ) : null}
               <span>via {lastKnownLocation.source}</span>
             </div>
-          ) : null}
+          ) : (
+            <div className="absolute left-2 top-2 z-10 max-w-xs rounded border border-info-border bg-info-bg/95 px-3 py-2 text-[11px] text-info-text backdrop-blur-sm">
+              No location heartbeat yet. The map is centered on Tagum City as a fallback until your first update.
+            </div>
+          )}
 
           {mapExternalUrl ? (
             <a

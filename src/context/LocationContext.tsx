@@ -1,15 +1,23 @@
-import { createContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react'
+import { createContext, useState, useEffect, useCallback, useMemo, useRef, ReactNode } from 'react'
 import { detectRuntimePlatform } from '../config'
 import { API_BASE_URL } from '../config'
 import {
   getLocationPermissionState,
   hasAcceptedLocationConsent,
   requestRuntimeLocationPermission,
+  type ResolvedLocation,
   resolveLocationWithFallback,
   setLocationConsentStatus,
 } from '../utils/location'
 import { getRequiredAccuracyMeters, getTrackingAccuracyMode } from '../utils/trackingPolicy'
-import { fetchJsonOrThrow, getAuthToken } from '../utils/api'
+import { getAuthToken, parseResponseBody } from '../utils/api'
+import {
+  fetchTrackingConsentStatus,
+  getTrackingConsentErrorMessage,
+  grantTrackingConsent,
+  isTrackingConsentRequiredResponse,
+  revokeTrackingConsent,
+} from '../utils/trackingConsent'
 import { useAuth } from '../hooks/useAuth'
 
 // ---------------------------------------------------------------------------
@@ -22,14 +30,21 @@ export type LocationHeartbeatStatus = 'active' | 'no-consent' | 'no-permission' 
 export interface LocationContextValue {
   hasLocationConsent: boolean
   locationConsentChecked: boolean
+  consentActionPending: boolean
+  consentSyncError: string
   geoPermissionState: LocationPermissionState
   locationHeartbeatStatus: LocationHeartbeatStatus
   geoNotice: string
+  lastResolvedLocation: ResolvedLocation | null
+  lastHeartbeatAt: string | null
+  lastHeartbeatApproximate: boolean
   locationBannerDismissed: boolean
-  grantLocationConsent: () => void
-  denyLocationConsent: () => void
+  grantLocationConsent: () => Promise<boolean>
+  denyLocationConsent: () => Promise<boolean>
+  refreshTrackingConsent: () => Promise<void>
   dismissLocationBanner: () => void
   requestGeoPermission: () => Promise<void>
+  retryLocationHeartbeat: () => Promise<void>
 }
 
 export const LocationContext = createContext<LocationContextValue | null>(null)
@@ -45,11 +60,16 @@ interface LocationProviderProps {
 export function LocationProvider({ children }: LocationProviderProps) {
   const { user, isLoggedIn, hasAcceptedToa } = useAuth()
 
-  const [hasLocationConsent, setHasLocationConsent] = useState(false)
+  const [hasLocationConsent, setHasLocationConsent] = useState(() => hasAcceptedLocationConsent())
   const [locationConsentChecked, setLocationConsentChecked] = useState(false)
+  const [consentActionPending, setConsentActionPending] = useState(false)
+  const [consentSyncError, setConsentSyncError] = useState('')
   const [geoPermissionState, setGeoPermissionState] = useState<LocationPermissionState>('unknown')
   const [heartbeatPaused, setHeartbeatPaused] = useState(false)
   const [geoNotice, setGeoNotice] = useState('')
+  const [lastResolvedLocation, setLastResolvedLocation] = useState<ResolvedLocation | null>(null)
+  const [lastHeartbeatAt, setLastHeartbeatAt] = useState<string | null>(null)
+  const [lastHeartbeatApproximate, setLastHeartbeatApproximate] = useState(false)
   const [locationBannerDismissed, setLocationBannerDismissed] = useState(() => {
     try {
       const dismissed = localStorage.getItem('sentinel_location_banner_dismissed')
@@ -62,16 +82,48 @@ export function LocationProvider({ children }: LocationProviderProps) {
     }
     return false
   })
+  const sendHeartbeatRef = useRef<(() => Promise<void>) | null>(null)
 
   // ---------------------------------------------------------------------------
-  // Initialization — read consent status from localStorage on mount
+  // Initialization — sync consent status from API, fallback to local cache
   // ---------------------------------------------------------------------------
 
   useEffect(() => {
-    const consentAccepted = hasAcceptedLocationConsent()
-    setHasLocationConsent(consentAccepted)
-    setLocationConsentChecked(consentAccepted)
-  }, [])
+    if (!isLoggedIn || !user) {
+      setHasLocationConsent(false)
+      setLocationConsentChecked(false)
+      setConsentSyncError('')
+      return
+    }
+
+    let cancelled = false
+
+    const syncConsent = async () => {
+      try {
+        const status = await fetchTrackingConsentStatus()
+        if (cancelled) return
+
+        const serverConsent = status.locationTrackingConsent
+        setHasLocationConsent(serverConsent)
+        setLocationConsentChecked(true)
+        setLocationConsentStatus(serverConsent)
+        setConsentSyncError('')
+      } catch {
+        if (cancelled) return
+
+        const localConsent = hasAcceptedLocationConsent()
+        setHasLocationConsent(localConsent)
+        setLocationConsentChecked(true)
+        setConsentSyncError('Could not verify tracking consent with server.')
+      }
+    }
+
+    void syncConsent()
+
+    return () => {
+      cancelled = true
+    }
+  }, [isLoggedIn, user?.id])
 
   // ---------------------------------------------------------------------------
   // Geo permission check — runs when auth/consent state changes
@@ -135,16 +187,21 @@ export function LocationProvider({ children }: LocationProviderProps) {
 
       try {
         const location = await resolveLocationWithFallback(platform)
+        if (disposed) return
+
+        setLastResolvedLocation(location)
 
         if (
           location.source !== 'ip' &&
           location.accuracyMeters != null &&
           location.accuracyMeters > requiredAccuracyMeters
         ) {
+          setHeartbeatPaused(true)
+          setGeoNotice('Location fix is too broad for precise tracking. Move to an open area and retry location.')
           return
         }
 
-        await fetchJsonOrThrow(
+        const heartbeatFetch = await fetch(
           `${API_BASE_URL}/api/tracking/heartbeat`,
           {
             method: 'POST',
@@ -156,7 +213,7 @@ export function LocationProvider({ children }: LocationProviderProps) {
               entityType: 'user',
               entityId: user.id,
               label: user.fullName || user.full_name || user.username,
-              status: 'active',
+              status: location.source === 'ip' ? 'approximate' : 'active',
               latitude: location.latitude,
               longitude: location.longitude,
               heading: location.heading,
@@ -164,12 +221,49 @@ export function LocationProvider({ children }: LocationProviderProps) {
               accuracyMeters: location.accuracyMeters,
             }),
           },
-          'Unable to update location heartbeat',
         )
 
+        const heartbeatPayload = await parseResponseBody(heartbeatFetch)
+        if (!heartbeatFetch.ok) {
+          if (isTrackingConsentRequiredResponse(heartbeatFetch.status, heartbeatPayload)) {
+            setHeartbeatPaused(true)
+            setHasLocationConsent(false)
+            setLocationConsentStatus(false)
+            setLocationConsentChecked(false)
+            setGeoPermissionState('unknown')
+            setGeoNotice(
+              getTrackingConsentErrorMessage(
+                heartbeatPayload,
+                'Server requires location tracking consent before heartbeat can resume.',
+              ),
+            )
+            return
+          }
+
+          throw new Error(getTrackingConsentErrorMessage(heartbeatPayload, 'Unable to update location heartbeat'))
+        }
+
+        const heartbeatResponse = heartbeatPayload as {
+          accepted?: boolean
+          approximate?: boolean
+          message?: string
+        }
+
         if (!disposed) {
+          if (heartbeatResponse.accepted === false) {
+            setHeartbeatPaused(true)
+            setGeoNotice(
+              heartbeatResponse.message ||
+              'Location sample was rejected due to low precision. Move to an open area and retry location.',
+            )
+            return
+          }
+
           setHeartbeatPaused(false)
-          if (location.source === 'ip') {
+          setLastHeartbeatAt(new Date().toISOString())
+          const isApproximate = Boolean(heartbeatResponse.approximate) || location.source === 'ip'
+          setLastHeartbeatApproximate(isApproximate)
+          if (isApproximate) {
             setGeoPermissionState('denied')
             setGeoNotice(
               'Using approximate IP-based location fallback. Enable precise location for higher map accuracy.',
@@ -187,6 +281,7 @@ export function LocationProvider({ children }: LocationProviderProps) {
       }
     }
 
+    sendHeartbeatRef.current = sendHeartbeat
     void sendHeartbeat()
     const intervalId = window.setInterval(() => {
       void sendHeartbeat()
@@ -194,6 +289,7 @@ export function LocationProvider({ children }: LocationProviderProps) {
 
     return () => {
       disposed = true
+      sendHeartbeatRef.current = null
       window.clearInterval(intervalId)
     }
   }, [hasAcceptedToa, hasLocationConsent, isLoggedIn, user?.id, user?.username, user?.fullName, user?.full_name])
@@ -208,28 +304,67 @@ export function LocationProvider({ children }: LocationProviderProps) {
     if (!canSendTrackingHeartbeat) return 'paused'
 
     if (heartbeatPaused) return 'paused'
-    if (geoPermissionState === 'denied' || geoPermissionState === 'prompt') return 'no-permission'
+    if ((geoPermissionState === 'denied' || geoPermissionState === 'prompt') && !lastHeartbeatAt) {
+      return 'no-permission'
+    }
 
     return 'active'
-  }, [geoPermissionState, hasAcceptedToa, hasLocationConsent, heartbeatPaused, isLoggedIn, user])
+  }, [geoPermissionState, hasAcceptedToa, hasLocationConsent, heartbeatPaused, isLoggedIn, lastHeartbeatAt, user])
 
   // ---------------------------------------------------------------------------
   // Handlers
   // ---------------------------------------------------------------------------
 
-  const grantLocationConsent = useCallback(() => {
-    setLocationConsentStatus(true)
-    setHasLocationConsent(true)
-    setLocationConsentChecked(true)
-    setGeoNotice('Location consent enabled. Live tracking can now run.')
+  const grantLocationConsent = useCallback(async (): Promise<boolean> => {
+    setConsentActionPending(true)
+    setConsentSyncError('')
+
+    try {
+      const result = await grantTrackingConsent()
+      setLocationConsentStatus(true)
+      setHasLocationConsent(result.locationTrackingConsent)
+      setLocationConsentChecked(true)
+      setGeoNotice('Location consent enabled. Live tracking can now run.')
+      return true
+    } catch {
+      setConsentSyncError('Could not save tracking consent. Please try again.')
+      return false
+    } finally {
+      setConsentActionPending(false)
+    }
   }, [])
 
-  const denyLocationConsent = useCallback(() => {
-    setLocationConsentStatus(false)
-    setHasLocationConsent(false)
-    setLocationConsentChecked(false)
-    setGeoPermissionState('unknown')
-    setGeoNotice('Location tracking remains disabled until consent is accepted.')
+  const denyLocationConsent = useCallback(async (): Promise<boolean> => {
+    setConsentActionPending(true)
+    setConsentSyncError('')
+
+    try {
+      const result = await revokeTrackingConsent()
+      setLocationConsentStatus(false)
+      setHasLocationConsent(result.locationTrackingConsent)
+      setLocationConsentChecked(false)
+      setGeoPermissionState('unknown')
+      setGeoNotice('Location tracking remains disabled until consent is accepted.')
+      return true
+    } catch {
+      setConsentSyncError('Could not save consent change. Please try again.')
+      return false
+    } finally {
+      setConsentActionPending(false)
+    }
+  }, [])
+
+  const refreshTrackingConsent = useCallback(async () => {
+    try {
+      const status = await fetchTrackingConsentStatus()
+      const serverConsent = status.locationTrackingConsent
+      setHasLocationConsent(serverConsent)
+      setLocationConsentChecked(true)
+      setLocationConsentStatus(serverConsent)
+      setConsentSyncError('')
+    } catch {
+      setConsentSyncError('Could not refresh tracking consent status.')
+    }
   }, [])
 
   const dismissLocationBanner = useCallback(() => {
@@ -263,6 +398,17 @@ export function LocationProvider({ children }: LocationProviderProps) {
     )
   }, [])
 
+  const retryLocationHeartbeat = useCallback(async () => {
+    const sendHeartbeat = sendHeartbeatRef.current
+
+    if (!sendHeartbeat) {
+      setGeoNotice('Location heartbeat cannot retry until login, consent, and terms confirmation are active.')
+      return
+    }
+
+    await sendHeartbeat()
+  }, [])
+
   // ---------------------------------------------------------------------------
   // Context value
   // ---------------------------------------------------------------------------
@@ -270,14 +416,21 @@ export function LocationProvider({ children }: LocationProviderProps) {
   const value: LocationContextValue = {
     hasLocationConsent,
     locationConsentChecked,
+    consentActionPending,
+    consentSyncError,
     geoPermissionState,
     locationHeartbeatStatus,
     geoNotice,
+    lastResolvedLocation,
+    lastHeartbeatAt,
+    lastHeartbeatApproximate,
     locationBannerDismissed,
     grantLocationConsent,
     denyLocationConsent,
+    refreshTrackingConsent,
     dismissLocationBanner,
     requestGeoPermission,
+    retryLocationHeartbeat,
   }
 
   return <LocationContext.Provider value={value}>{children}</LocationContext.Provider>

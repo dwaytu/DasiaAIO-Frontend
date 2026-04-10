@@ -1,4 +1,4 @@
-import { useState, FC } from 'react'
+import { useEffect, useState, FC } from 'react'
 import SentinelModal from './shared/SentinelModal'
 
 interface User {
@@ -31,6 +31,18 @@ const EditUserModal: FC<EditUserModalProps> = ({ user, onClose, onSave }) => {
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    setFormData({
+      fullName: user?.full_name || '',
+      phoneNumber: user?.phone_number || '',
+      licenseNumber: user?.license_number || '',
+      licenseIssuedDate: user?.license_issued_date ? user.license_issued_date.split('T')[0] : '',
+      licenseExpiryDate: user?.license_expiry_date ? user.license_expiry_date.split('T')[0] : '',
+      address: user?.address || '',
+    })
+    setError('')
+  }, [user])
 
   if (!user) return null
 

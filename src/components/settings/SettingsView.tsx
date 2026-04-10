@@ -30,7 +30,7 @@ export const SettingsView: FC<SettingsViewProps> = ({ user, onLogout, onViewChan
       onMenuClose={() => undefined}
       onLogoClick={() => onViewChange(homeView)}
     >
-      <RoleSettingsContent user={user} />
+      <RoleSettingsContent user={user} onViewChange={onViewChange} />
     </OperationalShell>
   )
 }

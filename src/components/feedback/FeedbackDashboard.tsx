@@ -174,7 +174,7 @@ const FeedbackDashboard: FC<FeedbackDashboardProps> = ({ user, onLogout, onViewC
               <div className="rounded-full border border-border-subtle bg-surface-elevated p-2 text-text-secondary" aria-hidden="true">
                 <BarChart3 className="h-5 w-5" />
               </div>
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <h1 className="soc-section-title">Feedback Intelligence</h1>
                 <p className="text-sm text-text-secondary">Monitor rating trends and comments submitted by field and command personnel.</p>
               </div>

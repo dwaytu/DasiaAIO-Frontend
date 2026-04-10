@@ -17,6 +17,7 @@ import AssignmentPicker from '../dashboard/AssignmentPicker'
 import LiveFreshnessPill from '../dashboard/ui/LiveFreshnessPill'
 import { TableLoadingState } from '../dashboard/ui/DashboardLoadingState'
 import EmptyState from '../shared/EmptyState'
+import SentinelModal from '../shared/SentinelModal'
 import { ClipboardX, CalendarX2, Target } from 'lucide-react'
 import Allowed from '../rbac/Allowed'
 import DeniedFallback from '../rbac/DeniedFallback'
@@ -1489,7 +1490,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                   <div className="flex-shrink-0 px-6 py-5 border-b border-border-subtle flex justify-between items-center">
                     <h2 className="text-xl font-bold text-text-primary">All Guard Schedules</h2>
                     <button
-                      onClick={() => setShowAddScheduleForm(!showAddScheduleForm)}
+                      onClick={() => setShowAddScheduleForm(true)}
                       className="bg-primary hover:bg-primary-hover text-primary-text px-4 py-2 rounded text-sm font-medium transition-colors flex items-center gap-2"
                     >
                       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1552,98 +1553,89 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                 )}
               </section>
 
-              {showAddScheduleForm && (
-                <section className="w-full table-glass rounded p-6 md:p-8">
-                  <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-2xl font-bold text-text-primary">Add New Schedule</h2>
+              <SentinelModal
+                open={showAddScheduleForm}
+                onClose={() => setShowAddScheduleForm(false)}
+                title="Add New Schedule"
+                subtitle="Assign a guard shift to a client site"
+                size="lg"
+              >
+                {error && (
+                  <div className="mb-4 p-3 bg-danger-bg border border-danger-border text-danger-text rounded text-sm">
+                    {error}
+                  </div>
+                )}
+
+                <form onSubmit={handleScheduleSubmit} noValidate className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="md:col-span-2">
+                    <AssignmentPicker
+                      id="schedule-guard"
+                      label="Select Guard"
+                      required
+                      tone="teal"
+                      value={scheduleFormData.guard_id}
+                      onChange={(value) => setScheduleFormData({ ...scheduleFormData, guard_id: value })}
+                      placeholder="-- Select a guard --"
+                      options={availableGuards.map((guard) => ({ value: guard.id, label: guard.full_name || guard.username }))}
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-semibold text-text-primary mb-1">Site/Location</label>
+                    <input
+                      type="text"
+                      required
+                      value={scheduleFormData.client_site}
+                      onChange={(e) => setScheduleFormData({...scheduleFormData, client_site: e.target.value})}
+                      placeholder="Enter site or location"
+                      className="w-full px-3 py-2 border border-border rounded bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)] focus:border-[color:var(--color-focus-ring)]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-text-primary mb-1">Date</label>
+                    <input
+                      type="date"
+                      required
+                      value={scheduleFormData.date}
+                      onChange={(e) => setScheduleFormData({...scheduleFormData, date: e.target.value})}
+                      className="w-full px-3 py-2 border border-border rounded bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)] focus:border-[color:var(--color-focus-ring)]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-text-primary mb-1">Start Time</label>
+                    <input
+                      type="time"
+                      required
+                      value={scheduleFormData.start_time}
+                      onChange={(e) => setScheduleFormData({...scheduleFormData, start_time: e.target.value})}
+                      className="w-full px-3 py-2 border border-border rounded bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)] focus:border-[color:var(--color-focus-ring)]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-text-primary mb-1">End Time</label>
+                    <input
+                      type="time"
+                      required
+                      value={scheduleFormData.end_time}
+                      onChange={(e) => setScheduleFormData({...scheduleFormData, end_time: e.target.value})}
+                      className="w-full px-3 py-2 border border-border rounded bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)] focus:border-[color:var(--color-focus-ring)]"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
                     <button
-                      onClick={() => setShowAddScheduleForm(false)}
-                      className="text-text-tertiary hover:text-text-primary transition-colors"
-                      title="Close form"
+                      type="submit"
+                      disabled={shiftsLoading}
+                      className="w-full bg-primary hover:bg-primary-hover disabled:opacity-50 text-primary-text font-semibold py-3 rounded transition-colors"
                     >
-                      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
+                      {shiftsLoading ? 'Creating Schedule...' : 'Create Schedule'}
                     </button>
                   </div>
-                  
-                  {error && (
-                    <div className="mb-4 p-3 bg-danger-bg border border-danger-border text-danger-text rounded text-sm">
-                      {error}
-                    </div>
-                  )}
-                  
-                  <form onSubmit={handleScheduleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="md:col-span-2">
-                      <AssignmentPicker
-                        id="schedule-guard"
-                        label="Select Guard"
-                        required
-                        tone="teal"
-                        value={scheduleFormData.guard_id}
-                        onChange={(value) => setScheduleFormData({ ...scheduleFormData, guard_id: value })}
-                        placeholder="-- Select a guard --"
-                        options={availableGuards.map((guard) => ({ value: guard.id, label: guard.full_name || guard.username }))}
-                      />
-                    </div>
-
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-semibold text-text-primary mb-1">Site/Location</label>
-                      <input
-                        type="text"
-                        required
-                        value={scheduleFormData.client_site}
-                        onChange={(e) => setScheduleFormData({...scheduleFormData, client_site: e.target.value})}
-                        placeholder="Enter site or location"
-                        className="w-full px-3 py-2 border border-border rounded bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)] focus:border-[color:var(--color-focus-ring)]"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-text-primary mb-1">Date</label>
-                      <input
-                        type="date"
-                        required
-                        value={scheduleFormData.date}
-                        onChange={(e) => setScheduleFormData({...scheduleFormData, date: e.target.value})}
-                        className="w-full px-3 py-2 border border-border rounded bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)] focus:border-[color:var(--color-focus-ring)]"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-text-primary mb-1">Start Time</label>
-                      <input
-                        type="time"
-                        required
-                        value={scheduleFormData.start_time}
-                        onChange={(e) => setScheduleFormData({...scheduleFormData, start_time: e.target.value})}
-                        className="w-full px-3 py-2 border border-border rounded bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)] focus:border-[color:var(--color-focus-ring)]"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-text-primary mb-1">End Time</label>
-                      <input
-                        type="time"
-                        required
-                        value={scheduleFormData.end_time}
-                        onChange={(e) => setScheduleFormData({...scheduleFormData, end_time: e.target.value})}
-                        className="w-full px-3 py-2 border border-border rounded bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)] focus:border-[color:var(--color-focus-ring)]"
-                      />
-                    </div>
-
-                    <div className="md:col-span-2">
-                      <button
-                        type="submit"
-                        disabled={shiftsLoading}
-                        className="w-full bg-primary hover:bg-primary-hover disabled:opacity-50 text-primary-text font-semibold py-3 rounded transition-colors"
-                      >
-                        {shiftsLoading ? 'Creating Schedule...' : 'Create Schedule'}
-                      </button>
-                    </div>
-                  </form>
-                </section>
-              )}
+                </form>
+              </SentinelModal>
             </>
             )}
           </div>

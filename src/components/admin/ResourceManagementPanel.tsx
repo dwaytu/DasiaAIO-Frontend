@@ -8,6 +8,8 @@ import { useAuth } from '../../hooks/useAuth'
 import { normalizeRole, Role } from '../../types/auth'
 import EmptyState from '../shared/EmptyState'
 import LoadingSkeleton from '../shared/LoadingSkeleton'
+import SentinelModal from '../shared/SentinelModal'
+import EditUserModal from '../EditUserModal'
 
 type ManageTab = 'guards' | 'firearms' | 'vehicles' | 'clients'
 
@@ -146,6 +148,7 @@ const GuardsTab: FC<{
   const [formErrors, setFormErrors] = useState<UserCreationErrors>({})
   const [createError, setCreateError] = useState('')
   const [createSuccess, setCreateSuccess] = useState('')
+  const [editUser, setEditUser] = useState<any>(null)
   const [newUser, setNewUser] = useState<UserCreationFormState>({
     fullName: '',
     username: '',
@@ -333,6 +336,26 @@ const GuardsTab: FC<{
     }
   }
 
+  const handleSaveEditUser = async (updatedData: Record<string, unknown>) => {
+    if (!editUser) return
+
+    await fetchJsonOrThrow<any>(
+      `${API_BASE_URL}/api/users/${editUser.id}`,
+      {
+        method: 'PUT',
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(updatedData),
+      },
+      'Failed to update user',
+    )
+
+    if (onUsersChanged) {
+      await Promise.resolve(onUsersChanged())
+    }
+
+    setEditUser(null)
+  }
+
   if (!canManageUsers) {
     return (
       <section className="table-glass rounded p-6">
@@ -394,12 +417,20 @@ const GuardsTab: FC<{
                   <td className="px-4 py-3 text-text-secondary text-sm hidden lg:table-cell">{g.license_number || '-'}</td>
                   {isSuperadminViewer && (
                     <td className="px-4 py-3 text-right">
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => setEditUser(g)}
+                          className="inline-flex min-h-11 items-center gap-1 rounded px-3 py-1.5 text-xs font-semibold text-info-text bg-info-bg ring-1 ring-info-border hover:opacity-90 transition-opacity"
+                        >
+                          Edit
+                        </button>
                       <button
                         onClick={() => onDeleteUser(g.id, g.email)}
                         className="inline-flex items-center gap-1 rounded px-3 py-1.5 text-xs font-semibold text-danger-text bg-danger-bg ring-1 ring-danger-border hover:bg-danger-bg/80 transition-colors"
                       >
                         Remove
                       </button>
+                      </div>
                     </td>
                   )}
                 </tr>
@@ -409,39 +440,13 @@ const GuardsTab: FC<{
         </div>
       )}
 
-      {isAddUserOpen && (
-        <div
-          className="soc-modal-backdrop"
-          onClick={closeAddUserModal}
-          aria-hidden="true"
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="add-user-dialog-title"
-            aria-describedby="add-user-dialog-description"
-            className="soc-modal-panel mx-4 w-full max-w-lg rounded bg-surface shadow-2xl"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-border px-6 py-4">
-              <div>
-                <h3 id="add-user-dialog-title" className="text-lg font-bold text-text-primary">Add User</h3>
-                <p id="add-user-dialog-description" className="mt-1 text-sm text-text-secondary">
-                  Create a new account for personnel access.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={closeAddUserModal}
-                className="flex min-h-11 min-w-11 items-center justify-center rounded-md text-3xl text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
-                aria-label="Close add user dialog"
-                disabled={isSubmittingUser}
-              >
-                ×
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateUser} className="space-y-4 p-6" noValidate>
+      <SentinelModal
+        open={isAddUserOpen}
+        onClose={closeAddUserModal}
+        title="Add User"
+        subtitle="Create a new account for personnel access."
+      >
+        <form onSubmit={handleCreateUser} className="space-y-4" noValidate>
               <div>
                 <label htmlFor="add-user-name" className="mb-1 block text-sm font-semibold text-text-secondary">
                   Full Name <span aria-hidden="true" className="text-danger-text">*</span>
@@ -653,10 +658,14 @@ const GuardsTab: FC<{
                   {isSubmittingUser ? 'Creating...' : 'Create User'}
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+        </form>
+      </SentinelModal>
+
+      <EditUserModal
+        user={editUser}
+        onClose={() => setEditUser(null)}
+        onSave={handleSaveEditUser}
+      />
     </section>
   )
 }
@@ -666,7 +675,7 @@ const FirearmsTab: FC = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
-  const [showAddForm, setShowAddForm] = useState(false)
+  const [showAddModal, setShowAddModal] = useState(false)
   const [newFirearm, setNewFirearm] = useState({ serialNumber: '', model: '', caliber: '' })
   const [submitting, setSubmitting] = useState(false)
 
@@ -702,12 +711,27 @@ const FirearmsTab: FC = () => {
       if (!response.ok) throw new Error('Failed to add firearm')
       setSuccess('Firearm added successfully')
       setNewFirearm({ serialNumber: '', model: '', caliber: '' })
-      setShowAddForm(false)
-      fetchFirearms()
+      setShowAddModal(false)
+      await fetchFirearms()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add firearm')
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const deleteFirearm = async (id: string) => {
+    setError('')
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/firearms/${id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      })
+      if (!response.ok) throw new Error('Failed to remove firearm')
+      setSuccess('Firearm removed successfully')
+      await fetchFirearms()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to remove firearm')
     }
   }
 
@@ -718,18 +742,25 @@ const FirearmsTab: FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <h2 className="soc-section-title">Firearm Inventory ({firearms.length})</h2>
         <button
-          onClick={() => setShowAddForm(!showAddForm)}
+          onClick={() => setShowAddModal(true)}
           className="inline-flex items-center gap-1 rounded px-4 py-2 text-sm font-semibold bg-[color:var(--color-info-bg)] text-[color:var(--color-info-text)] border border-[color:var(--color-info-border)] hover:opacity-90 transition-opacity"
         >
-          {showAddForm ? 'Cancel' : '+ Add Firearm'}
+          + Add Firearm
         </button>
       </div>
 
       {error && <div className="p-3 bg-danger-bg border border-danger-border rounded text-danger-text text-sm">{error}</div>}
       {success && <div className="p-3 bg-success-bg border border-success-border rounded text-success-text text-sm">{success}</div>}
 
-      {showAddForm && (
-        <form onSubmit={addFirearm} className="bg-surface-elevated p-4 rounded border border-border space-y-3">
+      <SentinelModal
+        open={showAddModal}
+        onClose={() => {
+          if (!submitting) setShowAddModal(false)
+        }}
+        title="Add Firearm"
+        subtitle="Register a new firearm in the armory"
+      >
+        <form onSubmit={addFirearm} noValidate className="space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label htmlFor="firearm-serial" className="block text-xs font-semibold text-text-secondary mb-1">Serial Number</label>
@@ -748,7 +779,7 @@ const FirearmsTab: FC = () => {
             {submitting ? 'Adding...' : 'Add Firearm'}
           </button>
         </form>
-      )}
+      </SentinelModal>
 
       {firearms.length === 0 ? (
         <EmptyState icon={Shield} title="No firearms registered" subtitle="Add firearms to the inventory to get started" />
@@ -761,6 +792,7 @@ const FirearmsTab: FC = () => {
                 <th className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Model</th>
                 <th className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider hidden sm:table-cell">Caliber</th>
                 <th className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Status</th>
+                <th className="px-4 py-3 text-right font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -779,6 +811,14 @@ const FirearmsTab: FC = () => {
                       {f.status}
                     </span>
                   </td>
+                  <td className="px-4 py-3 text-right">
+                    <button
+                      onClick={() => deleteFirearm(f.id)}
+                      className="inline-flex items-center gap-1 rounded px-3 py-1.5 text-xs font-semibold text-danger-text bg-danger-bg ring-1 ring-danger-border hover:bg-danger-bg/80 transition-colors"
+                    >
+                      Remove
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -794,7 +834,7 @@ const VehiclesTab: FC = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
-  const [showAddForm, setShowAddForm] = useState(false)
+  const [showAddModal, setShowAddModal] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [newCar, setNewCar] = useState({
     licensePlate: '',
@@ -838,12 +878,27 @@ const VehiclesTab: FC = () => {
       if (!response.ok) throw new Error('Failed to add vehicle')
       setSuccess('Vehicle added successfully')
       setNewCar({ licensePlate: '', vin: '', model: '', manufacturer: '', capacityKg: 0, passengerCapacity: 4 })
-      setShowAddForm(false)
-      fetchCars()
+      setShowAddModal(false)
+      await fetchCars()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add vehicle')
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const deleteVehicle = async (id: string) => {
+    setError('')
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/armored-cars/${id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      })
+      if (!response.ok) throw new Error('Failed to remove vehicle')
+      setSuccess('Vehicle removed successfully')
+      await fetchCars()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to remove vehicle')
     }
   }
 
@@ -854,18 +909,25 @@ const VehiclesTab: FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <h2 className="soc-section-title">Vehicle Fleet ({cars.length})</h2>
         <button
-          onClick={() => setShowAddForm(!showAddForm)}
+          onClick={() => setShowAddModal(true)}
           className="inline-flex items-center gap-1 rounded px-4 py-2 text-sm font-semibold bg-[color:var(--color-info-bg)] text-[color:var(--color-info-text)] border border-[color:var(--color-info-border)] hover:opacity-90 transition-opacity"
         >
-          {showAddForm ? 'Cancel' : '+ Add Vehicle'}
+          + Add Vehicle
         </button>
       </div>
 
       {error && <div className="p-3 bg-danger-bg border border-danger-border rounded text-danger-text text-sm">{error}</div>}
       {success && <div className="p-3 bg-success-bg border border-success-border rounded text-success-text text-sm">{success}</div>}
 
-      {showAddForm && (
-        <form onSubmit={addCar} className="bg-surface-elevated p-4 rounded border border-border space-y-3">
+      <SentinelModal
+        open={showAddModal}
+        onClose={() => {
+          if (!submitting) setShowAddModal(false)
+        }}
+        title="Add Vehicle"
+        subtitle="Register an armored vehicle for fleet management"
+      >
+        <form onSubmit={addCar} noValidate className="space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             <div>
               <label htmlFor="vehicle-plate" className="block text-xs font-semibold text-text-secondary mb-1">License Plate</label>
@@ -896,7 +958,7 @@ const VehiclesTab: FC = () => {
             {submitting ? 'Adding...' : 'Add Vehicle'}
           </button>
         </form>
-      )}
+      </SentinelModal>
 
       {cars.length === 0 ? (
         <EmptyState icon={Truck} title="No vehicles in fleet" subtitle="Register armored vehicles to manage the fleet" />
@@ -909,6 +971,7 @@ const VehiclesTab: FC = () => {
                 <th className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider hidden sm:table-cell">Model</th>
                 <th className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider hidden md:table-cell">Capacity</th>
                 <th className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Status</th>
+                <th className="px-4 py-3 text-right font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -927,6 +990,14 @@ const VehiclesTab: FC = () => {
                       {car.status}
                     </span>
                   </td>
+                  <td className="px-4 py-3 text-right">
+                    <button
+                      onClick={() => deleteVehicle(car.id)}
+                      className="inline-flex items-center gap-1 rounded px-3 py-1.5 text-xs font-semibold text-danger-text bg-danger-bg ring-1 ring-danger-border hover:bg-danger-bg/80 transition-colors"
+                    >
+                      Remove
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -939,7 +1010,7 @@ const VehiclesTab: FC = () => {
 
 const ClientSitesTab: FC = () => {
   const { clientSites, createClientSite, deleteClientSite } = useOperationalMapData()
-  const [showAddForm, setShowAddForm] = useState(false)
+  const [showAddModal, setShowAddModal] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -958,7 +1029,7 @@ const ClientSitesTab: FC = () => {
       await createClientSite(newSite)
       setSuccess('Client site created')
       setNewSite({ name: '', latitude: 7.4478, longitude: 125.8078, address: '' })
-      setShowAddForm(false)
+      setShowAddModal(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create site')
     } finally {
@@ -980,18 +1051,25 @@ const ClientSitesTab: FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <h2 className="soc-section-title">Client Sites ({clientSites.length})</h2>
         <button
-          onClick={() => setShowAddForm(!showAddForm)}
+          onClick={() => setShowAddModal(true)}
           className="inline-flex items-center gap-1 rounded px-4 py-2 text-sm font-semibold bg-[color:var(--color-info-bg)] text-[color:var(--color-info-text)] border border-[color:var(--color-info-border)] hover:opacity-90 transition-opacity"
         >
-          {showAddForm ? 'Cancel' : '+ Add Site'}
+          + Add Site
         </button>
       </div>
 
       {error && <div className="p-3 bg-danger-bg border border-danger-border rounded text-danger-text text-sm">{error}</div>}
       {success && <div className="p-3 bg-success-bg border border-success-border rounded text-success-text text-sm">{success}</div>}
 
-      {showAddForm && (
-        <form onSubmit={addSite} className="bg-surface-elevated p-4 rounded border border-border space-y-3">
+      <SentinelModal
+        open={showAddModal}
+        onClose={() => {
+          if (!submitting) setShowAddModal(false)
+        }}
+        title="Add Client Site"
+        subtitle="Register a geofenced site for guard tracking"
+      >
+        <form onSubmit={addSite} noValidate className="space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             <div className="sm:col-span-2 lg:col-span-1">
               <label htmlFor="site-name" className="block text-xs font-semibold text-text-secondary mb-1">Site Name</label>
@@ -1014,7 +1092,7 @@ const ClientSitesTab: FC = () => {
             {submitting ? 'Creating...' : 'Create Site'}
           </button>
         </form>
-      )}
+      </SentinelModal>
 
       {clientSites.length === 0 ? (
         <EmptyState icon={MapPin} title="No client sites" subtitle="Add geofenced client sites for guard tracking" />

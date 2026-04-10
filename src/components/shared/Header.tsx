@@ -12,9 +12,10 @@ interface HeaderProps {
   user: User
   onNavigateToProfile?: () => void
   onNavigateToInbox?: () => void
+  onNavigateToSettings?: () => void
 }
 
-const Header: FC<HeaderProps> = ({ title, badgeLabel, onLogout, rightSlot, onMenuClick, user, onNavigateToProfile, onNavigateToInbox }) => {
+const Header: FC<HeaderProps> = ({ title, badgeLabel, onLogout, rightSlot, onMenuClick, user, onNavigateToProfile, onNavigateToInbox, onNavigateToSettings }) => {
   return (
     <header className="relative isolate z-[var(--z-header)] border-b border-border bg-surface/95 px-4 py-3 backdrop-blur md:px-8 md:py-4" style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top, 0px))' }}>
       <div className="flex items-start justify-between gap-3 sm:items-center">
@@ -41,6 +42,7 @@ const Header: FC<HeaderProps> = ({ title, badgeLabel, onLogout, rightSlot, onMen
         onLogout={onLogout}
         onNavigateToProfile={onNavigateToProfile}
         onNavigateToInbox={onNavigateToInbox}
+        onNavigateToSettings={onNavigateToSettings}
         extraAction={rightSlot}
       />
       </div>

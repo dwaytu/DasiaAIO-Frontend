@@ -131,7 +131,7 @@ function SupportRouteWrapper() {
 
 const ELEVATED_ROLES = ['superadmin', 'admin', 'supervisor']
 const ALL_ROLES = ['superadmin', 'admin', 'supervisor', 'guard']
-const FEEDBACK_SUBMIT_ROLES = ['admin', 'supervisor', 'guard']
+const FEEDBACK_SUBMIT_ROLES = ['superadmin', 'admin', 'supervisor', 'guard']
 const SUPERADMIN_ONLY = ['superadmin']
 const GUARD_ONLY = ['guard']
 

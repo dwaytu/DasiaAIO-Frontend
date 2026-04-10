@@ -10,6 +10,7 @@ type HeaderGlobalActionsProps = {
   onLogout: () => void
   onNavigateToProfile?: () => void
   onNavigateToInbox?: () => void
+  onNavigateToSettings?: () => void
   extraAction?: ReactNode
   profileButtonRef?: Ref<HTMLButtonElement>
   guardMode?: boolean
@@ -20,6 +21,7 @@ const HeaderGlobalActions: FC<HeaderGlobalActionsProps> = ({
   onLogout,
   onNavigateToProfile,
   onNavigateToInbox,
+  onNavigateToSettings,
   extraAction,
   profileButtonRef,
   guardMode,
@@ -46,6 +48,7 @@ const HeaderGlobalActions: FC<HeaderGlobalActionsProps> = ({
         user={user}
         onLogout={onLogout}
         onNavigateToProfile={onNavigateToProfile}
+        onNavigateToSettings={onNavigateToSettings}
         isOpen={isOverlayOpen('profile')}
         onToggle={() => toggleOverlay('profile')}
         onClose={closeOverlay}

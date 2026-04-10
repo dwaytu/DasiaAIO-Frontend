@@ -816,6 +816,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
             onLogout={onLogout}
             onNavigateToInbox={() => onViewChange?.('inbox')}
             onNavigateToProfile={() => setProfileModalOpen(true)}
+            onNavigateToSettings={() => onViewChange?.('settings')}
             profileButtonRef={profileTriggerRef}
             guardMode
           />

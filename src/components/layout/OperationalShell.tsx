@@ -95,23 +95,27 @@ const OperationalShell: FC<OperationalShellProps> = ({
   return (
     <div className="flex h-[100dvh] w-full overflow-hidden bg-background font-sans">
       <a href="#maincontent" className="skip-link">Skip to main content</a>
-      <Sidebar
-        items={navItems}
-        activeView={activeView}
-        onNavigate={onNavigate}
-        onLogoClick={onLogoClick}
-        onLogout={onLogout}
-        isOpen={mobileMenuOpen}
-        onClose={onMenuClose}
-        collapsed={sidebarCollapsed}
-        onToggle={() => setSidebarCollapsed((prev) => !prev)}
-      />
+      {navItems.length > 0 && (
+        <Sidebar
+          items={navItems}
+          activeView={activeView}
+          onNavigate={onNavigate}
+          onLogoClick={onLogoClick}
+          onLogout={onLogout}
+          isOpen={mobileMenuOpen}
+          onClose={onMenuClose}
+          collapsed={sidebarCollapsed}
+          onToggle={() => setSidebarCollapsed((prev) => !prev)}
+        />
+      )}
 
-      <div
-        className="hidden w-72 flex-shrink-0 lg:block lg:w-[var(--sidebar-width)] soc-sidebar-width-transition"
-        style={sidebarSpacerStyle}
-        aria-hidden="true"
-      />
+      {navItems.length > 0 && (
+        <div
+          className="hidden w-72 flex-shrink-0 lg:block lg:w-[var(--sidebar-width)] soc-sidebar-width-transition"
+          style={sidebarSpacerStyle}
+          aria-hidden="true"
+        />
+      )}
 
       <main id="maincontent" tabIndex={-1} className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <Header
@@ -122,6 +126,7 @@ const OperationalShell: FC<OperationalShellProps> = ({
           user={user}
           onNavigateToInbox={() => onNavigate('inbox')}
           onNavigateToProfile={() => onNavigate('profile')}
+          onNavigateToSettings={() => onNavigate('settings')}
           rightSlot={rightSlot}
         />
 

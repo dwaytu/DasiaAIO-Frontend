@@ -29,7 +29,6 @@ const ADMIN_NAV: NavItem[] = [
   { view: 'approvals', label: 'Approvals', group: 'Core', permission: 'approve_guards' },
   { view: 'schedule', label: 'Schedule', group: 'Core' },
   { view: 'calendar', label: 'Calendar', group: 'Core' },
-  { view: 'feedback', label: 'Feedback', group: 'Core' },
   { view: 'allocation', label: 'Allocation', group: 'Operations', permission: 'manage_allocations' },
   { view: 'manage', label: 'Management', group: 'Operations' },
   { view: 'mdr-import', label: 'MDR Import', group: 'Operations' },
@@ -37,17 +36,18 @@ const ADMIN_NAV: NavItem[] = [
   { view: 'firearms', label: 'Firearms', group: 'Resources', permission: 'manage_firearms' },
   { view: 'armored-cars', label: 'Armored Cars', group: 'Resources', permission: 'manage_armored_cars' },
   { view: 'maintenance', label: 'Maintenance', group: 'Resources', permission: 'manage_maintenance' },
+  { view: 'settings', label: 'Settings', group: 'System' },
 ]
 
 const SUPERVISOR_NAV: NavItem[] = [
   { view: 'dashboard', label: 'Dashboard', group: 'Core' },
   { view: 'schedule', label: 'Schedule', group: 'Core' },
   { view: 'calendar', label: 'Calendar', group: 'Core' },
-  { view: 'feedback', label: 'Feedback', group: 'Core' },
   { view: 'missions', label: 'Missions', group: 'Field' },
   { view: 'approvals', label: 'Approvals', group: 'Operations', permission: 'approve_guards' },
   { view: 'allocation', label: 'Allocation', group: 'Operations', permission: 'manage_allocations' },
   { view: 'operations-map', label: 'Operations Map', group: 'Operations' },
+  { view: 'settings', label: 'Settings', group: 'System' },
 ]
 
 interface NavOptions {

@@ -29,6 +29,8 @@ export function isElevatedRole(role: unknown): boolean {
 }
 
 export function hasTrackingEndpointAccess(role: unknown): boolean {
+  if (!isLegacyRole(role)) return false
+
   const normalized = normalizeRole(role)
   return normalized === 'guard' || isElevatedRole(normalized)
 }

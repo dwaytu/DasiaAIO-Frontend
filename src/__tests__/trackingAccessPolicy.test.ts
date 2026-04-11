@@ -11,9 +11,11 @@ describe('tracking access policy', () => {
     expect(hasTrackingEndpointAccess('guard')).toBe(true)
   })
 
-  it('normalizes legacy and malformed tracking roles safely', () => {
+  it('normalizes legacy tracking roles and rejects malformed values', () => {
     expect(hasTrackingEndpointAccess('user')).toBe(true)
-    expect(hasTrackingEndpointAccess('unknown-role')).toBe(true)
+    expect(hasTrackingEndpointAccess('unknown-role')).toBe(false)
+    expect(hasTrackingEndpointAccess('')).toBe(false)
+    expect(hasTrackingEndpointAccess(null)).toBe(false)
   })
 
   it('limits client-site management controls to elevated roles', () => {

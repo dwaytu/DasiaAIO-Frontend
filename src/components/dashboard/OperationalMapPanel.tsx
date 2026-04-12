@@ -7,6 +7,12 @@ import { getPersonRecencyMinutes, getTrackingAccuracyMode, getVehicleRecencyMinu
 import { useTheme } from '../../context/ThemeProvider'
 import { useOperationalEvent } from '../../context/OperationalEventContext'
 import { getOperationalMapTileUrl } from './mapTileUrls'
+import {
+  hasCurrentUserTrackingPosition,
+  isCurrentUserTrackingPoint,
+  shouldShowClientSiteDraftMarker,
+  type MapPickMode,
+} from './operationalMapTruthfulness'
 
 interface OperationalMapPanelProps {
   activeTrips: number
@@ -143,9 +149,12 @@ const MapViewCommandController: FC<MapViewCommandControllerProps> = ({
     }
 
     if (commandType === 'center-user') {
-      const center = currentUserPosition || TAGUM_CENTER
+      if (!hasCurrentUserTrackingPosition(currentUserPosition)) {
+        return
+      }
+
       map.stop()
-      map.setView(center, Math.max(map.getZoom(), 13), { animate: true })
+      map.setView(currentUserPosition, Math.max(map.getZoom(), 13), { animate: true })
       return
     }
 
@@ -240,7 +249,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
 
   const [siteForm, setSiteForm] = useState<ClientSiteInput>(INITIAL_FORM)
   const [editingSiteId, setEditingSiteId] = useState<string>('')
-  const [mapPickMode, setMapPickMode] = useState<'idle' | 'add' | 'edit'>('idle')
+  const [mapPickMode, setMapPickMode] = useState<MapPickMode>('idle')
   const [mapZoom, setMapZoom] = useState<number>(12)
   const [focusCenter, setFocusCenter] = useState<[number, number] | null>(null)
   const [selectedGuardId, setSelectedGuardId] = useState<string>('')
@@ -273,7 +282,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
       const raw = localStorage.getItem('user')
       if (!raw) return ''
       const parsed = JSON.parse(raw)
-      return typeof parsed?.id === 'string' ? parsed.id : ''
+      return typeof parsed?.id === 'string' ? parsed.id.trim() : ''
     } catch {
       return ''
     }
@@ -333,12 +342,24 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
 
     return (
       pointTelemetry
-        .filter((entry) => entry.point.entityId === currentUserId)
+        .filter((entry) => isCurrentUserTrackingPoint(currentUserId, entry.point.entityId, entry.point.userId))
         .sort((left, right) => {
           return new Date(right.point.recordedAt).getTime() - new Date(left.point.recordedAt).getTime()
         })[0] || null
     )
   }, [pointTelemetry, currentUserId])
+
+  const showClientSiteDraftMarker = useMemo(
+    () => shouldShowClientSiteDraftMarker(isElevatedUser, mapPickMode),
+    [isElevatedUser, mapPickMode],
+  )
+
+  const currentUserPosition = useMemo<[number, number] | null>(() => {
+    if (!currentUserEntry) return null
+    return [currentUserEntry.point.latitude, currentUserEntry.point.longitude]
+  }, [currentUserEntry])
+
+  const canCenterOnCurrentUser = hasCurrentUserTrackingPosition(currentUserPosition)
 
   const mapCenter = useMemo<[number, number]>(() => {
     if (focusCenter) return focusCenter
@@ -791,7 +812,10 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
           <button
             type="button"
             onClick={() => issueMapCommand('center-user')}
-            className="min-h-11 rounded-md border border-border-subtle bg-surface-elevated px-3 py-2 text-xs font-semibold uppercase tracking-wide text-text-secondary"
+            disabled={!canCenterOnCurrentUser}
+            aria-label={canCenterOnCurrentUser ? 'Center map on your live location' : 'Center Me unavailable because no current self-location is available'}
+            title={canCenterOnCurrentUser ? 'Center map on your live location' : 'Center Me unavailable until a current tracking point exists for your account'}
+            className="min-h-11 rounded-md border border-border-subtle bg-surface-elevated px-3 py-2 text-xs font-semibold uppercase tracking-wide text-text-secondary disabled:cursor-not-allowed disabled:opacity-50"
           >
             Center Me
           </button>
@@ -808,6 +832,9 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
             >
               + Add Client Site
             </button>
+          ) : null}
+          {!loading && hasTrackingAccess && !canCenterOnCurrentUser ? (
+            <p className="text-xs text-text-tertiary">Center Me is disabled until a current tracking point is available for your account.</p>
           ) : null}
           <p className="text-xs text-text-tertiary">{lastUpdated ? `Updated ${lastUpdated}` : 'Waiting for first sync'}</p>
         </div>
@@ -865,7 +892,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
             commandId={mapViewCommand.id}
             commandType={mapViewCommand.type}
             bounds={mapBounds}
-            currentUserPosition={currentUserEntry ? [currentUserEntry.point.latitude, currentUserEntry.point.longitude] : null}
+            currentUserPosition={currentUserPosition}
           />
           <MapZoomTracker onZoomChange={setMapZoom} />
           <MapClickPicker enabled={isElevatedUser && mapPickMode !== 'idle'} onPick={handleMapPick} />
@@ -973,7 +1000,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
               ))
             : visibleTelemetry.map((entry) => {
                 const point = entry.point
-                const isCurrentUser = currentUserId && point.entityId === currentUserId
+              const isCurrentUser = isCurrentUserTrackingPoint(currentUserId, point.entityId, point.userId)
                 const isSelectedGuardPoint = isSelectedGuardTrackingPoint(point)
                 const tone = movementTone(point.entityType, entry.heartbeatState)
                 const markerColor = isSelectedGuardPoint ? 'var(--color-info)' : tone.color
@@ -1047,15 +1074,22 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
                 )
               })}
 
-          {isElevatedUser ? (
+          {showClientSiteDraftMarker ? (
             <CircleMarker
               center={[siteForm.latitude, siteForm.longitude]}
               radius={5}
-              pathOptions={{ color: 'var(--color-info)', fillColor: 'var(--color-info)', fillOpacity: 0.45 }}
+              pathOptions={{
+                color: 'var(--color-warning)',
+                fillColor: 'var(--color-warning)',
+                fillOpacity: 0.55,
+                dashArray: '4 3',
+                weight: 2,
+              }}
             >
               <Popup>
-                <strong>Selected Coordinates</strong>
+                <strong>Client Site Draft (Not Live GPS)</strong>
                 <div>{siteForm.latitude.toFixed(6)}, {siteForm.longitude.toFixed(6)}</div>
+                <div>This marker is only used while placing client site coordinates.</div>
               </Popup>
             </CircleMarker>
           ) : null}
@@ -1261,7 +1295,8 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
         <span className="inline-flex items-center gap-1"><span className="status-light status-light-info" aria-hidden="true" /> Vehicle</span>
         <span className="inline-flex items-center gap-1"><span className="status-light" aria-hidden="true" style={{ backgroundColor: '#7c3aed' }} /> Clustered units</span>
         <span className="inline-flex items-center gap-1"><span className="status-light status-light-warning" aria-hidden="true" /> Client site radius</span>
-        <span className="inline-flex items-center gap-1"><span className="status-light status-light-danger" aria-hidden="true" /> Your location</span>
+        {showClientSiteDraftMarker ? <span className="inline-flex items-center gap-1"><span className="status-light status-light-warning" aria-hidden="true" /> Client site draft (not live GPS)</span> : null}
+        <span className="inline-flex items-center gap-1"><span className="status-light status-light-danger" aria-hidden="true" /> Your live location</span>
         <span className="w-full text-text-tertiary normal-case tracking-normal sm:ml-auto sm:w-auto">Dashed guard markers indicate unscheduled tracking visibility.</span>
       </div>
 
@@ -1281,7 +1316,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
               </button>
               {mapPickMode !== 'idle' ? (
                 <span className="inline-flex items-center rounded-md bg-info-bg px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-info-text">
-                  Click anywhere on the map to set coordinates
+                  Click anywhere on the map to place a client-site draft marker (not live GPS)
                 </span>
               ) : null}
             </div>

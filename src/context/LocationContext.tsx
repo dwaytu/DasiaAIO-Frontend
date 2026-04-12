@@ -6,7 +6,8 @@ import {
   hasAcceptedLocationConsent,
   requestRuntimeLocationPermission,
   type ResolvedLocation,
-  resolveLocationWithFallback,
+  resolveDeviceLocation,
+  startResolvedLocationWatch,
   setLocationConsentStatus,
 } from '../utils/location'
 import { getRequiredAccuracyMeters, getTrackingAccuracyMode } from '../utils/trackingPolicy'
@@ -148,11 +149,59 @@ export function LocationProvider({ children }: LocationProviderProps) {
       setGeoPermissionState(state as LocationPermissionState)
       if (state === 'denied') {
         setGeoNotice(
-          'Precise location is denied. Live tracking will use approximate IP-based fallback until permission is restored.',
+          'Precise location is denied. Live tracking requires device GPS permission to be granted.',
         )
       }
     })
   }, [hasAcceptedToa, hasLocationConsent, isLoggedIn, user?.id])
+
+  useEffect(() => {
+    if (!isLoggedIn || !user || !hasAcceptedToa || !hasLocationConsent) return
+
+    const role = user.role
+    const canSendTrackingHeartbeat = role === 'supervisor' || role === 'guard'
+    if (!canSendTrackingHeartbeat) return
+
+    const platform = detectRuntimePlatform()
+    let disposed = false
+    let stopWatch: (() => void | Promise<void>) | null = null
+
+    const startWatch = async () => {
+      try {
+        const stop = await startResolvedLocationWatch(
+          platform,
+          (location) => {
+            if (disposed) return
+            setLastResolvedLocation(location)
+            if (location.source !== 'ip') {
+              setGeoPermissionState('granted')
+            }
+          },
+          () => {
+            // Heartbeat fallback path remains responsible for user-facing notices.
+          },
+        )
+
+        if (disposed) {
+          await stop()
+          return
+        }
+
+        stopWatch = stop
+      } catch {
+        // Watch mode is optional; heartbeat resolver continues with one-shot location samples.
+      }
+    }
+
+    void startWatch()
+
+    return () => {
+      disposed = true
+      if (stopWatch) {
+        void stopWatch()
+      }
+    }
+  }, [hasAcceptedToa, hasLocationConsent, isLoggedIn, user?.id, user?.role])
 
   // ---------------------------------------------------------------------------
   // Location heartbeat — periodic position updates while consented and logged in
@@ -186,13 +235,12 @@ export function LocationProvider({ children }: LocationProviderProps) {
       if (!token) return
 
       try {
-        const location = await resolveLocationWithFallback(platform)
+        const location = await resolveDeviceLocation(platform)
         if (disposed) return
 
         setLastResolvedLocation(location)
 
         if (
-          location.source !== 'ip' &&
           location.accuracyMeters != null &&
           location.accuracyMeters > requiredAccuracyMeters
         ) {
@@ -213,7 +261,7 @@ export function LocationProvider({ children }: LocationProviderProps) {
               entityType: 'user',
               entityId: user.id,
               label: user.fullName || user.full_name || user.username,
-              status: location.source === 'ip' ? 'approximate' : 'active',
+              status: 'active',
               latitude: location.latitude,
               longitude: location.longitude,
               heading: location.heading,
@@ -261,22 +309,14 @@ export function LocationProvider({ children }: LocationProviderProps) {
 
           setHeartbeatPaused(false)
           setLastHeartbeatAt(new Date().toISOString())
-          const isApproximate = Boolean(heartbeatResponse.approximate) || location.source === 'ip'
-          setLastHeartbeatApproximate(isApproximate)
-          if (isApproximate) {
-            setGeoPermissionState('denied')
-            setGeoNotice(
-              'Using approximate IP-based location fallback. Enable precise location for higher map accuracy.',
-            )
-          } else {
-            setGeoPermissionState('granted')
-            setGeoNotice('Location access active. Live tracking is operational.')
-          }
+          setLastHeartbeatApproximate(false)
+          setGeoPermissionState('granted')
+          setGeoNotice('Location access active. Live tracking is operational.')
         }
       } catch {
         if (!disposed) {
           setHeartbeatPaused(true)
-          setGeoNotice('Location update paused — check your connection and try again.')
+          setGeoNotice('Device geolocation unavailable — live tracking paused. Enable precise location to resume.')
         }
       }
     }
@@ -388,13 +428,13 @@ export function LocationProvider({ children }: LocationProviderProps) {
 
     if (permissionState === 'unsupported') {
       setGeoNotice(
-        'Location permission is unavailable on this runtime. IP fallback will be used when tracking is enabled.',
+        'Location permission is unavailable on this runtime. Live tracking cannot start until device location support is available.',
       )
       return
     }
 
     setGeoNotice(
-      'Location permission is blocked. Live tracking will fall back to approximate IP-based positioning.',
+      'Location permission is blocked. Live tracking stays paused until precise location permission is granted.',
     )
   }, [])
 

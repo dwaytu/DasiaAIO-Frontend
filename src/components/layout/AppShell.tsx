@@ -204,7 +204,7 @@ export default function AppShell() {
           <p className="font-semibold">Location access is not active.</p>
           <p className="mt-1">
             {geoNotice ||
-              'Live tracking requires location permission. Tap the button below to request access or continue with IP fallback.'}
+                'Live tracking requires location permission. Tap the button below to request access.'}
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
             <button

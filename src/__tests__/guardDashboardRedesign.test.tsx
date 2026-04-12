@@ -39,6 +39,34 @@ jest.mock('../utils/pushNotifications', () => ({
   unsubscribeFromPush: jest.fn(async () => undefined),
 }))
 
+jest.mock('../hooks/useUI', () => ({
+  useUI: () => ({
+    isNetworkOnline: true,
+  }),
+}))
+
+jest.mock('../hooks/useLocationConsent', () => ({
+  useLocationConsent: () => ({
+    hasLocationConsent: true,
+    locationConsentChecked: true,
+    consentActionPending: false,
+    consentSyncError: '',
+    geoPermissionState: 'granted',
+    locationHeartbeatStatus: 'active',
+    geoNotice: '',
+    lastResolvedLocation: null,
+    lastHeartbeatAt: null,
+    lastHeartbeatApproximate: false,
+    locationBannerDismissed: false,
+    grantLocationConsent: async () => true,
+    denyLocationConsent: async () => true,
+    refreshTrackingConsent: async () => undefined,
+    dismissLocationBanner: () => undefined,
+    requestGeoPermission: async () => undefined,
+    retryLocationHeartbeat: async () => undefined,
+  }),
+}))
+
 const mockFetchJsonOrThrow = jest.fn()
 
 jest.mock('../utils/api', () => ({
@@ -126,16 +154,17 @@ describe('guard dashboard redesign tranche', () => {
 
     const stickyRegion = await screen.findByTestId('guard-sticky-region')
     expect(stickyRegion).toBeInTheDocument()
-    expect(within(stickyRegion).getByRole('button', { name: /report incident/i })).toBeInTheDocument()
     expect(within(stickyRegion).getByRole('button', { name: /mission/i })).toBeInTheDocument()
+    expect(within(stickyRegion).getByRole('navigation', { name: /guard primary navigation/i })).toBeInTheDocument()
   })
 
   it('surfaces an immediate mission action with clear current-watch guidance', async () => {
     renderGuardDashboard('mission')
 
-    expect(await screen.findByRole('heading', { name: /immediate action/i })).toBeInTheDocument()
-    expect(screen.getByText(/check in at north gate/i)).toBeInTheDocument()
-    expect(screen.getByText(/confirm tracking and sync before leaving staging/i)).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /mission/i })).toBeInTheDocument()
+    expect(screen.getByText(/awaiting check in/i)).toBeInTheDocument()
+    expect(screen.getAllByText(/north gate/i).length).toBeGreaterThan(0)
+    expect(screen.getByText(/tracking and sync are ready for this watch/i)).toBeInTheDocument()
   })
 
   it('renders resources in a summary-first hierarchy', () => {
@@ -184,46 +213,35 @@ describe('guard dashboard redesign tranche', () => {
       />,
     )
 
-    expect(screen.getByRole('heading', { name: /location status/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /expand live map/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /live map/i })).toBeInTheDocument()
+    expect(screen.getByText(/tracking status unavailable/i)).toBeInTheDocument()
+    expect(screen.getByText(/location not active/i)).toBeInTheDocument()
   })
 
-  it('decompresses support workspace into clear grouped cards', async () => {
+  it('renders the current support ticket workspace', async () => {
     renderGuardDashboard('support')
 
-    expect(await screen.findByRole('heading', { name: /field instructions/i })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: /schedule change requests/i })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: /support tickets/i })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: /shift swaps/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /support tickets/i })).toBeInTheDocument()
+    expect(screen.getByText(/submit and track support requests/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /new ticket/i })).toBeInTheDocument()
   })
 
-  it('uses a schedule-based shift select and keeps manual target-guard fallback', async () => {
+  it('opens the create ticket form from the support workspace', async () => {
+    const user = userEvent.setup()
     renderGuardDashboard('support')
 
-    expect(await screen.findByLabelText(/scheduled shift/i)).toBeInTheDocument()
-    expect(screen.getByRole('option', { name: /north gate/i })).toBeInTheDocument()
-    expect(screen.getByLabelText(/target guard id/i)).toBeInTheDocument()
-    expect(screen.getByText(/enter the sentinel user id for the guard covering your post/i)).toBeInTheDocument()
+    await user.click(await screen.findByRole('button', { name: /new ticket/i }))
+
+    expect(await screen.findByRole('heading', { name: /create support ticket/i })).toBeInTheDocument()
+    expect(screen.getByLabelText(/category/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/subject/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/description/i)).toBeInTheDocument()
   })
 
-  it('degrades shift swaps gracefully when swap history is unavailable', async () => {
-    ;(globalThis.fetch as jest.Mock).mockResolvedValue({
-      ok: false,
-      status: 404,
-      json: async () => ({ message: 'Not found' }),
-    })
-
-    renderGuardDashboard('support')
-
-    expect(await screen.findByText(/shift swap updates are temporarily unavailable/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/scheduled shift/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/target guard id/i)).toBeInTheDocument()
-  })
-
-  it('guides the guard when no scheduled shift options are available', async () => {
+  it('shows a retry state when support tickets fail to load', async () => {
     mockFetchJsonOrThrow.mockImplementation(async (url: string) => {
-      if (url.includes('/guard-replacement/guard/')) {
-        return { shifts: [] }
+      if (url.includes('/support-tickets/')) {
+        throw new Error('Unable to load support tickets')
       }
 
       return defaultApiMock(url)
@@ -231,8 +249,16 @@ describe('guard dashboard redesign tranche', () => {
 
     renderGuardDashboard('support')
 
-    expect(await screen.findByText(/no upcoming shifts are available to attach right now/i)).toBeInTheDocument()
-    expect(screen.getByText(/use schedule change requests above or contact the operations desk/i)).toBeInTheDocument()
+    expect(await screen.findByText(/unable to load support tickets/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument()
+  })
+
+  it('guides the guard when no support tickets exist yet', async () => {
+    renderGuardDashboard('support')
+
+    expect(await screen.findByText(/no support tickets/i)).toBeInTheDocument()
+    expect(screen.getByText(/need help\? create a ticket below/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /create ticket/i })).toBeInTheDocument()
   })
 
   it('keeps the inbox usable when swap request updates are unavailable', async () => {
@@ -258,7 +284,7 @@ describe('guard dashboard redesign tranche', () => {
     await openGuardProfile(user)
 
     expect(onViewChange).not.toHaveBeenCalled()
-    expect(screen.getByRole('heading', { name: /mission screen/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /mission/i })).toBeInTheDocument()
     expect(screen.getByRole('dialog', { name: /guard profile settings/i })).toBeInTheDocument()
 
     await user.keyboard('{Escape}')
@@ -294,41 +320,27 @@ describe('guard dashboard redesign tranche', () => {
     })
   })
 
-  it('toggles the guard dashboard theme from the header and persists the selection', async () => {
-    const user = userEvent.setup()
-
+  it('keeps the theme toggle out of the guard header controls', async () => {
     renderGuardDashboard('mission')
 
-    const toggle = await screen.findByRole('button', { name: /switch to light mode/i })
     expect(document.documentElement.classList.contains('dark')).toBe(true)
-
-    await user.click(toggle)
-
-    await waitFor(() => {
-      expect(document.documentElement.classList.contains('light')).toBe(true)
-    })
-    expect(localStorage.getItem('sentinel-theme')).toBe('light')
+    await screen.findByRole('heading', { name: /mission/i })
+    expect(screen.queryByRole('button', { name: /switch to light mode/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /switch to dark mode/i })).not.toBeInTheDocument()
   })
 
-  it('shows shift swap request errors to the user', async () => {
+  it('shows support ticket validation errors to the user', async () => {
     const user = userEvent.setup()
-
-    mockFetchJsonOrThrow.mockImplementation(async (url: string) => {
-      if (url.endsWith('/api/shifts/swap-request')) {
-        throw new Error('Shift swap request is invalid.')
-      }
-
-      return defaultApiMock(url)
-    })
 
     renderGuardDashboard('support')
 
-    await user.selectOptions(await screen.findByLabelText(/scheduled shift/i), 'shift-1')
-    await user.type(screen.getByLabelText(/target guard id/i), 'guard-2')
-    await user.click(screen.getByRole('button', { name: /request swap/i }))
+    await user.click(await screen.findByRole('button', { name: /new ticket/i }))
+    await user.click(screen.getByRole('button', { name: /submit ticket/i }))
 
     await waitFor(() => {
-      expect(screen.getByText(/shift swap request is invalid/i)).toBeInTheDocument()
+      expect(screen.getByText(/please select a category/i)).toBeInTheDocument()
+      expect(screen.getByText(/subject is required/i)).toBeInTheDocument()
+      expect(screen.getByText(/description must be at least 10 characters/i)).toBeInTheDocument()
     })
   })
 
@@ -345,9 +357,11 @@ describe('guard dashboard redesign tranche', () => {
 
     renderGuardDashboard('support')
 
-    await user.type(await screen.findByLabelText(/subject/i), 'Need support')
-    await user.type(screen.getByLabelText(/message/i), 'Something failed during my shift.')
-    await user.click(screen.getByRole('button', { name: /create ticket/i }))
+    await user.click(await screen.findByRole('button', { name: /new ticket/i }))
+    await user.selectOptions(await screen.findByLabelText(/category/i), 'Equipment')
+    await user.type(screen.getByLabelText(/subject/i), 'Need support')
+    await user.type(screen.getByLabelText(/description/i), 'Something failed during my shift.')
+    await user.click(screen.getByRole('button', { name: /submit ticket/i }))
 
     await waitFor(() => {
       expect(screen.getByText(/unable to submit support ticket/i)).toBeInTheDocument()

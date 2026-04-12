@@ -16,6 +16,8 @@ export interface ResolvedLocation {
   source: 'gps' | 'capacitor' | 'ip'
 }
 
+export type StopLocationWatch = () => void | Promise<void>
+
 type BrowserPosition = {
   coords: {
     latitude: number
@@ -33,6 +35,15 @@ type CapacitorGeolocationPlugin = {
     timeout?: number
     maximumAge?: number
   }) => Promise<BrowserPosition>
+  watchPosition?: (
+    options: {
+      enableHighAccuracy?: boolean
+      timeout?: number
+      maximumAge?: number
+    },
+    callback: (position: BrowserPosition | null, err?: unknown) => void,
+  ) => Promise<string | number> | string | number
+  clearWatch?: (options: { id: string | number }) => Promise<void>
 }
 
 type RuntimeWindow = Window & {
@@ -253,19 +264,103 @@ export async function getLocationPermissionState(): Promise<LocationPermissionSt
   }
 }
 
+/**
+ * Resolve location using device geolocation only (GPS / Capacitor native).
+ * Throws if device geolocation is unavailable or denied — never falls back to
+ * IP-based approximation.  Use this for any path that claims "live GPS" or
+ * "live tracking" so that an IP result can never satisfy those claims.
+ */
+export async function resolveDeviceLocation(platform: RuntimePlatform): Promise<ResolvedLocation> {
+  if (platform === 'capacitor') {
+    return await getCapacitorPosition()
+  }
+
+  if (typeof window !== 'undefined' && window.isSecureContext) {
+    const browserPosition = await getBrowserPosition()
+    return toResolvedLocation(browserPosition, 'gps')
+  }
+
+  throw new Error('Device geolocation is not available on this platform.')
+}
+
+/**
+ * Best-effort location resolver that falls back to IP geolocation when device
+ * GPS is unavailable.  The returned `source` field distinguishes "gps" /
+ * "capacitor" from "ip".  Use ONLY for safety-critical paths (e.g. PanicButton
+ * SOS) where *some* location is better than none.  Never use this to claim
+ * "live GPS tracking."
+ */
 export async function resolveLocationWithFallback(platform: RuntimePlatform): Promise<ResolvedLocation> {
   try {
-    if (platform === 'capacitor') {
-      return await getCapacitorPosition()
-    }
-
-    if (typeof window !== 'undefined' && window.isSecureContext) {
-      const browserPosition = await getBrowserPosition()
-      return toResolvedLocation(browserPosition, 'gps')
-    }
+    return await resolveDeviceLocation(platform)
   } catch {
-    // Fallback to IP-based location below.
+    // Device geolocation failed — fall back to IP-based approximation.
   }
 
   return fetchIpLocation()
+}
+
+export async function startResolvedLocationWatch(
+  platform: RuntimePlatform,
+  onLocation: (location: ResolvedLocation) => void,
+  onError?: (error: Error) => void,
+  timeoutMs = 20000,
+): Promise<StopLocationWatch> {
+  if (platform === 'capacitor') {
+    const plugin = getCapacitorGeolocationPlugin()
+    if (!plugin?.watchPosition || !plugin.clearWatch) {
+      throw new Error('Capacitor watchPosition API is unavailable.')
+    }
+
+    if (plugin.requestPermissions) {
+      const permission = await plugin.requestPermissions()
+      const state = (permission.location || permission.coarseLocation || '').toLowerCase()
+      if (state === 'denied') {
+        throw new Error('Location permission denied by the mobile OS.')
+      }
+    }
+
+    const watchId = await Promise.resolve(
+      plugin.watchPosition(
+        {
+          enableHighAccuracy: true,
+          maximumAge: 0,
+          timeout: timeoutMs,
+        },
+        (position, err) => {
+          if (err || !position) {
+            onError?.(new Error('Live location watch is unavailable on this device.'))
+            return
+          }
+
+          onLocation(toResolvedLocation(position, 'capacitor'))
+        },
+      ),
+    )
+
+    return () => plugin.clearWatch?.({ id: watchId })
+  }
+
+  if (typeof navigator === 'undefined' || !navigator.geolocation) {
+    throw new Error('Geolocation is not supported on this platform.')
+  }
+
+  const watchId = navigator.geolocation.watchPosition(
+    (position) => {
+      onLocation(toResolvedLocation(position as unknown as BrowserPosition, 'gps'))
+    },
+    (error) => {
+      const message = error?.message || 'Live location watch is unavailable in this browser.'
+      onError?.(new Error(message))
+    },
+    {
+      enableHighAccuracy: true,
+      maximumAge: 0,
+      timeout: timeoutMs,
+    },
+  )
+
+  return () => {
+    navigator.geolocation.clearWatch(watchId)
+  }
 }

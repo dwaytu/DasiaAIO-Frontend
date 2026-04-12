@@ -37,6 +37,34 @@ jest.mock('../utils/pushNotifications', () => ({
   unsubscribeFromPush: jest.fn(async () => undefined),
 }))
 
+jest.mock('../hooks/useUI', () => ({
+  useUI: () => ({
+    isNetworkOnline: true,
+  }),
+}))
+
+jest.mock('../hooks/useLocationConsent', () => ({
+  useLocationConsent: () => ({
+    hasLocationConsent: true,
+    locationConsentChecked: true,
+    consentActionPending: false,
+    consentSyncError: '',
+    geoPermissionState: 'granted',
+    locationHeartbeatStatus: 'active',
+    geoNotice: '',
+    lastResolvedLocation: null,
+    lastHeartbeatAt: null,
+    lastHeartbeatApproximate: false,
+    locationBannerDismissed: false,
+    grantLocationConsent: async () => true,
+    denyLocationConsent: async () => true,
+    refreshTrackingConsent: async () => undefined,
+    dismissLocationBanner: () => undefined,
+    requestGeoPermission: async () => undefined,
+    retryLocationHeartbeat: async () => undefined,
+  }),
+}))
+
 const mockFetchJsonOrThrow = jest.fn()
 
 jest.mock('../utils/api', () => ({
@@ -144,18 +172,17 @@ describe('guard header global actions', () => {
     expect(onViewChange).toHaveBeenCalledWith('inbox')
   })
 
-  it('opens settings as an overlay without leaving the current guard section', async () => {
+  it('routes to settings from the profile menu', async () => {
     const user = userEvent.setup()
     const onViewChange = jest.fn()
 
     renderGuardDashboard('mission', onViewChange)
 
-    await user.click(await screen.findByRole('button', { name: /open settings/i }))
+    await user.click(await screen.findByRole('button', { name: /open profile menu/i }))
+    await user.click(await screen.findByRole('button', { name: /^settings$/i }))
 
-    expect(await screen.findByRole('dialog', { name: /settings/i })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: /guard settings/i })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: /mission screen/i })).toBeInTheDocument()
-    expect(onViewChange).not.toHaveBeenCalledWith('settings')
+    expect(screen.getByRole('heading', { name: /mission/i })).toBeInTheDocument()
+    expect(onViewChange).toHaveBeenCalledWith('settings')
   })
 
   it('opens a profile dropdown with identity summary, profile entry, and logout action', async () => {

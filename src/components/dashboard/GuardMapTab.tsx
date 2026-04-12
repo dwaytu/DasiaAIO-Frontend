@@ -38,7 +38,7 @@ const GuardMapTab: FC<GuardMapTabProps> = ({
         subtitle={
           lastKnownLocation
             ? `Updated ${locationUpdatedAt}`
-            : 'No heartbeat location yet. Showing Tagum City center until your first update arrives.'
+            : 'No heartbeat location yet. Map is centered on Tagum City without a live location marker.'
         }
       />
 
@@ -68,7 +68,7 @@ const GuardMapTab: FC<GuardMapTabProps> = ({
             </div>
           ) : (
             <div className="absolute left-2 top-2 z-10 max-w-xs rounded border border-info-border bg-info-bg/95 px-3 py-2 text-[11px] text-info-text backdrop-blur-sm">
-              No location heartbeat yet. The map is centered on Tagum City as a fallback until your first update.
+              No location heartbeat yet. This fallback view is centered on Tagum City and does not indicate your live position.
             </div>
           )}
 

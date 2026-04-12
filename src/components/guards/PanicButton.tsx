@@ -1,7 +1,8 @@
 import { FC, useState, useCallback, useRef } from 'react'
-import { API_BASE_URL } from '../../config'
+import { API_BASE_URL, detectRuntimePlatform } from '../../config'
 import { getAuthToken } from '../../utils/api'
 import { enqueueOfflineAction } from '../../utils/offlineQueue'
+import { resolveLocationWithFallback } from '../../utils/location'
 
 interface PanicButtonProps {
   userId: string
@@ -27,13 +28,10 @@ const PanicButton: FC<PanicButtonProps> = ({ userId, userDisplayName }) => {
 
     let location = 'Location unavailable'
     try {
-      const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          timeout: 3000,
-          enableHighAccuracy: true,
-        })
-      })
-      location = `${pos.coords.latitude}, ${pos.coords.longitude}`
+      const platform = detectRuntimePlatform()
+      const resolvedLocation = await resolveLocationWithFallback(platform)
+      const coordinates = `${resolvedLocation.latitude.toFixed(6)}, ${resolvedLocation.longitude.toFixed(6)}`
+      location = resolvedLocation.source === 'ip' ? `${coordinates} (approximate)` : coordinates
     } catch {
       // GPS unavailable or timed out — proceed without location
     }

@@ -19,6 +19,7 @@ import ProfileModalContent from '../profile/ProfileModalContent'
 import HeaderGlobalActions from '../shared/HeaderGlobalActions'
 import OffDutyPanel from './OffDutyPanel'
 import PanicButton from './PanicButton'
+import { buildGuardMapLinks } from './mapLinks'
 
 interface UserDashboardProps {
   user: AppUser
@@ -76,8 +77,6 @@ interface LastKnownLocation {
   recordedAt: string
   source: string
 }
-
-const TAGUM_CENTER: [number, number] = [7.4478, 125.8078]
 
 function resolveSectionFromView(activeView?: string): GuardSection {
   if (activeView === 'inbox') return 'inbox'
@@ -160,7 +159,22 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
   }, [activeView])
 
   const lastKnownLocation = useMemo<LastKnownLocation | null>(() => {
-    if (!lastResolvedLocation || !lastHeartbeatAt) {
+    if (!lastResolvedLocation) {
+      return null
+    }
+
+    const isDeviceSource =
+      lastResolvedLocation.source === 'gps' || lastResolvedLocation.source === 'capacitor'
+
+    // Show real device position immediately even before heartbeat persistence
+    // completes. Use heartbeat timestamp when available, local time otherwise.
+    const recordedAt = lastHeartbeatAt
+      ? lastHeartbeatAt
+      : isDeviceSource
+        ? new Date().toISOString()
+        : null
+
+    if (!recordedAt) {
       return null
     }
 
@@ -168,7 +182,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
       latitude: lastResolvedLocation.latitude,
       longitude: lastResolvedLocation.longitude,
       accuracyMeters: lastResolvedLocation.accuracyMeters,
-      recordedAt: lastHeartbeatAt,
+      recordedAt,
       source: lastHeartbeatApproximate ? 'approximate' : lastResolvedLocation.source,
     }
   }, [lastHeartbeatApproximate, lastHeartbeatAt, lastResolvedLocation])
@@ -393,26 +407,10 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
     }
   }, [dutyStatus])
 
-  const mapEmbedUrl = useMemo(() => {
-    const latitude = lastKnownLocation?.latitude ?? TAGUM_CENTER[0]
-    const longitude = lastKnownLocation?.longitude ?? TAGUM_CENTER[1]
-
-    const delta = 0.008
-    const left = (longitude - delta).toFixed(6)
-    const right = (longitude + delta).toFixed(6)
-    const bottom = (latitude - delta).toFixed(6)
-    const top = (latitude + delta).toFixed(6)
-    const markerLat = latitude.toFixed(6)
-    const markerLon = longitude.toFixed(6)
-
-    return `https://www.openstreetmap.org/export/embed.html?bbox=${left}%2C${bottom}%2C${right}%2C${top}&layer=mapnik&marker=${markerLat}%2C${markerLon}`
-  }, [lastKnownLocation])
-
-  const mapExternalUrl = useMemo(() => {
-    const latitude = lastKnownLocation?.latitude ?? TAGUM_CENTER[0]
-    const longitude = lastKnownLocation?.longitude ?? TAGUM_CENTER[1]
-    return `https://www.openstreetmap.org/?mlat=${latitude}&mlon=${longitude}#map=16/${latitude}/${longitude}`
-  }, [lastKnownLocation])
+  const { mapEmbedUrl, mapExternalUrl } = useMemo(
+    () => buildGuardMapLinks(lastKnownLocation),
+    [lastKnownLocation],
+  )
 
   const handleCheckIn = async (shift: ShiftItem) => {
     if (!user?.id) return
@@ -610,7 +608,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
       : !hasLocationConsent
       ? 'Review location consent so operations can verify your patrol position.'
       : locationHeartbeatStatus === 'no-permission'
-        ? 'Allow location permission for precise fixes. Approximate fallback can still run.'
+        ? 'Allow precise location permission so live heartbeat updates can resume.'
         : locationHeartbeatStatus === 'paused'
           ? 'Heartbeat is paused. Retry location to resume updates.'
           : isTrackingActiveWithoutSchedule
@@ -647,7 +645,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
         key: 'no-permission',
         title: 'Precise location permission required',
         message: lastHeartbeatAt
-          ? 'Tracking is running with approximate positioning. Allow precise location to improve map accuracy.'
+          ? 'A previous heartbeat exists, but fresh live tracking needs precise location permission.'
           : 'Allow location access to start heartbeat updates.',
         action: 'request-permission' as const,
         actionLabel: 'Enable Location',

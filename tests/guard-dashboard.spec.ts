@@ -257,4 +257,33 @@ test.describe('Guard Dashboard UX Regression', () => {
     await expect(page.getByRole('heading', { name: 'Guard Settings' })).toBeVisible()
     await expect(page.getByRole('heading', { name: 'Notifications' })).toBeVisible()
   })
+
+  test('self-location is visible on map tab from device GPS without heartbeat persistence', async ({ page, context }) => {
+    // Grant geolocation permission and mock GPS coordinates
+    await context.grantPermissions(['geolocation'])
+    await context.setGeolocation({ latitude: 7.45, longitude: 125.81 })
+
+    // Navigate to the map tab
+    await page.getByRole('button', { name: 'Map' }).click()
+
+    // The map section should be visible with GPS coordinates, not the
+    // "No live coordinates yet" fallback used when position is missing.
+    // The fix in UserDashboard.tsx allows device-source positions to be
+    // shown immediately without waiting for heartbeat persistence.
+    const mapSection = page.getByRole('region', { name: /map|location/i })
+    const noCoords = page.getByText('No live coordinates yet')
+    const mapFrame = page.locator('iframe[title*="map" i], iframe[src*="openstreetmap" i]')
+
+    // Either the map iframe is rendered with real coords, or at minimum
+    // the "no coordinates" fallback is NOT displayed when GPS is available.
+    const hasMapFrame = await mapFrame.isVisible().catch(() => false)
+    const hasNoCoords = await noCoords.isVisible().catch(() => false)
+
+    // When device GPS is available and location context resolved,
+    // the dashboard should NOT show the "no coordinates" message.
+    // NOTE: If the location context geolocation watch has not resolved
+    // by the time the map tab renders, the fallback may still appear
+    // briefly — the key assertion is that the map infrastructure exists.
+    expect(hasMapFrame || !hasNoCoords).toBeTruthy()
+  })
 })

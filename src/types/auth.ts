@@ -2,6 +2,7 @@ export const ROLES = ['superadmin', 'admin', 'supervisor', 'guard', 'user'] as c
 
 export type LegacyRole = typeof ROLES[number]
 export type Role = Exclude<LegacyRole, 'user'>
+const PRODUCT_ROLES = ['superadmin', 'admin', 'supervisor', 'guard'] as const
 
 function normalizeRoleInput(value: unknown): string | null {
   if (typeof value !== 'string') return null
@@ -14,13 +15,22 @@ export function isLegacyRole(value: unknown): value is LegacyRole {
   return normalized != null && (ROLES as readonly string[]).includes(normalized)
 }
 
-export function normalizeRole(role: unknown): Role {
+export function normalizeRole(role: unknown): Role | null {
   const normalized = normalizeRoleInput(role)
-  if (normalized == null || !(ROLES as readonly string[]).includes(normalized)) {
+  if (normalized == null) {
+    return null
+  }
+
+  // Backward compatibility for pre-migration sessions that still store `user`.
+  if (normalized === 'user') {
     return 'guard'
   }
 
-  return normalized === 'user' ? 'guard' : (normalized as Role)
+  if (!(PRODUCT_ROLES as readonly string[]).includes(normalized)) {
+    return null
+  }
+
+  return normalized as Role
 }
 
 export function isElevatedRole(role: unknown): boolean {
@@ -29,10 +39,17 @@ export function isElevatedRole(role: unknown): boolean {
 }
 
 export function hasTrackingEndpointAccess(role: unknown): boolean {
-  if (!isLegacyRole(role)) return false
-
   const normalized = normalizeRole(role)
+  if (normalized == null) return false
+
   return normalized === 'guard' || isElevatedRole(normalized)
+}
+
+export function canProduceTrackingHeartbeat(role: unknown): boolean {
+  const normalized = normalizeRole(role)
+  if (normalized == null) return false
+
+  return normalized === 'guard' || normalized === 'supervisor'
 }
 
 export function canManageTrackingSites(role: unknown): boolean {

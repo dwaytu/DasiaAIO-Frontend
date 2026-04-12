@@ -54,7 +54,7 @@ export function useReplacementSuggestions(): UseReplacementSuggestionsState {
         return
       }
 
-      let role = ''
+      let role: ReturnType<typeof normalizeRole> = null
       try {
         const parsedUser = JSON.parse(rawUser)
         role = normalizeRole(parsedUser?.role)

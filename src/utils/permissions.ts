@@ -51,6 +51,8 @@ const rolePermissions: Record<Role, Permission[]> = {
 
 export function can(roleInput: unknown, permission: Permission): boolean {
   const role = normalizeRole(roleInput)
+  if (role == null) return false
+
   return rolePermissions[role].includes(permission)
 }
 

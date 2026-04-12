@@ -15,11 +15,18 @@ if (typeof globalThis.ReadableStream === 'undefined') {
 	globalThis.WritableStream = WritableStream
 	globalThis.TransformStream = TransformStream
 }
-if (typeof globalThis.MessagePort === 'undefined') {
-	const { MessagePort, MessageChannel } = require('worker_threads')
-	globalThis.MessagePort = MessagePort
-	globalThis.MessageChannel = MessageChannel
-}
+// In Jest + jsdom, Node MessageChannel can leave MESSAGEPORT handles open.
+// Force React scheduler to use its timer fallback so test runs can exit cleanly.
+Object.defineProperty(globalThis, 'MessageChannel', {
+	configurable: true,
+	writable: true,
+	value: undefined,
+})
+Object.defineProperty(globalThis, 'MessagePort', {
+	configurable: true,
+	writable: true,
+	value: undefined,
+})
 if (typeof globalThis.Request === 'undefined') {
 	const { Request, Response, Headers, fetch } = require('undici')
 	globalThis.Request = Request

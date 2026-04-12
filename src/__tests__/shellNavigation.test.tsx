@@ -8,8 +8,12 @@ describe('shell navigation chrome', () => {
     expect(labels).toContain('Approvals')
     expect(labels).toContain('Schedule')
     expect(labels).toContain('Calendar')
+    expect(labels).toContain('Settings')
+    expect(labels).toContain('Operations Map')
+    expect(labels).toContain('MDR Import')
     expect(labels).not.toContain('Inbox')
-    expect(labels).not.toContain('Settings')
+    expect(labels).not.toContain('Audit')
+    expect(labels).toHaveLength(12)
   })
 
   it('returns empty sidebar for guard (uses bottom nav)', () => {
@@ -25,7 +29,8 @@ describe('shell navigation chrome', () => {
     expect(labels).toContain('Audit')
     expect(labels).toContain('Analytics')
     expect(labels).toContain('Calendar')
-    expect(labels).toHaveLength(9)
+    expect(labels).toContain('Feedback')
+    expect(labels).toHaveLength(13)
   })
 
   it('returns supervisor nav with Missions', () => {
@@ -34,8 +39,16 @@ describe('shell navigation chrome', () => {
     expect(labels).toContain('Missions')
     expect(labels).toContain('Approvals')
     expect(labels).toContain('Calendar')
+    expect(labels).toContain('Operations Map')
+    expect(labels).toContain('Settings')
     expect(labels).not.toContain('Firearms')
-    expect(labels).toHaveLength(6)
+    expect(labels).toHaveLength(8)
+  })
+
+  it('fails closed for malformed roles', () => {
+    expect(getSidebarNav('unknown-role')).toEqual([])
+    expect(getSidebarNav('')).toEqual([])
+    expect(getSidebarNav(null)).toEqual([])
   })
 
   it('applies homeView override for elevated roles', () => {

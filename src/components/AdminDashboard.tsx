@@ -404,7 +404,9 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
     .sort((a, b) => {
       const roleA = normalizeRole(a.role)
       const roleB = normalizeRole(b.role)
-      const roleDelta = rolePriority[roleA] - rolePriority[roleB]
+      const roleOrderA = roleA == null ? Number.MAX_SAFE_INTEGER : rolePriority[roleA]
+      const roleOrderB = roleB == null ? Number.MAX_SAFE_INTEGER : rolePriority[roleB]
+      const roleDelta = roleOrderA - roleOrderB
       if (roleDelta !== 0) return roleDelta
       const nameA = (a.full_name || a.username || a.email || '').toLowerCase()
       const nameB = (b.full_name || b.username || b.email || '').toLowerCase()

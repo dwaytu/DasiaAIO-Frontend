@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { API_BASE_URL } from '../config'
 import { fetchJsonOrThrow, getAuthHeaders, getAuthToken } from '../utils/api'
 import {
+  canProduceTrackingHeartbeat,
   canManageTrackingSites,
   hasTrackingEndpointAccess,
   normalizeRole,
@@ -171,6 +172,7 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
   const [lastUpdated, setLastUpdated] = useState<string>('')
   const [isElevatedUser, setIsElevatedUser] = useState<boolean>(false)
   const [hasTrackingAccess, setHasTrackingAccess] = useState<boolean>(false)
+  const [hasHeartbeatProducerAccess, setHasHeartbeatProducerAccess] = useState<boolean>(false)
   const wsRef = useRef<WebSocket | null>(null)
   const wsReconnectTimerRef = useRef<number | null>(null)
   const wsReconnectAttemptsRef = useRef<number>(0)
@@ -182,6 +184,7 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
     if (!storedUser) {
       setIsElevatedUser(false)
       setHasTrackingAccess(false)
+      setHasHeartbeatProducerAccess(false)
       return
     }
 
@@ -190,9 +193,11 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
       const role = normalizeRole(user?.role)
       setIsElevatedUser(canManageTrackingSites(role))
       setHasTrackingAccess(hasTrackingEndpointAccess(role))
+      setHasHeartbeatProducerAccess(canProduceTrackingHeartbeat(role))
     } catch {
       setIsElevatedUser(false)
       setHasTrackingAccess(false)
+      setHasHeartbeatProducerAccess(false)
     }
   }, [])
 
@@ -237,7 +242,7 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
   }, [applySnapshot, hasTrackingAccess])
 
   const createClientSite = useCallback(async (input: ClientSiteInput) => {
-    if (!hasTrackingAccess) return
+    if (!isElevatedUser) return
 
     await fetchJsonOrThrow<any>(
       `${API_BASE_URL}/api/tracking/client-sites`,
@@ -249,10 +254,10 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
       'Failed to create client site',
     )
     await load()
-  }, [hasTrackingAccess, load])
+  }, [isElevatedUser, load])
 
   const updateClientSite = useCallback(async (siteId: string, input: ClientSiteInput) => {
-    if (!hasTrackingAccess) return
+    if (!isElevatedUser) return
 
     await fetchJsonOrThrow<any>(
       `${API_BASE_URL}/api/tracking/client-sites/${siteId}`,
@@ -264,10 +269,10 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
       'Failed to update client site',
     )
     await load()
-  }, [hasTrackingAccess, load])
+  }, [isElevatedUser, load])
 
   const deleteClientSite = useCallback(async (siteId: string) => {
-    if (!hasTrackingAccess) return
+    if (!isElevatedUser) return
 
     await fetchJsonOrThrow<any>(
       `${API_BASE_URL}/api/tracking/client-sites/${siteId}`,
@@ -278,10 +283,10 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
       'Failed to delete client site',
     )
     await load()
-  }, [hasTrackingAccess, load])
+  }, [isElevatedUser, load])
 
   const sendGuardHeartbeat = useCallback(async (input: GuardHeartbeatInput) => {
-    if (!hasTrackingAccess) return
+    if (!hasHeartbeatProducerAccess) return
 
     await fetchJsonOrThrow<any>(
       `${API_BASE_URL}/api/tracking/heartbeat`,
@@ -302,7 +307,7 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
       },
       'Failed to send guard heartbeat',
     )
-  }, [hasTrackingAccess])
+  }, [hasHeartbeatProducerAccess])
 
   const fetchGuardHistory = useCallback(async (guardId: string, limit = 600) => {
     if (!hasTrackingAccess) return []

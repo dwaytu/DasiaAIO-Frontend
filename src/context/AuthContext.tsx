@@ -107,7 +107,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
           }
 
           const parsedUser = JSON.parse(storedUser) as User
-          parsedUser.role = normalizeRole(parsedUser.role)
+          const normalizedRole = normalizeRole(parsedUser.role)
+          if (normalizedRole == null) {
+            clearAuthSession()
+            localStorage.removeItem('user')
+            setUser(null)
+            setIsLoggedIn(false)
+            setHasAcceptedToa(false)
+            return
+          }
+
+          parsedUser.role = normalizedRole
           setUser(parsedUser)
           setIsLoggedIn(true)
           setHasAcceptedToa(hasServerLegalConsent(parsedUser))
@@ -145,11 +155,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
       return
     }
 
+    const normalizedRole = normalizeRole(userData.role)
+    if (normalizedRole == null) {
+      console.error('Invalid normalized role:', userData.role)
+      return
+    }
+
     storeAuthSession(accessToken, refreshToken)
 
     const typedUser: User = {
       ...userData,
-      role: normalizeRole(userData.role),
+      role: normalizedRole,
     }
 
     localStorage.setItem('user', JSON.stringify(typedUser))

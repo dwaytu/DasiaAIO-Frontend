@@ -142,7 +142,7 @@ const GuardsTab: FC<{
     (u) => (u.role || '').toLowerCase() === 'guard' || (u.role || '').toLowerCase() === 'user'
   )
   const viewerRole = useMemo(() => normalizeRole(currentUser?.role), [currentUser?.role])
-  const creatableRoles = CREATABLE_ROLES_BY_VIEWER[viewerRole]
+  const creatableRoles: UserCreateRole[] = viewerRole == null ? [] : CREATABLE_ROLES_BY_VIEWER[viewerRole]
   const [isAddUserOpen, setIsAddUserOpen] = useState(false)
   const [isSubmittingUser, setIsSubmittingUser] = useState(false)
   const [formErrors, setFormErrors] = useState<UserCreationErrors>({})
@@ -568,7 +568,7 @@ const GuardsTab: FC<{
                   onChange={(event) => setNewUser((prev) => ({ ...prev, role: event.target.value as UserCreateRole }))}
                   className="w-full rounded border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-[color:var(--color-focus-ring)]"
                 >
-                  {creatableRoles.map((role) => (
+                  {creatableRoles.map((role: UserCreateRole) => (
                     <option key={role} value={role}>
                       {USER_ROLE_LABEL[role]}
                     </option>

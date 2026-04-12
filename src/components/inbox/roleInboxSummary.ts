@@ -323,6 +323,15 @@ async function fetchSuperadminSummary(userId: string): Promise<QuickInboxSummary
 export async function fetchRoleInboxSummary(userId: string, roleInput: unknown): Promise<QuickInboxSummary> {
   const role = normalizeRole(roleInput)
 
+  if (role == null) {
+    return {
+      items: [],
+      actionableCount: 0,
+      notice: 'Inbox summary is unavailable for the current role.',
+      hasError: true,
+    }
+  }
+
   if (role === 'guard') return fetchGuardSummary(userId)
   if (role === 'supervisor') return fetchSupervisorSummary(userId)
   if (role === 'admin') return fetchAdminSummary(userId)

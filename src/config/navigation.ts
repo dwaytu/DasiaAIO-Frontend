@@ -58,6 +58,8 @@ export function getSidebarNav(roleInput: unknown, options: NavOptions = {}): Nav
   const role = normalizeRole(roleInput)
   const homeView = options.homeView ?? 'dashboard'
 
+  if (role == null) return []
+
   if (!isElevatedRole(role)) return []
 
   // Sidebar nav is limited to high-frequency destinations. URL-only flows are documented in ELEVATED_URL_ONLY_ROUTES.

@@ -1,4 +1,4 @@
-import { FC } from 'react'
+import { FC, Suspense, lazy } from 'react'
 import { MapPin } from 'lucide-react'
 import SectionHeader from './ui/SectionHeader'
 
@@ -18,6 +18,8 @@ interface GuardMapTabProps {
   trackingActiveWithoutSchedule?: boolean
   onSwitchToMission?: () => void
 }
+
+const GuardMapLeaflet = lazy(() => import('./GuardMapLeaflet'))
 
 const GuardMapTab: FC<GuardMapTabProps> = ({
   mapEmbedUrl,
@@ -51,12 +53,9 @@ const GuardMapTab: FC<GuardMapTabProps> = ({
 
       {mapEmbedUrl ? (
         <div className="relative overflow-hidden rounded border border-border-subtle bg-surface-elevated">
-          <iframe
-            title="Guard location map"
-            src={mapEmbedUrl}
-            className="h-[calc(100dvh-14rem)] w-full"
-            loading="lazy"
-          />
+          <Suspense fallback={<div className="h-[calc(100dvh-14rem)] w-full bg-surface" aria-hidden="true" />}>
+            <GuardMapLeaflet lastKnownLocation={lastKnownLocation} />
+          </Suspense>
 
           {lastKnownLocation ? (
             <div className="absolute bottom-2 left-2 z-10 flex items-center gap-2 rounded-full bg-surface/90 px-3 py-1.5 text-[11px] font-medium text-text-secondary backdrop-blur-sm">

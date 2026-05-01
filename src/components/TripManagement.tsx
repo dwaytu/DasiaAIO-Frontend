@@ -1,4 +1,4 @@
-import { useState, useEffect, FC } from 'react'
+import { useState, useEffect, useCallback, FC } from 'react'
 import { API_BASE_URL } from '../config'
 import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
 
@@ -38,26 +38,47 @@ const TripManagement: FC = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    fetchActiveTrips()
-    const interval = setInterval(fetchActiveTrips, 30000) // Refresh every 30 seconds
-    return () => clearInterval(interval)
-  }, [])
-
-  const fetchActiveTrips = async () => {
+  const fetchActiveTrips = useCallback(async (signal?: AbortSignal) => {
     try {
       const data = await fetchJsonOrThrow<{ trips?: Trip[] }>(`${API_BASE_URL}/api/trip-management/active`, {
-        headers: getAuthHeaders()
+        headers: getAuthHeaders(),
+        signal,
       }, 'Failed to fetch trips')
 
+      if (signal?.aborted) {
+        return
+      }
       setTrips(data.trips || [])
       setError('')
     } catch (err) {
+      if (signal?.aborted) {
+        return
+      }
       setError(err instanceof Error ? err.message : 'Failed to load trips')
     } finally {
-      setLoading(false)
+      if (!signal?.aborted) {
+        setLoading(false)
+      }
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    let controller: AbortController | null = null
+
+    const refreshTrips = () => {
+      controller?.abort()
+      controller = new AbortController()
+      void fetchActiveTrips(controller.signal)
+    }
+
+    refreshTrips()
+    const interval = window.setInterval(refreshTrips, 30000)
+
+    return () => {
+      window.clearInterval(interval)
+      controller?.abort()
+    }
+  }, [fetchActiveTrips])
 
   const fetchTripDetails = async (tripId: string) => {
     try {
@@ -121,7 +142,7 @@ const TripManagement: FC = () => {
         <div className="soc-alert-error text-sm">
           <p className="font-semibold">Failed to load trips</p>
           <p>{error}</p>
-          <p className="text-xs mt-2">Make sure the backend server is running on port 5000</p>
+          <p className="text-xs mt-2">Verify backend connectivity and auth session, then retry.</p>
           <button 
             onClick={() => fetchActiveTrips()}
             className="soc-btn soc-btn-danger mt-3"
@@ -212,7 +233,7 @@ const TripManagement: FC = () => {
                 className="flex min-h-11 min-w-11 items-center justify-center rounded-md text-3xl text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
                 onClick={() => setSelectedTrip(null)}
               >
-                ×
+                x
               </button>
             </div>
 

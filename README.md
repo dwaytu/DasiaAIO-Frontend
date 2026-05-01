@@ -1,50 +1,105 @@
 # SENTINEL Frontend
 
-React + TypeScript + Vite frontend for the SENTINEL security operations platform.
+Frontend application for SENTINEL, the DSIA security operations platform.
+
+## Overview
+
+This repository contains the shared client used by:
+
+- Web runtime
+- Desktop runtime (Tauri wrapper)
+- Android runtime (Capacitor wrapper)
+
+The frontend implements role-governed command and field workflows for guards, supervisors, admins, and superadmins.
 
 ## Stack
 
 - React 18
 - TypeScript
 - Vite
-- Jest + Testing Library
 - Tailwind CSS
+- Jest + Testing Library
+- Playwright
+- Leaflet / React-Leaflet
 
-## Install
+## Prerequisites
+
+- Node.js 20+
+- npm 10+
+
+## Setup
 
 ```bash
 npm install
 ```
 
-## Local Development
+## Environment
+
+Primary runtime variable:
+
+```env
+VITE_API_BASE_URL=https://your-backend-domain
+```
+
+Release/version variable:
+
+```env
+VITE_APP_VERSION=v1.0.0
+```
+
+Mode files supported:
+
+- `.env.development`
+- `.env.production`
+- optional mode-specific files (`.env.web`, `.env.mobile`, `.env.desktop`)
+
+## Development
 
 ```bash
 npm run dev
 ```
 
-## Test and Build
+## Quality Gates
+
+Unit/integration tests:
 
 ```bash
 npm test -- --runInBand
+```
+
+E2E tests:
+
+```bash
+npm run test:e2e
+```
+
+Production build:
+
+```bash
 npm run build
 ```
 
-## Multi-Platform Build Targets
+## Platform Build Commands
 
-This frontend is the shared source for web, desktop, and Android packaging.
+Web build:
 
 ```bash
-# Web production bundle
 npm run build:web
+```
 
-# Android web bundle + Capacitor sync
-npm run build:android
+Desktop build (web bundle + Tauri wrapper build trigger):
 
-# Desktop web bundle + Tauri build
+```bash
 npm run build:desktop
 ```
 
-Release scripts:
+Android build (web bundle + Capacitor sync trigger):
+
+```bash
+npm run build:android
+```
+
+## Release Commands
 
 ```bash
 npm run release:web
@@ -54,39 +109,15 @@ npm run release:android:bundle
 npm run release:all
 ```
 
-Production release scripts now enforce environment validation and will fail fast if required values are missing or unsafe (for example localhost/private API URLs).
+Release scripts validate production-critical settings and fail fast when configuration is unsafe.
 
-Required release env vars:
+## Repository Links
 
-```env
-VITE_API_BASE_URL=https://your-production-backend
-VITE_APP_VERSION=v1.2.3
-```
+- Root governance/release repo: https://github.com/dwaytu/Capstone-Main
+- Backend service repo: https://github.com/dwaytu/DasiaAIO-Backend
+- Project docs: https://dwaytu.github.io/Capstone-Main/
 
-Wrapper project locations:
+## Notes
 
-- `../apps/android-capacitor`
-- `../apps/desktop-tauri`
-
-## Environment Modes
-
-Use mode-specific environment files:
-
-- `.env.development`
-- `.env.production`
-
-Platform-specific files (`.env.web`, `.env.mobile`, `.env.desktop`) are also pinned to the same backend origin so web, desktop, and mobile builds remain aligned.
-
-`VITE_API_BASE_URL` is the only API endpoint variable used by the client runtime.
-
-Production runtime safeguard: if `VITE_API_BASE_URL` is not injected during a production build, the app now falls back to `https://backend-production-0c47.up.railway.app` to avoid white-screen startup failures.
-
-Version/update checks now query backend `GET /api/system/version` first, then fall back to GitHub latest release API when unavailable.
-
-Desktop builds support one-click update via Tauri updater when wrapper updater environment is configured.
-
-## Key Links
-
-- Production: https://dasiaaio.up.railway.app
-- Documentation: https://dwaytu.github.io/Capstone-Main
-- Repository: https://github.com/dwaytu/Capstone-Main
+- This codebase follows SOC-style command-center UI conventions defined in root governance docs.
+- `VITE_API_BASE_URL` is the authoritative backend origin for all protected API calls.

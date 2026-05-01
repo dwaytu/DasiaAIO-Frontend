@@ -63,6 +63,8 @@ const MONTH_NAMES = [
 
 const MONTH_PATTERN = new RegExp(`\\b(${MONTH_NAMES.join('|')})\\b`, 'i')
 const STOP_MARKER_PATTERN = /RECAPITULATION|PREPARED BY|NOTED BY|CERTIFIED CORRECT/i
+const MAX_WORKBOOK_SHEETS = 12
+const MAX_SHEET_ROWS = 12000
 
 const SECTION_PATTERNS: Array<{ pattern: RegExp; section: MdrSection }> = [
   { pattern: /CLIENT SITES?/i, section: 'clients' },
@@ -682,12 +684,36 @@ function identifySheets(sheetNames: string[]): SheetMapping {
   }
 }
 
+function validateSheetDimensions(workbook: XLSX.WorkBook): void {
+  if (workbook.SheetNames.length > MAX_WORKBOOK_SHEETS) {
+    throw new Error(`Workbook has too many sheets (${workbook.SheetNames.length}). Maximum supported: ${MAX_WORKBOOK_SHEETS}.`)
+  }
+
+  for (const sheetName of workbook.SheetNames) {
+    const sheet = workbook.Sheets[sheetName]
+    if (!sheet) continue
+
+    const rangeRef = sheet['!ref']
+    if (!rangeRef) continue
+
+    const range = XLSX.utils.decode_range(rangeRef)
+    const rowCount = range.e.r - range.s.r + 1
+
+    if (rowCount > MAX_SHEET_ROWS) {
+      throw new Error(
+        `Sheet "${sheetName}" exceeds the supported row limit (${rowCount} > ${MAX_SHEET_ROWS}).`,
+      )
+    }
+  }
+}
+
 export async function parseMdrWorkbook(file: File): Promise<MdrParseResult> {
   const warnings: string[] = []
   const warningSet = new Set<string>()
 
   const arrayBuffer = await readFileAsArrayBuffer(file)
   const workbook = XLSX.read(arrayBuffer, { type: 'array', cellDates: true })
+  validateSheetDimensions(workbook)
 
   if (workbook.SheetNames.length === 0) {
     throw new Error('Workbook does not contain any sheets.')

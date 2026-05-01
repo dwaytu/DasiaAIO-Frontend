@@ -1,8 +1,8 @@
 import { FC, FormEvent, Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import L from 'leaflet'
-import { Circle, CircleMarker, MapContainer, Marker, Polyline, Popup, TileLayer, useMap, useMapEvents } from 'react-leaflet'
+import { Circle, CircleMarker, MapContainer, Marker, Polygon, Polyline, Popup, TileLayer, useMap, useMapEvents } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
-import { type ActiveGuard, type ClientSiteInput, type MapTrackingPoint, useOperationalMapData } from '../../hooks/useOperationalMapData'
+import { type ActiveGuard, type ClientSiteInput, type GeofenceZoneInput, type MapTrackingPoint, useOperationalMapData } from '../../hooks/useOperationalMapData'
 import { getPersonRecencyMinutes, getTrackingAccuracyMode, getVehicleRecencyMinutes } from '../../utils/trackingPolicy'
 import { useTheme } from '../../context/ThemeProvider'
 import { useOperationalEvent } from '../../context/OperationalEventContext'
@@ -69,6 +69,14 @@ const INITIAL_FORM: ClientSiteInput = {
   address: '',
   latitude: TAGUM_CENTER[0],
   longitude: TAGUM_CENTER[1],
+  isActive: true,
+}
+
+const INITIAL_GEOFENCE_FORM: GeofenceZoneInput & { siteId: string; radiusKmText: string } = {
+  siteId: '',
+  zoneType: 'radius',
+  radiusKm: 1,
+  radiusKmText: '1',
   isActive: true,
 }
 
@@ -235,12 +243,16 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
     clientSites,
     trackingPoints,
     geofenceAlerts,
+    geofenceZones,
     loading,
     error,
     lastUpdated,
     createClientSite,
     updateClientSite,
     deleteClientSite,
+    createGeofenceZone,
+    updateGeofenceZone,
+    deleteGeofenceZone,
     fetchGuardPath,
     fetchActiveGuards,
     isElevatedUser,
@@ -270,6 +282,10 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
   })
   const [saving, setSaving] = useState<boolean>(false)
   const [formError, setFormError] = useState<string>('')
+  const [geofenceForm, setGeofenceForm] = useState(INITIAL_GEOFENCE_FORM)
+  const [editingGeofenceId, setEditingGeofenceId] = useState<string>('')
+  const [geofenceSaving, setGeofenceSaving] = useState<boolean>(false)
+  const [geofenceError, setGeofenceError] = useState<string>('')
   const [dismissedDegradedError, setDismissedDegradedError] = useState<string>('')
 
   const selectedEventPanelRef = useRef<HTMLElement | null>(null)
@@ -360,6 +376,23 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
   }, [currentUserEntry])
 
   const canCenterOnCurrentUser = hasCurrentUserTrackingPosition(currentUserPosition)
+
+  const geofenceZonesBySite = useMemo(() => {
+    const grouped = new Map<string, typeof geofenceZones>()
+    for (const zone of geofenceZones) {
+      const existing = grouped.get(zone.siteId) ?? []
+      existing.push(zone)
+      grouped.set(zone.siteId, existing)
+    }
+    return grouped
+  }, [geofenceZones])
+
+  useEffect(() => {
+    if (!isElevatedUser) return
+    if (geofenceForm.siteId) return
+    if (!clientSites[0]?.id) return
+    setGeofenceForm((prev) => ({ ...prev, siteId: clientSites[0].id }))
+  }, [clientSites, geofenceForm.siteId, isElevatedUser])
 
   const mapCenter = useMemo<[number, number]>(() => {
     if (focusCenter) return focusCenter
@@ -771,6 +804,86 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
     }
   }
 
+  const handleGeofenceSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setGeofenceError('')
+
+    if (!geofenceForm.siteId) {
+      setGeofenceError('Select a client site for this geofence.')
+      return
+    }
+
+    if (geofenceForm.zoneType !== 'radius') {
+      setGeofenceError('Only radius geofences are currently configurable in this panel.')
+      return
+    }
+
+    const radiusKm = Number(geofenceForm.radiusKmText)
+    if (!Number.isFinite(radiusKm) || radiusKm <= 0 || radiusKm > 50) {
+      setGeofenceError('Radius must be a number greater than 0 and not more than 50 km.')
+      return
+    }
+
+    const payload: GeofenceZoneInput = {
+      zoneType: 'radius',
+      radiusKm,
+      isActive: geofenceForm.isActive ?? true,
+    }
+
+    try {
+      setGeofenceSaving(true)
+      if (editingGeofenceId) {
+        await updateGeofenceZone(editingGeofenceId, payload)
+      } else {
+        await createGeofenceZone(geofenceForm.siteId, payload)
+      }
+
+      setEditingGeofenceId('')
+      setGeofenceForm((prev) => ({
+        ...INITIAL_GEOFENCE_FORM,
+        siteId: prev.siteId || clientSites[0]?.id || '',
+      }))
+    } catch (err) {
+      setGeofenceError(err instanceof Error ? err.message : 'Failed to save geofence zone')
+    } finally {
+      setGeofenceSaving(false)
+    }
+  }
+
+  const handleEditGeofence = (zoneId: string) => {
+    const zone = geofenceZones.find((entry) => entry.id === zoneId)
+    if (!zone) return
+
+    setEditingGeofenceId(zone.id)
+    setGeofenceForm({
+      siteId: zone.siteId,
+      zoneType: zone.zoneType === 'polygon' ? 'polygon' : 'radius',
+      radiusKm: zone.radiusKm ?? 1,
+      radiusKmText: String(zone.radiusKm ?? 1),
+      isActive: zone.isActive,
+      polygonPoints: Array.isArray(zone.polygonPoints) ? zone.polygonPoints : [],
+    })
+    setGeofenceError('')
+  }
+
+  const handleDeleteGeofence = async (zoneId: string) => {
+    if (!window.confirm('Delete this geofence zone?')) return
+
+    setGeofenceError('')
+    try {
+      await deleteGeofenceZone(zoneId)
+      if (editingGeofenceId === zoneId) {
+        setEditingGeofenceId('')
+        setGeofenceForm((prev) => ({
+          ...INITIAL_GEOFENCE_FORM,
+          siteId: prev.siteId || clientSites[0]?.id || '',
+        }))
+      }
+    } catch (err) {
+      setGeofenceError(err instanceof Error ? err.message : 'Failed to delete geofence zone')
+    }
+  }
+
   const handleMapPick = (latitude: number, longitude: number) => {
     setSiteForm((prev) => ({
       ...prev,
@@ -905,11 +1018,31 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
           {layerVisibility.clientSites
             ? clientSites.map((site) => (
                 <Fragment key={`site-group-${site.id}`}>
-                  <Circle
-                    center={[site.latitude, site.longitude]}
-                    radius={1000}
-                    pathOptions={{ color: '#facc15', fillColor: '#facc15', fillOpacity: 0.1, weight: 1 }}
-                  />
+                  {(geofenceZonesBySite.get(site.id) ?? [])
+                    .filter((zone) => zone.isActive)
+                    .map((zone) => {
+                      if (zone.zoneType === 'polygon' && Array.isArray(zone.polygonPoints) && zone.polygonPoints.length >= 3) {
+                        const points = zone.polygonPoints.map((point) => [point.latitude, point.longitude] as [number, number])
+                        return (
+                          <Polygon
+                            key={`zone-polygon-${zone.id}`}
+                            positions={points}
+                            pathOptions={{ color: '#f97316', fillColor: '#f97316', fillOpacity: 0.08, weight: 1 }}
+                          />
+                        )
+                      }
+
+                      const radiusKm = Number(zone.radiusKm ?? 1)
+                      const radiusMeters = Number.isFinite(radiusKm) && radiusKm > 0 ? radiusKm * 1000 : 1000
+                      return (
+                        <Circle
+                          key={`zone-radius-${zone.id}`}
+                          center={[site.latitude, site.longitude]}
+                          radius={radiusMeters}
+                          pathOptions={{ color: '#facc15', fillColor: '#facc15', fillOpacity: 0.1, weight: 1 }}
+                        />
+                      )
+                    })}
                   <CircleMarker
                     key={`site-${site.id}`}
                     center={[site.latitude, site.longitude]}
@@ -920,7 +1053,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
                       <strong>Client Site</strong>
                       <div>{site.name}</div>
                       {site.address ? <div>{site.address}</div> : null}
-                      <div>Radius: 1 km</div>
+                      <div>Active zones: {(geofenceZonesBySite.get(site.id) ?? []).filter((zone) => zone.isActive).length}</div>
                     </Popup>
                   </CircleMarker>
                 </Fragment>
@@ -1294,7 +1427,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
         <span className="inline-flex items-center gap-1"><span className="status-light status-light-danger" aria-hidden="true" /> Guard offline</span>
         <span className="inline-flex items-center gap-1"><span className="status-light status-light-info" aria-hidden="true" /> Vehicle</span>
         <span className="inline-flex items-center gap-1"><span className="status-light" aria-hidden="true" style={{ backgroundColor: '#7c3aed' }} /> Clustered units</span>
-        <span className="inline-flex items-center gap-1"><span className="status-light status-light-warning" aria-hidden="true" /> Client site radius</span>
+        <span className="inline-flex items-center gap-1"><span className="status-light status-light-warning" aria-hidden="true" /> Geofence zone</span>
         {showClientSiteDraftMarker ? <span className="inline-flex items-center gap-1"><span className="status-light status-light-warning" aria-hidden="true" /> Client site draft (not live GPS)</span> : null}
         <span className="inline-flex items-center gap-1"><span className="status-light status-light-danger" aria-hidden="true" /> Your live location</span>
         <span className="w-full text-text-tertiary normal-case tracking-normal sm:ml-auto sm:w-auto">Dashed guard markers indicate unscheduled tracking visibility.</span>
@@ -1428,6 +1561,134 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
                 ))}
               </tbody>
             </table>
+          </div>
+
+          <div className="mt-5 border-t border-border-subtle pt-4">
+            <h5 className="text-xs font-bold uppercase tracking-[0.14em] text-text-primary">Geofence Zone Manager</h5>
+            <p className="mt-1 text-xs text-text-tertiary">Create and manage geofence zones per client site for enter/exit monitoring.</p>
+
+            <form onSubmit={handleGeofenceSubmit} className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-3">
+              <select
+                value={geofenceForm.siteId}
+                onChange={(event) => setGeofenceForm((prev) => ({ ...prev, siteId: event.target.value }))}
+                className="rounded-md border border-border-subtle bg-background px-3 py-2 text-sm text-text-primary"
+                aria-label="Geofence client site"
+              >
+                <option value="">Select client site</option>
+                {clientSites.map((site) => (
+                  <option key={`zone-site-${site.id}`} value={site.id}>
+                    {site.name}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="number"
+                min="0.1"
+                max="50"
+                step="0.1"
+                value={geofenceForm.radiusKmText}
+                onChange={(event) => {
+                  const value = event.target.value
+                  setGeofenceForm((prev) => ({
+                    ...prev,
+                    radiusKmText: value,
+                    radiusKm: Number(value),
+                  }))
+                }}
+                placeholder="Radius km"
+                className="rounded-md border border-border-subtle bg-background px-3 py-2 text-sm text-text-primary"
+                aria-label="Geofence radius in kilometers"
+              />
+              <label className="inline-flex min-h-11 items-center gap-2 rounded-md border border-border-subtle bg-background px-3 py-2 text-sm text-text-secondary">
+                <input
+                  type="checkbox"
+                  checked={Boolean(geofenceForm.isActive)}
+                  onChange={(event) => setGeofenceForm((prev) => ({ ...prev, isActive: event.target.checked }))}
+                />
+                Active zone
+              </label>
+              <div className="md:col-span-3 flex flex-wrap gap-2">
+                <button
+                  type="submit"
+                  disabled={geofenceSaving}
+                  className="min-h-11 rounded-md bg-info-bg px-3 py-2 text-xs font-semibold uppercase tracking-wide text-info-text disabled:opacity-60"
+                >
+                  {geofenceSaving ? 'Saving...' : editingGeofenceId ? 'Update Geofence' : 'Add Geofence'}
+                </button>
+                {editingGeofenceId ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingGeofenceId('')
+                      setGeofenceError('')
+                      setGeofenceForm((prev) => ({
+                        ...INITIAL_GEOFENCE_FORM,
+                        siteId: prev.siteId || clientSites[0]?.id || '',
+                      }))
+                    }}
+                    className="min-h-11 rounded-md border border-border-subtle px-3 py-2 text-xs font-semibold uppercase tracking-wide text-text-secondary"
+                  >
+                    Cancel Edit
+                  </button>
+                ) : null}
+              </div>
+            </form>
+
+            {geofenceError ? <p className="mt-2 text-xs text-danger-text">{geofenceError}</p> : null}
+
+            <div className="mt-3 overflow-x-auto">
+              <table className="w-full min-w-[620px] text-xs">
+                <thead>
+                  <tr className="border-b border-border-subtle text-text-tertiary">
+                    <th className="px-2 py-2 text-left">Site</th>
+                    <th className="px-2 py-2 text-left">Type</th>
+                    <th className="px-2 py-2 text-left">Radius</th>
+                    <th className="px-2 py-2 text-left">Status</th>
+                    <th className="px-2 py-2 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {geofenceZones.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-2 py-3 text-text-tertiary">
+                        No geofence zones configured yet.
+                      </td>
+                    </tr>
+                  ) : (
+                    geofenceZones.map((zone) => (
+                      <tr key={zone.id} className="border-b border-border-subtle text-text-primary">
+                        <td className="px-2 py-2">{zone.siteName}</td>
+                        <td className="px-2 py-2 uppercase">{zone.zoneType}</td>
+                        <td className="px-2 py-2">
+                          {zone.zoneType === 'radius'
+                            ? `${Number(zone.radiusKm ?? 0).toFixed(2)} km`
+                            : `${zone.polygonPoints?.length ?? 0} points`}
+                        </td>
+                        <td className="px-2 py-2">{zone.isActive ? 'Active' : 'Inactive'}</td>
+                        <td className="px-2 py-2 text-right">
+                          <button
+                            type="button"
+                            onClick={() => handleEditGeofence(zone.id)}
+                            className="mr-2 min-h-11 rounded-md border border-border-subtle px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-text-secondary"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              void handleDeleteGeofence(zone.id)
+                            }}
+                            className="min-h-11 rounded-md bg-danger-bg px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-danger-text"
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       ) : null}

@@ -490,6 +490,7 @@ export default function AppShell() {
             <div className="fixed inset-0 z-[63] md:hidden" onClick={() => setMoreDrawerOpen(false)}>
               <div className="absolute inset-0 bg-black/40" />
               <div
+                id="appshell-more-drawer"
                 className="absolute bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] left-2 right-2 rounded border border-border bg-surface p-2 shadow-lg"
                 onClick={e => e.stopPropagation()}
               >
@@ -535,6 +536,7 @@ export default function AppShell() {
                     <button
                       type="button"
                       onClick={() => navigate(tabRoute)}
+                      aria-current={isActive ? 'page' : undefined}
                       className={`flex min-h-11 w-full flex-col items-center justify-center gap-0.5 rounded-md py-1 text-[10px] font-semibold transition-colors ${
                         isActive ? 'text-[var(--color-info)]' : 'text-text-secondary'
                       }`}
@@ -550,6 +552,8 @@ export default function AppShell() {
                 <button
                   type="button"
                   onClick={() => setMoreDrawerOpen(prev => !prev)}
+                  aria-expanded={moreDrawerOpen}
+                  aria-controls="appshell-more-drawer"
                   className={`flex min-h-11 w-full flex-col items-center justify-center gap-0.5 rounded-md py-1 text-[10px] font-semibold transition-colors ${
                     moreDrawerOpen ? 'text-[var(--color-info)]' : 'text-text-secondary'
                   }`}

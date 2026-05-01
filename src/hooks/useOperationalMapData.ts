@@ -54,6 +54,23 @@ export interface GeofenceAlert {
   createdAt: string
 }
 
+export interface GeofencePoint {
+  latitude: number
+  longitude: number
+}
+
+export interface GeofenceZone {
+  id: string
+  siteId: string
+  siteName: string
+  zoneType: 'radius' | 'polygon' | string
+  radiusKm?: number | null
+  polygonPoints?: GeofencePoint[] | null
+  isActive: boolean
+  createdAt?: string
+  updatedAt?: string
+}
+
 export interface GuardHistoryPoint {
   id?: string
   latitude: number
@@ -109,6 +126,10 @@ interface ActiveGuardsResponse {
   guards?: ActiveGuard[]
 }
 
+interface GeofenceZonesResponse {
+  zones?: GeofenceZone[]
+}
+
 type WsConnectionState = 'disabled' | 'connecting' | 'open' | 'backoff' | 'closed'
 
 const WS_AUTH_CLOSE_CODES = new Set([1008, 4001, 4401, 4403])
@@ -138,10 +159,18 @@ export interface GuardHeartbeatInput {
   status?: string
 }
 
+export interface GeofenceZoneInput {
+  zoneType: 'radius' | 'polygon'
+  radiusKm?: number
+  polygonPoints?: GeofencePoint[]
+  isActive?: boolean
+}
+
 interface UseOperationalMapDataResult {
   clientSites: MapClientSite[]
   trackingPoints: MapTrackingPoint[]
   geofenceAlerts: GeofenceAlert[]
+  geofenceZones: GeofenceZone[]
   wsConnectionState: WsConnectionState
   loading: boolean
   error: string
@@ -151,11 +180,36 @@ interface UseOperationalMapDataResult {
   createClientSite: (input: ClientSiteInput) => Promise<void>
   updateClientSite: (siteId: string, input: ClientSiteInput) => Promise<void>
   deleteClientSite: (siteId: string) => Promise<void>
+  createGeofenceZone: (siteId: string, input: GeofenceZoneInput) => Promise<void>
+  updateGeofenceZone: (zoneId: string, input: GeofenceZoneInput) => Promise<void>
+  deleteGeofenceZone: (zoneId: string) => Promise<void>
   sendGuardHeartbeat: (input: GuardHeartbeatInput) => Promise<void>
   fetchGuardHistory: (guardId: string, limit?: number) => Promise<GuardHistoryPoint[]>
   fetchGuardPath: (guardId: string, limit?: number) => Promise<GuardHistoryPoint[]>
   fetchActiveGuards: (windowMinutes?: number) => Promise<ActiveGuard[]>
   isElevatedUser: boolean
+}
+
+function normalizePolygonPoints(value: unknown): GeofencePoint[] {
+  if (!Array.isArray(value)) return []
+
+  return value
+    .map((point) => {
+      if (!point || typeof point !== 'object') return null
+      const candidate = point as Record<string, unknown>
+      const latitude = Number(candidate.latitude)
+      const longitude = Number(candidate.longitude)
+      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null
+      return { latitude, longitude }
+    })
+    .filter((point): point is GeofencePoint => point !== null)
+}
+
+function normalizeGeofenceZone(raw: GeofenceZone): GeofenceZone {
+  return {
+    ...raw,
+    polygonPoints: normalizePolygonPoints(raw.polygonPoints),
+  }
 }
 
 export function useOperationalMapData(): UseOperationalMapDataResult {
@@ -166,6 +220,7 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
   const [clientSites, setClientSites] = useState<MapClientSite[]>([])
   const [trackingPoints, setTrackingPoints] = useState<MapTrackingPoint[]>([])
   const [geofenceAlerts, setGeofenceAlerts] = useState<GeofenceAlert[]>([])
+  const [geofenceZones, setGeofenceZones] = useState<GeofenceZone[]>([])
   const [wsConnectionState, setWsConnectionState] = useState<WsConnectionState>('disabled')
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string>('')
@@ -213,6 +268,7 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
       setClientSites([])
       setTrackingPoints([])
       setGeofenceAlerts([])
+      setGeofenceZones([])
       setError('')
       setLoading(false)
       return
@@ -226,20 +282,32 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
     }
 
     try {
-      const data = await fetchJsonOrThrow<MapDataResponse>(
+      const headers = getAuthHeaders()
+      const mapDataPromise = fetchJsonOrThrow<MapDataResponse>(
         `${API_BASE_URL}/api/tracking/map-data`,
-        { headers: getAuthHeaders() },
+        { headers },
         'Failed to load operational map data',
       )
+      const geofenceZonesPromise = isElevatedUser
+        ? fetchJsonOrThrow<GeofenceZonesResponse>(
+            `${API_BASE_URL}/api/tracking/geofences`,
+            { headers },
+            'Failed to load geofence zones',
+          )
+        : Promise.resolve<GeofenceZonesResponse>({ zones: [] })
 
+      const [data, zoneResponse] = await Promise.all([mapDataPromise, geofenceZonesPromise])
       applySnapshot(data)
+      setGeofenceZones(
+        Array.isArray(zoneResponse.zones) ? zoneResponse.zones.map(normalizeGeofenceZone) : [],
+      )
       setError('')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load operational map data')
     } finally {
       setLoading(false)
     }
-  }, [applySnapshot, hasTrackingAccess])
+  }, [applySnapshot, hasTrackingAccess, isElevatedUser])
 
   const createClientSite = useCallback(async (input: ClientSiteInput) => {
     if (!isElevatedUser) return
@@ -281,6 +349,50 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
         headers: getAuthHeaders(),
       },
       'Failed to delete client site',
+    )
+    await load()
+  }, [isElevatedUser, load])
+
+  const createGeofenceZone = useCallback(async (siteId: string, input: GeofenceZoneInput) => {
+    if (!isElevatedUser) return
+
+    await fetchJsonOrThrow<any>(
+      `${API_BASE_URL}/api/tracking/client-sites/${siteId}/geofences`,
+      {
+        method: 'POST',
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(input),
+      },
+      'Failed to create geofence zone',
+    )
+    await load()
+  }, [isElevatedUser, load])
+
+  const updateGeofenceZone = useCallback(async (zoneId: string, input: GeofenceZoneInput) => {
+    if (!isElevatedUser) return
+
+    await fetchJsonOrThrow<any>(
+      `${API_BASE_URL}/api/tracking/geofences/${zoneId}`,
+      {
+        method: 'PUT',
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(input),
+      },
+      'Failed to update geofence zone',
+    )
+    await load()
+  }, [isElevatedUser, load])
+
+  const deleteGeofenceZone = useCallback(async (zoneId: string) => {
+    if (!isElevatedUser) return
+
+    await fetchJsonOrThrow<any>(
+      `${API_BASE_URL}/api/tracking/geofences/${zoneId}`,
+      {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      },
+      'Failed to delete geofence zone',
     )
     await load()
   }, [isElevatedUser, load])
@@ -498,6 +610,7 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
       clientSites,
       trackingPoints,
       geofenceAlerts,
+      geofenceZones,
       wsConnectionState,
       loading,
       error,
@@ -507,6 +620,9 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
       createClientSite,
       updateClientSite,
       deleteClientSite,
+      createGeofenceZone,
+      updateGeofenceZone,
+      deleteGeofenceZone,
       sendGuardHeartbeat,
       fetchGuardHistory,
       fetchGuardPath,
@@ -517,6 +633,7 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
       clientSites,
       trackingPoints,
       geofenceAlerts,
+      geofenceZones,
       wsConnectionState,
       loading,
       error,
@@ -526,6 +643,9 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
       createClientSite,
       updateClientSite,
       deleteClientSite,
+      createGeofenceZone,
+      updateGeofenceZone,
+      deleteGeofenceZone,
       sendGuardHeartbeat,
       fetchGuardHistory,
       fetchGuardPath,

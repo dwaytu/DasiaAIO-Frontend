@@ -28,10 +28,21 @@ interface PreviewCounts {
 }
 
 const ACCEPTED_TYPES = ['.xlsx', '.xls']
+const ACCEPTED_MIME_TYPES = new Set([
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-excel',
+  // Some browsers report empty MIME for local files.
+  '',
+])
+const MAX_MDR_FILE_SIZE_BYTES = 8 * 1024 * 1024 // 8 MB
 
 function hasAcceptedExtension(filename: string): boolean {
   const normalized = filename.toLowerCase()
   return ACCEPTED_TYPES.some((extension) => normalized.endsWith(extension))
+}
+
+function hasAcceptedMimeType(file: File): boolean {
+  return ACCEPTED_MIME_TYPES.has(file.type)
 }
 
 function computePreviewCounts(parsed: MdrParseResult): PreviewCounts {
@@ -101,6 +112,20 @@ const MdrUploader: FC<MdrUploaderProps> = ({ onUploadSuccess }) => {
       setSelectedFile(file)
       setParsedResult(null)
       setParseError('Only .xlsx and .xls files are supported for MDR import.')
+      return
+    }
+
+    if (!hasAcceptedMimeType(file)) {
+      setSelectedFile(file)
+      setParsedResult(null)
+      setParseError('The selected file type is not recognized as an Excel workbook.')
+      return
+    }
+
+    if (file.size > MAX_MDR_FILE_SIZE_BYTES) {
+      setSelectedFile(file)
+      setParsedResult(null)
+      setParseError('Workbook exceeds the 8 MB upload limit. Please split or compress the source file.')
       return
     }
 

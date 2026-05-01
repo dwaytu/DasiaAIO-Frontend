@@ -160,6 +160,10 @@ function getFirstDayOfMonth(year: number, month: number): number {
   return new Date(year, month, 1).getDay()
 }
 
+function isAbortError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === 'AbortError'
+}
+
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December']
 const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
 
@@ -179,13 +183,14 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState<boolean>(false)
   const [lastRefreshAt, setLastRefreshAt] = useState<number>(() => Date.now())
 
-  const fetchShifts = useCallback(async (): Promise<ShiftEvent[]> => {
+  const fetchShifts = useCallback(async (signal?: AbortSignal): Promise<ShiftEvent[]> => {
     try {
       const url = isAdmin
         ? `${API_BASE_URL}/api/guard-replacement/shifts`
         : `${API_BASE_URL}/api/guard-replacement/guard/${user.id}/shifts`
       const res = await fetch(url, {
-        headers: getAuthHeaders()
+        headers: getAuthHeaders(),
+        signal,
       })
       if (!res.ok) return []
       const data = await parseResponseBody(res)
@@ -208,15 +213,18 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
         }]
       })
     } catch (err) {
-      logError('Failed to fetch shifts:', err)
+      if (!isAbortError(err)) {
+        logError('Failed to fetch shifts:', err)
+      }
       return []
     }
   }, [isAdmin, user.id])
 
-  const fetchTrips = useCallback(async (): Promise<TripEvent[]> => {
+  const fetchTrips = useCallback(async (signal?: AbortSignal): Promise<TripEvent[]> => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/trips`, {
-        headers: getAuthHeaders()
+        headers: getAuthHeaders(),
+        signal,
       })
       if (!res.ok) return []
       const data = await parseResponseBody(res)
@@ -238,15 +246,18 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
         }]
       })
     } catch (err) {
-      logError('Failed to fetch trips:', err)
+      if (!isAbortError(err)) {
+        logError('Failed to fetch trips:', err)
+      }
       return []
     }
   }, [])
 
-  const fetchMissions = useCallback(async (): Promise<MissionEvent[]> => {
+  const fetchMissions = useCallback(async (signal?: AbortSignal): Promise<MissionEvent[]> => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/missions`, {
-        headers: getAuthHeaders()
+        headers: getAuthHeaders(),
+        signal,
       })
       if (!res.ok) return []
       const data = await parseResponseBody(res)
@@ -267,15 +278,18 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
         }]
       })
     } catch (err) {
-      logError('Failed to fetch missions:', err)
+      if (!isAbortError(err)) {
+        logError('Failed to fetch missions:', err)
+      }
       return []
     }
   }, [])
 
-  const fetchMaintenanceEvents = useCallback(async (): Promise<MaintenanceEvent[]> => {
+  const fetchMaintenanceEvents = useCallback(async (signal?: AbortSignal): Promise<MaintenanceEvent[]> => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/firearm-maintenance/pending`, {
-        headers: getAuthHeaders()
+        headers: getAuthHeaders(),
+        signal,
       })
       if (!res.ok) return []
       const data = await parseResponseBody(res)
@@ -295,21 +309,28 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
         }]
       })
     } catch (err) {
-      logError('Failed to fetch maintenance events:', err)
+      if (!isAbortError(err)) {
+        logError('Failed to fetch maintenance events:', err)
+      }
       return []
     }
   }, [])
 
-  const fetchAllEvents = useCallback(async () => {
-    setLoading(true)
-    setError('')
+  const fetchAllEvents = useCallback(async (signal?: AbortSignal) => {
+    if (!signal?.aborted) {
+      setLoading(true)
+      setError('')
+    }
     try {
       const results = await Promise.allSettled([
-        fetchShifts(),
-        fetchTrips(),
-        isAdmin ? fetchMissions() : Promise.resolve([]),
-        isAdmin ? fetchMaintenanceEvents() : Promise.resolve([]),
+        fetchShifts(signal),
+        fetchTrips(signal),
+        isAdmin ? fetchMissions(signal) : Promise.resolve([]),
+        isAdmin ? fetchMaintenanceEvents(signal) : Promise.resolve([]),
       ])
+      if (signal?.aborted) {
+        return
+      }
       const all: CalendarEvent[] = []
       results.forEach(r => {
         if (r.status === 'fulfilled' && Array.isArray(r.value)) {
@@ -325,14 +346,22 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
         setError(`Loaded with ${failedCount} source${failedCount === 1 ? '' : 's'} unavailable`)
       }
     } catch (e) {
-      setError('Failed to load calendar data')
+      if (!signal?.aborted && !isAbortError(e)) {
+        setError('Failed to load calendar data')
+      }
     } finally {
-      setLoading(false)
+      if (!signal?.aborted) {
+        setLoading(false)
+      }
     }
   }, [fetchMaintenanceEvents, fetchMissions, fetchShifts, fetchTrips, isAdmin])
 
   useEffect(() => {
-    fetchAllEvents()
+    const controller = new AbortController()
+    void fetchAllEvents(controller.signal)
+    return () => {
+      controller.abort()
+    }
   }, [fetchAllEvents])
 
   const eventsByDate = useMemo(() => events.reduce<Record<string, CalendarEvent[]>>((acc, ev) => {
@@ -471,7 +500,9 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
                 <div className="flex flex-wrap items-center gap-2">
                   <LiveFreshnessPill updatedAt={lastRefreshAt} label="Calendar feed" />
                   <button
-                    onClick={fetchAllEvents}
+                    onClick={() => {
+                      void fetchAllEvents()
+                    }}
                     className="soc-btn self-start sm:self-auto"
                   >
                     Refresh

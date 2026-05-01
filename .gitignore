@@ -16,3 +16,4 @@ build/
 output/
 playwright-report/
 test-results/
+playwright/.auth/

@@ -22,6 +22,7 @@ interface MdrImportBatch {
   new_rows?: number | null
   ambiguous_rows?: number | null
   error_rows?: number | null
+  pending_rows?: number | null
   committed_at?: string | null
   committed_by?: string | null
   created_at: string
@@ -55,6 +56,7 @@ interface MdrStagingRow {
   matched_guard_id?: string | null
   matched_firearm_id?: string | null
   matched_client_id?: string | null
+  validation_errors?: string[] | null
   created_at: string
 }
 
@@ -63,6 +65,11 @@ interface PaginatedResponse<T> {
   page: number
   pageSize: number
   items: T[]
+}
+
+interface BatchActionResponse {
+  status: string
+  summary?: Record<string, number>
 }
 
 type ResolveMatchStatus = 'matched' | 'new'
@@ -103,6 +110,8 @@ function matchStatusClass(matchStatus: string): string {
       return 'bg-warning/10 text-warning'
     case 'error':
       return 'bg-danger/10 text-danger'
+    case 'pending':
+      return 'bg-warning/10 text-warning'
     default:
       return 'bg-surface text-text-secondary'
   }
@@ -323,7 +332,7 @@ const MdrBatchReview: FC<MdrBatchReviewProps> = ({
     }
 
     try {
-      await fetchJsonOrThrow<{ status: string }>(
+      const response = await fetchJsonOrThrow<BatchActionResponse>(
         `${API_BASE_URL}/api/mdr/batches/${encodeURIComponent(batch.id)}/${action}`,
         {
           method: 'POST',
@@ -332,7 +341,15 @@ const MdrBatchReview: FC<MdrBatchReviewProps> = ({
         `Unable to ${action} MDR batch.`,
       )
 
-      setActionMessage(`Batch ${action} succeeded.`)
+      if (action === 'commit' && response.summary) {
+        const blockedGuards = Number(response.summary.guard_records_blocked ?? 0)
+        const blockedFirearms = Number(response.summary.firearm_records_blocked ?? 0)
+        setActionMessage(
+          `Batch commit succeeded. Guard blocks: ${blockedGuards} | Firearm blocks: ${blockedFirearms}.`,
+        )
+      } else {
+        setActionMessage(`Batch ${action} succeeded.`)
+      }
       onBatchUpdated?.()
       setRefreshSeed((current) => current + 1)
     } catch (batchError) {
@@ -348,7 +365,10 @@ const MdrBatchReview: FC<MdrBatchReviewProps> = ({
     }
   }
 
-  const unresolvedCount = toNumber(batch?.ambiguous_rows) + toNumber(batch?.error_rows)
+  const unresolvedCount =
+    toNumber(batch?.ambiguous_rows) +
+    toNumber(batch?.error_rows) +
+    toNumber(batch?.pending_rows)
 
   return (
     <section className="space-y-4 rounded border border-border bg-surface-elevated p-4 md:p-6">
@@ -389,7 +409,7 @@ const MdrBatchReview: FC<MdrBatchReviewProps> = ({
 
       {batch ? (
         <>
-          <dl className="grid grid-cols-2 gap-3 md:grid-cols-6">
+          <dl className="grid grid-cols-2 gap-3 md:grid-cols-7">
             <div className="rounded border border-border bg-surface p-3">
               <dt className="text-xs text-text-secondary">Status</dt>
               <dd className="text-sm font-semibold uppercase text-text-primary">{batch.status}</dd>
@@ -413,6 +433,10 @@ const MdrBatchReview: FC<MdrBatchReviewProps> = ({
             <div className="rounded border border-border bg-surface p-3">
               <dt className="text-xs text-text-secondary">Error</dt>
               <dd className="text-lg font-semibold text-danger">{toNumber(batch.error_rows)}</dd>
+            </div>
+            <div className="rounded border border-border bg-surface p-3">
+              <dt className="text-xs text-text-secondary">Pending</dt>
+              <dd className="text-lg font-semibold text-warning">{toNumber(batch.pending_rows)}</dd>
             </div>
           </dl>
 
@@ -439,7 +463,7 @@ const MdrBatchReview: FC<MdrBatchReviewProps> = ({
               <tbody>
                 {rows.map((row) => {
                   const draft = drafts[row.id] ?? buildDefaultDraft(row)
-                  const isAmbiguous = row.match_status === 'ambiguous'
+                  const isResolvable = row.match_status === 'ambiguous' || row.match_status === 'pending'
 
                   return (
                     <tr key={row.id} className="border-b border-border text-sm text-text-primary align-top">
@@ -450,6 +474,13 @@ const MdrBatchReview: FC<MdrBatchReviewProps> = ({
                       <td className="px-3 py-3">
                         <div>{row.client_name ?? '-'}</div>
                         <div className="text-xs text-text-secondary">{row.client_number ?? '-'}</div>
+                        {Array.isArray(row.validation_errors) && row.validation_errors.length > 0 ? (
+                          <ul className="mt-2 space-y-1 text-xs text-danger">
+                            {row.validation_errors.map((issue, index) => (
+                              <li key={`${row.id}-issue-${index}`}>• {issue}</li>
+                            ))}
+                          </ul>
+                        ) : null}
                       </td>
                       <td className="px-3 py-3">
                         <div>{row.guard_name ?? '-'}</div>
@@ -467,7 +498,7 @@ const MdrBatchReview: FC<MdrBatchReviewProps> = ({
                         </span>
                       </td>
                       <td className="px-3 py-3">
-                        {isAmbiguous ? (
+                        {isResolvable ? (
                           <div className="space-y-2">
                             <select
                               className="w-full rounded border border-border bg-surface px-2 py-2 text-xs text-text-primary"

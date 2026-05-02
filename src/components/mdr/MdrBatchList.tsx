@@ -20,6 +20,7 @@ interface MdrImportBatch {
   new_rows?: number | null
   ambiguous_rows?: number | null
   error_rows?: number | null
+  pending_rows?: number | null
   created_at: string
 }
 
@@ -181,6 +182,7 @@ const MdrBatchList: FC<MdrBatchListProps> = ({ onSelectBatch, refreshKey = 0 }) 
                       {' | '}new {toNumber(batch.new_rows)}
                       {' | '}ambiguous {toNumber(batch.ambiguous_rows)}
                       {' | '}error {toNumber(batch.error_rows)}
+                      {' | '}pending {toNumber(batch.pending_rows)}
                     </div>
                   </td>
                   <td className="px-3 py-3">

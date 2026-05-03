@@ -7,6 +7,14 @@ const STATIC_ASSETS = ['/', '/index.html', '/logo/sentinel-192.png', '/logo/sent
 // IndexedDB helpers for offline action queue
 const DB_NAME = 'sentinel-offline';
 const STORE_NAME = 'action-queue';
+const DEFAULT_MAX_ATTEMPTS = 5;
+const BASE_RETRY_DELAY_MS = 15000;
+const MAX_RETRY_DELAY_MS = 5 * 60 * 1000;
+
+function computeBackoffMs(attempts) {
+  const exponential = BASE_RETRY_DELAY_MS * 2 ** Math.max(0, attempts - 1);
+  return Math.min(exponential, MAX_RETRY_DELAY_MS);
+}
 
 function openQueue() {
   return new Promise((resolve, reject) => {
@@ -29,18 +37,25 @@ async function enqueueAction(action) {
   });
 }
 
-async function dequeueAll() {
+async function getDueActions() {
   const db = await openQueue();
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const tx = db.transaction(STORE_NAME, 'readonly');
     const store = tx.objectStore(STORE_NAME);
     const req = store.openCursor();
     const items = [];
+    const now = Date.now();
     req.onsuccess = (e) => {
       const cursor = e.target.result;
       if (cursor) {
-        items.push({ id: cursor.key, ...cursor.value });
-        cursor.delete();
+        const value = cursor.value || {};
+        const attempts = Number.isFinite(value.attempts) ? value.attempts : 0;
+        const maxAttempts = Number.isFinite(value.maxAttempts) ? value.maxAttempts : DEFAULT_MAX_ATTEMPTS;
+        const retryAt = value.nextRetryAt ? new Date(value.nextRetryAt).getTime() : 0;
+        const isDue = !Number.isFinite(retryAt) || retryAt <= now;
+        if (attempts < maxAttempts && isDue) {
+          items.push({ id: cursor.key, ...value });
+        }
         cursor.continue();
       } else {
         resolve(items);
@@ -50,9 +65,46 @@ async function dequeueAll() {
   });
 }
 
-async function requeue(item) {
-  const { id: _id, ...rest } = item;
-  await enqueueAction(rest);
+async function removeActionById(id) {
+  const db = await openQueue();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    const req = store.delete(id);
+    req.onsuccess = () => resolve();
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+async function markActionFailure(item, errorMessage) {
+  const db = await openQueue();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    const req = store.get(item.id);
+    req.onsuccess = () => {
+      const current = req.result;
+      if (!current) {
+        resolve();
+        return;
+      }
+      const attempts = (Number.isFinite(current.attempts) ? current.attempts : 0) + 1;
+      const maxAttempts = Number.isFinite(current.maxAttempts) ? current.maxAttempts : DEFAULT_MAX_ATTEMPTS;
+      const delayMs = computeBackoffMs(attempts);
+      const nextRetryAt = new Date(Date.now() + delayMs).toISOString();
+      const nextRecord = {
+        ...current,
+        attempts,
+        maxAttempts,
+        lastAttemptAt: new Date().toISOString(),
+        nextRetryAt,
+        lastError: errorMessage || 'Replay failed',
+      };
+      store.put(nextRecord);
+      resolve();
+    };
+    req.onerror = (e) => reject(e.target.error);
+  });
 }
 
 self.addEventListener('install', (event) => {
@@ -100,21 +152,21 @@ self.addEventListener('sync', (event) => {
 });
 
 async function replayQueue() {
-  const items = await dequeueAll();
-  const results = await Promise.allSettled(
-    items.map((item) =>
-      fetch(item.url, {
+  const items = await getDueActions();
+  for (const item of items) {
+    try {
+      const response = await fetch(item.url, {
         method: item.method,
         headers: { 'Content-Type': 'application/json', ...item.headers },
         body: item.body !== undefined ? JSON.stringify(item.body) : undefined,
-      }).then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      }),
-    ),
-  );
-  for (let i = 0; i < results.length; i++) {
-    if (results[i].status === 'rejected') {
-      await requeue(items[i]);
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      await removeActionById(item.id);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      await markActionFailure(item, message);
     }
   }
 }

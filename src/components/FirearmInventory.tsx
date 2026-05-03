@@ -2,7 +2,7 @@ import { useState, useEffect, FC } from 'react'
 import { Shield } from 'lucide-react'
 import { API_BASE_URL } from '../config'
 import { logError } from '../utils/logger'
-import { getAuthHeaders } from '../utils/api'
+import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
 import OperationalShell from './layout/OperationalShell'
 import EmptyState from './shared/EmptyState'
 import LoadingSkeleton from './shared/LoadingSkeleton'
@@ -28,6 +28,7 @@ interface Props {
 const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView }) => {
   const [firearms, setFirearms] = useState<Firearm[]>([])
   const [loading, setLoading] = useState<boolean>(true)
+  const [readWarning, setReadWarning] = useState<string>('')
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false)
   const currentView = activeView || 'firearms'
 
@@ -38,17 +39,16 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
   const fetchFirearms = async () => {
     try {
       setLoading(true)
-      const response = await fetch(`${API_BASE_URL}/api/firearms`, {
+      const data = await fetchJsonOrThrow<any>(`${API_BASE_URL}/api/firearms`, {
         headers: getAuthHeaders()
-      })
-      if (response.ok) {
-        const data = await response.json()
-        // Backend returns array directly, not wrapped in object
-        const firearmsList = Array.isArray(data) ? data : (data.firearms || [])
-        setFirearms(firearmsList)
-      }
+      }, 'Unable to load firearm inventory')
+      // Backend returns array directly, not wrapped in object
+      const firearmsList = Array.isArray(data) ? data : (data.firearms || [])
+      setFirearms(firearmsList)
+      setReadWarning('')
     } catch (err) {
       logError('Error fetching firearms:', err)
+      setReadWarning('Firearm inventory is temporarily unavailable. Reads are degraded; write actions remain server-protected.')
     } finally {
       setLoading(false)
     }
@@ -85,6 +85,11 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
           <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in">
             
             <section className="table-glass rounded p-4 md:p-8 w-full mb-6">
+              {readWarning ? (
+                <div className="mb-4 rounded border border-warning-border bg-warning-bg p-3 text-sm text-warning-text">
+                  {readWarning}
+                </div>
+              ) : null}
               <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
                 <h2 className="text-2xl font-bold text-text-primary mb-4 md:mb-0">All Firearms ({firearms.length})</h2>
               </div>

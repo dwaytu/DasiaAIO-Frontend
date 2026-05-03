@@ -5,7 +5,11 @@ import type { User as AppUser } from '../../context/AuthContext'
 import { logError } from '../../utils/logger'
 import { sanitizeErrorMessage } from '../../utils/sanitize'
 import { fetchJsonOrThrow, getAuthToken } from '../../utils/api'
-import { enqueueOfflineAction, getPendingCount } from '../../utils/offlineQueue'
+import {
+  enqueueOfflineAction,
+  getQueueHealth,
+  retryFailedActions,
+} from '../../utils/offlineQueue'
 import { useUI } from '../../hooks/useUI'
 import { useLocationConsent } from '../../hooks/useLocationConsent'
 import GuardResourcesTab from '../dashboard/GuardResourcesTab'
@@ -150,6 +154,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
 
 
   const [pendingCount, setPendingCount] = useState<number>(0)
+  const [failedOfflineCount, setFailedOfflineCount] = useState<number>(0)
 
   const [profileModalOpen, setProfileModalOpen] = useState<boolean>(false)
   const profileTriggerRef = useRef<HTMLButtonElement | null>(null)
@@ -217,13 +222,33 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
     let disposed = false
     const poll = async () => {
       try {
-        const count = await getPendingCount()
-        if (!disposed) setPendingCount(count)
+        const health = await getQueueHealth()
+        if (!disposed) {
+          setPendingCount(health.pendingCount)
+          setFailedOfflineCount(health.failedCount)
+        }
       } catch { /* ignore */ }
     }
     void poll()
     const interval = window.setInterval(() => void poll(), 5000)
     return () => { disposed = true; window.clearInterval(interval) }
+  }, [])
+
+  const handleRetryFailedQueueActions = useCallback(async () => {
+    try {
+      const recovered = await retryFailedActions()
+      if (recovered > 0) {
+        setActionStatus(`${recovered} failed queued action${recovered > 1 ? 's' : ''} reset for retry.`)
+      } else {
+        setActionStatus('No failed queued actions to retry.')
+      }
+      const health = await getQueueHealth()
+      setPendingCount(health.pendingCount)
+      setFailedOfflineCount(health.failedCount)
+    } catch (error) {
+      setActionStatus('Unable to retry failed queued actions right now.')
+      logError('Failed to retry queued actions:', error)
+    }
   }, [])
 
   const getAuthHeaders = useCallback((extraHeaders: Record<string, string> = {}) => {
@@ -778,6 +803,26 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
             <div className="flex items-center gap-2 rounded border border-warning-border bg-warning-bg p-3 text-warning-text text-sm" role="status" aria-live="polite">
               <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-warning-text text-warning-bg text-xs font-bold">{pendingCount}</span>
               <span>{pendingCount === 1 ? '1 action waiting to send' : `${pendingCount} actions waiting to send`}</span>
+            </div>
+          ) : null}
+
+          {failedOfflineCount > 0 ? (
+            <div className="rounded border border-danger-border bg-danger-bg p-3 text-danger-text text-sm" role="status" aria-live="polite">
+              <p className="font-semibold">
+                {failedOfflineCount === 1
+                  ? '1 queued action reached max retry attempts.'
+                  : `${failedOfflineCount} queued actions reached max retry attempts.`}
+              </p>
+              <p className="mt-1 text-xs opacity-90">Tap retry after connectivity stabilizes. Server data remains the source of truth on conflicts.</p>
+              <button
+                type="button"
+                onClick={() => {
+                  void handleRetryFailedQueueActions()
+                }}
+                className="mt-2 min-h-10 rounded-md border border-danger-border px-3 py-1.5 text-xs font-semibold"
+              >
+                Retry Failed Queue Actions
+              </button>
             </div>
           ) : null}
 

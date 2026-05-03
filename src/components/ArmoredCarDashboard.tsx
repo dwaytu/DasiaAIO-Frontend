@@ -96,6 +96,8 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
   const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<string>('')
   const [success, setSuccess] = useState<string>('')
+  const [readWarning, setReadWarning] = useState<string>('')
+  const [writeBlockReason, setWriteBlockReason] = useState<string>('')
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false)
 
   // Form states
@@ -128,6 +130,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
         'Failed to fetch cars'
       )
       setCars(carsData)
+      setReadWarning('')
 
       // Then fetch maintenance records for each car
       if (carsData.length > 0) {
@@ -149,6 +152,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
       setError('')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to initialize data')
+      setReadWarning('Armored-car data reads are currently degraded. Write actions stay fail-closed by backend policy.')
     } finally {
       setLoading(false)
     }
@@ -221,6 +225,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
   const issueAllocation = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+    setWriteBlockReason('')
     try {
       const response = await fetch(`${API_BASE_URL}/api/car-allocation/issue`, {
         method: 'POST',
@@ -235,7 +240,17 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
           notes: newAllocation.notes || null,
         }),
       })
-      if (!response.ok) throw new Error('Failed to allocate car')
+      if (!response.ok) {
+        const body = await parseResponseBody(response)
+        const message =
+          typeof body?.error === 'string'
+            ? body.error
+            : typeof body?.message === 'string'
+              ? body.message
+              : 'Failed to allocate car'
+        setWriteBlockReason(message)
+        throw new Error(message)
+      }
       setSuccess('Car allocated successfully!')
       setNewAllocation({ car_id: '', client_id: '', expected_return_date: '', notes: '' })
       fetchAllocations()
@@ -250,6 +265,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
   const scheduleMaintenance = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+    setWriteBlockReason('')
     try {
       const response = await fetch(`${API_BASE_URL}/api/car-maintenance/schedule`, {
         method: 'POST',
@@ -265,7 +281,17 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
           cost: newMaintenance.cost || null,
         }),
       })
-      if (!response.ok) throw new Error('Failed to schedule maintenance')
+      if (!response.ok) {
+        const body = await parseResponseBody(response)
+        const message =
+          typeof body?.error === 'string'
+            ? body.error
+            : typeof body?.message === 'string'
+              ? body.message
+              : 'Failed to schedule maintenance'
+        setWriteBlockReason(message)
+        throw new Error(message)
+      }
       setSuccess('Maintenance scheduled successfully!')
       setNewMaintenance({ car_id: '', maintenance_type: '', description: '', scheduled_date: '', cost: '' })
       fetchMaintenance()
@@ -324,6 +350,16 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
         )}
 
         <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in">
+          {readWarning ? (
+            <div className="mb-4 rounded border border-warning-border bg-warning-bg p-3 text-sm text-warning-text">
+              {readWarning}
+            </div>
+          ) : null}
+          {writeBlockReason ? (
+            <div className="mb-4 rounded border border-danger-border bg-danger-bg p-3 text-sm text-danger-text">
+              Write blocked: {writeBlockReason}
+            </div>
+          ) : null}
           <section className="soc-surface mb-6 p-4 md:p-5">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-text-tertiary">Fleet Command</p>
             <h1 className="text-2xl font-black uppercase tracking-wide text-text-primary">Armored Fleet Operations</h1>

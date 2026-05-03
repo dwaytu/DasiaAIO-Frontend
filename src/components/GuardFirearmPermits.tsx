@@ -1,7 +1,7 @@
 import { useState, useEffect, FC } from 'react'
 import { API_BASE_URL } from '../config'
 import { logError } from '../utils/logger'
-import { getAuthHeaders } from '../utils/api'
+import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
 import OperationalShell from './layout/OperationalShell'
 import { getSidebarNav } from '../config/navigation'
 
@@ -26,6 +26,7 @@ interface Props {
 const GuardFirearmPermits: FC<Props> = ({ user, onLogout, onViewChange, activeView }) => {
   const [permits, setPermits] = useState<Permit[]>([])
   const [loading, setLoading] = useState<boolean>(true)
+  const [readWarning, setReadWarning] = useState<string>('')
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false)
 
   useEffect(() => {
@@ -35,15 +36,14 @@ const GuardFirearmPermits: FC<Props> = ({ user, onLogout, onViewChange, activeVi
   const fetchPermits = async () => {
     try {
       setLoading(true)
-      const response = await fetch(`${API_BASE_URL}/api/guard-firearm-permits`, {
+      const data = await fetchJsonOrThrow<any>(`${API_BASE_URL}/api/guard-firearm-permits`, {
         headers: getAuthHeaders()
-      })
-      if (response.ok) {
-        const data = await response.json()
-        setPermits(data.permits || [])
-      }
+      }, 'Unable to load permit list')
+      setPermits(data.permits || [])
+      setReadWarning('')
     } catch (err) {
       logError('Error fetching permits:', err)
+      setReadWarning('Permit records are temporarily unavailable. Read state is degraded; permit writes remain blocked by backend validation when required.')
     } finally {
       setLoading(false)
     }
@@ -82,6 +82,11 @@ const GuardFirearmPermits: FC<Props> = ({ user, onLogout, onViewChange, activeVi
           </div>
         ) : (
           <div className="flex-1 flex flex-col p-4 md:p-8 overflow-hidden w-full animate-fade-in">
+            {readWarning ? (
+              <div className="mb-4 rounded border border-warning-border bg-warning-bg p-3 text-sm text-warning-text">
+                {readWarning}
+              </div>
+            ) : null}
             <section className="flex flex-col flex-1 min-h-0 rounded overflow-hidden table-glass">
               <div className="flex-shrink-0 px-6 py-5 border-b border-border-subtle">
                 <h2 className="text-xl font-bold text-text-primary">Active Permits ({permits.length})</h2>

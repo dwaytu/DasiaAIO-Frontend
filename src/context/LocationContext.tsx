@@ -12,6 +12,7 @@ import {
 } from '../utils/location'
 import { getRequiredAccuracyMeters, getTrackingAccuracyMode } from '../utils/trackingPolicy'
 import { getAuthToken, parseResponseBody } from '../utils/api'
+import { enqueueOfflineAction } from '../utils/offlineQueue'
 import {
   fetchTrackingConsentStatus,
   getTrackingConsentErrorMessage,
@@ -49,6 +50,17 @@ export interface LocationContextValue {
 }
 
 export const LocationContext = createContext<LocationContextValue | null>(null)
+
+function isOfflineRequestError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase()
+  return (
+    !navigator.onLine ||
+    message.includes('offline') ||
+    message.includes('network') ||
+    message.includes('failed to fetch') ||
+    message.includes('timed out')
+  )
+}
 
 // ---------------------------------------------------------------------------
 // Provider
@@ -366,7 +378,20 @@ export function LocationProvider({ children }: LocationProviderProps) {
       setLocationConsentChecked(true)
       setGeoNotice('Location consent enabled. Live tracking can now run.')
       return true
-    } catch {
+    } catch (error) {
+      if (isOfflineRequestError(error)) {
+        const token = getAuthToken().trim()
+        await enqueueOfflineAction({
+          url: `${API_BASE_URL}/api/tracking/consent/grant`,
+          method: 'POST',
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+          actionType: 'tracking_consent',
+        })
+        setConsentSyncError('Consent update queued offline. It will sync when connectivity returns.')
+        setGeoNotice('Location consent update queued. Live tracking resumes after server sync.')
+        return true
+      }
+
       setConsentSyncError('Could not save tracking consent. Please try again.')
       return false
     } finally {
@@ -386,7 +411,24 @@ export function LocationProvider({ children }: LocationProviderProps) {
       setGeoPermissionState('unknown')
       setGeoNotice('Location tracking remains disabled until consent is accepted.')
       return true
-    } catch {
+    } catch (error) {
+      if (isOfflineRequestError(error)) {
+        const token = getAuthToken().trim()
+        await enqueueOfflineAction({
+          url: `${API_BASE_URL}/api/tracking/consent/revoke`,
+          method: 'POST',
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+          actionType: 'tracking_consent',
+        })
+        setLocationConsentStatus(false)
+        setHasLocationConsent(false)
+        setLocationConsentChecked(false)
+        setGeoPermissionState('unknown')
+        setConsentSyncError('Consent revoke queued offline. It will sync when connectivity returns.')
+        setGeoNotice('Location tracking stays paused while revoke syncs to server.')
+        return true
+      }
+
       setConsentSyncError('Could not save consent change. Please try again.')
       return false
     } finally {

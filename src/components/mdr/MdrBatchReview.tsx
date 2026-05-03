@@ -1,7 +1,7 @@
 import { FC, useEffect, useMemo, useState } from 'react'
 import { CheckCircle2, Loader2 } from 'lucide-react'
 import { API_BASE_URL } from '../../config'
-import { fetchJsonOrThrow, getAuthHeaders } from '../../utils/api'
+import { fetchJsonOrThrow, getAuthHeaders, parseResponseBody } from '../../utils/api'
 
 interface MdrBatchReviewProps {
   batchId: string
@@ -70,6 +70,18 @@ interface PaginatedResponse<T> {
 interface BatchActionResponse {
   status: string
   summary?: Record<string, number>
+}
+
+interface CommitBlockedPayload {
+  status: 'blocked'
+  reason?: string
+  message?: string
+  unresolved?: {
+    total?: number
+    pending?: number
+    ambiguous?: number
+    errors?: number
+  }
 }
 
 type ResolveMatchStatus = 'matched' | 'new'
@@ -145,6 +157,7 @@ const MdrBatchReview: FC<MdrBatchReviewProps> = ({
   const [resolvingRowId, setResolvingRowId] = useState<string | null>(null)
   const [isCommitting, setIsCommitting] = useState(false)
   const [isRejecting, setIsRejecting] = useState(false)
+  const [commitBlockDetail, setCommitBlockDetail] = useState<CommitBlockedPayload | null>(null)
 
   const canCommit = userRole === 'superadmin'
   const canReject = userRole === 'superadmin' || userRole === 'admin'
@@ -324,6 +337,7 @@ const MdrBatchReview: FC<MdrBatchReviewProps> = ({
 
     setActionError('')
     setActionMessage('')
+    setCommitBlockDetail(null)
 
     if (action === 'commit') {
       setIsCommitting(true)
@@ -332,6 +346,45 @@ const MdrBatchReview: FC<MdrBatchReviewProps> = ({
     }
 
     try {
+      if (action === 'commit') {
+        const response = await fetch(`${API_BASE_URL}/api/mdr/batches/${encodeURIComponent(batch.id)}/commit`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+        })
+
+        const body = await parseResponseBody(response)
+        if (!response.ok) {
+          const blockedPayload = body as CommitBlockedPayload
+          if (response.status === 409 && blockedPayload?.status === 'blocked') {
+            setCommitBlockDetail(blockedPayload)
+            setActionError(blockedPayload.message || 'Commit blocked due to unresolved rows.')
+          } else {
+            setActionError(
+              typeof body?.error === 'string'
+                ? body.error
+                : typeof body?.message === 'string'
+                  ? body.message
+                  : 'Unable to commit MDR batch.',
+            )
+          }
+          return
+        }
+
+        const commitResponse = body as BatchActionResponse
+        if (commitResponse.summary) {
+          const blockedGuards = Number(commitResponse.summary.guard_records_blocked ?? 0)
+          const blockedFirearms = Number(commitResponse.summary.firearm_records_blocked ?? 0)
+          setActionMessage(
+            `Batch commit succeeded. Guard blocks: ${blockedGuards} | Firearm blocks: ${blockedFirearms}.`,
+          )
+        } else {
+          setActionMessage('Batch commit succeeded.')
+        }
+        onBatchUpdated?.()
+        setRefreshSeed((current) => current + 1)
+        return
+      }
+
       const response = await fetchJsonOrThrow<BatchActionResponse>(
         `${API_BASE_URL}/api/mdr/batches/${encodeURIComponent(batch.id)}/${action}`,
         {
@@ -341,15 +394,7 @@ const MdrBatchReview: FC<MdrBatchReviewProps> = ({
         `Unable to ${action} MDR batch.`,
       )
 
-      if (action === 'commit' && response.summary) {
-        const blockedGuards = Number(response.summary.guard_records_blocked ?? 0)
-        const blockedFirearms = Number(response.summary.firearm_records_blocked ?? 0)
-        setActionMessage(
-          `Batch commit succeeded. Guard blocks: ${blockedGuards} | Firearm blocks: ${blockedFirearms}.`,
-        )
-      } else {
-        setActionMessage(`Batch ${action} succeeded.`)
-      }
+      setActionMessage(`Batch ${action} succeeded.`)
       onBatchUpdated?.()
       setRefreshSeed((current) => current + 1)
     } catch (batchError) {
@@ -398,6 +443,18 @@ const MdrBatchReview: FC<MdrBatchReviewProps> = ({
 
       {actionError ? (
         <div className="rounded border border-danger bg-danger/10 p-3 text-sm text-danger">{actionError}</div>
+      ) : null}
+
+      {commitBlockDetail?.unresolved ? (
+        <div className="rounded border border-warning bg-warning/10 p-3 text-sm text-warning">
+          <p className="font-semibold">Commit is blocked until unresolved rows are cleared.</p>
+          <p className="mt-1">
+            Pending: {toNumber(commitBlockDetail.unresolved.pending)} | Ambiguous:{' '}
+            {toNumber(commitBlockDetail.unresolved.ambiguous)} | Error:{' '}
+            {toNumber(commitBlockDetail.unresolved.errors)} | Total:{' '}
+            {toNumber(commitBlockDetail.unresolved.total)}
+          </p>
+        </div>
       ) : null}
 
       {actionMessage ? (

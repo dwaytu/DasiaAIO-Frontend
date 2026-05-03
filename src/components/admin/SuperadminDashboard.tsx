@@ -995,7 +995,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
             </div>
           </div>
         ) : activeSection === 'dashboard' ? (
-          <div className="flex-1 flex flex-col overflow-hidden p-4 md:p-8 w-full animate-fade-in gap-4 md:gap-6">
+          <div className="w-full animate-fade-in space-y-4 md:space-y-6">
             <CommandCenterDashboard
               quickActions={[
                 { label: 'Assign Shift', tone: 'indigo', onClick: () => handleNavigate('schedule') },
@@ -1008,7 +1008,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
               ]}
             />
 
-            <section className="flex flex-col flex-1 min-h-0 w-full bento-card !p-0 overflow-hidden table-glass">
+            <section className="w-full bento-card !p-0 overflow-hidden table-glass">
               {/* Table header â€” static, never scrolls */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-5 border-b border-border-subtle flex-shrink-0">
                 <div>

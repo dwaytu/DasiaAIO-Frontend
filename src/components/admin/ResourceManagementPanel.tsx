@@ -663,6 +663,7 @@ const GuardsTab: FC<{
 
       <EditUserModal
         user={editUser}
+        viewerRole={viewerRole ?? ''}
         onClose={() => setEditUser(null)}
         onSave={handleSaveEditUser}
       />

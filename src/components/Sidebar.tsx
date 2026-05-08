@@ -121,7 +121,7 @@ const Sidebar: FC<SidebarProps> = ({
       {/* Mobile overlay */}
       {isOpen && onClose && (
         <div
-          className="fixed inset-0 z-[var(--z-drawer-backdrop)] bg-black/50 transition-opacity lg:hidden"
+          className="fixed inset-0 z-(--z-drawer-backdrop) bg-black/50 transition-opacity lg:hidden"
           onClick={onClose}
           aria-hidden="true"
         />
@@ -129,7 +129,7 @@ const Sidebar: FC<SidebarProps> = ({
       
       {/* Sidebar */}
       <aside className={`
-        fixed inset-y-0 left-0 z-[var(--z-drawer)]
+        fixed inset-y-0 left-0 z-(--z-drawer)
         w-72 lg:w-[var(--sidebar-width)] soc-sidebar-width-transition
         flex flex-col overflow-y-auto shadow-2xl soc-sidebar-shell
         transform transition-transform duration-200 ease-out
@@ -145,7 +145,7 @@ const Sidebar: FC<SidebarProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="absolute right-3 top-3 min-h-11 min-w-11 rounded p-2 text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)] lg:hidden"
+              className="absolute right-3 top-3 min-h-11 min-w-11 rounded p-2 text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring) lg:hidden"
               aria-label="Close menu"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -154,7 +154,7 @@ const Sidebar: FC<SidebarProps> = ({
             </button>
           )}
           
-          <div className={`mb-4 flex-shrink-0 border-b border-border-subtle pb-4 ${collapsed ? 'lg:flex lg:justify-center' : ''}`}>
+          <div className={`mb-4 shrink-0 border-b border-border-subtle pb-4 ${collapsed ? 'lg:flex lg:justify-center' : ''}`}>
             <SidebarBrand
               onClick={onLogoClick}
               compact={collapsed}
@@ -211,7 +211,7 @@ const Sidebar: FC<SidebarProps> = ({
           <button 
             type="button"
             onClick={onLogout} 
-            className={`soc-sidebar-logout mt-3 flex min-h-11 flex-shrink-0 cursor-pointer items-center gap-2 rounded px-3 py-2 text-sm font-semibold uppercase tracking-wide ${collapsed ? 'lg:justify-center lg:px-2' : ''}`}
+            className={`soc-sidebar-logout mt-3 flex min-h-11 shrink-0 cursor-pointer items-center gap-2 rounded px-3 py-2 text-sm font-semibold uppercase tracking-wide ${collapsed ? 'lg:justify-center lg:px-2' : ''}`}
             title={collapsed ? 'Logout' : undefined}
             aria-label="Logout"
           >

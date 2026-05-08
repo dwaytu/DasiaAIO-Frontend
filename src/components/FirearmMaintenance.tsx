@@ -84,7 +84,7 @@ const FirearmMaintenance: FC<Props> = ({ user, onLogout, onViewChange, activeVie
         ) : (
           <div className="flex-1 flex flex-col p-4 md:p-8 overflow-hidden w-full animate-fade-in">
             <section className="flex flex-col flex-1 min-h-0 rounded overflow-hidden table-glass">
-              <div className="flex-shrink-0 px-6 py-5 border-b border-border-subtle">
+              <div className="shrink-0 px-6 py-5 border-b border-border-subtle">
                 <h2 className="text-xl font-bold text-text-primary">Maintenance Records ({maintenances.length})</h2>
               </div>
               {maintenances.length > 0 ? (

@@ -212,7 +212,7 @@ export const BentoCard = forwardRef<HTMLDivElement, BentoCardProps>(
         {(title || icon) && (
           <div className="flex items-start gap-3 mb-4">
             {icon && (
-              <div className={`flex-shrink-0 ${getIconColorClass(variant)}`}>
+              <div className={`shrink-0 ${getIconColorClass(variant)}`}>
                 {icon}
               </div>
             )}

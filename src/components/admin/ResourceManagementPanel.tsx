@@ -104,7 +104,7 @@ const ResourceManagementPanel: FC<ResourceManagementPanelProps> = ({
             aria-current={activeTab === key ? 'page' : undefined}
             className={`inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-semibold uppercase tracking-wide whitespace-nowrap transition-all duration-300 ${
               activeTab === key
-                ? 'bg-[color:var(--color-info-bg)] text-[color:var(--color-info-text)] border border-[color:var(--color-info-border)]'
+                ? 'bg-(--color-info-bg) text-(--color-info-text) border border-(--color-info-border)'
                 : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover'
             }`}
           >
@@ -378,7 +378,7 @@ const GuardsTab: FC<{
             <button
               type="button"
               onClick={openAddUserModal}
-              className="inline-flex min-h-11 items-center justify-center rounded border border-info-border bg-info-bg px-4 py-2 text-sm font-semibold text-info-text transition-opacity hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
+              className="inline-flex min-h-11 items-center justify-center rounded border border-info-border bg-info-bg px-4 py-2 text-sm font-semibold text-info-text transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
             >
               + Add User
             </button>
@@ -462,7 +462,7 @@ const GuardsTab: FC<{
                   autoComplete="name"
                   value={newUser.fullName}
                   onChange={(event) => setNewUser((prev) => ({ ...prev, fullName: event.target.value }))}
-                  className="w-full rounded border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-[color:var(--color-focus-ring)]"
+                  className="w-full rounded border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-(--color-focus-ring)"
                 />
                 {formErrors.fullName && (
                   <p id="add-user-name-error" className="mt-1 text-xs text-danger-text">{formErrors.fullName}</p>
@@ -483,7 +483,7 @@ const GuardsTab: FC<{
                   autoComplete="username"
                   value={newUser.username}
                   onChange={(event) => setNewUser((prev) => ({ ...prev, username: event.target.value }))}
-                  className="w-full rounded border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-[color:var(--color-focus-ring)]"
+                  className="w-full rounded border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-(--color-focus-ring)"
                 />
                 {formErrors.username && (
                   <p id="add-user-username-error" className="mt-1 text-xs text-danger-text">{formErrors.username}</p>
@@ -504,7 +504,7 @@ const GuardsTab: FC<{
                   autoComplete="email"
                   value={newUser.email}
                   onChange={(event) => setNewUser((prev) => ({ ...prev, email: event.target.value }))}
-                  className="w-full rounded border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-[color:var(--color-focus-ring)]"
+                  className="w-full rounded border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-(--color-focus-ring)"
                 />
                 {formErrors.email && (
                   <p id="add-user-email-error" className="mt-1 text-xs text-danger-text">{formErrors.email}</p>
@@ -526,7 +526,7 @@ const GuardsTab: FC<{
                   autoComplete="new-password"
                   value={newUser.password}
                   onChange={(event) => setNewUser((prev) => ({ ...prev, password: event.target.value }))}
-                  className="w-full rounded border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-[color:var(--color-focus-ring)]"
+                  className="w-full rounded border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-(--color-focus-ring)"
                 />
                 {formErrors.password && (
                   <p id="add-user-password-error" className="mt-1 text-xs text-danger-text">{formErrors.password}</p>
@@ -547,7 +547,7 @@ const GuardsTab: FC<{
                   autoComplete="tel"
                   value={newUser.phoneNumber}
                   onChange={(event) => setNewUser((prev) => ({ ...prev, phoneNumber: event.target.value }))}
-                  className="w-full rounded border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-[color:var(--color-focus-ring)]"
+                  className="w-full rounded border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-(--color-focus-ring)"
                 />
                 {formErrors.phoneNumber && (
                   <p id="add-user-phone-error" className="mt-1 text-xs text-danger-text">{formErrors.phoneNumber}</p>
@@ -566,7 +566,7 @@ const GuardsTab: FC<{
                   aria-describedby={formErrors.role ? 'add-user-role-error' : undefined}
                   value={newUser.role}
                   onChange={(event) => setNewUser((prev) => ({ ...prev, role: event.target.value as UserCreateRole }))}
-                  className="w-full rounded border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-[color:var(--color-focus-ring)]"
+                  className="w-full rounded border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-(--color-focus-ring)"
                 >
                   {creatableRoles.map((role: UserCreateRole) => (
                     <option key={role} value={role}>
@@ -594,7 +594,7 @@ const GuardsTab: FC<{
                       aria-describedby={formErrors.licenseNumber ? 'add-user-license-error' : undefined}
                       value={newUser.licenseNumber}
                       onChange={(e) => setNewUser((prev) => ({ ...prev, licenseNumber: e.target.value }))}
-                      className="w-full rounded border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-[color:var(--color-focus-ring)]"
+                      className="w-full rounded border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-(--color-focus-ring)"
                     />
                     {formErrors.licenseNumber && (
                       <p id="add-user-license-error" className="mt-1 text-xs text-danger-text">{formErrors.licenseNumber}</p>
@@ -613,7 +613,7 @@ const GuardsTab: FC<{
                       aria-describedby={formErrors.licenseIssuedDate ? 'add-user-license-issued-error' : undefined}
                       value={newUser.licenseIssuedDate}
                       onChange={(e) => setNewUser((prev) => ({ ...prev, licenseIssuedDate: e.target.value }))}
-                      className="w-full rounded border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-[color:var(--color-focus-ring)]"
+                      className="w-full rounded border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-(--color-focus-ring)"
                     />
                     {formErrors.licenseIssuedDate && (
                       <p id="add-user-license-issued-error" className="mt-1 text-xs text-danger-text">{formErrors.licenseIssuedDate}</p>
@@ -632,7 +632,7 @@ const GuardsTab: FC<{
                       aria-describedby={formErrors.licenseExpiryDate ? 'add-user-license-expiry-error' : undefined}
                       value={newUser.licenseExpiryDate}
                       onChange={(e) => setNewUser((prev) => ({ ...prev, licenseExpiryDate: e.target.value }))}
-                      className="w-full rounded border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-[color:var(--color-focus-ring)]"
+                      className="w-full rounded border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-(--color-focus-ring)"
                     />
                     {formErrors.licenseExpiryDate && (
                       <p id="add-user-license-expiry-error" className="mt-1 text-xs text-danger-text">{formErrors.licenseExpiryDate}</p>
@@ -645,14 +645,14 @@ const GuardsTab: FC<{
                 <button
                   type="button"
                   onClick={closeAddUserModal}
-                  className="inline-flex min-h-11 items-center justify-center rounded border border-border px-4 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
+                  className="inline-flex min-h-11 items-center justify-center rounded border border-border px-4 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
                   disabled={isSubmittingUser}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="inline-flex min-h-11 items-center justify-center rounded border border-info-border bg-info-bg px-4 py-2 text-sm font-semibold text-info-text transition-opacity hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)] disabled:opacity-60"
+                  className="inline-flex min-h-11 items-center justify-center rounded border border-info-border bg-info-bg px-4 py-2 text-sm font-semibold text-info-text transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring) disabled:opacity-60"
                   disabled={isSubmittingUser}
                 >
                   {isSubmittingUser ? 'Creating...' : 'Create User'}
@@ -744,7 +744,7 @@ const FirearmsTab: FC = () => {
         <h2 className="soc-section-title">Firearm Inventory ({firearms.length})</h2>
         <button
           onClick={() => setShowAddModal(true)}
-          className="inline-flex items-center gap-1 rounded px-4 py-2 text-sm font-semibold bg-[color:var(--color-info-bg)] text-[color:var(--color-info-text)] border border-[color:var(--color-info-border)] hover:opacity-90 transition-opacity"
+          className="inline-flex items-center gap-1 rounded px-4 py-2 text-sm font-semibold bg-(--color-info-bg) text-(--color-info-text) border border-(--color-info-border) hover:opacity-90 transition-opacity"
         >
           + Add Firearm
         </button>
@@ -765,18 +765,18 @@ const FirearmsTab: FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label htmlFor="firearm-serial" className="block text-xs font-semibold text-text-secondary mb-1">Serial Number</label>
-              <input id="firearm-serial" type="text" required value={newFirearm.serialNumber} onChange={(e) => setNewFirearm({ ...newFirearm, serialNumber: e.target.value })} className="w-full px-3 py-2 text-sm border border-border rounded bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-[color:var(--color-focus-ring)]" />
+              <input id="firearm-serial" type="text" required value={newFirearm.serialNumber} onChange={(e) => setNewFirearm({ ...newFirearm, serialNumber: e.target.value })} className="w-full px-3 py-2 text-sm border border-border rounded bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-(--color-focus-ring)" />
             </div>
             <div>
               <label htmlFor="firearm-model" className="block text-xs font-semibold text-text-secondary mb-1">Model</label>
-              <input id="firearm-model" type="text" required value={newFirearm.model} onChange={(e) => setNewFirearm({ ...newFirearm, model: e.target.value })} className="w-full px-3 py-2 text-sm border border-border rounded bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-[color:var(--color-focus-ring)]" />
+              <input id="firearm-model" type="text" required value={newFirearm.model} onChange={(e) => setNewFirearm({ ...newFirearm, model: e.target.value })} className="w-full px-3 py-2 text-sm border border-border rounded bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-(--color-focus-ring)" />
             </div>
             <div>
               <label htmlFor="firearm-caliber" className="block text-xs font-semibold text-text-secondary mb-1">Caliber</label>
-              <input id="firearm-caliber" type="text" required value={newFirearm.caliber} onChange={(e) => setNewFirearm({ ...newFirearm, caliber: e.target.value })} className="w-full px-3 py-2 text-sm border border-border rounded bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-[color:var(--color-focus-ring)]" placeholder="e.g., 9mm" />
+              <input id="firearm-caliber" type="text" required value={newFirearm.caliber} onChange={(e) => setNewFirearm({ ...newFirearm, caliber: e.target.value })} className="w-full px-3 py-2 text-sm border border-border rounded bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-(--color-focus-ring)" placeholder="e.g., 9mm" />
             </div>
           </div>
-          <button type="submit" disabled={submitting} className="w-full rounded bg-[color:var(--color-info-bg)] text-[color:var(--color-info-text)] border border-[color:var(--color-info-border)] py-2 font-semibold text-sm hover:opacity-90 disabled:opacity-50 transition-opacity">
+          <button type="submit" disabled={submitting} className="w-full rounded bg-(--color-info-bg) text-(--color-info-text) border border-(--color-info-border) py-2 font-semibold text-sm hover:opacity-90 disabled:opacity-50 transition-opacity">
             {submitting ? 'Adding...' : 'Add Firearm'}
           </button>
         </form>
@@ -911,7 +911,7 @@ const VehiclesTab: FC = () => {
         <h2 className="soc-section-title">Vehicle Fleet ({cars.length})</h2>
         <button
           onClick={() => setShowAddModal(true)}
-          className="inline-flex items-center gap-1 rounded px-4 py-2 text-sm font-semibold bg-[color:var(--color-info-bg)] text-[color:var(--color-info-text)] border border-[color:var(--color-info-border)] hover:opacity-90 transition-opacity"
+          className="inline-flex items-center gap-1 rounded px-4 py-2 text-sm font-semibold bg-(--color-info-bg) text-(--color-info-text) border border-(--color-info-border) hover:opacity-90 transition-opacity"
         >
           + Add Vehicle
         </button>
@@ -932,30 +932,30 @@ const VehiclesTab: FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             <div>
               <label htmlFor="vehicle-plate" className="block text-xs font-semibold text-text-secondary mb-1">License Plate</label>
-              <input id="vehicle-plate" type="text" required value={newCar.licensePlate} onChange={(e) => setNewCar({ ...newCar, licensePlate: e.target.value })} className="w-full px-3 py-2 text-sm border border-border rounded bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-[color:var(--color-focus-ring)]" />
+              <input id="vehicle-plate" type="text" required value={newCar.licensePlate} onChange={(e) => setNewCar({ ...newCar, licensePlate: e.target.value })} className="w-full px-3 py-2 text-sm border border-border rounded bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-(--color-focus-ring)" />
             </div>
             <div>
               <label htmlFor="vehicle-vin" className="block text-xs font-semibold text-text-secondary mb-1">VIN</label>
-              <input id="vehicle-vin" type="text" required value={newCar.vin} onChange={(e) => setNewCar({ ...newCar, vin: e.target.value })} className="w-full px-3 py-2 text-sm border border-border rounded bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-[color:var(--color-focus-ring)]" />
+              <input id="vehicle-vin" type="text" required value={newCar.vin} onChange={(e) => setNewCar({ ...newCar, vin: e.target.value })} className="w-full px-3 py-2 text-sm border border-border rounded bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-(--color-focus-ring)" />
             </div>
             <div>
               <label htmlFor="vehicle-model" className="block text-xs font-semibold text-text-secondary mb-1">Model</label>
-              <input id="vehicle-model" type="text" required value={newCar.model} onChange={(e) => setNewCar({ ...newCar, model: e.target.value })} className="w-full px-3 py-2 text-sm border border-border rounded bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-[color:var(--color-focus-ring)]" />
+              <input id="vehicle-model" type="text" required value={newCar.model} onChange={(e) => setNewCar({ ...newCar, model: e.target.value })} className="w-full px-3 py-2 text-sm border border-border rounded bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-(--color-focus-ring)" />
             </div>
             <div>
               <label htmlFor="vehicle-mfr" className="block text-xs font-semibold text-text-secondary mb-1">Manufacturer</label>
-              <input id="vehicle-mfr" type="text" required value={newCar.manufacturer} onChange={(e) => setNewCar({ ...newCar, manufacturer: e.target.value })} className="w-full px-3 py-2 text-sm border border-border rounded bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-[color:var(--color-focus-ring)]" />
+              <input id="vehicle-mfr" type="text" required value={newCar.manufacturer} onChange={(e) => setNewCar({ ...newCar, manufacturer: e.target.value })} className="w-full px-3 py-2 text-sm border border-border rounded bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-(--color-focus-ring)" />
             </div>
             <div>
               <label htmlFor="vehicle-cap" className="block text-xs font-semibold text-text-secondary mb-1">Capacity (kg)</label>
-              <input id="vehicle-cap" type="number" required value={newCar.capacityKg} onChange={(e) => setNewCar({ ...newCar, capacityKg: parseInt(e.target.value) || 0 })} className="w-full px-3 py-2 text-sm border border-border rounded bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-[color:var(--color-focus-ring)]" />
+              <input id="vehicle-cap" type="number" required value={newCar.capacityKg} onChange={(e) => setNewCar({ ...newCar, capacityKg: parseInt(e.target.value) || 0 })} className="w-full px-3 py-2 text-sm border border-border rounded bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-(--color-focus-ring)" />
             </div>
             <div>
               <label htmlFor="vehicle-pax" className="block text-xs font-semibold text-text-secondary mb-1">Passengers</label>
-              <input id="vehicle-pax" type="number" required min={1} max={20} value={newCar.passengerCapacity} onChange={(e) => setNewCar({ ...newCar, passengerCapacity: parseInt(e.target.value) || 4 })} className="w-full px-3 py-2 text-sm border border-border rounded bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-[color:var(--color-focus-ring)]" />
+              <input id="vehicle-pax" type="number" required min={1} max={20} value={newCar.passengerCapacity} onChange={(e) => setNewCar({ ...newCar, passengerCapacity: parseInt(e.target.value) || 4 })} className="w-full px-3 py-2 text-sm border border-border rounded bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-(--color-focus-ring)" />
             </div>
           </div>
-          <button type="submit" disabled={submitting} className="w-full rounded bg-[color:var(--color-info-bg)] text-[color:var(--color-info-text)] border border-[color:var(--color-info-border)] py-2 font-semibold text-sm hover:opacity-90 disabled:opacity-50 transition-opacity">
+          <button type="submit" disabled={submitting} className="w-full rounded bg-(--color-info-bg) text-(--color-info-text) border border-(--color-info-border) py-2 font-semibold text-sm hover:opacity-90 disabled:opacity-50 transition-opacity">
             {submitting ? 'Adding...' : 'Add Vehicle'}
           </button>
         </form>
@@ -1053,7 +1053,7 @@ const ClientSitesTab: FC = () => {
         <h2 className="soc-section-title">Client Sites ({clientSites.length})</h2>
         <button
           onClick={() => setShowAddModal(true)}
-          className="inline-flex items-center gap-1 rounded px-4 py-2 text-sm font-semibold bg-[color:var(--color-info-bg)] text-[color:var(--color-info-text)] border border-[color:var(--color-info-border)] hover:opacity-90 transition-opacity"
+          className="inline-flex items-center gap-1 rounded px-4 py-2 text-sm font-semibold bg-(--color-info-bg) text-(--color-info-text) border border-(--color-info-border) hover:opacity-90 transition-opacity"
         >
           + Add Site
         </button>
@@ -1074,22 +1074,22 @@ const ClientSitesTab: FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             <div className="sm:col-span-2 lg:col-span-1">
               <label htmlFor="site-name" className="block text-xs font-semibold text-text-secondary mb-1">Site Name</label>
-              <input id="site-name" type="text" required value={newSite.name} onChange={(e) => setNewSite({ ...newSite, name: e.target.value })} className="w-full px-3 py-2 text-sm border border-border rounded bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-[color:var(--color-focus-ring)]" />
+              <input id="site-name" type="text" required value={newSite.name} onChange={(e) => setNewSite({ ...newSite, name: e.target.value })} className="w-full px-3 py-2 text-sm border border-border rounded bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-(--color-focus-ring)" />
             </div>
             <div>
               <label htmlFor="site-lat" className="block text-xs font-semibold text-text-secondary mb-1">Latitude</label>
-              <input id="site-lat" type="number" step="any" required value={newSite.latitude} onChange={(e) => setNewSite({ ...newSite, latitude: parseFloat(e.target.value) || 0 })} className="w-full px-3 py-2 text-sm border border-border rounded bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-[color:var(--color-focus-ring)]" />
+              <input id="site-lat" type="number" step="any" required value={newSite.latitude} onChange={(e) => setNewSite({ ...newSite, latitude: parseFloat(e.target.value) || 0 })} className="w-full px-3 py-2 text-sm border border-border rounded bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-(--color-focus-ring)" />
             </div>
             <div>
               <label htmlFor="site-lng" className="block text-xs font-semibold text-text-secondary mb-1">Longitude</label>
-              <input id="site-lng" type="number" step="any" required value={newSite.longitude} onChange={(e) => setNewSite({ ...newSite, longitude: parseFloat(e.target.value) || 0 })} className="w-full px-3 py-2 text-sm border border-border rounded bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-[color:var(--color-focus-ring)]" />
+              <input id="site-lng" type="number" step="any" required value={newSite.longitude} onChange={(e) => setNewSite({ ...newSite, longitude: parseFloat(e.target.value) || 0 })} className="w-full px-3 py-2 text-sm border border-border rounded bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-(--color-focus-ring)" />
             </div>
             <div className="sm:col-span-2 lg:col-span-1">
               <label htmlFor="site-address" className="block text-xs font-semibold text-text-secondary mb-1">Address</label>
-              <input id="site-address" type="text" value={newSite.address || ''} onChange={(e) => setNewSite({ ...newSite, address: e.target.value })} className="w-full px-3 py-2 text-sm border border-border rounded bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-[color:var(--color-focus-ring)]" />
+              <input id="site-address" type="text" value={newSite.address || ''} onChange={(e) => setNewSite({ ...newSite, address: e.target.value })} className="w-full px-3 py-2 text-sm border border-border rounded bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-(--color-focus-ring)" />
             </div>
           </div>
-          <button type="submit" disabled={submitting} className="w-full rounded bg-[color:var(--color-info-bg)] text-[color:var(--color-info-text)] border border-[color:var(--color-info-border)] py-2 font-semibold text-sm hover:opacity-90 disabled:opacity-50 transition-opacity">
+          <button type="submit" disabled={submitting} className="w-full rounded bg-(--color-info-bg) text-(--color-info-text) border border-(--color-info-border) py-2 font-semibold text-sm hover:opacity-90 disabled:opacity-50 transition-opacity">
             {submitting ? 'Creating...' : 'Create Site'}
           </button>
         </form>

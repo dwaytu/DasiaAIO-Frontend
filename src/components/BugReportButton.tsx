@@ -67,7 +67,7 @@ const BugReportButton: React.FC<BugReportButtonProps> = ({ userId }) => {
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="fixed right-4 z-[58] rounded-full bg-red-500 p-3.5 text-white shadow-lg transition-all hover:scale-105 hover:bg-red-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
+        className="fixed right-4 z-[58] rounded-full bg-red-500 p-3.5 text-white shadow-lg transition-all hover:scale-105 hover:bg-red-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
         style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}
         title="Report a Bug"
       >
@@ -88,7 +88,7 @@ const BugReportButton: React.FC<BugReportButtonProps> = ({ userId }) => {
                 <button
                   type="button"
                   onClick={() => setIsOpen(false)}
-                  className="flex min-h-11 min-w-11 items-center justify-center rounded-md text-3xl text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
+                  className="flex min-h-11 min-w-11 items-center justify-center rounded-md text-3xl text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
                 >
                   ×
                 </button>

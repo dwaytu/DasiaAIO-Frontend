@@ -167,7 +167,7 @@ export default function AppShell() {
       {/* ── Connectivity banner ──────────────────────────────────────────── */}
       {showConnectivityBanner && !hasBlockingOverlay ? (
         <div
-          className={`pointer-events-none fixed left-[calc(1rem+env(safe-area-inset-left,0px))] right-[calc(1rem+env(safe-area-inset-right,0px))] top-[calc(1rem+env(safe-area-inset-top,0px))] z-[var(--z-toast)] rounded border border-danger-border bg-danger-bg p-3 text-sm text-danger-text shadow-lg ${
+          className={`pointer-events-none fixed left-[calc(1rem+env(safe-area-inset-left,0px))] right-[calc(1rem+env(safe-area-inset-right,0px))] top-[calc(1rem+env(safe-area-inset-top,0px))] z-(--z-toast) rounded border border-danger-border bg-danger-bg p-3 text-sm text-danger-text shadow-lg ${
             isGuardWorkspaceView
               ? 'lg:left-[calc(1rem+env(safe-area-inset-left,0px))] lg:right-auto lg:top-[calc(5rem+env(safe-area-inset-top,0px))] lg:bottom-auto lg:w-[min(24rem,calc(100vw-2rem))]'
               : 'lg:left-[calc(18rem+1rem)] lg:right-auto lg:top-auto lg:bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] lg:w-[min(24rem,calc(100vw-20rem))]'
@@ -192,7 +192,7 @@ export default function AppShell() {
       !hasBlockingOverlay &&
       !locationBannerDismissed ? (
         <div
-          className={`soc-warning-banner fixed left-4 right-4 z-[var(--z-banner)] rounded p-3 text-sm shadow-lg ${
+          className={`soc-warning-banner fixed left-4 right-4 z-(--z-banner) rounded p-3 text-sm shadow-lg ${
             isGuardWorkspaceView
               ? 'md:left-4 md:right-auto md:w-[min(24rem,calc(100vw-2rem))]'
               : 'md:left-auto md:right-4 md:w-[min(28rem,calc(100vw-2rem))]'
@@ -231,7 +231,7 @@ export default function AppShell() {
       {/* ── ToA modal (full-screen blocking) ────────────────────────────── */}
       {isLoggedIn && !hasAcceptedToa ? (
         <div
-          className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-(--z-modal) flex items-center justify-center p-4 backdrop-blur-sm"
           style={{ background: 'var(--color-overlay)' }}
         >
           <section
@@ -369,7 +369,7 @@ export default function AppShell() {
       {/* ── Location consent upgrade modal (legacy users) ────────────────── */}
       {showLocationConsentUpgrade ? (
         <div
-          className="fixed inset-0 z-[var(--z-modal-profile)] flex items-center justify-center p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-(--z-modal-profile) flex items-center justify-center p-4 backdrop-blur-sm"
           style={{ background: 'var(--color-overlay)' }}
         >
           <section
@@ -408,7 +408,7 @@ export default function AppShell() {
       {/* ── What's new modal ─────────────────────────────────────────────── */}
       {whatsNewPrompt && !releasePrompt ? (
         <div
-          className="fixed inset-0 z-[var(--z-modal-settings)] flex items-center justify-center p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-(--z-modal-settings) flex items-center justify-center p-4 backdrop-blur-sm"
           style={{ background: 'var(--color-overlay)' }}
         >
           <section
@@ -440,7 +440,7 @@ export default function AppShell() {
       {/* ── Release update modal ─────────────────────────────────────────── */}
       {releasePrompt ? (
         <div
-          className="fixed inset-0 z-[var(--z-modal-inbox)] flex items-center justify-center p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-(--z-modal-inbox) flex items-center justify-center p-4 backdrop-blur-sm"
           style={{ background: 'var(--color-overlay)' }}
         >
           <section
@@ -524,7 +524,7 @@ export default function AppShell() {
           {/* Bottom tab bar */}
           <nav
             aria-label="Mobile navigation"
-            className="fixed bottom-0 left-0 right-0 z-[var(--z-mobile-nav)] border-t border-border-elevated bg-surface/95 backdrop-blur-md px-2 pb-[calc(0.25rem+env(safe-area-inset-bottom,0px))] pt-1 md:hidden"
+            className="fixed bottom-0 left-0 right-0 z-(--z-mobile-nav) border-t border-border-elevated bg-surface/95 backdrop-blur-md px-2 pb-[calc(0.25rem+env(safe-area-inset-bottom,0px))] pt-1 md:hidden"
           >
             <ul className="grid grid-cols-5 gap-0.5">
               {mobileBottomTabs.map(tab => {

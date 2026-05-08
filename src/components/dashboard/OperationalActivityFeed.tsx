@@ -73,24 +73,24 @@ const ICONS: Record<ActivityKind, JSX.Element> = {
 const OperationalActivityFeed: FC<OperationalActivityFeedProps> = ({ items, title = 'Operational Activity', subtitle = 'Real-time system events' }) => {
   return (
     <section
-      className="command-panel rounded border border-[color:var(--color-border)] bg-[color:var(--color-surface)]"
+      className="command-panel rounded border border-(--color-border) bg-(--color-surface)"
       aria-label="Operational Activity Feed"
     >
-      <div className="flex items-center justify-between border-b border-[color:var(--color-border)] px-4 py-3">
+      <div className="flex items-center justify-between border-b border-(--color-border) px-4 py-3">
         <div className="flex items-center gap-2">
-          <svg aria-hidden="true" className="h-4 w-4 text-[color:var(--color-text)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+          <svg aria-hidden="true" className="h-4 w-4 text-(--color-text)" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
             <path strokeLinecap="round" strokeLinejoin="round" d="M4 5h16M4 12h16M4 19h16" />
           </svg>
           <div>
-            <p className="font-mono text-xs font-semibold uppercase tracking-wider text-[color:var(--color-text)]">{title}</p>
-            <p className="font-mono text-[11px] text-[color:var(--color-muted-text)]">{subtitle}</p>
+            <p className="font-mono text-xs font-semibold uppercase tracking-wider text-(--color-text)">{title}</p>
+            <p className="font-mono text-[11px] text-(--color-muted-text)">{subtitle}</p>
           </div>
         </div>
       </div>
 
       <div className="max-h-80 overflow-auto px-3 py-2" role="list" aria-label="Activity events">
         {items.length === 0 && (
-          <p className="px-2 py-4 text-center font-mono text-xs text-[color:var(--color-muted-text)]">
+          <p className="px-2 py-4 text-center font-mono text-xs text-(--color-muted-text)">
             No recent activity.
           </p>
         )}
@@ -99,12 +99,12 @@ const OperationalActivityFeed: FC<OperationalActivityFeedProps> = ({ items, titl
           <div
             key={item.id}
             role="listitem"
-            className="flex items-start gap-3 rounded px-2 py-2 hover:bg-[color:var(--color-border)]/40"
+            className="flex items-start gap-3 rounded px-2 py-2 hover:bg-(--color-border)/40"
           >
             <div className="mt-0.5">{ICONS[item.kind]}</div>
             <div className="min-w-0 flex-1">
-              <p className="font-mono text-[11px] text-[color:var(--color-muted-text)]">{item.timeLabel}</p>
-              <p className="truncate font-mono text-xs text-[color:var(--color-text)]" title={item.description}>
+              <p className="font-mono text-[11px] text-(--color-muted-text)">{item.timeLabel}</p>
+              <p className="truncate font-mono text-xs text-(--color-text)" title={item.description}>
                 {item.description}
               </p>
             </div>

@@ -52,16 +52,16 @@ const AccountManager: FC<AccountManagerProps> = ({ user, onLogout, onNavigateToP
   }
 
   return (
-    <div className="relative z-[var(--z-floating)]">
+    <div className="relative z-(--z-floating)">
       <button
         ref={buttonRef}
         type="button"
         onClick={() => setOpen(!resolvedOpen)}
-        className={`group flex min-h-11 items-center gap-2 rounded px-2 py-2 transition-colors hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)] md:gap-3 md:px-3 ${resolvedOpen ? 'bg-surface-hover' : ''}`}
+        className={`group flex min-h-11 items-center gap-2 rounded px-2 py-2 transition-colors hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring) md:gap-3 md:px-3 ${resolvedOpen ? 'bg-surface-hover' : ''}`}
         aria-label="Open profile menu"
         aria-expanded={resolvedOpen}
       >
-        <div className="soc-avatar-gradient w-8 h-8 md:w-9 md:h-9 rounded-full flex items-center justify-center text-white font-bold text-xs md:text-sm shadow-md overflow-hidden flex-shrink-0">
+        <div className="soc-avatar-gradient w-8 h-8 md:w-9 md:h-9 rounded-full flex items-center justify-center text-white font-bold text-xs md:text-sm shadow-md overflow-hidden shrink-0">
           {user.profilePhoto ? (
             <img src={user.profilePhoto} alt="Profile" className="w-full h-full object-cover" />
           ) : (
@@ -80,10 +80,10 @@ const AccountManager: FC<AccountManagerProps> = ({ user, onLogout, onNavigateToP
       </button>
 
       {resolvedOpen && (
-        <div className="soc-dropdown-surface absolute right-0 z-[var(--z-floating)] mt-2 w-72 max-w-[calc(100vw-1rem)] rounded py-2 animate-fade-in md:w-80" role="dialog" aria-label="Profile menu">
+        <div className="soc-dropdown-surface absolute right-0 z-(--z-floating) mt-2 w-72 max-w-[calc(100vw-1rem)] rounded py-2 animate-fade-in md:w-80" role="dialog" aria-label="Profile menu">
           <div className="px-4 py-3 border-b border-border">
             <div className="flex items-center gap-3">
-              <div className="soc-avatar-gradient w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-base shadow-md overflow-hidden flex-shrink-0">
+              <div className="soc-avatar-gradient w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-base shadow-md overflow-hidden shrink-0">
                 {user.profilePhoto ? (
                   <img src={user.profilePhoto} alt="Profile" className="w-full h-full object-cover" />
                 ) : (

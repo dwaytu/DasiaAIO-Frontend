@@ -16,12 +16,25 @@ interface User {
 
 interface EditUserModalProps {
   user: User | null
+  viewerRole: string
   onClose: () => void
   onSave: (updatedUser: Partial<User>) => Promise<void>
 }
 
-const EditUserModal: FC<EditUserModalProps> = ({ user, onClose, onSave }) => {
+const normalizeRole = (role?: string) => {
+  const normalized = (role || '').trim().toLowerCase()
+  return normalized === 'user' ? 'guard' : normalized
+}
+
+const EditUserModal: FC<EditUserModalProps> = ({ user, viewerRole, onClose, onSave }) => {
+  const normalizedViewerRole = normalizeRole(viewerRole)
+  const normalizedTargetRole = normalizeRole(user?.role)
+  const canEditCredentials =
+    normalizedViewerRole === 'superadmin' ||
+    ((normalizedViewerRole === 'admin' || normalizedViewerRole === 'supervisor') && normalizedTargetRole === 'guard')
   const [formData, setFormData] = useState({
+    email: user?.email || '',
+    username: user?.username || '',
     fullName: user?.full_name || '',
     phoneNumber: user?.phone_number || '',
     licenseNumber: user?.license_number || '',
@@ -34,6 +47,8 @@ const EditUserModal: FC<EditUserModalProps> = ({ user, onClose, onSave }) => {
 
   useEffect(() => {
     setFormData({
+      email: user?.email || '',
+      username: user?.username || '',
       fullName: user?.full_name || '',
       phoneNumber: user?.phone_number || '',
       licenseNumber: user?.license_number || '',
@@ -60,14 +75,30 @@ const EditUserModal: FC<EditUserModalProps> = ({ user, onClose, onSave }) => {
     setError('')
 
     try {
-      await onSave({
+      const payload: Partial<User> & {
+        fullName?: string
+        phoneNumber?: string
+        licenseNumber?: string
+        licenseIssuedDate?: string
+        licenseExpiryDate?: string
+        address?: string
+        email?: string
+        username?: string
+      } = {
         full_name: formData.fullName,
         phone_number: formData.phoneNumber,
         license_number: formData.licenseNumber,
         license_issued_date: formData.licenseIssuedDate,
         license_expiry_date: formData.licenseExpiryDate,
         address: formData.address,
-      })
+      }
+
+      if (canEditCredentials) {
+        payload.email = formData.email
+        payload.username = formData.username
+      }
+
+      await onSave(payload)
       onClose()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update user')
@@ -89,6 +120,42 @@ const EditUserModal: FC<EditUserModalProps> = ({ user, onClose, onSave }) => {
         </div>
       )}
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label htmlFor="email" className="mb-1 block text-sm font-semibold text-text-secondary">Email</label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              placeholder="Enter email"
+              disabled={!canEditCredentials}
+              className="w-full rounded border border-border px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-info disabled:cursor-not-allowed disabled:opacity-60"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="username" className="mb-1 block text-sm font-semibold text-text-secondary">Username</label>
+            <input
+              type="text"
+              id="username"
+              name="username"
+              value={formData.username}
+              onChange={handleChange}
+              placeholder="Enter username"
+              disabled={!canEditCredentials}
+              className="w-full rounded border border-border px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-info disabled:cursor-not-allowed disabled:opacity-60"
+            />
+          </div>
+        </div>
+
+        {!canEditCredentials ? (
+          <p className="text-xs text-text-tertiary">
+            Superadmin can edit email and username for all users. Admin and supervisor can edit guard credentials only.
+          </p>
+        ) : null}
+
         <div>
           <label htmlFor="fullName" className="mb-1 block text-sm font-semibold text-text-secondary">Full Name</label>
           <input
@@ -169,14 +236,14 @@ const EditUserModal: FC<EditUserModalProps> = ({ user, onClose, onSave }) => {
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex min-h-11 items-center justify-center rounded border border-border px-4 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
+            className="inline-flex min-h-11 items-center justify-center rounded border border-border px-4 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
             disabled={loading}
           >
             Cancel
           </button>
           <button
             type="submit"
-            className="inline-flex min-h-11 items-center justify-center rounded border border-info-border bg-info-bg px-4 py-2 text-sm font-semibold text-info-text transition-opacity hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)] disabled:opacity-60"
+            className="inline-flex min-h-11 items-center justify-center rounded border border-info-border bg-info-bg px-4 py-2 text-sm font-semibold text-info-text transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring) disabled:opacity-60"
             disabled={loading}
           >
             {loading ? 'Saving...' : 'Save Changes'}

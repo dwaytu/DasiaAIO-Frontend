@@ -72,7 +72,7 @@ function SkeletonRow(): React.ReactElement {
   return (
     <div className="flex items-start gap-3 p-4 animate-pulse">
       <div className="w-1 self-stretch rounded-full bg-surface-elevated" />
-      <div className="h-6 w-6 rounded bg-surface-elevated flex-shrink-0" />
+      <div className="h-6 w-6 rounded bg-surface-elevated shrink-0" />
       <div className="flex-1 space-y-2">
         <div className="h-4 w-2/5 rounded bg-surface-elevated" />
         <div className="h-3 w-3/4 rounded bg-surface-elevated" />
@@ -132,10 +132,10 @@ export function ActionInbox({
                 >
                   <span
                     aria-hidden="true"
-                    className={`w-1 self-stretch rounded-full flex-shrink-0 ${PRIORITY_BAR_CLASS[item.priority]}`}
+                    className={`w-1 self-stretch rounded-full shrink-0 ${PRIORITY_BAR_CLASS[item.priority]}`}
                   />
 
-                  <span aria-hidden="true" className="text-text-secondary mt-0.5 flex-shrink-0">
+                  <span aria-hidden="true" className="text-text-secondary mt-0.5 shrink-0">
                     <Icon size={16} />
                   </span>
 
@@ -147,7 +147,7 @@ export function ActionInbox({
                         {item.title}
                       </span>
 
-                      <span className="text-xs text-text-secondary whitespace-nowrap flex-shrink-0">
+                      <span className="text-xs text-text-secondary whitespace-nowrap shrink-0">
                         {formatRelativeTime(item.timestamp)}
                       </span>
                     </div>

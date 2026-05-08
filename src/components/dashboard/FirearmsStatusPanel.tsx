@@ -18,13 +18,13 @@ const FirearmsStatusPanel: FC<FirearmsStatusPanelProps> = ({
   const available = Math.max(firearms.length - issued - maintenance, 0)
 
   return (
-    <section className="command-panel rounded border border-[color:var(--color-border)] bg-[color:var(--color-surface)]" aria-label="Firearms status">
-      <div className="flex items-center justify-between border-b border-[color:var(--color-border)] px-4 py-3">
+    <section className="command-panel rounded border border-(--color-border) bg-(--color-surface)" aria-label="Firearms status">
+      <div className="flex items-center justify-between border-b border-(--color-border) px-4 py-3">
         <div>
-          <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-text)]">Firearms Status</p>
-          <p className="font-mono text-[11px] text-[color:var(--color-muted-text)]">Availability and assignment posture</p>
+          <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-(--color-text)">Firearms Status</p>
+          <p className="font-mono text-[11px] text-(--color-muted-text)">Availability and assignment posture</p>
         </div>
-        {lastUpdated && <span className="font-mono text-[11px] text-[color:var(--color-muted-text)]">Updated {lastUpdated}</span>}
+        {lastUpdated && <span className="font-mono text-[11px] text-(--color-muted-text)">Updated {lastUpdated}</span>}
       </div>
 
       <div className="space-y-3 px-4 py-3" role="region" aria-live="polite">
@@ -43,7 +43,7 @@ const FirearmsStatusPanel: FC<FirearmsStatusPanelProps> = ({
           </div>
         </div>
 
-        {loading && <p className="text-center font-mono text-xs text-[color:var(--color-muted-text)]">Loading firearm status...</p>}
+        {loading && <p className="text-center font-mono text-xs text-(--color-muted-text)">Loading firearm status...</p>}
 
         {!loading && error && (
           <p role="alert" className="text-center font-mono text-xs text-red-400">
@@ -52,7 +52,7 @@ const FirearmsStatusPanel: FC<FirearmsStatusPanelProps> = ({
         )}
 
         {!loading && !error && firearms.length === 0 && (
-          <p className="text-center font-mono text-xs text-[color:var(--color-muted-text)]">No firearm records available.</p>
+          <p className="text-center font-mono text-xs text-(--color-muted-text)">No firearm records available.</p>
         )}
 
         {!loading && !error && firearms.length > 0 && (
@@ -63,13 +63,13 @@ const FirearmsStatusPanel: FC<FirearmsStatusPanelProps> = ({
               const status = (item.status || 'available').toUpperCase()
 
               return (
-                <li key={item.id || `${serial}-${index}`} className="rounded-md border border-[color:var(--color-border)]/60 bg-[color:var(--color-bg)]/30 px-3 py-2 shadow-inner shadow-black/20">
+                <li key={item.id || `${serial}-${index}`} className="rounded-md border border-(--color-border)/60 bg-(--color-bg)/30 px-3 py-2 shadow-inner shadow-black/20">
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="truncate font-mono text-xs font-semibold text-[color:var(--color-text)]">{serial}</p>
-                      <p className="truncate font-mono text-[11px] text-[color:var(--color-muted-text)]">{weaponType}</p>
+                      <p className="truncate font-mono text-xs font-semibold text-(--color-text)">{serial}</p>
+                      <p className="truncate font-mono text-[11px] text-(--color-muted-text)">{weaponType}</p>
                     </div>
-                    <span className="inline-flex rounded-full border border-[color:var(--color-border)] px-2 py-0.5 font-mono text-[11px] uppercase text-[color:var(--color-text)]">
+                    <span className="inline-flex rounded-full border border-(--color-border) px-2 py-0.5 font-mono text-[11px] uppercase text-(--color-text)">
                       {status}
                     </span>
                   </div>

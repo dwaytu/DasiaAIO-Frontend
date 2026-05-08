@@ -149,7 +149,7 @@ const OffDutyPanel: FC<OffDutyPanelProps> = ({ scheduleItems }) => {
                       onChange={() => toggleEquipment(index)}
                     />
                     <Icon
-                      className={`h-5 w-5 flex-shrink-0 ${checked ? 'text-success-text' : 'text-text-tertiary'}`}
+                      className={`h-5 w-5 shrink-0 ${checked ? 'text-success-text' : 'text-text-tertiary'}`}
                       aria-hidden="true"
                     />
                     <span className={`text-sm font-medium ${checked ? 'text-text-primary' : 'text-text-secondary'}`}>

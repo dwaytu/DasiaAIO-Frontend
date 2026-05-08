@@ -86,8 +86,8 @@ const IncidentSeverityClassifier: FC<IncidentSeverityClassifierProps> = ({ incid
   }
 
   return (
-    <section className="command-panel rounded border border-[color:var(--color-border)] bg-[color:var(--color-surface)]" aria-label="Incident severity classifier">
-      <div className="flex items-center justify-between border-b border-[color:var(--color-border)] px-4 py-3">
+    <section className="command-panel rounded border border-(--color-border) bg-(--color-surface)" aria-label="Incident severity classifier">
+      <div className="flex items-center justify-between border-b border-(--color-border) px-4 py-3">
         <div>
           <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-text-primary">Incident Severity Classifier</p>
           <p className="font-mono text-[11px] text-text-secondary">Heuristic severity estimation — results are advisory, not authoritative</p>

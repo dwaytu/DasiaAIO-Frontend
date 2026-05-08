@@ -49,7 +49,7 @@ function formatRelativeTime(iso: string): string {
 function SkeletonRow(): React.ReactElement {
   return (
     <div className="flex items-start gap-3 px-4 py-3 animate-pulse">
-      <div className="flex flex-col items-center flex-shrink-0">
+      <div className="flex flex-col items-center shrink-0">
         <div className="w-6 h-6 rounded-full bg-surface-elevated" />
         <div className="w-0.5 flex-1 mt-1 bg-surface-elevated min-h-[24px]" />
       </div>
@@ -100,10 +100,10 @@ export function WorkflowTimeline({
                     className="flex items-start gap-3 px-4 pt-3 pb-1 cursor-default"
                   >
                     {/* Left: icon + connector line */}
-                    <div className="flex flex-col items-center flex-shrink-0" aria-hidden="true">
+                    <div className="flex flex-col items-center shrink-0" aria-hidden="true">
                       <span
                         className={[
-                          'w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0',
+                          'w-6 h-6 rounded-full flex items-center justify-center shrink-0',
                           STATUS_ICON_CLASS[entry.status],
                         ].join(' ')}
                       >
@@ -122,12 +122,12 @@ export function WorkflowTimeline({
                             {entry.title}
                           </span>
                           {entry.category && (
-                            <span className="text-xs rounded bg-surface-elevated text-text-secondary px-1 py-0.5 flex-shrink-0">
+                            <span className="text-xs rounded bg-surface-elevated text-text-secondary px-1 py-0.5 shrink-0">
                               {entry.category}
                             </span>
                           )}
                         </div>
-                        <span className="text-xs text-text-secondary whitespace-nowrap flex-shrink-0">
+                        <span className="text-xs text-text-secondary whitespace-nowrap shrink-0">
                           {formatRelativeTime(entry.timestamp)}
                         </span>
                       </div>

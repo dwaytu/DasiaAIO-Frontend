@@ -133,8 +133,8 @@ const IncidentSummaryGenerator: FC<IncidentSummaryGeneratorProps> = ({ incidents
   }
 
   return (
-    <section className="command-panel rounded border border-[color:var(--color-border)] bg-[color:var(--color-surface)]" aria-label="Incident summary generator">
-      <div className="flex items-center justify-between border-b border-[color:var(--color-border)] px-4 py-3">
+    <section className="command-panel rounded border border-(--color-border) bg-(--color-surface)" aria-label="Incident summary generator">
+      <div className="flex items-center justify-between border-b border-(--color-border) px-4 py-3">
         <div>
           <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-text-primary">Incident Summary Generator</p>
           <p className="font-mono text-[11px] text-text-secondary">AI-assisted brief — review before including in official reports</p>
@@ -173,7 +173,7 @@ const IncidentSummaryGenerator: FC<IncidentSummaryGeneratorProps> = ({ incidents
                       key={i}
                       type="button"
                       onClick={() => void handleRecommendedAction(action)}
-                      className="rounded border border-info-border bg-info-bg px-2 py-1 font-mono text-[11px] text-info-text transition-colors hover:bg-info-bg focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--color-focus-ring)]"
+                      className="rounded border border-info-border bg-info-bg px-2 py-1 font-mono text-[11px] text-info-text transition-colors hover:bg-info-bg focus-visible:outline-2 focus-visible:outline-(--color-focus-ring)"
                       title={action}
                     >
                       {copiedAction === action

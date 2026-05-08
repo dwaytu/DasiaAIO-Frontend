@@ -67,14 +67,14 @@ const SentinelModal = ({
         aria-labelledby={titleId}
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex flex-shrink-0 items-center justify-between border-b border-border bg-surface/50 px-6 py-5">
+        <div className="flex shrink-0 items-center justify-between border-b border-border bg-surface/50 px-6 py-5">
           <div>
             <h2 id={titleId} className="text-xl font-bold text-text-primary">{title}</h2>
             {subtitle && <p className="mt-1 text-sm text-text-secondary">{subtitle}</p>}
           </div>
           <button
             type="button"
-            className="flex min-h-11 min-w-11 items-center justify-center rounded-md text-2xl text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
+            className="flex min-h-11 min-w-11 items-center justify-center rounded-md text-2xl text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
             onClick={onClose}
             aria-label="Close"
           >

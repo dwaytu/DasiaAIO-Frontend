@@ -2,6 +2,7 @@ import { ChangeEvent, FC, useEffect, useRef, useState } from 'react'
 import type { User } from '../../context/AuthContext'
 import { API_BASE_URL } from '../../config'
 import { fetchJsonOrThrow, getAuthHeaders } from '../../utils/api'
+import { useAuth } from '../../hooks/useAuth'
 import {
   registerServiceWorker,
   requestPushPermission,
@@ -64,6 +65,7 @@ export const ProfileModalContent: FC<ProfileModalContentProps> = ({
   onClose,
   onProfilePhotoUpdate,
 }) => {
+  const { updateUser } = useAuth()
   const [profilePhoto, setProfilePhoto] = useState<string>(user.profilePhoto || '')
   const [uploading, setUploading] = useState(false)
   const [message, setMessage] = useState('')
@@ -91,6 +93,10 @@ export const ProfileModalContent: FC<ProfileModalContentProps> = ({
     const timer = window.setTimeout(() => setMessage(''), 3000)
     return () => window.clearTimeout(timer)
   }, [message])
+
+  useEffect(() => {
+    setProfilePhoto(user.profilePhoto || '')
+  }, [user.profilePhoto])
 
   useEffect(() => {
     if (user.role !== 'guard') return undefined
@@ -240,6 +246,7 @@ export const ProfileModalContent: FC<ProfileModalContentProps> = ({
       )
 
       setProfilePhoto(base64String)
+      updateUser({ profilePhoto: base64String, profile_photo: base64String })
       onProfilePhotoUpdate?.(base64String)
       setMessage('Profile photo updated successfully!')
     } catch (error) {
@@ -263,6 +270,7 @@ export const ProfileModalContent: FC<ProfileModalContentProps> = ({
       )
 
       setProfilePhoto('')
+      updateUser({ profilePhoto: '', profile_photo: '' })
       onProfilePhotoUpdate?.('')
       setMessage('Profile photo removed.')
     } catch (error) {
@@ -297,6 +305,21 @@ export const ProfileModalContent: FC<ProfileModalContentProps> = ({
         },
         'Failed to update profile.',
       )
+
+      updateUser({
+        fullName: formData.fullName,
+        full_name: formData.fullName,
+        phoneNumber: formData.phoneNumber,
+        phone_number: formData.phoneNumber,
+        email: formData.email,
+        licenseNumber: formData.licenseNumber || undefined,
+        license_number: formData.licenseNumber || undefined,
+        licenseIssuedDate: formData.licenseIssuedDate || undefined,
+        license_issued_date: formData.licenseIssuedDate || undefined,
+        licenseExpiryDate: formData.licenseExpiryDate || undefined,
+        license_expiry_date: formData.licenseExpiryDate || undefined,
+        address: formData.address || undefined,
+      })
 
       setMessage('Profile updated successfully!')
     } catch (error) {
@@ -446,7 +469,7 @@ export const ProfileModalContent: FC<ProfileModalContentProps> = ({
               aria-checked={isAvailable}
               disabled={availabilityLoading}
               onClick={() => void handleToggleAvailability()}
-              className={`relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-focus-ring)] disabled:cursor-not-allowed disabled:opacity-50 ${
+              className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring) disabled:cursor-not-allowed disabled:opacity-50 ${
                 isAvailable ? 'bg-green-500' : 'bg-zinc-500'
               }`}
               aria-label={isAvailable ? 'Mark yourself as unavailable' : 'Mark yourself as available'}
@@ -478,7 +501,7 @@ export const ProfileModalContent: FC<ProfileModalContentProps> = ({
               aria-checked={isPushEnabled}
               disabled={pushLoading}
               onClick={() => void handleTogglePush()}
-              className={`relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-focus-ring)] disabled:cursor-not-allowed disabled:opacity-50 ${
+              className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring) disabled:cursor-not-allowed disabled:opacity-50 ${
                 isPushEnabled ? 'bg-indigo-500' : 'bg-zinc-500'
               }`}
               aria-label={isPushEnabled ? 'Disable push notifications' : 'Enable push notifications'}

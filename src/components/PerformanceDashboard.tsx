@@ -110,7 +110,7 @@ const PerformanceDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeV
             </section>
 
             <section className="flex flex-col flex-1 min-h-0 rounded overflow-hidden table-glass">
-              <div className="flex-shrink-0 px-6 py-5 border-b border-border-subtle bg-gradient-to-r from-[color:var(--color-surface)] to-[color:var(--color-surface-elevated)]">
+              <div className="shrink-0 px-6 py-5 border-b border-border-subtle bg-gradient-to-r from-(--color-surface) to-(--color-surface-elevated)">
                 <h2 className="text-xl font-bold text-text-primary">Guard Performance</h2>
                 <p className="text-text-secondary text-sm mt-1">Attendance reliability and task throughput by operator.</p>
               </div>
@@ -136,7 +136,7 @@ const PerformanceDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeV
                             <div className="flex items-center gap-2">
                               <div className="flex-1 bg-border rounded-full h-2 overflow-hidden" aria-hidden="true">
                                 <div 
-                                  className="bg-[color:var(--status-success-border)] h-full transition-all duration-300" 
+                                  className="bg-(--status-success-border) h-full transition-all duration-300" 
                                   style={{width: `${p.attendanceRate}%`}}
                                 ></div>
                               </div>

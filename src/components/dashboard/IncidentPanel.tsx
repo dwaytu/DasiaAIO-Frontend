@@ -125,7 +125,7 @@ const IncidentPanel: FC = () => {
               d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"
             />
           </svg>
-          <h2 className="font-mono text-base font-semibold uppercase tracking-wider text-[color:var(--color-text)]">
+          <h2 className="font-mono text-base font-semibold uppercase tracking-wider text-(--color-text)">
             Incident Management
           </h2>
           {activeCount > 0 && (
@@ -136,14 +136,14 @@ const IncidentPanel: FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="font-mono text-xs text-[color:var(--color-muted-text)]">
+          <span className="font-mono text-xs text-(--color-muted-text)">
             {lastUpdated ? `Updated ${lastUpdated}` : ''}
           </span>
           <button
             type="button"
             onClick={() => refresh()}
             aria-label="Refresh incidents"
-            className="min-h-9 rounded border border-[color:var(--color-border)] px-2.5 py-1.5 font-mono text-[11px] font-semibold uppercase tracking-wide text-[color:var(--color-muted-text)] hover:border-[color:var(--color-text)] hover:text-[color:var(--color-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
+            className="min-h-9 rounded border border-(--color-border) px-2.5 py-1.5 font-mono text-[11px] font-semibold uppercase tracking-wide text-(--color-muted-text) hover:border-(--color-text) hover:text-(--color-text) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
           >
             Refresh
           </button>
@@ -151,7 +151,7 @@ const IncidentPanel: FC = () => {
             type="button"
             onClick={() => setShowForm((v) => !v)}
             aria-expanded={showForm}
-            className="min-h-9 rounded bg-[color:var(--color-danger)] px-3 py-1.5 font-mono text-[11px] font-semibold uppercase tracking-wide text-white hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-danger)]"
+            className="min-h-9 rounded bg-(--color-danger) px-3 py-1.5 font-mono text-[11px] font-semibold uppercase tracking-wide text-white hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-danger)"
           >
             {showForm ? 'Cancel' : '+ Report Incident'}
           </button>
@@ -175,10 +175,10 @@ const IncidentPanel: FC = () => {
             role="tab"
             aria-selected={filter === s}
             onClick={() => setFilter(s)}
-            className={`rounded-t px-3 py-1.5 font-mono text-[11px] font-semibold uppercase tracking-wide transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)] ${
+            className={`rounded-t px-3 py-1.5 font-mono text-[11px] font-semibold uppercase tracking-wide transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring) ${
               filter === s
-                ? 'bg-[color:var(--color-border)] text-[color:var(--color-text)]'
-                : 'text-[color:var(--color-muted-text)] hover:text-[color:var(--color-text)]'
+                ? 'bg-(--color-border) text-(--color-text)'
+                : 'text-(--color-muted-text) hover:text-(--color-text)'
             }`}
           >
             {s === 'all' ? 'All' : s}
@@ -201,12 +201,12 @@ const IncidentPanel: FC = () => {
 
       {/* Table */}
       <div
-        className="overflow-x-auto rounded border border-[color:var(--color-border)] bg-[color:var(--color-surface)]"
+        className="overflow-x-auto rounded border border-(--color-border) bg-(--color-surface)"
         role="tabpanel"
         aria-label={`Incidents — ${filter}`}
       >
         {loading && (
-          <p className="px-4 py-6 text-center font-mono text-xs text-[color:var(--color-muted-text)]">
+          <p className="px-4 py-6 text-center font-mono text-xs text-(--color-muted-text)">
             Loading incidents…
           </p>
         )}
@@ -219,7 +219,7 @@ const IncidentPanel: FC = () => {
 
         {!loading && !error && displayed.length === 0 && (
           <div className="px-4 py-6 text-center">
-            <p className="font-mono text-xs text-[color:var(--color-muted-text)]">No incidents reported — all zones are clear.</p>
+            <p className="font-mono text-xs text-(--color-muted-text)">No incidents reported — all zones are clear.</p>
           </div>
         )}
 
@@ -227,24 +227,24 @@ const IncidentPanel: FC = () => {
           <table className="min-w-full text-left">
             <caption className="sr-only">Incident list filtered by: {filter}</caption>
             <thead>
-              <tr className="border-b border-[color:var(--color-border)]">
-                <th scope="col" className="px-4 py-2 font-mono text-xs font-semibold uppercase text-[color:var(--color-muted-text)]">
+              <tr className="border-b border-(--color-border)">
+                <th scope="col" className="px-4 py-2 font-mono text-xs font-semibold uppercase text-(--color-muted-text)">
                   Title
                 </th>
-                <th scope="col" className="px-4 py-2 font-mono text-xs font-semibold uppercase text-[color:var(--color-muted-text)]">
+                <th scope="col" className="px-4 py-2 font-mono text-xs font-semibold uppercase text-(--color-muted-text)">
                   Location
                 </th>
-                <th scope="col" className="px-4 py-2 font-mono text-xs font-semibold uppercase text-[color:var(--color-muted-text)]">
+                <th scope="col" className="px-4 py-2 font-mono text-xs font-semibold uppercase text-(--color-muted-text)">
                   Priority
                 </th>
-                <th scope="col" className="px-4 py-2 font-mono text-xs font-semibold uppercase text-[color:var(--color-muted-text)]">
+                <th scope="col" className="px-4 py-2 font-mono text-xs font-semibold uppercase text-(--color-muted-text)">
                   Status
                 </th>
-                <th scope="col" className="px-4 py-2 font-mono text-xs font-semibold uppercase text-[color:var(--color-muted-text)]">
+                <th scope="col" className="px-4 py-2 font-mono text-xs font-semibold uppercase text-(--color-muted-text)">
                   Reported
                 </th>
                 {isSupervisorPlus && (
-                  <th scope="col" className="px-4 py-2 font-mono text-xs font-semibold uppercase text-[color:var(--color-muted-text)]">
+                  <th scope="col" className="px-4 py-2 font-mono text-xs font-semibold uppercase text-(--color-muted-text)">
                     Actions
                   </th>
                 )}
@@ -258,9 +258,9 @@ const IncidentPanel: FC = () => {
                 return (
                   <tr
                     key={incident.id}
-                    className="border-b border-[color:var(--color-border)] last:border-0 hover:bg-[color:var(--color-border)]/30"
+                    className="border-b border-(--color-border) last:border-0 hover:bg-(--color-border)/30"
                   >
-                    <td className="max-w-[200px] truncate px-4 py-2 font-mono text-xs text-[color:var(--color-text)]">
+                    <td className="max-w-[200px] truncate px-4 py-2 font-mono text-xs text-(--color-text)">
                       <div className="space-y-1">
                         <span title={incident.title}>{incident.title}</span>
                         <div>
@@ -268,13 +268,13 @@ const IncidentPanel: FC = () => {
                             type="button"
                             onClick={() => handleSummaryPreview(incident)}
                             disabled={summarizingId === incident.id}
-                            className="rounded border border-[color:var(--color-border)] px-2 py-0.5 font-mono text-[11px] text-[color:var(--color-muted-text)] hover:border-[color:var(--color-text)] hover:text-[color:var(--color-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)] disabled:cursor-not-allowed disabled:opacity-60"
+                            className="rounded border border-(--color-border) px-2 py-0.5 font-mono text-[11px] text-(--color-muted-text) hover:border-(--color-text) hover:text-(--color-text) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring) disabled:cursor-not-allowed disabled:opacity-60"
                           >
                             {summarizingId === incident.id ? 'Generating summary…' : 'Preview AI Summary'}
                           </button>
                         </div>
                         {summaryByIncidentId[incident.id] && (
-                          <div className="max-w-[380px] whitespace-normal rounded border border-[color:var(--color-border)] px-2 py-1 font-mono text-[11px] text-[color:var(--color-muted-text)]">
+                          <div className="max-w-[380px] whitespace-normal rounded border border-(--color-border) px-2 py-1 font-mono text-[11px] text-(--color-muted-text)">
                             <p>{summaryByIncidentId[incident.id].summary}</p>
                             <p className="mt-1">Risk level: {summaryByIncidentId[incident.id].riskLevel || 'unknown'}</p>
                             <p className="mt-1">Confidence: {Math.round(summaryByIncidentId[incident.id].confidence * 100)}%</p>
@@ -286,7 +286,7 @@ const IncidentPanel: FC = () => {
                         )}
                       </div>
                     </td>
-                    <td className="max-w-[160px] truncate px-4 py-2 font-mono text-xs text-[color:var(--color-muted-text)]">
+                    <td className="max-w-[160px] truncate px-4 py-2 font-mono text-xs text-(--color-muted-text)">
                       <span title={incident.location}>{incident.location}</span>
                     </td>
                     <td className="px-4 py-2">
@@ -299,7 +299,7 @@ const IncidentPanel: FC = () => {
                         {incident.status}
                       </span>
                     </td>
-                    <td className="px-4 py-2 font-mono text-xs text-[color:var(--color-muted-text)]">
+                    <td className="px-4 py-2 font-mono text-xs text-(--color-muted-text)">
                       {new Date(incident.created_at).toLocaleString([], {
                         month: 'short',
                         day: 'numeric',
@@ -318,14 +318,14 @@ const IncidentPanel: FC = () => {
                                 disabled={updatingId === incident.id}
                                 onClick={() => handleStatusChange(incident.id, nextStatus)}
                                 aria-label={`Mark incident "${incident.title}" as ${nextStatus}`}
-                                className="rounded border border-[color:var(--color-border)] px-2 py-0.5 font-mono text-[11px] text-[color:var(--color-muted-text)] hover:border-[color:var(--color-text)] hover:text-[color:var(--color-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)] disabled:cursor-not-allowed disabled:opacity-50"
+                                className="rounded border border-(--color-border) px-2 py-0.5 font-mono text-[11px] text-(--color-muted-text) hover:border-(--color-text) hover:text-(--color-text) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring) disabled:cursor-not-allowed disabled:opacity-50"
                               >
                                 {updatingId === incident.id ? '…' : nextStatus}
                               </button>
                             ))}
                           </div>
                         ) : (
-                          <span className="font-mono text-[11px] text-[color:var(--color-muted-text)]">—</span>
+                          <span className="font-mono text-[11px] text-(--color-muted-text)">—</span>
                         )}
                       </td>
                     )}

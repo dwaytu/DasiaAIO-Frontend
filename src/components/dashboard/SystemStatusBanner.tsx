@@ -64,17 +64,17 @@ const VehicleIcon = () => (
 const STATUS_STYLE: Record<SystemHealthState, { label: string; toneClass: string; glowClass: string }> = {
   operational: {
     label: 'OPERATIONAL',
-    toneClass: 'border-[color:var(--color-success-border)] bg-[color:var(--color-success-bg)] text-[color:var(--color-success-text)] status-bar-success',
+    toneClass: 'border-(--color-success-border) bg-(--color-success-bg) text-(--color-success-text) status-bar-success',
     glowClass: '',
   },
   warning: {
     label: 'WARNING',
-    toneClass: 'border-[color:var(--color-warning-border)] bg-[color:var(--color-warning-bg)] text-[color:var(--color-warning-text)] status-bar-warning',
+    toneClass: 'border-(--color-warning-border) bg-(--color-warning-bg) text-(--color-warning-text) status-bar-warning',
     glowClass: '',
   },
   critical: {
     label: 'CRITICAL',
-    toneClass: 'border-[color:var(--color-danger-border)] bg-[color:var(--color-danger-bg)] text-[color:var(--color-danger-text)] status-bar-critical',
+    toneClass: 'border-(--color-danger-border) bg-(--color-danger-bg) text-(--color-danger-text) status-bar-critical',
     glowClass: '',
   },
 }

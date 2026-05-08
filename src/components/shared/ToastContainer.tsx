@@ -74,7 +74,7 @@ export default function ToastContainer() {
               type="button"
               onClick={() => removeToast(toast.id)}
               aria-label="Dismiss notification"
-              className="shrink-0 -mr-1 rounded p-0.5 text-text-primary/70 hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-border"
+              className="shrink-0 -mr-1 rounded p-0.5 text-text-primary/70 hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-border"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"

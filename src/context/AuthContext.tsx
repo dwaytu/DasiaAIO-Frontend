@@ -50,6 +50,7 @@ export interface AuthContextValue {
   logout: () => Promise<void>
   acceptToa: () => Promise<boolean>
   declineToa: () => void
+  updateUser: (updates: Partial<User>) => void
   setToaChecked: (checked: boolean) => void
   setToaError: (error: string) => void
 }
@@ -194,6 +195,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
     clearAuthState()
   }
 
+  const updateUser = useCallback((updates: Partial<User>) => {
+    if (!updates || Object.keys(updates).length === 0) return
+
+    setUser((currentUser) => {
+      if (!currentUser) return currentUser
+
+      const updatedUser: User = {
+        ...currentUser,
+        ...updates,
+      }
+
+      localStorage.setItem('user', JSON.stringify(updatedUser))
+      return updatedUser
+    })
+  }, [])
+
   const acceptToa = async () => {
     if (!toaChecked) {
       setToaError('Please confirm that you have read and agree to the Terms of Agreement.')
@@ -278,6 +295,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     logout,
     acceptToa,
     declineToa,
+    updateUser,
     setToaChecked,
     setToaError,
   }

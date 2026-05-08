@@ -37,15 +37,15 @@ const IncidentSeverityMonitoringPanel: FC<IncidentSeverityMonitoringPanelProps> 
 
   return (
     <section
-      className="command-panel rounded border border-[color:var(--color-border)] bg-[color:var(--color-surface)]"
+      className="command-panel rounded border border-(--color-border) bg-(--color-surface)"
       aria-label="Incident severity monitoring"
     >
-      <div className="flex items-center justify-between border-b border-[color:var(--color-border)] px-4 py-3">
+      <div className="flex items-center justify-between border-b border-(--color-border) px-4 py-3">
         <div>
-          <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-text)]">Incident Severity Monitoring</p>
-          <p className="font-mono text-[11px] text-[color:var(--color-muted-text)]">Live severity distribution and escalation posture</p>
+          <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-(--color-text)">Incident Severity Monitoring</p>
+          <p className="font-mono text-[11px] text-(--color-muted-text)">Live severity distribution and escalation posture</p>
         </div>
-        {lastUpdated && <span className="font-mono text-[11px] text-[color:var(--color-muted-text)]">Updated {lastUpdated}</span>}
+        {lastUpdated && <span className="font-mono text-[11px] text-(--color-muted-text)">Updated {lastUpdated}</span>}
       </div>
 
       <div className="space-y-3 px-4 py-3" role="region" aria-live="polite">
@@ -68,7 +68,7 @@ const IncidentSeverityMonitoringPanel: FC<IncidentSeverityMonitoringPanelProps> 
           </div>
         </div>
 
-        {loading && <p className="text-center font-mono text-xs text-[color:var(--color-muted-text)]">Syncing incident severity feed...</p>}
+        {loading && <p className="text-center font-mono text-xs text-(--color-muted-text)">Syncing incident severity feed...</p>}
 
         {!loading && error && (
           <p role="alert" className="text-center font-mono text-xs text-red-400">
@@ -77,7 +77,7 @@ const IncidentSeverityMonitoringPanel: FC<IncidentSeverityMonitoringPanelProps> 
         )}
 
         {!loading && !error && activeIncidents.length === 0 && (
-          <p className="text-center font-mono text-xs text-[color:var(--color-muted-text)]">No active incidents in the severity queue.</p>
+          <p className="text-center font-mono text-xs text-(--color-muted-text)">No active incidents in the severity queue.</p>
         )}
 
         {!loading && !error && activeIncidents.length > 0 && (
@@ -87,12 +87,12 @@ const IncidentSeverityMonitoringPanel: FC<IncidentSeverityMonitoringPanelProps> 
               return (
                 <li
                   key={incident.id}
-                  className="rounded-md border border-[color:var(--color-border)]/60 bg-[color:var(--color-bg)]/30 px-3 py-2"
+                  className="rounded-md border border-(--color-border)/60 bg-(--color-bg)/30 px-3 py-2"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="truncate font-mono text-xs font-semibold text-[color:var(--color-text)]">{incident.title}</p>
-                      <p className="truncate font-mono text-[11px] text-[color:var(--color-muted-text)]">{incident.location}</p>
+                      <p className="truncate font-mono text-xs font-semibold text-(--color-text)">{incident.title}</p>
+                      <p className="truncate font-mono text-[11px] text-(--color-muted-text)">{incident.location}</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className={`inline-flex rounded border px-2 py-0.5 font-mono text-[11px] font-semibold uppercase ${severityBadgeClass[incident.priority]}`}>
@@ -103,7 +103,7 @@ const IncidentSeverityMonitoringPanel: FC<IncidentSeverityMonitoringPanelProps> 
                       </span>
                     </div>
                   </div>
-                  <p className="mt-1 font-mono text-[11px] text-[color:var(--color-muted-text)]">Reported {timeLabel}</p>
+                  <p className="mt-1 font-mono text-[11px] text-(--color-muted-text)">Reported {timeLabel}</p>
                 </li>
               )
             })}

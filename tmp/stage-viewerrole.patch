@@ -1,0 +1,5 @@
+diff --git a/src/components/admin/ResourceManagementPanel.tsx b/src/components/admin/ResourceManagementPanel.tsx
+--- a/src/components/admin/ResourceManagementPanel.tsx
++++ b/src/components/admin/ResourceManagementPanel.tsx
+@@ -665,0 +666 @@ const GuardsTab: FC<{
++        viewerRole={viewerRole ?? ''}

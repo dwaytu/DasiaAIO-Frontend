@@ -17,14 +17,14 @@ interface HeaderProps {
 
 const Header: FC<HeaderProps> = ({ title, badgeLabel, onLogout, rightSlot, onMenuClick, user, onNavigateToProfile, onNavigateToInbox, onNavigateToSettings }) => {
   return (
-    <header className="relative isolate z-[var(--z-header)] border-b border-border bg-surface/95 px-4 py-3 backdrop-blur md:px-8 md:py-4" style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top, 0px))' }}>
+    <header className="relative isolate z-(--z-header) border-b border-border bg-surface/95 px-4 py-3 backdrop-blur md:px-8 md:py-4" style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top, 0px))' }}>
       <div className="flex items-start justify-between gap-3 sm:items-center">
       <div className="flex min-w-0 items-center gap-3">
         {/* Mobile hamburger menu */}
         <button
           type="button"
           onClick={onMenuClick}
-          className="min-h-11 min-w-11 rounded p-2 text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
+          className="min-h-11 min-w-11 rounded p-2 text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
           aria-label="Toggle menu"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">

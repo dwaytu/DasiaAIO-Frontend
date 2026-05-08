@@ -128,11 +128,11 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ user, isOpen, onT
   const topItems = useMemo(() => items.slice(0, 4), [items])
 
   return (
-    <div className="relative z-[var(--z-floating)]">
+    <div className="relative z-(--z-floating)">
       <button
         type="button"
         onClick={onToggle}
-        className="soc-notification-trigger relative min-h-11 min-w-11 rounded p-2 text-text-secondary transition-colors hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
+        className="soc-notification-trigger relative min-h-11 min-w-11 rounded p-2 text-text-secondary transition-colors hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
         aria-label={actionableCount > 0 ? `Open quick inbox (${actionableCount} items)` : 'Open quick inbox'}
         aria-expanded={isOpen}
         aria-controls="quick-inbox-panel"
@@ -146,7 +146,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ user, isOpen, onT
       </button>
 
       {isOpen ? (
-        <div id="quick-inbox-panel" className="soc-dropdown-surface absolute right-0 z-[var(--z-floating)] mt-2 flex max-h-[min(36rem,calc(100dvh-6rem))] w-[min(26rem,calc(100vw-1rem))] flex-col rounded" role="dialog" aria-label="Quick inbox">
+        <div id="quick-inbox-panel" className="soc-dropdown-surface absolute right-0 z-(--z-floating) mt-2 flex max-h-[min(36rem,calc(100dvh-6rem))] w-[min(26rem,calc(100vw-1rem))] flex-col rounded" role="dialog" aria-label="Quick inbox">
           <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-tertiary">Global Actions</p>
@@ -184,7 +184,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ user, isOpen, onT
                     <button
                       type="button"
                       onClick={onViewAll}
-                      className="w-full px-4 py-4 text-left transition-colors hover:bg-surface-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[color:var(--color-focus-ring)]"
+                      className="w-full px-4 py-4 text-left transition-colors hover:bg-surface-elevated focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-(--color-focus-ring)"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">

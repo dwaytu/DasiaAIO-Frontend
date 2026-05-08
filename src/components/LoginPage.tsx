@@ -222,7 +222,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
     setError('')
   }
 
-  const inputClass = "w-full px-4 py-2.5 rounded bg-surface border border-border text-text-primary focus:outline-none focus:ring-2 focus:ring-[color:var(--color-focus-ring)] transition-colors"
+  const inputClass = "w-full px-4 py-2.5 rounded bg-surface border border-border text-text-primary focus:outline-none focus:ring-2 focus:ring-(--color-focus-ring) transition-colors"
   const labelClass = "block text-sm font-semibold text-text-secondary mb-2"
 
   const renderForm = () => {

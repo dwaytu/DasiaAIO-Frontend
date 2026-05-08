@@ -47,22 +47,22 @@ const ReplacementSuggestionPanel: FC<ReplacementSuggestionPanelProps> = ({
 }) => {
   return (
     <section
-      className="command-panel rounded border border-[color:var(--color-border)] bg-[color:var(--color-surface)]"
+      className="command-panel rounded border border-(--color-border) bg-(--color-surface)"
       aria-label="Smart guard replacement suggestions"
     >
-      <div className="flex items-center justify-between border-b border-[color:var(--color-border)] px-4 py-3">
+      <div className="flex items-center justify-between border-b border-(--color-border) px-4 py-3">
         <div>
-          <p className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--color-text)]">Smart Guard Replacement</p>
-          <p className="font-mono text-[11px] text-[color:var(--color-muted-text)]">
+          <p className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-(--color-text)">Smart Guard Replacement</p>
+          <p className="font-mono text-[11px] text-(--color-muted-text)">
             {postName ? `Top recommendations for ${postName}` : 'Top recommendations for active post'}
           </p>
         </div>
-        {lastUpdated && <span className="font-mono text-[11px] text-[color:var(--color-muted-text)]">{lastUpdated}</span>}
+        {lastUpdated && <span className="font-mono text-[11px] text-(--color-muted-text)">{lastUpdated}</span>}
       </div>
 
       <div className="space-y-2 px-4 py-3" role="region" aria-live="polite">
         {loading && (
-          <p className="text-center font-mono text-xs text-[color:var(--color-muted-text)]">Generating replacement recommendations...</p>
+          <p className="text-center font-mono text-xs text-(--color-muted-text)">Generating replacement recommendations...</p>
         )}
 
         {!loading && error && (
@@ -72,7 +72,7 @@ const ReplacementSuggestionPanel: FC<ReplacementSuggestionPanelProps> = ({
         )}
 
         {!loading && !error && suggestions.length === 0 && (
-          <p className="text-center font-mono text-xs text-[color:var(--color-muted-text)]">No replacement candidates found for this post.</p>
+          <p className="text-center font-mono text-xs text-(--color-muted-text)">No replacement candidates found for this post.</p>
         )}
 
         {!loading && !error && suggestions.length > 0 && (
@@ -82,18 +82,18 @@ const ReplacementSuggestionPanel: FC<ReplacementSuggestionPanelProps> = ({
               return (
                 <li
                   key={`${item.guardId}-${item.generatedAt}-${index}`}
-                  className="rounded-md border border-[color:var(--color-border)]/60 bg-[color:var(--color-bg)]/30 px-3 py-2 shadow-inner shadow-black/20"
+                  className="rounded-md border border-(--color-border)/60 bg-(--color-bg)/30 px-3 py-2 shadow-inner shadow-black/20"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="truncate font-mono text-sm text-[color:var(--color-text)]">{item.guardName}</p>
-                      <p className="font-mono text-[11px] text-[color:var(--color-muted-text)]">
+                      <p className="truncate font-mono text-sm text-(--color-text)">{item.guardName}</p>
+                      <p className="font-mono text-[11px] text-(--color-muted-text)">
                         Reliability {item.reliabilityScore.toFixed(1)} • Distance {item.distanceKm.toFixed(2)} km
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="font-mono text-base font-bold text-[color:var(--color-text)]">{item.replacementScore.toFixed(3)}</p>
-                      <p className="font-mono text-[11px] text-[color:var(--color-muted-text)]">Replacement Score</p>
+                      <p className="font-mono text-base font-bold text-(--color-text)">{item.replacementScore.toFixed(3)}</p>
+                      <p className="font-mono text-[11px] text-(--color-muted-text)">Replacement Score</p>
                     </div>
                   </div>
 
@@ -104,27 +104,27 @@ const ReplacementSuggestionPanel: FC<ReplacementSuggestionPanelProps> = ({
                     <span className="inline-flex rounded-full border border-info-border bg-info-bg px-2 py-0.5 font-mono text-[11px] text-info-text">
                       Permit {item.permitValid ? 'Valid' : 'Invalid'}
                     </span>
-                    <span className="inline-flex rounded-full border border-[color:var(--color-border)] px-2 py-0.5 font-mono text-[11px] text-[color:var(--color-muted-text)]">
+                    <span className="inline-flex rounded-full border border-(--color-border) px-2 py-0.5 font-mono text-[11px] text-(--color-muted-text)">
                       Rank #{index + 1}
                     </span>
                   </div>
-                  <p className="mt-2 font-mono text-[11px] text-[color:var(--color-muted-text)]">Reason: {getRecommendationReason(item)}</p>
-                  <p className="mt-1 font-mono text-[11px] text-[color:var(--color-muted-text)]">Risk level: {getRiskLevel(item)}</p>
-                  <p className="mt-2 font-mono text-[11px] text-[color:var(--color-muted-text)]">Suggested action: {getSuggestedAction(item)}</p>
-                  <p className="mt-1 font-mono text-[11px] text-[color:var(--color-muted-text)]">Confidence: {(getConfidence(item) * 100).toFixed(0)}%</p>
+                  <p className="mt-2 font-mono text-[11px] text-(--color-muted-text)">Reason: {getRecommendationReason(item)}</p>
+                  <p className="mt-1 font-mono text-[11px] text-(--color-muted-text)">Risk level: {getRiskLevel(item)}</p>
+                  <p className="mt-2 font-mono text-[11px] text-(--color-muted-text)">Suggested action: {getSuggestedAction(item)}</p>
+                  <p className="mt-1 font-mono text-[11px] text-(--color-muted-text)">Confidence: {(getConfidence(item) * 100).toFixed(0)}%</p>
                   {index === 0 && item.availability && item.permitValid && (
                     <div className="mt-2 flex gap-1">
                       <button
                         type="button"
                         onClick={() => alert(`Assign ${item.guardName} as replacement`)}
-                        className="rounded border border-success-border bg-success-bg px-2 py-1 font-mono text-[11px] font-semibold text-success-text transition-colors hover:bg-success-bg focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--color-success)]"
+                        className="rounded border border-success-border bg-success-bg px-2 py-1 font-mono text-[11px] font-semibold text-success-text transition-colors hover:bg-success-bg focus-visible:outline-2 focus-visible:outline-(--color-success)"
                       >
                         Assign Now
                       </button>
                       <button
                         type="button"
                         onClick={() => alert(`Contact ${item.guardName} for confirmation`)}
-                        className="rounded border border-info-border bg-info-bg px-2 py-1 font-mono text-[11px] text-info-text transition-colors hover:bg-info-bg focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--color-info)]"
+                        className="rounded border border-info-border bg-info-bg px-2 py-1 font-mono text-[11px] text-info-text transition-colors hover:bg-info-bg focus-visible:outline-2 focus-visible:outline-(--color-info)"
                       >
                         Contact Guard
                       </button>

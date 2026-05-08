@@ -111,7 +111,7 @@ const OperationalShell: FC<OperationalShellProps> = ({
 
       {navItems.length > 0 && (
         <div
-          className="hidden w-72 flex-shrink-0 lg:block lg:w-[var(--sidebar-width)] soc-sidebar-width-transition"
+          className="hidden w-72 shrink-0 lg:block lg:w-[var(--sidebar-width)] soc-sidebar-width-transition"
           style={sidebarSpacerStyle}
           aria-hidden="true"
         />
@@ -187,7 +187,7 @@ const OperationalShell: FC<OperationalShellProps> = ({
 
           <nav
             aria-label="Mobile navigation"
-            className="fixed bottom-0 left-0 right-0 z-[var(--z-mobile-nav)] border-t border-border-elevated bg-surface/95 px-2 pb-[calc(0.25rem+env(safe-area-inset-bottom,0px))] pt-1 backdrop-blur-md md:hidden"
+            className="fixed bottom-0 left-0 right-0 z-(--z-mobile-nav) border-t border-border-elevated bg-surface/95 px-2 pb-[calc(0.25rem+env(safe-area-inset-bottom,0px))] pt-1 backdrop-blur-md md:hidden"
           >
             <ul className="grid grid-cols-5 gap-0.5">
               {mobileBottomTabs.map((tab) => {

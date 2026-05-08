@@ -13,6 +13,7 @@ import CommandCenterDashboard from './dashboard/CommandCenterDashboard'
 import LiveFreshnessPill from './dashboard/ui/LiveFreshnessPill'
 import { TableLoadingState } from './dashboard/ui/DashboardLoadingState'
 import { normalizeRole } from '../types/auth'
+import CreateGuardAccountModal from './admin/CreateGuardAccountModal'
 
 interface User {
   id: string
@@ -84,7 +85,7 @@ const UserAvatar: FC<{ user: User }> = ({ user }) => {
       : 'bg-success-bg text-success-text'
 
   return (
-    <div className={`h-9 w-9 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${avatarColor}`} aria-hidden="true">
+    <div className={`h-9 w-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${avatarColor}`} aria-hidden="true">
       {initial}
     </div>
   )
@@ -111,7 +112,7 @@ const RoleBadge: FC<{ roleRaw: string }> = ({ roleRaw }) => {
 const StatusIndicator: FC<{ status: UserDerivedStatus }> = ({ status }) => {
   const statusConfig: Record<UserDerivedStatus, { dot: string; glow: string; label: string; pill: string }> = {
     active: {
-      dot: 'bg-[color:var(--color-success)]',
+      dot: 'bg-(--color-success)',
       glow: '0 0 6px rgba(52,211,153,0.7)',
       label: 'Active',
       pill: 'bg-success-bg text-success-text ring-1 ring-success-border',
@@ -123,13 +124,13 @@ const StatusIndicator: FC<{ status: UserDerivedStatus }> = ({ status }) => {
       pill: 'bg-zinc-500/15 text-zinc-300 ring-1 ring-zinc-500/30',
     },
     pending: {
-      dot: 'bg-[color:var(--color-warning)]',
+      dot: 'bg-(--color-warning)',
       glow: '0 0 6px rgba(251,191,36,0.7)',
       label: 'Pending',
       pill: 'bg-warning-bg text-warning-text ring-1 ring-warning-border',
     },
     suspended: {
-      dot: 'bg-[color:var(--color-danger)]',
+      dot: 'bg-(--color-danger)',
       glow: '0 0 6px rgba(248,113,113,0.7)',
       label: 'Suspended',
       pill: 'bg-danger-bg text-danger-text ring-1 ring-danger-border',
@@ -187,11 +188,16 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([])
   const [bulkProcessing, setBulkProcessing] = useState<boolean>(false)
   const [lastUserSyncAt, setLastUserSyncAt] = useState<number>(() => Date.now())
+  const [createGuardModalOpen, setCreateGuardModalOpen] = useState<boolean>(false)
   const currentView = activeView || activeSection
   const navItems = getSidebarNav(user.role, { homeView: 'users' })
   const normalizedViewerRole = normalizeRole(user.role)
   const isAdminViewer = normalizedViewerRole === 'admin'
   const isSupervisorViewer = normalizedViewerRole === 'supervisor'
+  const canCreateGuardAccounts =
+    normalizedViewerRole === 'superadmin' ||
+    normalizedViewerRole === 'admin' ||
+    normalizedViewerRole === 'supervisor'
 
   const canViewUserRow = (targetRoleRaw: string) => {
     const targetRole = normalizeRole(targetRoleRaw)
@@ -564,13 +570,22 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
               )}
 
               {!loading && (
-                <section className="flex flex-col min-h-0 w-full bento-card !p-0 overflow-hidden table-glass">
+                <section className="flex flex-col min-h-0 w-full bento-card p-0! overflow-hidden table-glass">
                   <div className="flex flex-col gap-3 border-b border-border-subtle p-5 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <h2 className="text-lg font-bold text-text-primary">User Management</h2>
                       <p className="mt-0.5 text-xs text-text-tertiary">Manage system users, approvals, and roles</p>
                     </div>
                     <div className="flex items-center gap-2">
+                      {canCreateGuardAccounts ? (
+                        <button
+                          type="button"
+                          onClick={() => setCreateGuardModalOpen(true)}
+                          className="min-h-11 rounded border border-info-border bg-info-bg px-3 py-2 text-sm font-semibold text-info-text transition-opacity hover:opacity-90"
+                        >
+                          Create Guard Account
+                        </button>
+                      ) : null}
                       <LiveFreshnessPill updatedAt={lastUserSyncAt} label="Roster sync" />
                       <div className="relative">
                         <svg className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
@@ -770,7 +785,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                                         onClick={() => handleApproveIfPending(u)}
                                         title="Approve pending user"
                                         aria-label={`Approve ${u.full_name || u.username || u.email}`}
-                                        className="min-h-11 min-w-11 rounded p-2 text-text-tertiary transition-colors hover:bg-success-bg hover:text-success-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
+                                        className="min-h-11 min-w-11 rounded p-2 text-text-tertiary transition-colors hover:bg-success-bg hover:text-success-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
                                       >
                                         <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                                       </button>
@@ -781,7 +796,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                                         onClick={() => handleEditUser(u)}
                                         title="Edit user"
                                         aria-label={`Edit ${u.full_name || u.username || u.email}`}
-                                        className="min-h-11 min-w-11 rounded p-2 text-text-tertiary transition-colors hover:bg-info-bg hover:text-info-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
+                                        className="min-h-11 min-w-11 rounded p-2 text-text-tertiary transition-colors hover:bg-info-bg hover:text-info-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
                                       >
                                         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                                       </button>
@@ -791,7 +806,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                                       onClick={() => handleResetPasswordAction(u)}
                                       title="Reset password"
                                       aria-label={`Reset password for ${u.full_name || u.username || u.email}`}
-                                      className="min-h-11 min-w-11 rounded p-2 text-text-tertiary transition-colors hover:bg-info-bg hover:text-info-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
+                                      className="min-h-11 min-w-11 rounded p-2 text-text-tertiary transition-colors hover:bg-info-bg hover:text-info-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
                                     >
                                       <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 11V7m0 0l-3 3m3-3l3 3M5 12a7 7 0 1114 0v5a2 2 0 01-2 2H7a2 2 0 01-2-2v-5z" /></svg>
                                     </button>
@@ -800,7 +815,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                                       onClick={() => handleSuspendAction(u)}
                                       title="Suspend user"
                                       aria-label={`Suspend ${u.full_name || u.username || u.email}`}
-                                      className="min-h-11 min-w-11 rounded p-2 text-text-tertiary transition-colors hover:bg-warning-bg hover:text-warning-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
+                                      className="min-h-11 min-w-11 rounded p-2 text-text-tertiary transition-colors hover:bg-warning-bg hover:text-warning-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
                                     >
                                       <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M18.364 5.636l-12.728 12.728M8 7h8a2 2 0 012 2v6a2 2 0 01-2 2H8a2 2 0 01-2-2V9a2 2 0 012-2z" /></svg>
                                     </button>
@@ -815,7 +830,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                                           onClick={() => handleDeleteUser(u.id, u.email)}
                                           title="Delete user"
                                           aria-label={`Delete ${u.full_name || u.username || u.email}`}
-                                          className="min-h-11 min-w-11 rounded p-2 text-text-tertiary transition-colors hover:bg-danger-bg hover:text-danger-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
+                                          className="min-h-11 min-w-11 rounded p-2 text-text-tertiary transition-colors hover:bg-danger-bg hover:text-danger-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
                                         >
                                           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                         </button>
@@ -1081,7 +1096,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                               </td>
                               <td className="px-6 py-3">
                                 <button
-                                  className="bg-[color:var(--color-info)] hover:opacity-90 text-white px-4 py-1.5 rounded text-sm font-medium transition-colors"
+                                  className="bg-(--color-info) hover:opacity-90 text-white px-4 py-1.5 rounded text-sm font-medium transition-colors"
                                   onClick={() => setEditingShift(shift)}
                                   title="Edit shift"
                                 >
@@ -1117,7 +1132,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                               </div>
                             </dl>
                             <button
-                              className="mt-3 rounded-md bg-[color:var(--color-info)] px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:opacity-90"
+                              className="mt-3 rounded-md bg-(--color-info) px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:opacity-90"
                               onClick={() => setEditingShift(shift)}
                               title="Edit shift"
                             >
@@ -1141,6 +1156,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
           {editingUser && (
             <EditUserModal
               user={editingUser}
+              viewerRole={user.role}
               onClose={() => setEditingUser(null)}
               onSave={handleSaveUser}
             />
@@ -1178,13 +1194,13 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                 <div className="mt-5 flex gap-2">
                   <button
                     onClick={() => handleApprovalAction(selectedApproval.id, 'approve')}
-                    className="rounded bg-[color:var(--color-success)] px-3 py-2 text-sm font-semibold text-white hover:opacity-90"
+                    className="rounded bg-(--color-success) px-3 py-2 text-sm font-semibold text-white hover:opacity-90"
                   >
                     Approve
                   </button>
                   <button
                     onClick={() => handleApprovalAction(selectedApproval.id, 'reject')}
-                    className="rounded bg-[color:var(--color-danger)] px-3 py-2 text-sm font-semibold text-white hover:opacity-90"
+                    className="rounded bg-(--color-danger) px-3 py-2 text-sm font-semibold text-white hover:opacity-90"
                   >
                     Reject
                   </button>
@@ -1198,6 +1214,16 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
               </aside>
             </div>
           )}
+
+          <CreateGuardAccountModal
+            isOpen={createGuardModalOpen}
+            onClose={() => setCreateGuardModalOpen(false)}
+            viewerRole={normalizedViewerRole}
+            onCreated={async () => {
+              await fetchUsers()
+              await fetchPendingApprovals()
+            }}
+          />
 
         <BugReportButton userId={user.id} />
       </div>

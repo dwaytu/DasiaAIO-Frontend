@@ -59,11 +59,11 @@ const ActiveIncidentsWidget: FC<ActiveIncidentsWidgetProps> = ({
 
   return (
     <section
-      className="command-panel rounded border border-[color:var(--color-border)] bg-[color:var(--color-surface)]"
+      className="command-panel rounded border border-(--color-border) bg-(--color-surface)"
       aria-label="Active Incidents"
     >
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-[color:var(--color-border)] px-4 py-3">
+      <div className="flex items-center justify-between border-b border-(--color-border) px-4 py-3">
         <div className="flex items-center gap-2">
           {/* Alert icon */}
           <svg
@@ -80,7 +80,7 @@ const ActiveIncidentsWidget: FC<ActiveIncidentsWidgetProps> = ({
               d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"
             />
           </svg>
-          <h2 className="font-mono text-sm font-semibold uppercase tracking-wider text-[color:var(--color-text)]">
+          <h2 className="font-mono text-sm font-semibold uppercase tracking-wider text-(--color-text)">
             Active Incidents
           </h2>
           {active.length > 0 && (
@@ -89,13 +89,13 @@ const ActiveIncidentsWidget: FC<ActiveIncidentsWidgetProps> = ({
             </span>
           )}
         </div>
-        <span className="font-mono text-xs text-[color:var(--color-muted-text)]">{nowLabel}</span>
+        <span className="font-mono text-xs text-(--color-muted-text)">{nowLabel}</span>
       </div>
 
       {/* Body */}
       <div className="p-2">
         {loading && (
-          <p className="px-2 py-4 text-center font-mono text-xs text-[color:var(--color-muted-text)]">
+          <p className="px-2 py-4 text-center font-mono text-xs text-(--color-muted-text)">
             Loading incidents...
           </p>
         )}
@@ -107,7 +107,7 @@ const ActiveIncidentsWidget: FC<ActiveIncidentsWidgetProps> = ({
         )}
 
         {!loading && !error && active.length === 0 && (
-          <p className="px-2 py-4 text-center font-mono text-xs text-[color:var(--color-muted-text)]">
+          <p className="px-2 py-4 text-center font-mono text-xs text-(--color-muted-text)">
             No active incidents
           </p>
         )}
@@ -131,13 +131,13 @@ const ActiveIncidentsWidget: FC<ActiveIncidentsWidgetProps> = ({
               return (
                 <li
                   key={incident.id}
-                  className={`flex cursor-default items-start justify-between gap-3 rounded px-3 py-2 transition-colors hover:bg-[color:var(--color-surface-elevated)] ${cfg.rowClass} ${priorityClass}`}
+                  className={`flex cursor-default items-start justify-between gap-3 rounded px-3 py-2 transition-colors hover:bg-(--color-surface-elevated) ${cfg.rowClass} ${priorityClass}`}
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-mono text-xs font-semibold text-[color:var(--color-text)]">
+                    <p className="truncate font-mono text-xs font-semibold text-(--color-text)">
                       {incident.title}
                     </p>
-                    <p className="truncate font-mono text-xs text-[color:var(--color-muted-text)]">
+                    <p className="truncate font-mono text-xs text-(--color-muted-text)">
                       {incident.location}
                     </p>
                   </div>
@@ -145,11 +145,11 @@ const ActiveIncidentsWidget: FC<ActiveIncidentsWidgetProps> = ({
                     <span className={`rounded px-1.5 py-0.5 font-mono text-[11px] font-bold ${cfg.badgeClass}`}>
                       {cfg.label}
                     </span>
-                    <span className="inline-flex items-center gap-1 font-mono text-[11px] text-[color:var(--color-muted-text)]">
+                    <span className="inline-flex items-center gap-1 font-mono text-[11px] text-(--color-muted-text)">
                       <span className={`h-1.5 w-1.5 rounded-full ${SEVERITY_DOT_CLASS[incident.priority]}`} aria-hidden="true" />
                       Severity
                     </span>
-                    <span className="font-mono text-[11px] text-[color:var(--color-muted-text)]">
+                    <span className="font-mono text-[11px] text-(--color-muted-text)">
                       {STATUS_LABEL[incident.status]} · {timeLabel}
                     </span>
                   </div>

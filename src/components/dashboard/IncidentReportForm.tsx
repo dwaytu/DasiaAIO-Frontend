@@ -155,9 +155,9 @@ const IncidentReportForm: FC<IncidentReportFormProps> = ({ onSubmit, onCancel })
       onSubmit={handleSubmit}
       noValidate
       aria-label="Report Incident"
-      className="space-y-4 rounded border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-4"
+      className="space-y-4 rounded border border-(--color-border) bg-(--color-surface) p-4"
     >
-      <h3 className="font-mono text-sm font-semibold uppercase tracking-wider text-[color:var(--color-text)]">
+      <h3 className="font-mono text-sm font-semibold uppercase tracking-wider text-(--color-text)">
         Report Incident
       </h3>
 
@@ -165,7 +165,7 @@ const IncidentReportForm: FC<IncidentReportFormProps> = ({ onSubmit, onCancel })
       <div className="space-y-1">
         <label
           htmlFor="incident-title"
-          className="block font-mono text-xs font-medium text-[color:var(--color-text)]"
+          className="block font-mono text-xs font-medium text-(--color-text)"
         >
           Title <span aria-hidden="true" className="text-danger-text">*</span>
         </label>
@@ -179,7 +179,7 @@ const IncidentReportForm: FC<IncidentReportFormProps> = ({ onSubmit, onCancel })
           aria-invalid={titleError ? 'true' : undefined}
           aria-describedby={titleError ? 'incident-title-error' : undefined}
           placeholder="Brief incident description"
-          className="w-full rounded border border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-3 py-2 font-mono text-xs text-[color:var(--color-text)] placeholder-[color:var(--color-muted-text)] focus:border-[color:var(--color-focus-ring)] focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)]"
+          className="w-full rounded border border-(--color-border) bg-(--color-bg) px-3 py-2 font-mono text-xs text-(--color-text) placeholder-[color:var(--color-muted-text)] focus:border-(--color-focus-ring) focus:outline-none focus:ring-1 focus:ring-(--color-focus-ring)"
         />
         {titleError && (
           <p id="incident-title-error" role="alert" className="font-mono text-xs text-danger-text">
@@ -192,7 +192,7 @@ const IncidentReportForm: FC<IncidentReportFormProps> = ({ onSubmit, onCancel })
       <div className="space-y-1">
         <label
           htmlFor="incident-description"
-          className="block font-mono text-xs font-medium text-[color:var(--color-text)]"
+          className="block font-mono text-xs font-medium text-(--color-text)"
         >
           Description <span aria-hidden="true" className="text-danger-text">*</span>
         </label>
@@ -206,7 +206,7 @@ const IncidentReportForm: FC<IncidentReportFormProps> = ({ onSubmit, onCancel })
           aria-describedby={descError ? 'incident-description-error' : undefined}
           rows={3}
           placeholder="Detailed description of the incident"
-          className="w-full resize-y rounded border border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-3 py-2 font-mono text-xs text-[color:var(--color-text)] placeholder-[color:var(--color-muted-text)] focus:border-[color:var(--color-focus-ring)] focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)]"
+          className="w-full resize-y rounded border border-(--color-border) bg-(--color-bg) px-3 py-2 font-mono text-xs text-(--color-text) placeholder-[color:var(--color-muted-text)] focus:border-(--color-focus-ring) focus:outline-none focus:ring-1 focus:ring-(--color-focus-ring)"
         />
         {descError && (
           <p id="incident-description-error" role="alert" className="font-mono text-xs text-danger-text">
@@ -219,7 +219,7 @@ const IncidentReportForm: FC<IncidentReportFormProps> = ({ onSubmit, onCancel })
       <div className="space-y-1">
         <label
           htmlFor="incident-location"
-          className="block font-mono text-xs font-medium text-[color:var(--color-text)]"
+          className="block font-mono text-xs font-medium text-(--color-text)"
         >
           Location <span aria-hidden="true" className="text-danger-text">*</span>
         </label>
@@ -233,7 +233,7 @@ const IncidentReportForm: FC<IncidentReportFormProps> = ({ onSubmit, onCancel })
           aria-invalid={locationError ? 'true' : undefined}
           aria-describedby={locationError ? 'incident-location-error' : undefined}
           placeholder="Site or zone where incident occurred"
-          className="w-full rounded border border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-3 py-2 font-mono text-xs text-[color:var(--color-text)] placeholder-[color:var(--color-muted-text)] focus:border-[color:var(--color-focus-ring)] focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)]"
+          className="w-full rounded border border-(--color-border) bg-(--color-bg) px-3 py-2 font-mono text-xs text-(--color-text) placeholder-[color:var(--color-muted-text)] focus:border-(--color-focus-ring) focus:outline-none focus:ring-1 focus:ring-(--color-focus-ring)"
         />
         {locationError && (
           <p id="incident-location-error" role="alert" className="font-mono text-xs text-danger-text">
@@ -246,22 +246,22 @@ const IncidentReportForm: FC<IncidentReportFormProps> = ({ onSubmit, onCancel })
       <div className="space-y-1">
         <label
           htmlFor="incident-priority"
-          className="block font-mono text-xs font-medium text-[color:var(--color-text)]"
+          className="block font-mono text-xs font-medium text-(--color-text)"
         >
           Priority
         </label>
         <div className="flex items-center justify-between gap-2">
-          <p className="font-mono text-[11px] text-[color:var(--color-muted-text)]">
+          <p className="font-mono text-[11px] text-(--color-muted-text)">
             {classifying ? 'AI classifying severity...' : aiSuggestedSeverity ? `AI suggested: ${aiSuggestedSeverity}` : 'AI suggestion available as you type'}
           </p>
           {aiSuggestedSeverity && (
-            <span className="rounded border border-[color:var(--color-border)] px-2 py-0.5 font-mono text-[11px] text-[color:var(--color-text)]">
+            <span className="rounded border border-(--color-border) px-2 py-0.5 font-mono text-[11px] text-(--color-text)">
               {aiSuggestedSeverity}
             </span>
           )}
         </div>
         {(aiRiskLevel || aiExplanation || aiSuggestedActions.length > 0) && (
-          <div className="rounded border border-[color:var(--color-border)]/70 bg-[color:var(--color-bg)]/30 px-2 py-2 font-mono text-[11px] text-[color:var(--color-muted-text)]">
+          <div className="rounded border border-(--color-border)/70 bg-(--color-bg)/30 px-2 py-2 font-mono text-[11px] text-(--color-muted-text)">
             <p>Risk level: {aiRiskLevel || 'unknown'}</p>
             <p className="mt-1">Confidence: {Math.round(aiConfidence * 100)}%</p>
             <p className="mt-1">Explanation: {aiExplanation || 'No explanation returned.'}</p>
@@ -272,7 +272,7 @@ const IncidentReportForm: FC<IncidentReportFormProps> = ({ onSubmit, onCancel })
           id="incident-priority"
           value={priority}
           onChange={(e) => setPriority(e.target.value as Incident['priority'])}
-          className="w-full rounded border border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-3 py-2 font-mono text-xs text-[color:var(--color-text)] focus:border-[color:var(--color-focus-ring)] focus:outline-none focus:ring-1 focus:ring-[color:var(--color-focus-ring)]"
+          className="w-full rounded border border-(--color-border) bg-(--color-bg) px-3 py-2 font-mono text-xs text-(--color-text) focus:border-(--color-focus-ring) focus:outline-none focus:ring-1 focus:ring-(--color-focus-ring)"
         >
           {PRIORITY_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -301,7 +301,7 @@ const IncidentReportForm: FC<IncidentReportFormProps> = ({ onSubmit, onCancel })
         <button
           type="submit"
           disabled={submitting}
-          className="rounded bg-[color:var(--color-danger)] px-4 py-1.5 font-mono text-xs font-semibold text-white hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-danger)] disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded bg-(--color-danger) px-4 py-1.5 font-mono text-xs font-semibold text-white hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-danger) disabled:cursor-not-allowed disabled:opacity-60"
         >
           {submitting ? 'Submitting…' : 'Submit Report'}
         </button>
@@ -309,7 +309,7 @@ const IncidentReportForm: FC<IncidentReportFormProps> = ({ onSubmit, onCancel })
           <button
             type="button"
             onClick={onCancel}
-            className="rounded border border-[color:var(--color-border)] px-4 py-1.5 font-mono text-xs text-[color:var(--color-muted-text)] hover:border-[color:var(--color-text)] hover:text-[color:var(--color-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
+            className="rounded border border-(--color-border) px-4 py-1.5 font-mono text-xs text-(--color-muted-text) hover:border-(--color-text) hover:text-(--color-text) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
           >
             Cancel
           </button>

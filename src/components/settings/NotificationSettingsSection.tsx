@@ -59,7 +59,7 @@ export const NotificationSettingsSection: FC<NotificationSettingsSectionProps> =
                 aria-checked={checked}
                 aria-label={row.title}
                 onClick={() => toggleSetting(row.key)}
-                className={`relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-focus-ring)] ${
+                className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring) ${
                   checked ? 'bg-indigo-500' : 'bg-zinc-500'
                 }`}
               >

@@ -594,8 +594,8 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
                         </div>
                       </div>
                       {isExpanded
-                        ? <ChevronDown className="ml-2 h-4 w-4 flex-shrink-0 text-text-tertiary" aria-hidden="true" />
-                        : <ChevronRight className="ml-2 h-4 w-4 flex-shrink-0 text-text-tertiary" aria-hidden="true" />}
+                        ? <ChevronDown className="ml-2 h-4 w-4 shrink-0 text-text-tertiary" aria-hidden="true" />
+                        : <ChevronRight className="ml-2 h-4 w-4 shrink-0 text-text-tertiary" aria-hidden="true" />}
                     </button>
 
                     {isExpanded && (

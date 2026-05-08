@@ -718,7 +718,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
     <div className="relative min-h-[100dvh] w-full overflow-hidden bg-background font-sans">
       <a href="#maincontent" className="skip-link">Skip to main content</a>
 
-      <header className="sticky top-0 z-[var(--z-header)] border-b border-border bg-surface/95 px-4 py-3 backdrop-blur" style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top, 0px))' }}>
+      <header className="sticky top-0 z-(--z-header) border-b border-border bg-surface/95 px-4 py-3 backdrop-blur" style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top, 0px))' }}>
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-tertiary">Field Operations</p>
@@ -1083,7 +1083,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                       onClick={() => setActiveSection(item.key)}
                       className={`min-h-11 w-full rounded-md px-2 py-2 text-xs font-semibold transition-colors outline outline-offset-[-2px] outline-transparent ${
                         isActive
-                          ? 'bg-info text-white forced-colors:text-[ButtonText] forced-colors:outline forced-colors:outline-2 forced-colors:outline-[Highlight]'
+                          ? 'bg-info text-white forced-colors:text-[ButtonText] forced-colors:outline-2 forced-colors:outline-[Highlight]'
                           : 'bg-surface-elevated text-text-secondary'
                       } ${isDisabled ? 'opacity-40' : ''}`}
                       aria-current={isActive ? 'page' : undefined}
@@ -1101,7 +1101,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
       <PanicButton userId={user.id} userDisplayName={user.full_name || user.username || user.id} />
 
       {profileModalOpen ? (
-        <div className="fixed inset-0 z-[var(--z-overlay)] flex items-center justify-center bg-black/50 p-4" role="presentation">
+        <div className="fixed inset-0 z-(--z-overlay) flex items-center justify-center bg-black/50 p-4" role="presentation">
           <section
             role="dialog"
             aria-modal="true"
@@ -1121,7 +1121,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
       ) : null}
 
       {instructionsOpen ? (
-        <div className="fixed inset-0 z-[var(--z-overlay)] flex items-end justify-center bg-black/40 p-4 sm:items-center" role="presentation" onKeyDown={(e) => { if (e.key === 'Escape') setInstructionsOpen(false) }}>
+        <div className="fixed inset-0 z-(--z-overlay) flex items-end justify-center bg-black/40 p-4 sm:items-center" role="presentation" onKeyDown={(e) => { if (e.key === 'Escape') setInstructionsOpen(false) }}>
           <section
             role="dialog"
             aria-modal="true"
@@ -1157,7 +1157,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
       ) : null}
 
       {incidentModalOpen ? (
-        <div className="fixed inset-0 z-[var(--z-overlay)] flex items-end justify-center bg-black/50 p-4 sm:items-center" role="presentation" onKeyDown={(e) => { if (e.key === 'Escape') setIncidentModalOpen(false) }}>
+        <div className="fixed inset-0 z-(--z-overlay) flex items-end justify-center bg-black/50 p-4 sm:items-center" role="presentation" onKeyDown={(e) => { if (e.key === 'Escape') setIncidentModalOpen(false) }}>
           <section
             role="dialog"
             aria-modal="true"

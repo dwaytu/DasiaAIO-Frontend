@@ -73,10 +73,10 @@ interface MaintenanceEvent {
 type CalendarEvent = ShiftEvent | TripEvent | MissionEvent | MaintenanceEvent
 
 const EVENT_COLORS: Record<string, { bg: string; border: string; text: string; dot: string; chip: string }> = {
-  shift:       { bg: 'bg-[color:var(--color-info-bg)]', border: 'border-[color:var(--color-info-border)]', text: 'text-[color:var(--color-info-text)]', dot: 'bg-[color:var(--color-info-text)]', chip: 'soc-chip status-info' },
-  trip:        { bg: 'bg-[color:var(--color-warning-bg)]', border: 'border-[color:var(--color-warning-border)]', text: 'text-[color:var(--color-warning-text)]', dot: 'bg-[color:var(--color-warning-text)]', chip: 'soc-chip status-warning' },
-  mission:     { bg: 'bg-[color:var(--color-surface-elevated)]', border: 'border-[color:var(--color-border-elevated)]', text: 'text-[color:var(--color-text-primary)]', dot: 'bg-[color:var(--color-text-primary)]', chip: 'soc-chip status-neutral' },
-  maintenance: { bg: 'bg-[color:var(--color-danger-bg)]', border: 'border-[color:var(--color-danger-border)]', text: 'text-[color:var(--color-danger-text)]', dot: 'bg-[color:var(--color-danger-text)]', chip: 'soc-chip status-danger' },
+  shift:       { bg: 'bg-(--color-info-bg)', border: 'border-(--color-info-border)', text: 'text-(--color-info-text)', dot: 'bg-(--color-info-text)', chip: 'soc-chip status-info' },
+  trip:        { bg: 'bg-(--color-warning-bg)', border: 'border-(--color-warning-border)', text: 'text-(--color-warning-text)', dot: 'bg-(--color-warning-text)', chip: 'soc-chip status-warning' },
+  mission:     { bg: 'bg-(--color-surface-elevated)', border: 'border-(--color-border-elevated)', text: 'text-(--color-text-primary)', dot: 'bg-(--color-text-primary)', chip: 'soc-chip status-neutral' },
+  maintenance: { bg: 'bg-(--color-danger-bg)', border: 'border-(--color-danger-border)', text: 'text-(--color-danger-text)', dot: 'bg-(--color-danger-text)', chip: 'soc-chip status-danger' },
 }
 
 const TYPE_LABELS: Record<string, string> = {
@@ -593,16 +593,16 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
 
           <BentoGrid className="items-start">
             {/* Main calendar — hero card (2 cols × 2 rows) */}
-            <BentoCard isMain className="!p-0 overflow-hidden">
+            <BentoCard isMain className="p-0! overflow-hidden">
               {/* Month nav */}
-              <div className="flex items-center justify-between px-6 py-5 bg-gradient-to-r from-[color:var(--color-surface)] to-[color:var(--color-surface-elevated)] border-b border-border-subtle">
-                <button onClick={prevMonth} aria-label="Previous month" className="p-2 hover:bg-surface-hover rounded text-text-secondary hover:text-text-primary transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-focus-ring)]">
+              <div className="flex items-center justify-between px-6 py-5 bg-gradient-to-r from-(--color-surface) to-(--color-surface-elevated) border-b border-border-subtle">
+                <button onClick={prevMonth} aria-label="Previous month" className="p-2 hover:bg-surface-hover rounded text-text-secondary hover:text-text-primary transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)">
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
                 </button>
                 <h2 className="text-text-primary font-bold text-lg sm:text-2xl tracking-tight">
                   {MONTH_NAMES[currentMonth]} <span className="text-text-secondary">{currentYear}</span>
                 </h2>
-                <button onClick={nextMonth} aria-label="Next month" className="p-2 hover:bg-surface-hover rounded text-text-secondary hover:text-text-primary transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-focus-ring)]">
+                <button onClick={nextMonth} aria-label="Next month" className="p-2 hover:bg-surface-hover rounded text-text-secondary hover:text-text-primary transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)">
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
                 </button>
               </div>
@@ -637,18 +637,18 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
                         onClick={() => setSelectedDate(dateKey)}
                         className={`h-24 sm:h-28 rounded p-2 text-left transition-all relative border-2
                           ${isToday 
-                            ? 'bg-[color:var(--color-info-bg)] border-[color:var(--color-info-border)] shadow-lg shadow-black/20' 
+                            ? 'bg-(--color-info-bg) border-(--color-info-border) shadow-lg shadow-black/20' 
                             : isSelected 
-                            ? 'bg-[color:var(--color-surface-elevated)] border-[color:var(--color-border-elevated)]'
+                            ? 'bg-(--color-surface-elevated) border-(--color-border-elevated)'
                             : dayHasAttention
-                            ? 'bg-surface border-[color:var(--color-danger-border)] hover:border-[color:var(--color-danger-border)] hover:bg-surface-hover/40'
+                            ? 'bg-surface border-(--color-danger-border) hover:border-(--color-danger-border) hover:bg-surface-hover/40'
                             : 'bg-surface border-border hover:border-blue-400/60 hover:bg-surface-hover/40'
                           }
                         `}
                       >
                         <div className="flex items-center justify-between mb-1.5">
                           <span className={`text-sm sm:text-base font-bold w-7 h-7 flex items-center justify-center rounded-full
-                            ${isToday ? 'bg-[color:var(--color-info-border)] text-white' : isSelected ? 'bg-[color:var(--color-info-bg)] text-[color:var(--color-info-text)]' : 'text-text-primary'}`}>
+                            ${isToday ? 'bg-(--color-info-border) text-white' : isSelected ? 'bg-(--color-info-bg) text-(--color-info-text)' : 'text-text-primary'}`}>
                             {day}
                           </span>
                           {dayEvents.length > 0 && (
@@ -721,9 +721,9 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
             </BentoCard>
 
             {/* Day detail panel — 2 cols */}
-            <BentoCard colSpan={2} className="!p-0 overflow-hidden flex flex-col min-h-[360px]">
+            <BentoCard colSpan={2} className="p-0! overflow-hidden flex flex-col min-h-[360px]">
               <div className="flex-1 overflow-hidden flex flex-col">
-                <div className="px-6 py-4 bg-gradient-to-r from-[color:var(--color-surface)] to-[color:var(--color-surface-elevated)] border-b border-border-subtle">
+                <div className="px-6 py-4 bg-gradient-to-r from-(--color-surface) to-(--color-surface-elevated) border-b border-border-subtle">
                   <h3 className="text-text-primary font-bold text-lg">{formatDate(selectedDate)}</h3>
                   <p className="text-text-secondary text-sm mt-1">{selectedDateEvents.length} event{selectedDateEvents.length !== 1 ? 's' : ''} scheduled</p>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -747,12 +747,12 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
                             ${c.bg} ${c.border} hover:shadow-lg hover:shadow-current/20`}
                         >
                           <div className="flex items-start gap-3">
-                            <span className={`mt-1.5 w-2.5 h-2.5 rounded-full flex-shrink-0 ${c.dot}`} />
+                            <span className={`mt-1.5 w-2.5 h-2.5 rounded-full shrink-0 ${c.dot}`} />
                             <div className="min-w-0 flex-1">
                               <div className={`font-bold text-sm truncate ${c.text}`}>{ev.title}</div>
                               <div className="flex items-center gap-3 mt-2 flex-wrap">
                                 <div className="text-text-secondary text-xs font-medium">{formatTime(ev.startTime)}</div>
-                                <div className="text-text-tertiary text-xs uppercase tracking-wide font-semibold capitalize">
+                                <div className="text-text-tertiary text-xs uppercase tracking-wide font-semibold">
                                   {TYPE_LABELS[ev.type]}
                                 </div>
                               </div>
@@ -829,7 +829,7 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
               <button
                 type="button"
                 onClick={() => setSelectedEvent(null)}
-                className="rounded-md text-text-tertiary transition-colors hover:bg-surface-hover hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
+                className="rounded-md text-text-tertiary transition-colors hover:bg-surface-hover hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -886,7 +886,7 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
 
 const Row: FC<{ label: string; value: string; capitalize?: boolean }> = ({ label, value, capitalize }) => (
   <div className="flex justify-between gap-2">
-    <span className="text-text-tertiary flex-shrink-0">{label}</span>
+    <span className="text-text-tertiary shrink-0">{label}</span>
     <span className={`text-text-primary text-right ${capitalize ? 'capitalize' : ''}`}>{value}</span>
   </div>
 )

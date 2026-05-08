@@ -93,6 +93,7 @@ describe('useAuth', () => {
     expect(typeof result!.logout).toBe('function')
     expect(typeof result!.acceptToa).toBe('function')
     expect(typeof result!.declineToa).toBe('function')
+    expect(typeof result!.updateUser).toBe('function')
     expect(typeof result!.setToaChecked).toBe('function')
     expect(typeof result!.setToaError).toBe('function')
   })
@@ -301,5 +302,39 @@ describe('token expiry', () => {
     expect(auth!.isLoggedIn).toBe(false)
     expect(auth!.user).toBeNull()
     expect(mockedClearAuthSession).toHaveBeenCalled()
+  })
+})
+
+describe('updateUser', () => {
+  it('merges updates into the current user and persists localStorage', async () => {
+    let auth: AuthContextValue | undefined
+
+    function Consumer() {
+      auth = useAuth()
+      return null
+    }
+
+    await act(async () => {
+      render(
+        <AuthProvider>
+          <Consumer />
+        </AuthProvider>,
+      )
+    })
+
+    act(() => {
+      auth!.login(
+        { id: '1', email: 'a@b.com', username: 'u', role: 'guard' } as User,
+        'at',
+        'rt',
+      )
+    })
+
+    act(() => {
+      auth!.updateUser({ profilePhoto: 'data:image/png;base64,test-image' })
+    })
+
+    expect(auth!.user?.profilePhoto).toBe('data:image/png;base64,test-image')
+    expect(JSON.parse(localStorage.getItem('user') || '{}').profilePhoto).toBe('data:image/png;base64,test-image')
   })
 })

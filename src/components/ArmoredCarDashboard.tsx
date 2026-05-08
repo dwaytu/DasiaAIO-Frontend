@@ -397,7 +397,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                 key={tab}
                 className={`rounded-md px-4 py-2 text-sm font-semibold uppercase tracking-wide whitespace-nowrap transition-all duration-300 ${
                   activeTab === tab
-                    ? 'bg-[color:var(--color-info-bg)] text-[color:var(--color-info-text)] border border-[color:var(--color-info-border)]'
+                    ? 'bg-(--color-info-bg) text-(--color-info-text) border border-(--color-info-border)'
                     : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover'
                 }`}
                 onClick={() => setActiveTab(tab)}

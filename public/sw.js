@@ -1,8 +1,8 @@
 // Service worker: push notifications + offline caching + action queue
 // Registered from src/utils/pushNotifications.ts
 
-const CACHE_NAME = 'sentinel-v1';
-const STATIC_ASSETS = ['/', '/index.html', '/logo/sentinel-192.png', '/logo/sentinel-96.png'];
+const CACHE_NAME = 'sentinel-v2';
+const STATIC_ASSETS = ['/logo/sentinel-192.png', '/logo/sentinel-96.png'];
 
 // IndexedDB helpers for offline action queue
 const DB_NAME = 'sentinel-offline';
@@ -109,7 +109,10 @@ async function markActionFailure(item, errorMessage) {
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS)).then(() => self.skipWaiting()),
+    caches
+      .open(CACHE_NAME)
+      .then((cache) => cache.addAll(STATIC_ASSETS))
+      .then(() => self.skipWaiting()),
   );
 });
 
@@ -124,22 +127,77 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Cache-first for static assets; network-first (passthrough) for API requests
+async function cacheFirst(request) {
+  const cached = await caches.match(request);
+  if (cached) return cached;
+
+  const response = await fetch(request);
+  if (response.ok && response.type !== 'opaque') {
+    const clone = response.clone();
+    caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+  }
+  return response;
+}
+
+async function networkFirstNavigation(request) {
+  try {
+    const response = await fetch(request);
+    if (response.ok && response.type !== 'opaque') {
+      const clone = response.clone();
+      caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+    }
+    return response;
+  } catch (error) {
+    const cached = await caches.match(request);
+    if (cached) return cached;
+
+    const fallback = await caches.match('/');
+    if (fallback) return fallback;
+
+    throw error;
+  }
+}
+
+function isAssetRequest(url, request) {
+  return (
+    url.pathname.startsWith('/assets/') ||
+    request.destination === 'script' ||
+    request.destination === 'worker' ||
+    request.destination === 'style'
+  );
+}
+
+// Navigation requests must be network-first to prevent stale HTML from referencing old chunk hashes.
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
+
   if (request.method !== 'GET') return;
+  if (url.origin !== self.location.origin) return;
   if (url.pathname.startsWith('/api/')) return;
+
+  if (request.mode === 'navigate') {
+    event.respondWith(networkFirstNavigation(request));
+    return;
+  }
+
+  // For hashed JS/CSS assets, prefer network and fallback to cache (prevents stale bundles after deploy).
+  if (isAssetRequest(url, request)) {
+    event.respondWith(
+      fetch(request).catch(async () => {
+        const cached = await caches.match(request);
+        if (cached) return cached;
+        return Response.error();
+      }),
+    );
+    return;
+  }
+
   event.respondWith(
-    caches.match(request).then((cached) => {
+    cacheFirst(request).catch(async () => {
+      const cached = await caches.match(request);
       if (cached) return cached;
-      return fetch(request).then((response) => {
-        if (response.ok && response.type !== 'opaque') {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-        }
-        return response;
-      });
+      return Response.error();
     }),
   );
 });

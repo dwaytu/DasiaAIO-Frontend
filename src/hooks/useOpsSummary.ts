@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { API_BASE_URL } from '../config'
 import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
 
@@ -27,10 +27,13 @@ export function useOpsSummary() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [lastUpdated, setLastUpdated] = useState('')
+  const hasLoadedOnceRef = useRef(false)
 
   const refresh = useCallback(async () => {
     try {
-      setLoading(true)
+      if (!hasLoadedOnceRef.current) {
+        setLoading(true)
+      }
       const headers = getAuthHeaders()
 
       const [shiftsResult, approvalsResult, allocationsResult, overdueResult, tripsResult, vehiclesResult, permitsResult] = await Promise.allSettled([
@@ -72,6 +75,7 @@ export function useOpsSummary() {
       setError(err instanceof Error ? err.message : 'Failed to load command summary')
     } finally {
       setLoading(false)
+      hasLoadedOnceRef.current = true
     }
   }, [])
 

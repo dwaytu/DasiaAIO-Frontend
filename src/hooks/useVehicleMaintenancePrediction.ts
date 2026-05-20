@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { API_BASE_URL } from '../config'
 import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
 
@@ -30,10 +30,13 @@ export function useVehicleMaintenancePrediction(): UseVehicleMaintenancePredicti
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [lastUpdated, setLastUpdated] = useState('')
+  const hasLoadedOnceRef = useRef(false)
 
   const refresh = useCallback(async () => {
     try {
-      setLoading(true)
+      if (!hasLoadedOnceRef.current) {
+        setLoading(true)
+      }
       const data = await fetchJsonOrThrow<VehicleMaintenancePrediction[]>(
         `${API_BASE_URL}/api/ai/vehicle-maintenance-risk`,
         { headers: getAuthHeaders() },
@@ -47,6 +50,7 @@ export function useVehicleMaintenancePrediction(): UseVehicleMaintenancePredicti
       setError(err instanceof Error ? err.message : 'Failed to load predictive vehicle maintenance risk')
     } finally {
       setLoading(false)
+      hasLoadedOnceRef.current = true
     }
   }, [])
 

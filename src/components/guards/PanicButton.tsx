@@ -75,7 +75,7 @@ const PanicButton: FC<PanicButtonProps> = ({ userId, userDisplayName }) => {
   }, [state, userDisplayName, userId])
 
   return (
-    <div className="fixed bottom-32 right-4 z-40 flex flex-col items-center gap-1">
+    <div className="fixed bottom-32 right-4 z-(--z-toast) flex flex-col items-center gap-1">
       <span
         className="absolute inset-0 m-auto h-16 w-16 animate-ping rounded-full bg-red-500 opacity-30"
         aria-hidden="true"

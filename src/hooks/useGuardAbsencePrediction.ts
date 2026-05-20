@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { API_BASE_URL } from '../config'
 import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
 
@@ -29,10 +29,13 @@ export function useGuardAbsencePrediction(): UseGuardAbsencePredictionState {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [lastUpdated, setLastUpdated] = useState('')
+  const hasLoadedOnceRef = useRef(false)
 
   const refresh = useCallback(async () => {
     try {
-      setLoading(true)
+      if (!hasLoadedOnceRef.current) {
+        setLoading(true)
+      }
       const data = await fetchJsonOrThrow<GuardAbsencePrediction[]>(
         `${API_BASE_URL}/api/ai/guard-absence-risk`,
         { headers: getAuthHeaders() },
@@ -46,6 +49,7 @@ export function useGuardAbsencePrediction(): UseGuardAbsencePredictionState {
       setError(err instanceof Error ? err.message : 'Failed to load guard absence predictions')
     } finally {
       setLoading(false)
+      hasLoadedOnceRef.current = true
     }
   }, [])
 

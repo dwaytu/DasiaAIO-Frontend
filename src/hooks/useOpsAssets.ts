@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { API_BASE_URL } from '../config'
 import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
 
@@ -8,10 +8,13 @@ export function useOpsAssets() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [lastUpdated, setLastUpdated] = useState('')
+  const hasLoadedOnceRef = useRef(false)
 
   const refresh = useCallback(async () => {
     try {
-      setLoading(true)
+      if (!hasLoadedOnceRef.current) {
+        setLoading(true)
+      }
       const headers = getAuthHeaders()
 
       const [firearmsRes, vehiclesRes] = await Promise.allSettled([
@@ -30,6 +33,7 @@ export function useOpsAssets() {
       setError(err instanceof Error ? err.message : 'Failed to load assets')
     } finally {
       setLoading(false)
+      hasLoadedOnceRef.current = true
     }
   }, [])
 

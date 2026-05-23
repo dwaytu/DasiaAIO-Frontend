@@ -45,6 +45,12 @@ jest.mock('../hooks/useUI', () => ({
   }),
 }))
 
+jest.mock('../hooks/useAuth', () => ({
+  useAuth: () => ({
+    updateUser: jest.fn(),
+  }),
+}))
+
 jest.mock('../hooks/useLocationConsent', () => ({
   useLocationConsent: () => ({
     hasLocationConsent: true,

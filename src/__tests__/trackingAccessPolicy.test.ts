@@ -33,23 +33,22 @@ describe('tracking access policy', () => {
     expect(hasTrackingEndpointAccess(null)).toBe(false)
   })
 
-  it('keeps elevated tracking read access while denying heartbeat producer access', () => {
+  it('keeps elevated tracking read access while allowing heartbeat producer access', () => {
     expect(hasTrackingEndpointAccess('admin')).toBe(true)
     expect(hasTrackingEndpointAccess('superadmin')).toBe(true)
 
-    expect(canProduceTrackingHeartbeat('admin')).toBe(false)
-    expect(canProduceTrackingHeartbeat('superadmin')).toBe(false)
+    expect(canProduceTrackingHeartbeat('admin')).toBe(true)
+    expect(canProduceTrackingHeartbeat('superadmin')).toBe(true)
 
     expect(hasTrackingEndpointAccess('unknown-role')).toBe(false)
     expect(canProduceTrackingHeartbeat('unknown-role')).toBe(false)
   })
 
-  it('limits heartbeat producer access to guard and supervisor roles', () => {
+  it('limits heartbeat producer access to operational roles', () => {
     expect(canProduceTrackingHeartbeat('guard')).toBe(true)
     expect(canProduceTrackingHeartbeat('supervisor')).toBe(true)
-
-    expect(canProduceTrackingHeartbeat('admin')).toBe(false)
-    expect(canProduceTrackingHeartbeat('superadmin')).toBe(false)
+    expect(canProduceTrackingHeartbeat('admin')).toBe(true)
+    expect(canProduceTrackingHeartbeat('superadmin')).toBe(true)
 
     // Legacy sessions that still carry `user` normalize to guard.
     expect(canProduceTrackingHeartbeat('user')).toBe(true)

@@ -195,6 +195,12 @@ interface PendingApprovalUser {
   created_at: string
 }
 
+interface ClientSiteOption {
+  id: string
+  name: string
+  isActive?: boolean
+}
+
 interface SuperadminDashboardProps {
   user: AppUser
   onLogout: () => void
@@ -299,6 +305,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([])
   const [bulkProcessing, setBulkProcessing] = useState<boolean>(false)
   const [availableGuards, setAvailableGuards] = useState<User[]>([])
+  const [availableClientSites, setAvailableClientSites] = useState<ClientSiteOption[]>([])
   const [availableFirearms, setAvailableFirearms] = useState<any[]>([])
   const [availableVehicles, setAvailableVehicles] = useState<any[]>([])
   const [selectedGuards, setSelectedGuards] = useState<string>('')
@@ -306,6 +313,8 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   const [selectedVehicles, setSelectedVehicles] = useState<string>('')
   const [showAddScheduleForm, setShowAddScheduleForm] = useState<boolean>(false)
   const [, setRefreshing] = useState<boolean>(false)
+  const [clientSitesLoading, setClientSitesLoading] = useState<boolean>(false)
+  const [clientSitesError, setClientSitesError] = useState<string>('')
   const [lastUserSyncAt, setLastUserSyncAt] = useState<number>(() => Date.now())
   const [createGuardModalOpen, setCreateGuardModalOpen] = useState<boolean>(false)
   const [scheduleFormData, setScheduleFormData] = useState({
@@ -393,6 +402,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
       fetchPendingApprovals()
     } else if (activeSection === 'schedule') {
       fetchShifts()
+      fetchClientSites()
     } else if (activeSection === 'missions') {
       fetchMissions()
     }
@@ -483,6 +493,34 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
       setError('Error loading missions: ' + (err instanceof Error ? err.message : String(err)))
     } finally {
       setMissionsLoading(false)
+    }
+  }
+
+  const fetchClientSites = async () => {
+    try {
+      setClientSitesLoading(true)
+      setClientSitesError('')
+      const data = await fetchJsonOrThrow<any>(
+        `${API_BASE_URL}/api/tracking/client-sites`,
+        { headers: getAuthHeaders() },
+        'Failed to fetch client sites',
+      )
+      const sites = Array.isArray(data?.sites) ? data.sites : []
+      const normalizedSites = sites
+        .filter((site: any) => typeof site?.name === 'string' && site.name.trim().length > 0)
+        .filter((site: any) => site.isActive !== false)
+        .map((site: any) => ({
+          id: String(site.id || site.name),
+          name: String(site.name),
+          isActive: site.isActive !== false,
+        }))
+      setAvailableClientSites(normalizedSites)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to fetch client sites'
+      setClientSitesError(message)
+      logError('Error fetching client sites:', err)
+    } finally {
+      setClientSitesLoading(false)
     }
   }
 
@@ -1507,7 +1545,10 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                   <div className="shrink-0 px-6 py-5 border-b border-border-subtle flex justify-between items-center">
                     <h2 className="text-xl font-bold text-text-primary">All Guard Schedules</h2>
                     <button
-                      onClick={() => setShowAddScheduleForm(true)}
+                      onClick={() => {
+                        void fetchClientSites()
+                        setShowAddScheduleForm(true)
+                      }}
                       className="bg-primary hover:bg-primary-hover text-primary-text px-4 py-2 rounded text-sm font-medium transition-colors flex items-center gap-2"
                     >
                       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1582,6 +1623,11 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                     {error}
                   </div>
                 )}
+                {clientSitesError && (
+                  <div className="mb-4 p-3 bg-warning-bg border border-warning-border text-warning-text rounded text-sm">
+                    {clientSitesError}
+                  </div>
+                )}
 
                 <form onSubmit={handleScheduleSubmit} noValidate className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="md:col-span-2">
@@ -1599,14 +1645,27 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
 
                   <div className="md:col-span-2">
                     <label className="block text-sm font-semibold text-text-primary mb-1">Site/Location</label>
-                    <input
-                      type="text"
+                    <select
                       required
                       value={scheduleFormData.client_site}
-                      onChange={(e) => setScheduleFormData({...scheduleFormData, client_site: e.target.value})}
-                      placeholder="Enter site or location"
+                      onChange={(e) => setScheduleFormData({ ...scheduleFormData, client_site: e.target.value })}
+                      disabled={clientSitesLoading || availableClientSites.length === 0}
                       className="w-full px-3 py-2 border border-border rounded bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-(--color-focus-ring) focus:border-(--color-focus-ring)"
-                    />
+                    >
+                      <option value="">
+                        {clientSitesLoading ? 'Loading client sites...' : '-- Select a client site --'}
+                      </option>
+                      {availableClientSites.map((site) => (
+                        <option key={site.id} value={site.name}>
+                          {site.name}
+                        </option>
+                      ))}
+                    </select>
+                    {availableClientSites.length === 0 && !clientSitesLoading ? (
+                      <p className="mt-1 text-xs text-text-tertiary">
+                        No active client sites found. Add client sites in Operations Map or Resource Management first.
+                      </p>
+                    ) : null}
                   </div>
 
                   <div>

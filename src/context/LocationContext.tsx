@@ -20,6 +20,7 @@ import {
   isTrackingConsentRequiredResponse,
   revokeTrackingConsent,
 } from '../utils/trackingConsent'
+import { canProduceTrackingHeartbeat } from '../types/auth'
 import { useAuth } from '../hooks/useAuth'
 
 // ---------------------------------------------------------------------------
@@ -170,8 +171,7 @@ export function LocationProvider({ children }: LocationProviderProps) {
   useEffect(() => {
     if (!isLoggedIn || !user || !hasAcceptedToa || !hasLocationConsent) return
 
-    const role = user.role
-    const canSendTrackingHeartbeat = role === 'supervisor' || role === 'guard'
+    const canSendTrackingHeartbeat = canProduceTrackingHeartbeat(user.role)
     if (!canSendTrackingHeartbeat) return
 
     const platform = detectRuntimePlatform()
@@ -222,10 +222,9 @@ export function LocationProvider({ children }: LocationProviderProps) {
   useEffect(() => {
     if (!isLoggedIn || !user || !hasAcceptedToa || !hasLocationConsent) return
 
-    const role = user.role
-    const canSendTrackingHeartbeat = role === 'supervisor' || role === 'guard'
+    const canSendTrackingHeartbeat = canProduceTrackingHeartbeat(user.role)
     if (!canSendTrackingHeartbeat) {
-      setGeoNotice('Location heartbeat is enabled only for supervisor and guard roles.')
+      setGeoNotice('Location heartbeat is enabled only for operational roles.')
       return
     }
 
@@ -351,8 +350,7 @@ export function LocationProvider({ children }: LocationProviderProps) {
     if (!hasAcceptedToa) return 'no-toa'
     if (!hasLocationConsent) return 'no-consent'
 
-    const role = user.role
-    const canSendTrackingHeartbeat = role === 'supervisor' || role === 'guard'
+    const canSendTrackingHeartbeat = canProduceTrackingHeartbeat(user.role)
     if (!canSendTrackingHeartbeat) return 'paused'
 
     if (heartbeatPaused) return 'paused'

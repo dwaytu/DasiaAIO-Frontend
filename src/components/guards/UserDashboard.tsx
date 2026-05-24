@@ -131,6 +131,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
     lastResolvedLocation,
     lastHeartbeatAt,
     lastHeartbeatApproximate,
+    grantLocationConsent,
     requestGeoPermission: requestGeoPermissionFromContext,
     retryLocationHeartbeat,
   } = useLocationConsent()
@@ -650,7 +651,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
         key: 'no-consent',
         title: 'Location sharing paused',
         message: 'Location consent is required before heartbeat updates can run.',
-        action: 'open-profile' as const,
+        action: 'grant-consent' as const,
         actionLabel: 'Enable Consent',
       }
     }
@@ -770,6 +771,17 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                     <button
                       type="button"
                       onClick={() => setProfileModalOpen(true)}
+                      className="mt-2 min-h-10 rounded-md border border-warning-border px-3 py-1.5 text-xs font-semibold"
+                    >
+                      {locationBlockingNotice.actionLabel}
+                    </button>
+                  ) : null}
+                  {locationBlockingNotice.action === 'grant-consent' ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void grantLocationConsent()
+                      }}
                       className="mt-2 min-h-10 rounded-md border border-warning-border px-3 py-1.5 text-xs font-semibold"
                     >
                       {locationBlockingNotice.actionLabel}

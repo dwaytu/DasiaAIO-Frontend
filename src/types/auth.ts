@@ -49,7 +49,7 @@ export function canProduceTrackingHeartbeat(role: unknown): boolean {
   const normalized = normalizeRole(role)
   if (normalized == null) return false
 
-  return normalized === 'guard' || normalized === 'supervisor'
+  return normalized === 'guard' || normalized === 'supervisor' || normalized === 'admin' || normalized === 'superadmin'
 }
 
 export function canManageTrackingSites(role: unknown): boolean {

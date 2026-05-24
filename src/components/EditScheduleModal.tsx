@@ -21,6 +21,12 @@ interface User {
   role: string
 }
 
+interface ClientSiteOption {
+  id: string
+  name: string
+  isActive?: boolean
+}
+
 interface EditScheduleModalProps {
   shift: Shift | null
   onClose: () => void
@@ -30,6 +36,7 @@ interface EditScheduleModalProps {
 
 const EditScheduleModal: FC<EditScheduleModalProps> = ({ shift, onClose, onSave, onDelete }) => {
   const [guards, setGuards] = useState<User[]>([])
+  const [clientSites, setClientSites] = useState<ClientSiteOption[]>([])
   const [formData, setFormData] = useState({
     guardId: shift?.guard_id || '',
     clientSite: shift?.client_site || '',
@@ -38,11 +45,13 @@ const EditScheduleModal: FC<EditScheduleModalProps> = ({ shift, onClose, onSave,
     endTime: shift?.end_time ? new Date(shift.end_time).toTimeString().slice(0, 5) : '',
   })
   const [loading, setLoading] = useState(false)
+  const [clientSitesLoading, setClientSitesLoading] = useState(false)
   const [error, setError] = useState('')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   useEffect(() => {
     fetchGuards()
+    fetchClientSites()
   }, [])
 
   const fetchGuards = async () => {
@@ -57,6 +66,27 @@ const EditScheduleModal: FC<EditScheduleModalProps> = ({ shift, onClose, onSave,
       setGuards(data.users.filter((u: User) => u.role === 'guard' || u.role === 'user'))
     } catch (err) {
       logError('Error fetching guards:', err)
+    }
+  }
+
+  const fetchClientSites = async () => {
+    try {
+      setClientSitesLoading(true)
+      const response = await fetch(`${API_BASE_URL}/api/tracking/client-sites`, {
+        headers: getAuthHeaders(),
+      })
+
+      if (!response.ok) throw new Error('Failed to fetch client sites')
+
+      const data = await response.json() as { sites?: ClientSiteOption[] }
+      const sites = Array.isArray(data.sites) ? data.sites : []
+      const activeSites = sites.filter((site) => site.isActive !== false)
+      setClientSites(activeSites.length > 0 ? activeSites : sites)
+    } catch (err) {
+      logError('Error fetching client sites:', err)
+      setClientSites([])
+    } finally {
+      setClientSitesLoading(false)
     }
   }
 
@@ -222,16 +252,34 @@ const EditScheduleModal: FC<EditScheduleModalProps> = ({ shift, onClose, onSave,
 
             <div>
               <label htmlFor="clientSite" className="mb-1 block text-sm font-semibold text-text-secondary">Client Site</label>
-              <input
-                type="text"
+              <select
                 id="clientSite"
                 name="clientSite"
                 value={formData.clientSite}
                 onChange={handleChange}
                 required
-                placeholder="Enter client site"
                 className="w-full rounded border border-border px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-info"
-              />
+                disabled={clientSitesLoading || (clientSites.length === 0 && !formData.clientSite)}
+              >
+                <option value="">
+                  {clientSitesLoading ? 'Loading client sites...' : 'Select client site'}
+                </option>
+                {clientSites.map((site) => (
+                  <option key={site.id} value={site.name}>
+                    {site.name}
+                  </option>
+                ))}
+                {formData.clientSite && !clientSites.some((site) => site.name === formData.clientSite) ? (
+                  <option value={formData.clientSite}>
+                    {formData.clientSite} (current)
+                  </option>
+                ) : null}
+              </select>
+              {clientSites.length === 0 && !clientSitesLoading ? (
+                <p className="mt-1 text-xs text-text-tertiary">
+                  No client sites found. Create one first in Operations Map or Resource Management.
+                </p>
+              ) : null}
             </div>
 
             <div>

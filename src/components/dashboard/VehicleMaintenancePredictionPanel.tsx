@@ -34,11 +34,11 @@ const VehicleMaintenancePredictionPanel: FC<VehicleMaintenancePredictionPanelPro
   return (
     <section
       className="command-panel rounded border border-(--color-border) bg-(--color-surface)"
-      aria-label="Predictive vehicle maintenance"
+      aria-label="Vehicle maintenance risk"
     >
       <div className="flex items-center justify-between border-b border-(--color-border) px-4 py-3">
         <div>
-          <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-(--color-text)">Predictive Vehicle Maintenance</p>
+          <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-(--color-text)">Vehicle Maintenance Risk</p>
           <p className="font-mono text-[11px] text-(--color-muted-text)">Vehicles likely to require maintenance soon</p>
         </div>
         {lastUpdated && <span className="font-mono text-[11px] text-(--color-muted-text)">{lastUpdated}</span>}

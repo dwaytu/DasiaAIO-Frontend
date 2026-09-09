@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
+import { API_BASE_URL } from '../../config';
 import { ActionInbox, InboxItem } from './ActionInbox';
 import { WorkflowTimeline, TimelineEntry } from './WorkflowTimeline';
 import { getAuthHeaders } from '../../utils/api';
+import { fetchArrayPayload, fetchObjectPayload } from './inboxPayloads';
 import { parsePendingApprovalsPayload, type PendingApprovalRecord } from './pendingApprovals';
 
 interface AdminInboxPanelProps {
@@ -38,20 +40,13 @@ interface OperationalMetrics {
   [key: string]: unknown;
 }
 
-async function safeFetch<T>(url: string, headers: HeadersInit): Promise<T[]> {
+async function safeFetchPendingApprovals(
+  url: string,
+  headers: HeadersInit,
+  signal?: AbortSignal,
+): Promise<PendingApproval[]> {
   try {
-    const res = await fetch(url, { headers });
-    if (!res.ok) return [];
-    const data: unknown = await res.json();
-    return Array.isArray(data) ? (data as T[]) : [];
-  } catch {
-    return [];
-  }
-}
-
-async function safeFetchPendingApprovals(url: string, headers: HeadersInit): Promise<PendingApproval[]> {
-  try {
-    const res = await fetch(url, { headers });
+    const res = await fetch(url, { headers, signal });
     if (!res.ok) return [];
     const data: unknown = await res.json();
     return parsePendingApprovalsPayload(data);
@@ -60,18 +55,23 @@ async function safeFetchPendingApprovals(url: string, headers: HeadersInit): Pro
   }
 }
 
-async function safeFetchObject<T>(url: string, headers: HeadersInit): Promise<T | null> {
-  try {
-    const res = await fetch(url, { headers });
-    if (!res.ok) return null;
-    const data: unknown = await res.json();
-    if (data !== null && typeof data === 'object' && !Array.isArray(data)) {
-      return data as T;
-    }
-    return null;
-  } catch {
-    return null;
-  }
+type AnalyticsPayload = {
+  overview?: {
+    active_guards?: number;
+    active_missions?: number;
+  };
+  mission_stats?: {
+    pending_missions?: number;
+  };
+};
+
+function toOperationalMetrics(payload: AnalyticsPayload | null): OperationalMetrics | null {
+  if (!payload) return null;
+  return {
+    active_guards: payload.overview?.active_guards,
+    active_operations: payload.overview?.active_missions,
+    pending_approvals: payload.mission_stats?.pending_missions,
+  };
 }
 
 function buildInboxItems(
@@ -162,6 +162,7 @@ export const AdminInboxPanel = ({ userId, onAction }: AdminInboxPanelProps): Rea
 
   useEffect(() => {
     let cancelled = false;
+    const controller = new AbortController();
 
     async function load(): Promise<void> {
       const headers = getAuthHeaders({ 'Content-Type': 'application/json' });
@@ -169,19 +170,36 @@ export const AdminInboxPanel = ({ userId, onAction }: AdminInboxPanelProps): Rea
       const [approvalsResult, firearmsResult, notificationsResult, metricsResult] =
         await Promise.allSettled([
           safeFetchPendingApprovals(
-            '/api/users/pending-approvals',
+            `${API_BASE_URL}/api/users/pending-approvals`,
             headers,
+            controller.signal,
           ),
-          safeFetch<FirearmItem>('/api/firearm-allocations', headers).then((data) =>
+          fetchArrayPayload<FirearmItem>(
+            `${API_BASE_URL}/api/firearm-allocations`,
+            headers,
+            ['allocations'],
+            controller.signal,
+          ).then((data) =>
             data.length > 0
               ? data
-              : safeFetch<FirearmItem>('/api/firearms', headers),
+              : fetchArrayPayload<FirearmItem>(
+                `${API_BASE_URL}/api/firearms`,
+                headers,
+                ['firearms'],
+                controller.signal,
+              ),
           ),
-          safeFetch<AdminNotification>(
-            `/api/users/${encodeURIComponent(userId)}/notifications`,
+          fetchArrayPayload<AdminNotification>(
+            `${API_BASE_URL}/api/users/${encodeURIComponent(userId)}/notifications`,
             headers,
+            ['notifications'],
+            controller.signal,
           ),
-          safeFetchObject<OperationalMetrics>('/api/analytics/metrics', headers),
+          fetchObjectPayload<AnalyticsPayload>(
+            `${API_BASE_URL}/api/analytics`,
+            headers,
+            controller.signal,
+          ),
         ]);
 
       if (cancelled) return;
@@ -193,7 +211,7 @@ export const AdminInboxPanel = ({ userId, onAction }: AdminInboxPanelProps): Rea
       const notifications =
         notificationsResult.status === 'fulfilled' ? notificationsResult.value : [];
       const metricsData =
-        metricsResult.status === 'fulfilled' ? metricsResult.value : null;
+        metricsResult.status === 'fulfilled' ? toOperationalMetrics(metricsResult.value) : null;
 
       setInboxItems(buildInboxItems(approvals, firearms, notifications, onAction));
       setTimelineEntries(buildTimelineEntries(notifications));
@@ -204,6 +222,7 @@ export const AdminInboxPanel = ({ userId, onAction }: AdminInboxPanelProps): Rea
     void load();
     return () => {
       cancelled = true;
+      controller.abort();
     };
   }, [userId, onAction]);
 

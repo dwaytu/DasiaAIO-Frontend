@@ -38,6 +38,7 @@ import { AdminInboxPanel } from '../inbox/AdminInboxPanel'
 import { SuperadminInboxPanel } from '../inbox/SuperadminInboxPanel'
 import { useOperationalMapData } from '../../hooks/useOperationalMapData'
 import CreateGuardAccountModal from './CreateGuardAccountModal'
+import { localScheduleToUtc } from '../../utils/scheduleDateTime'
 
 const AuditDashboard = lazy(() => import('../AuditDashboard'))
 
@@ -668,19 +669,34 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
 
   const handleScheduleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    const hasRequiredFields = scheduleFormData.guard_id
+      && scheduleFormData.client_site
+      && scheduleFormData.date
+      && scheduleFormData.start_time
+      && scheduleFormData.end_time
+
+    if (!hasRequiredFields) {
+      const message = 'Select a guard, client site, date, start time, and end time before creating a schedule.'
+      setError(message)
+      addNotification('error', 'Schedule Incomplete', message)
+      return
+    }
+
     try {
       setShiftsLoading(true)
       setError('')
-      
-      // Combine date and times to create datetime strings
-      const startDateTime = `${scheduleFormData.date}T${scheduleFormData.start_time}:00Z`
-      const endDateTime = `${scheduleFormData.date}T${scheduleFormData.end_time}:00Z`
+
+      const { startTime, endTime } = localScheduleToUtc(
+        scheduleFormData.date,
+        scheduleFormData.start_time,
+        scheduleFormData.end_time,
+      )
       
       const payload = {
-        guard_id: scheduleFormData.guard_id,
-        client_site: scheduleFormData.client_site,
-        start_time: startDateTime,
-        end_time: endDateTime,
+        guardId: scheduleFormData.guard_id,
+        clientSite: scheduleFormData.client_site,
+        startTime,
+        endTime,
         status: 'scheduled'
       }
 
@@ -1704,7 +1720,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                   <div className="md:col-span-2">
                     <button
                       type="submit"
-                      disabled={shiftsLoading}
+                      disabled={shiftsLoading || clientSitesLoading || availableClientSites.length === 0}
                       className="w-full bg-primary hover:bg-primary-hover disabled:opacity-50 text-primary-text font-semibold py-3 rounded transition-colors"
                     >
                       {shiftsLoading ? 'Creating Schedule...' : 'Create Schedule'}

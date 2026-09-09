@@ -385,7 +385,7 @@ const MdrBatchReview: FC<MdrBatchReviewProps> = ({
         return
       }
 
-      const response = await fetchJsonOrThrow<BatchActionResponse>(
+      await fetchJsonOrThrow<BatchActionResponse>(
         `${API_BASE_URL}/api/mdr/batches/${encodeURIComponent(batch.id)}/${action}`,
         {
           method: 'POST',

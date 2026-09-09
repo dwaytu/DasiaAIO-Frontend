@@ -186,6 +186,7 @@ export default function AppShell() {
 
       {/* ── Location permission banner ───────────────────────────────────── */}
       {isLoggedIn &&
+      !isGuardWorkspaceView &&
       hasAcceptedToa &&
       hasLocationConsent &&
       geoPermissionState !== 'granted' &&

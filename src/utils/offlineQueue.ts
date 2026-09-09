@@ -50,6 +50,45 @@ export interface OfflineQueueHealth {
   failedCount: number
 }
 
+type OfflineActionIdentity = Pick<OfflineActionInput, 'url' | 'method' | 'body'>
+
+function stableJsonStringify(value: unknown): string | undefined | null {
+  try {
+    return JSON.stringify(value, (_key, nestedValue: unknown) => {
+      if (nestedValue === null || typeof nestedValue !== 'object' || Array.isArray(nestedValue)) {
+        return nestedValue
+      }
+
+      const record = nestedValue as Record<string, unknown>
+      return Object.keys(record)
+        .sort()
+        .reduce<Record<string, unknown>>((sorted, key) => {
+          sorted[key] = record[key]
+          return sorted
+        }, {})
+    })
+  } catch {
+    return null
+  }
+}
+
+export function areOfflineActionsEquivalent(
+  left: OfflineActionIdentity,
+  right: OfflineActionIdentity,
+): boolean {
+  if (left.url !== right.url || left.method.toUpperCase() !== right.method.toUpperCase()) {
+    return false
+  }
+
+  if (Object.is(left.body, right.body)) {
+    return true
+  }
+
+  const leftBody = stableJsonStringify(left.body)
+  const rightBody = stableJsonStringify(right.body)
+  return leftBody !== null && rightBody !== null && leftBody === rightBody
+}
+
 function computeBackoffMs(attempts: number): number {
   const exponential = BASE_RETRY_DELAY_MS * 2 ** Math.max(0, attempts - 1)
   return Math.min(exponential, MAX_RETRY_DELAY_MS)
@@ -82,12 +121,18 @@ export async function enqueueOfflineAction(action: OfflineActionInput): Promise<
     const cursorReq = store.openCursor(null, 'prev')
     cursorReq.onsuccess = (e) => {
       const cursor = (e.target as IDBRequest<IDBCursorWithValue | null>).result
-      if (cursor) {
-        const last = cursor.value as OfflineAction
-        resolve(last.url === action.url && last.method === action.method)
-      } else {
+      if (!cursor) {
         resolve(false)
+        return
       }
+
+      const queuedAction = cursor.value as OfflineAction
+      if (areOfflineActionsEquivalent(queuedAction, action)) {
+        resolve(true)
+        return
+      }
+
+      cursor.continue()
     }
     cursorReq.onerror = (e) => reject((e.target as IDBRequest).error)
   })
@@ -100,8 +145,11 @@ export async function enqueueOfflineAction(action: OfflineActionInput): Promise<
     ...action,
     actionType,
     queuedAt: now,
-    attempts: Number.isFinite(action.attempts) ? action.attempts : 0,
-    maxAttempts: Number.isFinite(action.maxAttempts) ? action.maxAttempts : DEFAULT_MAX_ATTEMPTS,
+    attempts: typeof action.attempts === 'number' && Number.isFinite(action.attempts) ? action.attempts : 0,
+    maxAttempts:
+      typeof action.maxAttempts === 'number' && Number.isFinite(action.maxAttempts)
+        ? action.maxAttempts
+        : DEFAULT_MAX_ATTEMPTS,
     nextRetryAt: action.nextRetryAt || now,
     lastAttemptAt: action.lastAttemptAt,
     lastError: action.lastError,

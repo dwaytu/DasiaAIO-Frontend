@@ -44,7 +44,7 @@ export function useReplacementSuggestions(): UseReplacementSuggestionsState {
   const [lastUpdated, setLastUpdated] = useState('')
   const hasLoadedOnceRef = useRef(false)
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (signal?: AbortSignal) => {
     try {
       if (!hasLoadedOnceRef.current) {
         setLoading(true)
@@ -82,7 +82,7 @@ export function useReplacementSuggestions(): UseReplacementSuggestionsState {
       if (!resolvedPostId) {
         const sitesResponse = await fetchJsonOrThrow<ClientSite[] | ClientSitesResponse>(
           `${API_BASE_URL}/api/tracking/client-sites`,
-          { headers },
+          { headers, signal },
           'Failed to load client sites for replacement suggestions',
         )
 
@@ -105,8 +105,8 @@ export function useReplacementSuggestions(): UseReplacementSuggestionsState {
       }
 
       const data = await fetchJsonOrThrow<ReplacementSuggestion[]>(
-        `${API_BASE_URL}/api/ai/replacement-suggestions?post_id=${encodeURIComponent(resolvedPostId)}`,
-        { headers },
+        `${API_BASE_URL}/api/analytics/replacement-suggestions?post_id=${encodeURIComponent(resolvedPostId)}`,
+        { headers, signal },
         'Failed to load smart guard replacement suggestions',
       )
 
@@ -114,15 +114,20 @@ export function useReplacementSuggestions(): UseReplacementSuggestionsState {
       setError('')
       setLastUpdated(new Date().toLocaleTimeString())
     } catch (err) {
+      if (signal?.aborted) return
       setError(err instanceof Error ? err.message : 'Failed to load smart guard replacement suggestions')
     } finally {
-      setLoading(false)
-      hasLoadedOnceRef.current = true
+      if (!signal?.aborted) {
+        setLoading(false)
+        hasLoadedOnceRef.current = true
+      }
     }
   }, [postId, postName])
 
   useEffect(() => {
-    refresh()
+    const controller = new AbortController()
+    void refresh(controller.signal)
+    return () => controller.abort()
   }, [refresh])
 
   return {

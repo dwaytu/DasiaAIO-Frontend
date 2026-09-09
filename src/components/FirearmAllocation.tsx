@@ -1,7 +1,8 @@
 import { useState, useEffect, FC } from 'react'
+import { CheckCircle2 } from 'lucide-react'
 import { API_BASE_URL } from '../config'
 import { logError } from '../utils/logger'
-import { getAuthHeaders } from '../utils/api'
+import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
 import OperationalShell from './layout/OperationalShell'
 import { getSidebarNav } from '../config/navigation'
 
@@ -41,6 +42,7 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
   const [showAllocateForm, setShowAllocateForm] = useState<boolean>(false)
   const [error, setError] = useState<string>('')
   const [success, setSuccess] = useState<string>('')
+  const [returningId, setReturningId] = useState<string | null>(null)
   const [newAllocation, setNewAllocation] = useState({
     guardId: '',
     firearmId: '',
@@ -149,6 +151,32 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
     }
   }
 
+  const returnFirearm = async (allocationId: string) => {
+    if (!window.confirm('Return this firearm and mark it available again?')) return
+
+    setReturningId(allocationId)
+    setError('')
+    setSuccess('')
+    try {
+      await fetchJsonOrThrow(
+        `${API_BASE_URL}/api/firearm-allocation/return`,
+        {
+          method: 'POST',
+          headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+          body: JSON.stringify({ allocationId }),
+        },
+        'Failed to return firearm',
+      )
+      setSuccess('Firearm returned successfully and is now available.')
+      await fetchAllocations()
+      await fetchFirearms()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to return firearm')
+    } finally {
+      setReturningId(null)
+    }
+  }
+
   const getStatusBadgeColor = (status: string) => {
     switch (status?.toLowerCase()) {
       case 'active': return 'bg-success-bg text-success-text ring-1 ring-success-border'
@@ -242,6 +270,7 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
                         <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Firearm ID</th>
                         <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Allocation Date</th>
                         <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Status</th>
+                        <th className="px-4 py-3 text-right font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -250,11 +279,27 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
                           <td className="px-4 py-3 text-text-primary">{a.guardId}</td>
                           <td className="px-4 py-3 text-text-primary">{a.firearmId}</td>
                           <td className="px-4 py-3 text-text-primary">{new Date(a.allocationDate).toLocaleDateString()}</td>
-                          <td className="px-4 py-3">
-                            <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${getStatusBadgeColor(a.status)}`}>
-                              {a.status}
-                            </span>
-                          </td>
+                            <td className="px-4 py-3">
+                              <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${getStatusBadgeColor(a.status)}`}>
+                                {a.status}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              {a.status?.toLowerCase() === 'active' ? (
+                                <button
+                                  type="button"
+                                  onClick={() => void returnFirearm(a.id)}
+                                  disabled={returningId === a.id}
+                                  className="soc-btn inline-flex min-h-10 items-center gap-2 px-3 text-xs disabled:cursor-not-allowed disabled:opacity-60"
+                                  title="Return firearm"
+                                >
+                                  <CheckCircle2 size={15} aria-hidden="true" />
+                                  {returningId === a.id ? 'Returning...' : 'Return'}
+                                </button>
+                              ) : (
+                                <span className="text-xs text-text-tertiary">No action</span>
+                              )}
+                            </td>
                         </tr>
                       ))}
                     </tbody>

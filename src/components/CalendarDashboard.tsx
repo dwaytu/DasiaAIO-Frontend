@@ -324,7 +324,7 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
     try {
       const results = await Promise.allSettled([
         fetchShifts(signal),
-        fetchTrips(signal),
+        isAdmin ? fetchTrips(signal) : Promise.resolve([]),
         isAdmin ? fetchMissions(signal) : Promise.resolve([]),
         isAdmin ? fetchMaintenanceEvents(signal) : Promise.resolve([]),
       ])

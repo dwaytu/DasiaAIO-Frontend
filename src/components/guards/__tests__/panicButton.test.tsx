@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import PanicButton from '../PanicButton'
 import { resolveLocationWithFallback } from '../../../utils/location'
 import { enqueueOfflineAction } from '../../../utils/offlineQueue'
+import { fetchJsonOrThrow } from '../../../utils/api'
 
 jest.mock('../../../config', () => ({
   API_BASE_URL: 'https://example.test',
@@ -22,6 +23,9 @@ jest.mock('../../../utils/location', () => ({
 
 jest.mock('../../../utils/api', () => ({
   getAuthToken: () => 'token',
+  fetchJsonOrThrow: jest.fn(async () => ({})),
+  isOfflineRequestError: (error: unknown) =>
+    error instanceof Error && error.message.toLowerCase().includes('offline'),
 }))
 
 jest.mock('../../../utils/offlineQueue', () => ({
@@ -30,14 +34,11 @@ jest.mock('../../../utils/offlineQueue', () => ({
 
 const mockedResolveLocationWithFallback = resolveLocationWithFallback as jest.MockedFunction<typeof resolveLocationWithFallback>
 const mockedEnqueueOfflineAction = enqueueOfflineAction as jest.MockedFunction<typeof enqueueOfflineAction>
+const mockedFetchJsonOrThrow = fetchJsonOrThrow as jest.MockedFunction<typeof fetchJsonOrThrow>
 
 describe('PanicButton', () => {
   beforeEach(() => {
-    Object.defineProperty(globalThis, 'fetch', {
-      configurable: true,
-      writable: true,
-      value: jest.fn().mockResolvedValue({ ok: true, status: 201 }),
-    })
+    mockedFetchJsonOrThrow.mockResolvedValue({})
 
     Object.defineProperty(globalThis.navigator, 'geolocation', {
       configurable: true,
@@ -71,17 +72,16 @@ describe('PanicButton', () => {
 
     expect((navigator.geolocation as Geolocation).getCurrentPosition).not.toHaveBeenCalled()
 
-    const fetchMock = globalThis.fetch as jest.Mock
-    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(mockedFetchJsonOrThrow).toHaveBeenCalledTimes(1)
 
-    const requestInit = fetchMock.mock.calls[0][1] as RequestInit
+    const requestInit = mockedFetchJsonOrThrow.mock.calls[0][1] as RequestInit
     const body = JSON.parse(String(requestInit.body)) as { location: string }
     expect(body.location).toContain('7.123456, 125.654321')
   })
 
   it('queues SOS payload offline when incident post fails', async () => {
     const user = userEvent.setup()
-    ;(globalThis.fetch as jest.Mock).mockRejectedValueOnce(new Error('offline'))
+    mockedFetchJsonOrThrow.mockRejectedValueOnce(new Error('offline'))
 
     render(<PanicButton userId="guard-1" userDisplayName="Guard One" />)
 
@@ -95,5 +95,16 @@ describe('PanicButton', () => {
     const queuedBody = queuedPayload.body as { location?: unknown }
     expect(queuedBody.location).toEqual(expect.any(String))
     expect(String(queuedBody.location)).toContain('7.123456, 125.654321')
+  })
+
+  it('does not queue authorization or validation failures as sent SOS alerts', async () => {
+    const user = userEvent.setup()
+    mockedFetchJsonOrThrow.mockRejectedValueOnce(new Error('Session expired. Please log in again.'))
+
+    render(<PanicButton userId="guard-1" userDisplayName="Guard One" />)
+    await user.click(screen.getByRole('button', { name: /emergency sos/i }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/session expired/i)
+    expect(mockedEnqueueOfflineAction).not.toHaveBeenCalled()
   })
 })

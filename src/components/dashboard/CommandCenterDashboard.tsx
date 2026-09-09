@@ -12,8 +12,6 @@ import GuardAbsencePredictionPanel from './GuardAbsencePredictionPanel'
 import ReplacementSuggestionPanel from './ReplacementSuggestionPanel'
 import VehicleMaintenancePredictionPanel from './VehicleMaintenancePredictionPanel'
 import IncidentSeverityMonitoringPanel from './IncidentSeverityMonitoringPanel'
-import IncidentSeverityClassifier from './IncidentSeverityClassifier'
-import IncidentSummaryGenerator from './IncidentSummaryGenerator'
 import TodaysShiftOperations from './TodaysShiftOperations'
 import FirearmsStatusPanel from './FirearmsStatusPanel'
 import SystemStatusBanner from './SystemStatusBanner'
@@ -262,7 +260,7 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
     return (
       <DashboardLoadingState
         title="Security Operations Command Center"
-        subtitle="Unified tactical view for incidents, deployments, and predictive risk activity."
+        subtitle="Unified tactical view for incidents, deployments, and operational risk activity."
         heroCards={4}
         lowerSections={2}
       />
@@ -284,7 +282,7 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
       <section className="animate-section-enter soc-surface p-4 md:p-5" aria-labelledby="command-center-title">
         <SectionHeader
           title="Security Operations Command Center"
-          subtitle="Unified tactical view for incidents, deployments, and predictive risk activity."
+          subtitle="Unified tactical view for incidents, deployments, and operational risk activity."
           actions={
             <div className="flex items-center gap-2">
               <LiveFreshnessPill updatedAt={lastRefreshAt} label="SOC stream" />
@@ -348,7 +346,7 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
 
       <SectionPanel
         title="Live Operations"
-        subtitle="Streaming feed, incident escalation, and AI-assisted incident triage"
+        subtitle="Streaming feed, incident escalation, and severity monitoring"
         icon={<Siren className="h-4 w-4" aria-hidden="true" />}
       >
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
@@ -363,31 +361,29 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
             onUpdateStatus={handleIncidentStatusUpdate}
           />
         </div>
-        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:grid-flow-dense xl:grid-cols-4">
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <IncidentSeverityMonitoringPanel
             incidents={displayIncidents}
             loading={incidentsState.loading}
             error={incidentsState.error}
             lastUpdated={incidentsState.lastUpdated || staleNote}
           />
-          <div className="sm:col-span-2 xl:col-span-1">
+          <div>
             <PredictiveAlertsPanel
               alerts={predictiveAlertsState.alerts}
               loading={predictiveAlertsState.loading}
               error={predictiveAlertsState.error}
               lastUpdated={predictiveAlertsState.lastUpdated || staleNote}
-              title="AI Operational Insights"
-              subtitle="Model-driven alerts and emerging risk vectors"
+              title="Operational Risk Alerts"
+              subtitle="Rule-based alerts and emerging risk indicators"
             />
           </div>
-          <IncidentSeverityClassifier incidents={displayIncidents} />
-          <IncidentSummaryGenerator incidents={displayIncidents} />
         </div>
       </SectionPanel>
 
       <SectionPanel
         title="Operations Management"
-        subtitle="Shift execution and staffing resilience with predictive staffing support"
+        subtitle="Shift execution and staffing resilience with attendance risk support"
         icon={<TimerReset className="h-4 w-4" aria-hidden="true" />}
       >
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">

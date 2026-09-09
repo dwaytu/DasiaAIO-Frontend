@@ -86,15 +86,15 @@ const PredictiveAlertsPanel: FC<PredictiveAlertsPanelProps> = ({
   loading = false,
   error = '',
   lastUpdated,
-  title = 'Predictive Alerts',
-  subtitle = 'Forecasted operational risks',
+  title = 'Operational Alerts',
+  subtitle = 'Rule-based operational risks',
 }) => {
   const timestamp = lastUpdated ? `Updated ${lastUpdated}` : undefined
 
   return (
     <section
       className="command-panel rounded border border-(--color-border) bg-(--color-surface)"
-      aria-label="Predictive operational alerts"
+      aria-label="Operational risk alerts"
     >
       <div className="flex items-center justify-between border-b border-(--color-border) px-4 py-3">
         <div>
@@ -114,7 +114,7 @@ const PredictiveAlertsPanel: FC<PredictiveAlertsPanelProps> = ({
         )}
 
         {!loading && !error && alerts.length === 0 && (
-          <p className="text-center font-mono text-xs text-text-secondary">No predictive risks detected.</p>
+          <p className="text-center font-mono text-xs text-text-secondary">No operational risks detected.</p>
         )}
 
         {!loading && !error && alerts.length > 0 && (
@@ -122,8 +122,8 @@ const PredictiveAlertsPanel: FC<PredictiveAlertsPanelProps> = ({
             {alerts.map((alert) => {
               const severityClass = severityStyles[alert.severity] ?? severityStyles.info
               const icon = severityIcon[alert.severity] ?? severityIcon.info
-              const categoryLabel = alert.category || 'Forecast'
-              const message = alert.message || 'No predictive alert narrative was provided.'
+              const categoryLabel = alert.category || 'Risk'
+              const message = alert.message || 'No alert narrative was provided.'
               const count = getNumericContext(alert.context, 'count')
               const guardNames = getStringListContext(alert.context, 'guards')
               const detectedLabel = alert.detectedAt

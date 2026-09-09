@@ -3,17 +3,6 @@ import { normalizeRole } from '../../types/auth'
 import { useIncidents } from '../../hooks/useIncidents'
 import type { Incident } from '../../hooks/useIncidents'
 import IncidentReportForm from './IncidentReportForm'
-import { API_BASE_URL } from '../../config'
-import { fetchJsonOrThrow, getAuthHeaders } from '../../utils/api'
-
-interface IncidentSummaryPreview {
-  riskLevel: string
-  confidence: number
-  explanation: string
-  suggestedActions: string[]
-  summary: string
-  keyPhrases: string[]
-}
 
 const PRIORITY_BADGE: Record<
   Incident['priority'],
@@ -42,9 +31,6 @@ const IncidentPanel: FC = () => {
   const [showForm, setShowForm] = useState(false)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [updateError, setUpdateError] = useState('')
-  const [summaryError, setSummaryError] = useState('')
-  const [summarizingId, setSummarizingId] = useState<string | null>(null)
-  const [summaryByIncidentId, setSummaryByIncidentId] = useState<Record<string, IncidentSummaryPreview>>({})
   const [filter, setFilter] = useState<'all' | Incident['status']>('all')
 
   const userRole = normalizeRole(localStorage.getItem('role'))
@@ -64,42 +50,6 @@ const IncidentPanel: FC = () => {
       setUpdateError(err instanceof Error ? err.message : 'Failed to update status')
     } finally {
       setUpdatingId(null)
-    }
-  }
-
-  const handleSummaryPreview = async (incident: Incident) => {
-    try {
-      setSummarizingId(incident.id)
-      setSummaryError('')
-
-      const response = await fetchJsonOrThrow<IncidentSummaryPreview>(
-        `${API_BASE_URL}/api/ai/summarize-incident`,
-        {
-          method: 'POST',
-          headers: {
-            ...getAuthHeaders(),
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ description: incident.description }),
-        },
-        'Failed to generate incident summary',
-      )
-
-      setSummaryByIncidentId((prev) => ({
-        ...prev,
-        [incident.id]: {
-          riskLevel: (response.riskLevel || '').toLowerCase(),
-          confidence: typeof response.confidence === 'number' ? response.confidence : 0,
-          explanation: response.explanation || 'No explanation returned.',
-          suggestedActions: Array.isArray(response.suggestedActions) ? response.suggestedActions : [],
-          summary: response.summary || 'No summary generated.',
-          keyPhrases: Array.isArray(response.keyPhrases) ? response.keyPhrases : [],
-        },
-      }))
-    } catch (err) {
-      setSummaryError(err instanceof Error ? err.message : 'Failed to generate incident summary')
-    } finally {
-      setSummarizingId(null)
     }
   }
 
@@ -193,12 +143,6 @@ const IncidentPanel: FC = () => {
         </p>
       )}
 
-      {summaryError && (
-        <p role="alert" className="font-mono text-xs text-warning-text">
-          {summaryError}
-        </p>
-      )}
-
       {/* Table */}
       <div
         className="overflow-x-auto rounded border border-(--color-border) bg-(--color-surface)"
@@ -263,27 +207,6 @@ const IncidentPanel: FC = () => {
                     <td className="max-w-[200px] truncate px-4 py-2 font-mono text-xs text-(--color-text)">
                       <div className="space-y-1">
                         <span title={incident.title}>{incident.title}</span>
-                        <div>
-                          <button
-                            type="button"
-                            onClick={() => handleSummaryPreview(incident)}
-                            disabled={summarizingId === incident.id}
-                            className="rounded border border-(--color-border) px-2 py-0.5 font-mono text-[11px] text-(--color-muted-text) hover:border-(--color-text) hover:text-(--color-text) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring) disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            {summarizingId === incident.id ? 'Generating summary…' : 'Preview AI Summary'}
-                          </button>
-                        </div>
-                        {summaryByIncidentId[incident.id] && (
-                          <div className="max-w-[380px] whitespace-normal rounded border border-(--color-border) px-2 py-1 font-mono text-[11px] text-(--color-muted-text)">
-                            <p>{summaryByIncidentId[incident.id].summary}</p>
-                            <p className="mt-1">Risk level: {summaryByIncidentId[incident.id].riskLevel || 'unknown'}</p>
-                            <p className="mt-1">Confidence: {Math.round(summaryByIncidentId[incident.id].confidence * 100)}%</p>
-                            <p className="mt-1">Explanation: {summaryByIncidentId[incident.id].explanation}</p>
-                            <p className="mt-1">
-                              Suggested actions: {summaryByIncidentId[incident.id].suggestedActions.slice(0, 2).join(' | ') || 'No actions suggested.'}
-                            </p>
-                          </div>
-                        )}
                       </div>
                     </td>
                     <td className="max-w-[160px] truncate px-4 py-2 font-mono text-xs text-(--color-muted-text)">

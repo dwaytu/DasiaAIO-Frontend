@@ -1,7 +1,5 @@
-import { FC, FormEvent, useEffect, useState } from 'react'
+import { FC, FormEvent, useState } from 'react'
 import type { CreateIncidentPayload, Incident } from '../../hooks/useIncidents'
-import { API_BASE_URL } from '../../config'
-import { fetchJsonOrThrow, getAuthHeaders } from '../../utils/api'
 
 interface IncidentReportFormProps {
   onSubmit: (payload: CreateIncidentPayload) => Promise<void>
@@ -15,21 +13,6 @@ const PRIORITY_OPTIONS: { value: Incident['priority']; label: string }[] = [
   { value: 'critical', label: 'Critical' },
 ]
 
-const SEVERITY_TO_PRIORITY: Record<string, Incident['priority']> = {
-  LOW: 'low',
-  MEDIUM: 'medium',
-  HIGH: 'high',
-  CRITICAL: 'critical',
-}
-
-interface ClassifyIncidentSuggestion {
-  riskLevel: string
-  severity: string
-  confidence: number
-  explanation: string
-  suggestedActions: string[]
-}
-
 const IncidentReportForm: FC<IncidentReportFormProps> = ({ onSubmit, onCancel }) => {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -38,13 +21,6 @@ const IncidentReportForm: FC<IncidentReportFormProps> = ({ onSubmit, onCancel })
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
   const [success, setSuccess] = useState(false)
-  const [aiSuggestedSeverity, setAiSuggestedSeverity] = useState<'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' | ''>('')
-  const [aiRiskLevel, setAiRiskLevel] = useState('')
-  const [aiConfidence, setAiConfidence] = useState(0)
-  const [aiExplanation, setAiExplanation] = useState('')
-  const [aiSuggestedActions, setAiSuggestedActions] = useState<string[]>([])
-  const [classifying, setClassifying] = useState(false)
-
   // Client-side field validation state
   const [titleError, setTitleError] = useState('')
   const [descError, setDescError] = useState('')
@@ -72,57 +48,6 @@ const IncidentReportForm: FC<IncidentReportFormProps> = ({ onSubmit, onCancel })
     }
     return valid
   }
-
-  useEffect(() => {
-    const text = `${title} ${description}`.trim()
-    if (text.length < 3) {
-      setAiSuggestedSeverity('')
-      setAiRiskLevel('')
-      setAiConfidence(0)
-      setAiExplanation('')
-      setAiSuggestedActions([])
-      return
-    }
-
-    const timeout = window.setTimeout(async () => {
-      try {
-        setClassifying(true)
-        const response = await fetchJsonOrThrow<ClassifyIncidentSuggestion>(
-          `${API_BASE_URL}/api/ai/classify-incident`,
-          {
-            method: 'POST',
-            headers: {
-              ...getAuthHeaders(),
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ title, description }),
-          },
-          'Failed to classify incident severity',
-        )
-
-        const severity = (response?.severity || '').toUpperCase()
-        setAiRiskLevel((response?.riskLevel || '').toUpperCase())
-        setAiConfidence(typeof response?.confidence === 'number' ? response.confidence : 0)
-        setAiExplanation(response?.explanation || '')
-        setAiSuggestedActions(Array.isArray(response?.suggestedActions) ? response.suggestedActions : [])
-
-        if (severity in SEVERITY_TO_PRIORITY) {
-          setAiSuggestedSeverity(severity as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL')
-          setPriority(SEVERITY_TO_PRIORITY[severity])
-        }
-      } catch {
-        // Keep manual priority fallback when classifier is unavailable.
-        setAiRiskLevel('')
-        setAiConfidence(0)
-        setAiExplanation('')
-        setAiSuggestedActions([])
-      } finally {
-        setClassifying(false)
-      }
-    }, 350)
-
-    return () => window.clearTimeout(timeout)
-  }, [title, description])
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -250,24 +175,6 @@ const IncidentReportForm: FC<IncidentReportFormProps> = ({ onSubmit, onCancel })
         >
           Priority
         </label>
-        <div className="flex items-center justify-between gap-2">
-          <p className="font-mono text-[11px] text-(--color-muted-text)">
-            {classifying ? 'AI classifying severity...' : aiSuggestedSeverity ? `AI suggested: ${aiSuggestedSeverity}` : 'AI suggestion available as you type'}
-          </p>
-          {aiSuggestedSeverity && (
-            <span className="rounded border border-(--color-border) px-2 py-0.5 font-mono text-[11px] text-(--color-text)">
-              {aiSuggestedSeverity}
-            </span>
-          )}
-        </div>
-        {(aiRiskLevel || aiExplanation || aiSuggestedActions.length > 0) && (
-          <div className="rounded border border-(--color-border)/70 bg-(--color-bg)/30 px-2 py-2 font-mono text-[11px] text-(--color-muted-text)">
-            <p>Risk level: {aiRiskLevel || 'unknown'}</p>
-            <p className="mt-1">Confidence: {Math.round(aiConfidence * 100)}%</p>
-            <p className="mt-1">Explanation: {aiExplanation || 'No explanation returned.'}</p>
-            <p className="mt-1">Suggested actions: {aiSuggestedActions.slice(0, 2).join(' | ') || 'No actions suggested.'}</p>
-          </div>
-        )}
         <select
           id="incident-priority"
           value={priority}

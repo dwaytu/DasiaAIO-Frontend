@@ -36,7 +36,10 @@ const GuardFirearmPermits: FC<Props> = ({ user, onLogout, onViewChange, activeVi
   const fetchPermits = async () => {
     try {
       setLoading(true)
-      const data = await fetchJsonOrThrow<any>(`${API_BASE_URL}/api/guard-firearm-permits`, {
+      const permitsPath = user.role === 'guard'
+        ? `/api/guard-firearm-permits/${encodeURIComponent(user.id)}`
+        : '/api/guard-firearm-permits'
+      const data = await fetchJsonOrThrow<any>(`${API_BASE_URL}${permitsPath}`, {
         headers: getAuthHeaders()
       }, 'Unable to load permit list')
       setPermits(data.permits || [])

@@ -13,8 +13,10 @@ const FeedbackForm = lazy(() => import('../components/feedback/FeedbackForm'))
 const FeedbackDashboard = lazy(() => import('../components/feedback/FeedbackDashboard'))
 const CalendarDashboard = lazy(() => import('../components/CalendarDashboard'))
 const PerformanceDashboard = lazy(() => import('../components/PerformanceDashboard'))
+const DtrReport = lazy(() => import('../components/DtrReport'))
 const MeritScoreDashboard = lazy(() => import('../components/MeritScoreDashboard'))
 const FirearmInventory = lazy(() => import('../components/FirearmInventory'))
+const FirearmComplianceReport = lazy(() => import('../components/FirearmComplianceReport'))
 const FirearmAllocation = lazy(() => import('../components/FirearmAllocation'))
 const GuardFirearmPermits = lazy(() => import('../components/GuardFirearmPermits'))
 const FirearmMaintenance = lazy(() => import('../components/FirearmMaintenance'))
@@ -202,8 +204,10 @@ export const appRoutes: RouteObject[] = [
         element: <RoleGuard roles={ELEVATED_ROLES} />,
         children: [
           { path: ROUTES.PERFORMANCE, element: <LegacyPage Component={PerformanceDashboard} /> },
+          { path: ROUTES.DTR, element: <LegacyPage Component={DtrReport} /> },
           { path: ROUTES.MERIT, element: <LegacyPage Component={MeritScoreDashboard} /> },
           { path: ROUTES.FIREARMS, element: <LegacyPage Component={FirearmInventory} /> },
+          { path: ROUTES.FIREARM_COMPLIANCE, element: <LegacyPage Component={FirearmComplianceReport} /> },
           { path: ROUTES.ALLOCATION, element: <LegacyPage Component={FirearmAllocation} /> },
           { path: ROUTES.MAINTENANCE, element: <LegacyPage Component={FirearmMaintenance} /> },
           { path: ROUTES.ARMORED_CARS, element: <LegacyPage Component={ArmoredCarDashboard} /> },

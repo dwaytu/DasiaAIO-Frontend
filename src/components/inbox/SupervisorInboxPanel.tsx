@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
+import { API_BASE_URL } from '../../config';
 import { ActionInbox, InboxItem } from './ActionInbox';
 import { WorkflowTimeline, TimelineEntry, TimelineStatus } from './WorkflowTimeline';
 import { getAuthHeaders } from '../../utils/api';
+import { fetchArrayPayload } from './inboxPayloads';
 import { parsePendingApprovalsPayload, type PendingApprovalRecord } from './pendingApprovals';
 
 export interface SupervisorInboxPanelProps {
@@ -145,6 +147,7 @@ export const SupervisorInboxPanel = ({
 
   useEffect(() => {
     let cancelled = false;
+    const controller = new AbortController();
 
     const headers = getAuthHeaders({ 'Content-Type': 'application/json' });
 
@@ -154,10 +157,28 @@ export const SupervisorInboxPanel = ({
 
       const [approvalsResult, incidentsResult, shiftsResult, notificationsResult] =
         await Promise.allSettled([
-          fetch('/api/users/pending-approvals', { headers }).then((r) => r.json() as Promise<unknown>),
-          fetch('/api/incidents', { headers }).then((r) => r.json() as Promise<unknown>),
-          fetch('/api/guard-replacement/shifts', { headers }).then((r) => r.json() as Promise<unknown>),
-          fetch(`/api/users/${encodeURIComponent(userId)}/notifications`, { headers }).then((r) => r.json() as Promise<unknown>),
+          fetch(`${API_BASE_URL}/api/users/pending-approvals`, {
+            headers,
+            signal: controller.signal,
+          }).then((r) => (r.ok ? r.json() as Promise<unknown> : Promise.reject(r.status))),
+          fetchArrayPayload<Incident>(
+            `${API_BASE_URL}/api/incidents`,
+            headers,
+            ['incidents'],
+            controller.signal,
+          ),
+          fetchArrayPayload<Shift>(
+            `${API_BASE_URL}/api/guard-replacement/shifts`,
+            headers,
+            ['shifts'],
+            controller.signal,
+          ),
+          fetchArrayPayload<Notification>(
+            `${API_BASE_URL}/api/users/${encodeURIComponent(userId)}/notifications`,
+            headers,
+            ['notifications'],
+            controller.signal,
+          ),
         ]);
 
       if (cancelled) return;
@@ -178,18 +199,18 @@ export const SupervisorInboxPanel = ({
           : [];
 
       const incidentsRaw: Incident[] =
-        incidentsResult.status === 'fulfilled' && Array.isArray(incidentsResult.value)
-          ? (incidentsResult.value as Incident[]).slice(0, 10)
+        incidentsResult.status === 'fulfilled'
+          ? incidentsResult.value.slice(0, 10)
           : [];
 
       const shifts: Shift[] =
-        shiftsResult.status === 'fulfilled' && Array.isArray(shiftsResult.value)
-          ? (shiftsResult.value as Shift[])
+        shiftsResult.status === 'fulfilled'
+          ? shiftsResult.value
           : [];
 
       const notifications: Notification[] =
-        notificationsResult.status === 'fulfilled' && Array.isArray(notificationsResult.value)
-          ? (notificationsResult.value as Notification[])
+        notificationsResult.status === 'fulfilled'
+          ? notificationsResult.value
           : [];
 
       setInboxItems(toInboxItems(approvals, incidentsRaw, shifts, notifications, onAction));
@@ -201,6 +222,7 @@ export const SupervisorInboxPanel = ({
 
     return () => {
       cancelled = true;
+      controller.abort();
     };
   }, [userId, onAction]);
 

@@ -18,26 +18,29 @@ export function useGuardReliability() {
   const [error, setError] = useState('')
   const [lastUpdated, setLastUpdated] = useState('')
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (signal?: AbortSignal) => {
     try {
       setLoading(true)
       const data = await fetchJsonOrThrow<GuardReliability[]>(
         `${API_BASE_URL}/api/analytics/guard-reliability`,
-        { headers: getAuthHeaders() },
+        { headers: getAuthHeaders(), signal },
         'Failed to load guard reliability data',
       )
       setLeaders(Array.isArray(data) ? data : [])
       setError('')
       setLastUpdated(new Date().toLocaleTimeString())
     } catch (err) {
+      if (signal?.aborted) return
       setError(err instanceof Error ? err.message : 'Failed to load guard reliability data')
     } finally {
-      setLoading(false)
+      if (!signal?.aborted) setLoading(false)
     }
   }, [])
 
   useEffect(() => {
-    refresh()
+    const controller = new AbortController()
+    void refresh(controller.signal)
+    return () => controller.abort()
   }, [refresh])
 
   return { leaders, loading, error, lastUpdated, refresh }

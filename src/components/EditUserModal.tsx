@@ -85,11 +85,11 @@ const EditUserModal: FC<EditUserModalProps> = ({ user, viewerRole, onClose, onSa
         email?: string
         username?: string
       } = {
-        full_name: formData.fullName,
-        phone_number: formData.phoneNumber,
-        license_number: formData.licenseNumber,
-        license_issued_date: formData.licenseIssuedDate,
-        license_expiry_date: formData.licenseExpiryDate,
+        fullName: formData.fullName,
+        phoneNumber: formData.phoneNumber,
+        licenseNumber: formData.licenseNumber,
+        licenseIssuedDate: formData.licenseIssuedDate,
+        licenseExpiryDate: formData.licenseExpiryDate,
         address: formData.address,
       }
 

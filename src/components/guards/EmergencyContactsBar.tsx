@@ -25,13 +25,13 @@ const EmergencyContactsBar: FC = () => {
       </button>
 
       {expanded && (
-        <div className="mt-2 flex flex-wrap gap-2">
+        <div className="mt-2 flex flex-wrap gap-2 max-[359px]:pr-20">
           {EMERGENCY_CONTACTS.map((contact) => (
             <a
               key={contact.phone}
               href={phoneToTelHref(contact.phone)}
               aria-label={`Call ${contact.label} at ${contact.phone}`}
-              className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-surface px-4 py-2.5 text-sm font-medium text-text-primary"
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-surface px-4 py-2.5 text-sm font-medium text-text-primary max-[359px]:w-full max-[359px]:min-w-0 max-[359px]:flex-wrap"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"

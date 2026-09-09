@@ -1,5 +1,5 @@
 # Stage 1: Build the React+Vite app
-FROM node:20-alpine as builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
@@ -20,7 +20,7 @@ COPY . .
 RUN npm run build
 
 # Stage 2: Serve the app with a simple server
-FROM node:20-alpine
+FROM node:22-alpine
 
 WORKDIR /app
 

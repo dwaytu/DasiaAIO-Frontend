@@ -3,6 +3,7 @@ import { normalizeRole } from '../../types/auth'
 import { fetchJsonOrThrow, getAuthHeaders } from '../../utils/api'
 import { fetchSwapRequestsFeed } from '../../utils/swapRequests'
 import type { InboxItem } from './ActionInbox'
+import { extractArrayPayload } from './inboxPayloads'
 import { parsePendingApprovalsPayload, type PendingApprovalRecord } from './pendingApprovals'
 
 type QuickInboxSummary = {
@@ -97,12 +98,12 @@ function extractNotifications(payload: unknown): NotificationRecord[] {
   return []
 }
 
-async function safeFetch<T>(url: string, headers: HeadersInit): Promise<T[]> {
+async function safeFetch<T>(url: string, headers: HeadersInit, keys: string[] = []): Promise<T[]> {
   try {
     const response = await fetch(url, { headers })
     if (!response.ok) return []
     const data: unknown = await response.json()
-    return Array.isArray(data) ? (data as T[]) : []
+    return extractArrayPayload<T>(data, keys)
   } catch {
     return []
   }
@@ -199,9 +200,9 @@ async function fetchSupervisorSummary(userId: string): Promise<QuickInboxSummary
   const headers = getAuthHeaders({ 'Content-Type': 'application/json' })
   const [approvals, incidents, shifts, notifications] = await Promise.all([
     safeFetchPendingApprovals(`${API_BASE_URL}/api/users/pending-approvals`, headers),
-    safeFetch<Incident>(`${API_BASE_URL}/api/incidents`, headers),
-    safeFetch<Shift>(`${API_BASE_URL}/api/guard-replacement/shifts`, headers),
-    safeFetch<NotificationRecord>(`${API_BASE_URL}/api/users/${encodeURIComponent(userId)}/notifications`, headers),
+    safeFetch<Incident>(`${API_BASE_URL}/api/incidents`, headers, ['incidents']),
+    safeFetch<Shift>(`${API_BASE_URL}/api/guard-replacement/shifts`, headers, ['shifts']),
+    safeFetch<NotificationRecord>(`${API_BASE_URL}/api/users/${encodeURIComponent(userId)}/notifications`, headers, ['notifications']),
   ])
 
   const items: InboxItem[] = [
@@ -246,10 +247,10 @@ async function fetchAdminSummary(userId: string): Promise<QuickInboxSummary> {
   const headers = getAuthHeaders({ 'Content-Type': 'application/json' })
   const [approvals, firearmsPrimary, notifications] = await Promise.all([
     safeFetchPendingApprovals(`${API_BASE_URL}/api/users/pending-approvals`, headers),
-    safeFetch<FirearmItem>(`${API_BASE_URL}/api/firearm-allocations`, headers),
-    safeFetch<NotificationRecord>(`${API_BASE_URL}/api/users/${encodeURIComponent(userId)}/notifications`, headers),
+    safeFetch<FirearmItem>(`${API_BASE_URL}/api/firearm-allocations`, headers, ['allocations']),
+    safeFetch<NotificationRecord>(`${API_BASE_URL}/api/users/${encodeURIComponent(userId)}/notifications`, headers, ['notifications']),
   ])
-  const firearms = firearmsPrimary.length > 0 ? firearmsPrimary : await safeFetch<FirearmItem>(`${API_BASE_URL}/api/firearms`, headers)
+  const firearms = firearmsPrimary.length > 0 ? firearmsPrimary : await safeFetch<FirearmItem>(`${API_BASE_URL}/api/firearms`, headers, ['firearms'])
 
   const items: InboxItem[] = [
     ...approvals.map((approval) => ({
@@ -288,9 +289,9 @@ async function fetchAdminSummary(userId: string): Promise<QuickInboxSummary> {
 async function fetchSuperadminSummary(userId: string): Promise<QuickInboxSummary> {
   const headers = getAuthHeaders({ 'Content-Type': 'application/json' })
   const [notifications, approvals, incidents] = await Promise.all([
-    safeFetch<NotificationRecord>(`${API_BASE_URL}/api/users/${encodeURIComponent(userId)}/notifications`, headers),
+    safeFetch<NotificationRecord>(`${API_BASE_URL}/api/users/${encodeURIComponent(userId)}/notifications`, headers, ['notifications']),
     safeFetchPendingApprovals(`${API_BASE_URL}/api/users/pending-approvals`, headers),
-    safeFetch<Incident>(`${API_BASE_URL}/api/incidents`, headers),
+    safeFetch<Incident>(`${API_BASE_URL}/api/incidents`, headers, ['incidents']),
   ])
 
   const items: InboxItem[] = [

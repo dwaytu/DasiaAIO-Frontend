@@ -120,8 +120,63 @@ async function loadSecureRefreshToken(): Promise<string> {
   }
 }
 
-const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 const IDEMPOTENCY_HEADER = 'Idempotency-Key'
+
+class RequestTimeoutError extends Error {
+  constructor(timeoutMs: number) {
+    super(`Request timed out after ${timeoutMs}ms`)
+    this.name = 'TimeoutError'
+  }
+}
+
+class NetworkRequestError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'NetworkError'
+  }
+}
+
+export function isOfflineRequestError(error: unknown): boolean {
+  const name = error instanceof Error ? error.name : ''
+  const message = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase()
+  return (
+    (typeof navigator !== 'undefined' && navigator.onLine === false) ||
+    name === 'NetworkError' ||
+    name === 'TimeoutError' ||
+    message.includes('network') ||
+    message.includes('offline') ||
+    message.includes('failed to fetch') ||
+    message.includes('timed out')
+  )
+}
+
+function abortReason(signal: AbortSignal): unknown {
+  return signal.reason ?? new DOMException('The operation was aborted.', 'AbortError')
+}
+
+function wait(ms: number, signal?: AbortSignal): Promise<void> {
+  if (!signal) {
+    return new Promise((resolve) => setTimeout(resolve, ms))
+  }
+
+  if (signal.aborted) {
+    return Promise.reject(abortReason(signal))
+  }
+
+  return new Promise((resolve, reject) => {
+    const handleAbort = () => {
+      clearTimeout(timeout)
+      signal.removeEventListener('abort', handleAbort)
+      reject(abortReason(signal))
+    }
+    const timeout = setTimeout(() => {
+      signal.removeEventListener('abort', handleAbort)
+      resolve()
+    }, ms)
+
+    signal.addEventListener('abort', handleAbort, { once: true })
+  })
+}
 
 function notifyAuthExpired(message: string): void {
   if (authExpiryNotified) return
@@ -223,17 +278,46 @@ function isProtectedApiEndpoint(url: string): boolean {
   }
 }
 
-async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit | undefined, timeoutMs: number): Promise<Response> {
+export async function fetchWithTimeout(
+  input: RequestInfo | URL,
+  init: RequestInit | undefined,
+  timeoutMs: number,
+): Promise<Response> {
   const abortController = new AbortController()
-  const timeout = setTimeout(() => abortController.abort(), timeoutMs)
+  const callerSignal = init?.signal
+  let abortSource: 'caller' | 'timeout' | null = null
+
+  const abortFromCaller = () => {
+    if (abortSource !== null) return
+    abortSource = 'caller'
+    abortController.abort(callerSignal ? abortReason(callerSignal) : undefined)
+  }
+
+  if (callerSignal?.aborted) {
+    abortFromCaller()
+  } else {
+    callerSignal?.addEventListener('abort', abortFromCaller, { once: true })
+  }
+
+  const timeout = setTimeout(() => {
+    if (abortSource !== null) return
+    abortSource = 'timeout'
+    abortController.abort()
+  }, timeoutMs)
 
   try {
     return await fetch(input, {
       ...init,
-      signal: init?.signal ?? abortController.signal,
+      signal: abortController.signal,
     })
+  } catch (error) {
+    if (abortSource === 'timeout') {
+      throw new RequestTimeoutError(timeoutMs)
+    }
+    throw error
   } finally {
     clearTimeout(timeout)
+    callerSignal?.removeEventListener('abort', abortFromCaller)
   }
 }
 
@@ -347,28 +431,21 @@ export async function fetchJsonOrThrow<T>(
   let lastNetworkError: Error | null = null
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    const abortController = new AbortController()
-    const timeout = setTimeout(() => abortController.abort(), timeoutMs)
-
     try {
-      response = await fetch(input, {
-        ...requestInit,
-        signal: requestInit?.signal ?? abortController.signal,
-      })
+      response = await fetchWithTimeout(input, requestInit, timeoutMs)
       lastNetworkError = null
     } catch (error) {
-      // If the caller's signal caused the abort, re-throw so callers can distinguish cancellation from timeout.
-      if (requestInit?.signal?.aborted && error instanceof DOMException && error.name === 'AbortError') {
+      if (requestInit?.signal?.aborted) {
         throw error
       }
-      if (error instanceof DOMException && error.name === 'AbortError') {
-        lastNetworkError = new Error(`Request timed out after ${timeoutMs}ms`)
+      if (error instanceof RequestTimeoutError) {
+        lastNetworkError = error
       } else {
         const offline = typeof navigator !== 'undefined' && navigator.onLine === false
-        lastNetworkError = new Error(offline ? 'You appear to be offline. Reconnect and try again.' : fallbackError)
+        lastNetworkError = new NetworkRequestError(
+          offline ? 'You appear to be offline. Reconnect and try again.' : fallbackError,
+        )
       }
-    } finally {
-      clearTimeout(timeout)
     }
 
     if (response?.ok) {
@@ -382,7 +459,7 @@ export async function fetchJsonOrThrow<T>(
 
     if (shouldRetry) {
       const backoffMs = 400 * 2 ** (attempt - 1)
-      await wait(backoffMs)
+      await wait(backoffMs, requestInit?.signal || undefined)
       continue
     }
 

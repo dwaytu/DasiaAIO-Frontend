@@ -29,7 +29,7 @@ export function useOpsSummary() {
   const [lastUpdated, setLastUpdated] = useState('')
   const hasLoadedOnceRef = useRef(false)
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (signal?: AbortSignal) => {
     try {
       if (!hasLoadedOnceRef.current) {
         setLoading(true)
@@ -37,14 +37,16 @@ export function useOpsSummary() {
       const headers = getAuthHeaders()
 
       const [shiftsResult, approvalsResult, allocationsResult, overdueResult, tripsResult, vehiclesResult, permitsResult] = await Promise.allSettled([
-        fetchJsonOrThrow<any>(`${API_BASE_URL}/api/guard-replacement/shifts`, { headers }, 'Failed to load shifts'),
-        fetchJsonOrThrow<any>(`${API_BASE_URL}/api/users/pending-approvals`, { headers }, 'Failed to load approvals'),
-        fetchJsonOrThrow<any>(`${API_BASE_URL}/api/firearm-allocations/active`, { headers }, 'Failed to load active allocations'),
-        fetchJsonOrThrow<any>(`${API_BASE_URL}/api/firearm-allocations/overdue`, { headers }, 'Failed to load overdue allocations'),
-        fetchJsonOrThrow<any>(`${API_BASE_URL}/api/trips`, { headers }, 'Failed to load trips'),
-        fetchJsonOrThrow<any>(`${API_BASE_URL}/api/armored-cars`, { headers }, 'Failed to load vehicles'),
-        fetchJsonOrThrow<any>(`${API_BASE_URL}/api/guard-firearm-permits/expiring`, { headers }, 'Failed to load expiring permits'),
+        fetchJsonOrThrow<any>(`${API_BASE_URL}/api/guard-replacement/shifts`, { headers, signal }, 'Failed to load shifts'),
+        fetchJsonOrThrow<any>(`${API_BASE_URL}/api/users/pending-approvals`, { headers, signal }, 'Failed to load approvals'),
+        fetchJsonOrThrow<any>(`${API_BASE_URL}/api/firearm-allocations/active`, { headers, signal }, 'Failed to load active allocations'),
+        fetchJsonOrThrow<any>(`${API_BASE_URL}/api/firearm-allocations/overdue`, { headers, signal }, 'Failed to load overdue allocations'),
+        fetchJsonOrThrow<any>(`${API_BASE_URL}/api/trips`, { headers, signal }, 'Failed to load trips'),
+        fetchJsonOrThrow<any>(`${API_BASE_URL}/api/armored-cars`, { headers, signal }, 'Failed to load vehicles'),
+        fetchJsonOrThrow<any>(`${API_BASE_URL}/api/guard-firearm-permits/expiring`, { headers, signal }, 'Failed to load expiring permits'),
       ])
+
+      if (signal?.aborted) return
 
       const shifts = shiftsResult.status === 'fulfilled' ? (shiftsResult.value.shifts || shiftsResult.value || []) : []
       const approvals = approvalsResult.status === 'fulfilled' ? (approvalsResult.value.users || approvalsResult.value || []) : []
@@ -72,15 +74,20 @@ export function useOpsSummary() {
       setError('')
       setLastUpdated(new Date().toLocaleTimeString())
     } catch (err) {
+      if (signal?.aborted) return
       setError(err instanceof Error ? err.message : 'Failed to load command summary')
     } finally {
-      setLoading(false)
-      hasLoadedOnceRef.current = true
+      if (!signal?.aborted) {
+        setLoading(false)
+        hasLoadedOnceRef.current = true
+      }
     }
   }, [])
 
   useEffect(() => {
-    refresh()
+    const controller = new AbortController()
+    void refresh(controller.signal)
+    return () => controller.abort()
   }, [refresh])
 
   return { summary, loading, error, lastUpdated, refresh }

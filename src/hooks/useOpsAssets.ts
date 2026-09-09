@@ -10,7 +10,7 @@ export function useOpsAssets() {
   const [lastUpdated, setLastUpdated] = useState('')
   const hasLoadedOnceRef = useRef(false)
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (signal?: AbortSignal) => {
     try {
       if (!hasLoadedOnceRef.current) {
         setLoading(true)
@@ -18,9 +18,11 @@ export function useOpsAssets() {
       const headers = getAuthHeaders()
 
       const [firearmsRes, vehiclesRes] = await Promise.allSettled([
-        fetchJsonOrThrow<any>(`${API_BASE_URL}/api/firearms`, { headers }, 'Failed to load firearms'),
-        fetchJsonOrThrow<any>(`${API_BASE_URL}/api/armored-cars`, { headers }, 'Failed to load vehicles'),
+        fetchJsonOrThrow<any>(`${API_BASE_URL}/api/firearms`, { headers, signal }, 'Failed to load firearms'),
+        fetchJsonOrThrow<any>(`${API_BASE_URL}/api/armored-cars`, { headers, signal }, 'Failed to load vehicles'),
       ])
+
+      if (signal?.aborted) return
 
       const firearmData = firearmsRes.status === 'fulfilled' ? firearmsRes.value : []
       const vehicleData = vehiclesRes.status === 'fulfilled' ? vehiclesRes.value : []
@@ -30,15 +32,20 @@ export function useOpsAssets() {
       setError('')
       setLastUpdated(new Date().toLocaleTimeString())
     } catch (err) {
+      if (signal?.aborted) return
       setError(err instanceof Error ? err.message : 'Failed to load assets')
     } finally {
-      setLoading(false)
-      hasLoadedOnceRef.current = true
+      if (!signal?.aborted) {
+        setLoading(false)
+        hasLoadedOnceRef.current = true
+      }
     }
   }, [])
 
   useEffect(() => {
-    refresh()
+    const controller = new AbortController()
+    void refresh(controller.signal)
+    return () => controller.abort()
   }, [refresh])
 
   return { firearms, vehicles, loading, error, lastUpdated, refresh }

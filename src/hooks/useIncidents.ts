@@ -34,14 +34,14 @@ export function useIncidents() {
   const [lastUpdated, setLastUpdated] = useState('')
   const hasLoadedOnceRef = useRef(false)
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (signal?: AbortSignal) => {
     try {
       if (!hasLoadedOnceRef.current) {
         setLoading(true)
       }
       const data = await fetchJsonOrThrow<Incident[] | IncidentListResponse>(
         `${API_BASE_URL}/api/incidents/active?page=1&page_size=50`,
-        { headers: getAuthHeaders() },
+        { headers: getAuthHeaders(), signal },
         'Failed to load incidents',
       )
       const normalized = Array.isArray(data)
@@ -53,10 +53,13 @@ export function useIncidents() {
       setError('')
       setLastUpdated(new Date().toLocaleTimeString())
     } catch (err) {
+      if (signal?.aborted) return
       setError(err instanceof Error ? err.message : 'Failed to load incidents')
     } finally {
-      setLoading(false)
-      hasLoadedOnceRef.current = true
+      if (!signal?.aborted) {
+        setLoading(false)
+        hasLoadedOnceRef.current = true
+      }
     }
   }, [])
 
@@ -93,7 +96,9 @@ export function useIncidents() {
   }, [refresh])
 
   useEffect(() => {
-    refresh()
+    const controller = new AbortController()
+    void refresh(controller.signal)
+    return () => controller.abort()
   }, [refresh])
 
   const activeCount = incidents.filter(

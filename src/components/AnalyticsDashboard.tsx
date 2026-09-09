@@ -43,8 +43,10 @@ interface AnalyticsData {
   resource_utilization: {
     firearms_in_use: number
     firearms_available: number
+    firearms_unavailable: number
     vehicles_deployed: number
     vehicles_available: number
+    vehicles_unavailable: number
     guards_on_duty: number
     guards_available: number
   }
@@ -55,13 +57,22 @@ interface AnalyticsData {
     average_guards_per_mission: number
     average_duration_hours: number
   }
-}
-
-interface InsightItem {
-  id: string
-  title: string
-  detail: string
-  tone: 'success' | 'warning' | 'danger' | 'analytics'
+  attendance_analytics: {
+    period_days: number
+    total_scheduled_shifts: number
+    attended_shifts: number
+    on_time_check_ins: number
+    late_check_ins: number
+    no_shows: number
+    attendance_rate: number
+  }
+  attendance_trend: Array<{
+    date: string
+    scheduled_shifts: number
+    attended_shifts: number
+    late_check_ins: number
+    no_shows: number
+  }>
 }
 
 /* ── SVG Chart Components ─────────────────────────────────── */
@@ -212,13 +223,6 @@ function SimpleLineChart({ data, height = 200, lineColor = 'var(--color-success-
 
 /* ── Constants & Helpers ──────────────────────────────────── */
 
-const KPI_TARGETS = {
-  missionCompletionRate: 90,
-  guardAttendanceRate: 95,
-  firearmAvailabilityRate: 98,
-  vehicleUtilizationRate: 80,
-}
-
 const DATE_RANGE_OPTIONS = [
   { value: '7', label: 'Last 7 days' },
   { value: '30', label: 'Last 30 days' },
@@ -227,17 +231,6 @@ const DATE_RANGE_OPTIONS = [
 
 const BASE_POLL_INTERVAL_MS = 30000
 const MAX_POLL_INTERVAL_MS = 300000
-
-function formatPointDelta(value: number): string {
-  if (Math.abs(value) < 0.1) return 'On target'
-  return `${value > 0 ? '+' : ''}${value.toFixed(1)} pts vs target`
-}
-
-function getTrendFromDelta(delta: number): 'up' | 'down' | 'flat' {
-  if (delta > 0.1) return 'up'
-  if (delta < -0.1) return 'down'
-  return 'flat'
-}
 
 const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onViewChange, activeView }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -274,7 +267,7 @@ const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onVie
 
   const fetchAnalytics = useCallback(async (signal?: AbortSignal) => {
     try {
-      const data = await fetchJsonOrThrow<AnalyticsData>(`${API_BASE_URL}/api/analytics`, {
+      const data = await fetchJsonOrThrow<AnalyticsData>(`${API_BASE_URL}/api/analytics?days=${encodeURIComponent(dateRange)}`, {
         headers: getAuthHeaders(),
         signal,
       }, 'Failed to fetch analytics')
@@ -291,7 +284,7 @@ const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onVie
     } finally {
       setLoading(false)
     }
-  }, [toUserFacingError])
+  }, [dateRange, toUserFacingError])
 
   const handleRetry = useCallback(() => {
     if (!analytics) {
@@ -432,68 +425,30 @@ const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onVie
 
   const missionCompletion = analytics.performance_metrics.mission_completion_rate
   const missionTrendTone = missionCompletion >= 85 ? 'success' : missionCompletion >= 65 ? 'warning' : 'danger'
-  const missionCompletionDelta = missionCompletion - KPI_TARGETS.missionCompletionRate
-  const guardAttendanceDelta = analytics.performance_metrics.guard_attendance_rate - KPI_TARGETS.guardAttendanceRate
-  const firearmAvailabilityDelta = analytics.performance_metrics.firearm_availability_rate - KPI_TARGETS.firearmAvailabilityRate
-  const vehicleUtilizationDelta = analytics.performance_metrics.vehicle_utilization_rate - KPI_TARGETS.vehicleUtilizationRate
 
-  const operationalInsights: InsightItem[] = (() => {
-    const insights: InsightItem[] = []
-
-    if (missionCompletionDelta < -8) {
-      insights.push({
-        id: 'mission-completion-risk',
-        title: 'Mission throughput below command target',
-        detail: `Completion is ${Math.abs(missionCompletionDelta).toFixed(1)} points below target. Review unfinished assignments and rebalance active teams.`,
-        tone: 'danger',
-      })
-    } else {
-      insights.push({
-        id: 'mission-completion-stable',
-        title: 'Mission execution stable',
-        detail: `Completion trend is ${formatPointDelta(missionCompletionDelta)}. Maintain current dispatch cadence.`,
-        tone: 'success',
-      })
-    }
-
-    if (guardAttendanceDelta < -4) {
-      insights.push({
-        id: 'attendance-watch',
-        title: 'Guard attendance needs intervention',
-        detail: `Attendance sits ${Math.abs(guardAttendanceDelta).toFixed(1)} points below target. Trigger supervisor check-ins for high-risk posts.`,
-        tone: 'warning',
-      })
-    }
-
-    if (analytics.mission_stats.pending_missions > analytics.mission_stats.completed_missions_this_month * 0.45) {
-      insights.push({
-        id: 'pending-backlog',
-        title: 'Pending mission backlog building',
-        detail: 'Pending missions exceed healthy backlog limits. Prioritize delayed missions in the next roster cycle.',
-        tone: 'warning',
-      })
-    }
-
-    if (vehicleUtilizationDelta > 8) {
-      insights.push({
-        id: 'fleet-saturation',
-        title: 'Fleet utilization nearing saturation',
-        detail: `Vehicle usage is ${vehicleUtilizationDelta.toFixed(1)} points above baseline. Reserve backup units to reduce mission risk.`,
-        tone: 'analytics',
-      })
-    }
-
-    return insights.slice(0, 4)
-  })()
-
-  const barChartData: BarChartData[] = [
-    { label: 'Guards Active', value: analytics.resource_utilization.guards_on_duty },
-    { label: 'Guards Avail', value: analytics.resource_utilization.guards_available },
-    { label: 'Firearms Used', value: analytics.resource_utilization.firearms_in_use },
-    { label: 'Firearms Avail', value: analytics.resource_utilization.firearms_available },
-    { label: 'Vehicles Out', value: analytics.resource_utilization.vehicles_deployed },
-    { label: 'Vehicles Avail', value: analytics.resource_utilization.vehicles_available },
+  const resourceAvailabilityData: BarChartData[] = [
+    { label: 'Guards Available', value: analytics.resource_utilization.guards_available },
+    { label: 'Guards Unavailable', value: analytics.resource_utilization.guards_on_duty },
+    { label: 'Firearms Available', value: analytics.resource_utilization.firearms_available },
+    { label: 'Firearms Unavailable', value: analytics.resource_utilization.firearms_unavailable },
+    { label: 'Vehicles Available', value: analytics.resource_utilization.vehicles_available },
+    { label: 'Vehicles Unavailable', value: analytics.resource_utilization.vehicles_unavailable },
   ]
+
+  const attendanceBreakdownData: BarChartData[] = [
+    { label: 'Scheduled', value: analytics.attendance_analytics.total_scheduled_shifts },
+    { label: 'Attended', value: analytics.attendance_analytics.attended_shifts },
+    { label: 'On Time', value: analytics.attendance_analytics.on_time_check_ins },
+    { label: 'Late', value: analytics.attendance_analytics.late_check_ins },
+    { label: 'No Shows', value: analytics.attendance_analytics.no_shows },
+  ]
+
+  const attendanceTrendData: LineChartData[] = analytics.attendance_trend
+    .filter((_, index, trend) => trend.length <= 14 || index % Math.ceil(trend.length / 14) === 0)
+    .map((point) => ({
+      label: new Date(`${point.date}T00:00:00`).toLocaleDateString([], { month: 'short', day: 'numeric' }),
+      value: point.scheduled_shifts > 0 ? (point.attended_shifts / point.scheduled_shifts) * 100 : 0,
+    }))
 
   const lineChartData: LineChartData[] = [
     { label: 'Completion', value: analytics.performance_metrics.mission_completion_rate },
@@ -641,8 +596,8 @@ const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onVie
       {/* ── Charts Row ─────────────────────────────────── */}
       <section aria-label="Analytics charts">
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-          <DashboardCard title="Resource Distribution">
-            <SimpleBarChart data={barChartData} height={220} barColor="var(--color-info-border)" />
+          <DashboardCard title="Resource Availability">
+            <SimpleBarChart data={resourceAvailabilityData} height={220} barColor="var(--color-info-border)" />
           </DashboardCard>
           <DashboardCard title="Performance Metrics Trend">
             <SimpleLineChart data={lineChartData} height={220} lineColor="var(--color-success-text)" />
@@ -650,135 +605,28 @@ const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onVie
         </div>
       </section>
 
+      <section aria-label="Guard attendance analytics">
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+          <DashboardCard title="Guard Attendance Breakdown">
+            <SimpleBarChart data={attendanceBreakdownData} height={220} barColor="var(--color-success-text)" />
+            <p className="mt-2 text-center text-xs text-text-secondary">
+              {analytics.attendance_analytics.attendance_rate.toFixed(1)}% attendance rate over the last {analytics.attendance_analytics.period_days} days
+            </p>
+          </DashboardCard>
+          <DashboardCard title="Guard Attendance Trend">
+            {attendanceTrendData.length > 0 ? (
+              <SimpleLineChart data={attendanceTrendData} height={220} lineColor="var(--color-success-text)" />
+            ) : (
+              <p className="py-20 text-center text-sm text-text-secondary">No attendance records for the selected period.</p>
+            )}
+            <p className="mt-2 text-center text-xs text-text-secondary">Daily attended shifts as a percentage of scheduled shifts</p>
+          </DashboardCard>
+        </div>
+      </section>
+
       {/* ── Performance Metrics ────────────────────────── */}
-      <DashboardCard title="Performance Metrics">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5">
-          <MetricStatCard
-            label="Mission Completion"
-            value={`${analytics.performance_metrics.mission_completion_rate.toFixed(1)}%`}
-            tone="mission"
-            hint={formatPointDelta(missionCompletionDelta)}
-            trend={getTrendFromDelta(missionCompletionDelta)}
-            meter={{
-              value: analytics.performance_metrics.mission_completion_rate,
-              max: 100,
-              label: `Target ${KPI_TARGETS.missionCompletionRate}%`,
-            }}
-          />
-          <MetricStatCard
-            label="Guard Attendance"
-            value={`${analytics.performance_metrics.guard_attendance_rate.toFixed(1)}%`}
-            tone="guard"
-            hint={formatPointDelta(guardAttendanceDelta)}
-            trend={getTrendFromDelta(guardAttendanceDelta)}
-            meter={{
-              value: analytics.performance_metrics.guard_attendance_rate,
-              max: 100,
-              label: `Target ${KPI_TARGETS.guardAttendanceRate}%`,
-            }}
-          />
-          <MetricStatCard
-            label="Firearm Availability"
-            value={`${analytics.performance_metrics.firearm_availability_rate.toFixed(1)}%`}
-            tone="maintenance"
-            hint={formatPointDelta(firearmAvailabilityDelta)}
-            trend={getTrendFromDelta(firearmAvailabilityDelta)}
-            meter={{
-              value: analytics.performance_metrics.firearm_availability_rate,
-              max: 100,
-              label: `Target ${KPI_TARGETS.firearmAvailabilityRate}%`,
-            }}
-          />
-          <MetricStatCard
-            label="Vehicle Utilization"
-            value={`${analytics.performance_metrics.vehicle_utilization_rate.toFixed(1)}%`}
-            tone="vehicle"
-            hint={formatPointDelta(vehicleUtilizationDelta)}
-            trend={getTrendFromDelta(vehicleUtilizationDelta)}
-            meter={{
-              value: analytics.performance_metrics.vehicle_utilization_rate,
-              max: 100,
-              label: `Target ${KPI_TARGETS.vehicleUtilizationRate}%`,
-            }}
-          />
-          <MetricStatCard
-            label="Avg Mission Duration"
-            value={`${analytics.performance_metrics.average_mission_duration.toFixed(1)}h`}
-            tone="analytics"
-            hint={`${analytics.mission_stats.average_duration_hours.toFixed(1)}h monthly average`}
-          />
-        </div>
-      </DashboardCard>
-
       {/* ── Operational Narrative ──────────────────────── */}
-      <DashboardCard title="Operational Narrative">
-        <div className="space-y-3">
-          {operationalInsights.length === 0 ? (
-            <p className="text-sm text-text-secondary">No anomalies detected. All tracked operational indicators are inside command thresholds.</p>
-          ) : (
-            operationalInsights.map((insight) => (
-              <article key={insight.id} className="rounded border border-border-subtle bg-surface-elevated p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <h3 className="text-sm font-semibold text-text-primary">{insight.title}</h3>
-                  <StatusBadge label={insight.tone === 'danger' ? 'Immediate' : insight.tone === 'warning' ? 'Watch' : insight.tone === 'analytics' ? 'Forecast' : 'Stable'} tone={insight.tone} />
-                </div>
-                <p className="mt-2 text-xs text-text-secondary">{insight.detail}</p>
-              </article>
-            ))
-          )}
-        </div>
-      </DashboardCard>
-
       {/* ── Mission Statistics ─────────────────────────── */}
-      <DashboardCard title="Mission Statistics (This Month)">
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <MetricStatCard
-            label="Total Missions"
-            value={formatCompactNumber(analytics.mission_stats.total_missions_this_month)}
-            tone="mission"
-            meter={{
-              value: analytics.mission_stats.total_missions_this_month,
-              max: Math.max(analytics.mission_stats.total_missions_this_month, 1),
-              label: 'Monthly workload',
-            }}
-          />
-          <MetricStatCard
-            label="Completed Missions"
-            value={formatCompactNumber(analytics.mission_stats.completed_missions_this_month)}
-            tone="guard"
-            meter={{
-              value: analytics.mission_stats.completed_missions_this_month,
-              max: analytics.mission_stats.total_missions_this_month,
-              label: formatRatioLabel(
-                analytics.mission_stats.completed_missions_this_month,
-                analytics.mission_stats.total_missions_this_month,
-                'complete',
-              ),
-            }}
-          />
-          <MetricStatCard
-            label="Pending Missions"
-            value={formatCompactNumber(analytics.mission_stats.pending_missions)}
-            tone="vehicle"
-            meter={{
-              value: analytics.mission_stats.pending_missions,
-              max: analytics.mission_stats.total_missions_this_month,
-              label: formatRatioLabel(
-                analytics.mission_stats.pending_missions,
-                analytics.mission_stats.total_missions_this_month,
-                'pending',
-              ),
-            }}
-          />
-          <MetricStatCard
-            label="Avg Guards Per Mission"
-            value={analytics.mission_stats.average_guards_per_mission.toFixed(1)}
-            tone="analytics"
-            hint={`${analytics.mission_stats.average_duration_hours.toFixed(1)}h average duration`}
-          />
-        </div>
-      </DashboardCard>
-
       {/* ── Resource Utilization ───────────────────────── */}
       <DashboardCard title="Resource Utilization">
         <div className="space-y-4">

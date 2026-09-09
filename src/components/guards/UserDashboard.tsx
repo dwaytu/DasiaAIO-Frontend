@@ -4,7 +4,7 @@ import { EMERGENCY_CONTACTS, phoneToTelHref } from '../../constants/emergencyCon
 import type { User as AppUser } from '../../context/AuthContext'
 import { logError } from '../../utils/logger'
 import { sanitizeErrorMessage } from '../../utils/sanitize'
-import { fetchJsonOrThrow, getAuthToken } from '../../utils/api'
+import { fetchJsonOrThrow, getAuthToken, isOfflineRequestError } from '../../utils/api'
 import {
   enqueueOfflineAction,
   getQueueHealth,
@@ -24,6 +24,11 @@ import HeaderGlobalActions from '../shared/HeaderGlobalActions'
 import OffDutyPanel from './OffDutyPanel'
 import PanicButton from './PanicButton'
 import { buildGuardMapLinks } from './mapLinks'
+import {
+  deriveCheckedInAttendance,
+  findActiveAttendanceForShift,
+  shiftsOverlappingLocalDay,
+} from './attendanceUtils'
 
 interface UserDashboardProps {
   user: AppUser
@@ -34,6 +39,7 @@ interface UserDashboardProps {
 
 interface AttendanceRecord {
   id: string
+  shift_id: string
   check_in_time: string
   check_out_time?: string
   status: string
@@ -98,17 +104,6 @@ function formatTimeWindow(startTime: string, endTime: string): string {
 }
 
 
-
-function isOfflineRequestError(error: unknown): boolean {
-  const message = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase()
-  return (
-    !navigator.onLine ||
-    message.includes('network') ||
-    message.includes('offline') ||
-    message.includes('failed to fetch') ||
-    message.includes('timed out')
-  )
-}
 
 const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, activeView }) => {
   const [activeSection, setActiveSection] = useState<GuardSection>(() => resolveSectionFromView(activeView))
@@ -321,7 +316,13 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
       }
 
       const data = result.value
-      if (index === 0) setAttendance(Array.isArray(data?.attendance) ? data.attendance : [])
+      if (index === 0) {
+        const attendanceRows: AttendanceRecord[] = Array.isArray(data?.attendance) ? data.attendance : []
+        const derivedState = deriveCheckedInAttendance(attendanceRows)
+        setAttendance(attendanceRows)
+        setCheckInStatus(derivedState.checkInStatus)
+        setCheckInTimes(derivedState.checkInTimes)
+      }
       if (index === 1) setScheduleItems(Array.isArray(data?.shifts) ? data.shifts : [])
       if (index === 2) setFirearmItems(Array.isArray(data?.allocations) ? data.allocations : [])
       if (index === 3) setPermitItems(Array.isArray(data?.permits) ? data.permits : [])
@@ -373,15 +374,8 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
   const activeShifts = useMemo(() => {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    const tomorrow = new Date(today)
-    tomorrow.setDate(tomorrow.getDate() + 1)
 
-    return scheduleItems
-      .filter((shift) => {
-        const shiftStart = new Date(shift.start_time)
-        return shiftStart >= today && shiftStart < tomorrow
-      })
-      .sort((left, right) => new Date(left.start_time).getTime() - new Date(right.start_time).getTime())
+    return shiftsOverlappingLocalDay(scheduleItems, today)
   }, [scheduleItems])
 
   const currentShift = useMemo(() => {
@@ -450,7 +444,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
         {
           method: 'POST',
           headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
-          body: JSON.stringify({ guard_id: user.id, shift_id: shift.id }),
+          body: JSON.stringify({ guardId: user.id, shiftId: shift.id }),
         },
         'Check-in failed',
       )
@@ -465,7 +459,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
           url: `${API_BASE_URL}/api/guard-replacement/attendance/check-in`,
           method: 'POST',
           headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
-          body: { guard_id: user.id, shift_id: shift.id },
+          body: { guardId: user.id, shiftId: shift.id },
         })
         setActionStatus('Check-in saved — will send when you\'re back online.')
       } else {
@@ -481,11 +475,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
   const handleCheckOut = async (shift: ShiftItem) => {
     if (!user?.id) return
 
-    const recentAttendance = attendance.find(
-      (record) =>
-        record.status === 'checked_in' &&
-        new Date(record.check_in_time).toDateString() === new Date().toDateString(),
-    )
+    const recentAttendance = findActiveAttendanceForShift(attendance, shift.id)
 
     if (!recentAttendance) {
       setActionStatus('No active check-in found for this shift.')
@@ -501,7 +491,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
         {
           method: 'POST',
           headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
-          body: JSON.stringify({ attendance_id: recentAttendance.id }),
+          body: JSON.stringify({ attendanceId: recentAttendance.id }),
         },
         'Check-out failed',
       )
@@ -526,7 +516,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
           url: `${API_BASE_URL}/api/guard-replacement/attendance/check-out`,
           method: 'POST',
           headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
-          body: { attendance_id: recentAttendance.id },
+          body: { attendanceId: recentAttendance.id },
         })
         setActionStatus('Check-out saved — will send when you\'re back online.')
       } else {
@@ -592,19 +582,25 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
       setIncidentForm({ description: '', priority: 'high' })
       setIncidentModalOpen(false)
     } catch (error) {
-      try {
-        const token = getAuthToken()
-        await enqueueOfflineAction({
-          url: `${API_BASE_URL}/api/incidents`,
-          method: 'POST',
-          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-          body: payload,
-        })
-        setIncidentStatus('Saved \u2014 will send when back online.')
-        setIncidentForm({ description: '', priority: 'high' })
-        setIncidentModalOpen(false)
-      } catch {
-        const message = sanitizeErrorMessage(error instanceof Error ? error.message : 'Failed to submit incident report')
+      if (isOfflineRequestError(error)) {
+        try {
+          const token = getAuthToken()
+          await enqueueOfflineAction({
+            url: `${API_BASE_URL}/api/incidents`,
+            method: 'POST',
+            headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+            body: payload,
+          })
+          setIncidentStatus('Saved \u2014 will send when back online.')
+          setIncidentForm({ description: '', priority: 'high' })
+          setIncidentModalOpen(false)
+        } catch {
+          setIncidentStatus('Unable to save the incident offline. Please try again.')
+        }
+      } else {
+        const message = sanitizeErrorMessage(
+          error instanceof Error ? error.message : 'Failed to submit incident report',
+        )
         setIncidentStatus(message)
       }
     } finally {

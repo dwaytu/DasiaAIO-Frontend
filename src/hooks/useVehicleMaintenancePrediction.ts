@@ -32,30 +32,35 @@ export function useVehicleMaintenancePrediction(): UseVehicleMaintenancePredicti
   const [lastUpdated, setLastUpdated] = useState('')
   const hasLoadedOnceRef = useRef(false)
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (signal?: AbortSignal) => {
     try {
       if (!hasLoadedOnceRef.current) {
         setLoading(true)
       }
       const data = await fetchJsonOrThrow<VehicleMaintenancePrediction[]>(
-        `${API_BASE_URL}/api/ai/vehicle-maintenance-risk`,
-        { headers: getAuthHeaders() },
-        'Failed to load predictive vehicle maintenance risk',
+        `${API_BASE_URL}/api/analytics/vehicle-maintenance-risk`,
+        { headers: getAuthHeaders(), signal },
+        'Failed to load vehicle maintenance risk',
       )
 
       setPredictions(Array.isArray(data) ? data : [])
       setError('')
       setLastUpdated(new Date().toLocaleTimeString())
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load predictive vehicle maintenance risk')
+      if (signal?.aborted) return
+      setError(err instanceof Error ? err.message : 'Failed to load vehicle maintenance risk')
     } finally {
-      setLoading(false)
-      hasLoadedOnceRef.current = true
+      if (!signal?.aborted) {
+        setLoading(false)
+        hasLoadedOnceRef.current = true
+      }
     }
   }, [])
 
   useEffect(() => {
-    refresh()
+    const controller = new AbortController()
+    void refresh(controller.signal)
+    return () => controller.abort()
   }, [refresh])
 
   return {

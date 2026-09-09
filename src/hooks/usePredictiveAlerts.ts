@@ -28,29 +28,34 @@ export function usePredictiveAlerts(): UsePredictiveAlertsState {
   const [lastUpdated, setLastUpdated] = useState('')
   const hasLoadedOnceRef = useRef(false)
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (signal?: AbortSignal) => {
     try {
       if (!hasLoadedOnceRef.current) {
         setLoading(true)
       }
       const data = await fetchJsonOrThrow<PredictiveAlert[]>(
-        `${API_BASE_URL}/api/alerts/predictive`,
-        { headers: getAuthHeaders() },
-        'Failed to load predictive alerts',
+        `${API_BASE_URL}/api/alerts/operational-risk`,
+        { headers: getAuthHeaders(), signal },
+        'Failed to load operational alerts',
       )
       setAlerts(Array.isArray(data) ? data : [])
       setError('')
       setLastUpdated(new Date().toLocaleTimeString())
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load predictive alerts')
+      if (signal?.aborted) return
+      setError(err instanceof Error ? err.message : 'Failed to load operational alerts')
     } finally {
-      setLoading(false)
-      hasLoadedOnceRef.current = true
+      if (!signal?.aborted) {
+        setLoading(false)
+        hasLoadedOnceRef.current = true
+      }
     }
   }, [])
 
   useEffect(() => {
-    refresh()
+    const controller = new AbortController()
+    void refresh(controller.signal)
+    return () => controller.abort()
   }, [refresh])
 
   return { alerts, loading, error, lastUpdated, refresh }

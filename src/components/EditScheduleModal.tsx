@@ -2,6 +2,11 @@ import { useState, useEffect, FC } from 'react'
 import { API_BASE_URL } from '../config'
 import { logError } from '../utils/logger'
 import { getAuthHeaders } from '../utils/api'
+import {
+  localScheduleToUtc,
+  toLocalDateInputValue,
+  toLocalTimeInputValue,
+} from '../utils/scheduleDateTime'
 
 interface Shift {
   id: string
@@ -40,14 +45,27 @@ const EditScheduleModal: FC<EditScheduleModalProps> = ({ shift, onClose, onSave,
   const [formData, setFormData] = useState({
     guardId: shift?.guard_id || '',
     clientSite: shift?.client_site || '',
-    date: shift?.start_time ? new Date(shift.start_time).toISOString().split('T')[0] : '',
-    startTime: shift?.start_time ? new Date(shift.start_time).toTimeString().slice(0, 5) : '',
-    endTime: shift?.end_time ? new Date(shift.end_time).toTimeString().slice(0, 5) : '',
+    date: shift?.start_time ? toLocalDateInputValue(shift.start_time) : '',
+    startTime: shift?.start_time ? toLocalTimeInputValue(shift.start_time) : '',
+    endTime: shift?.end_time ? toLocalTimeInputValue(shift.end_time) : '',
   })
   const [loading, setLoading] = useState(false)
   const [clientSitesLoading, setClientSitesLoading] = useState(false)
   const [error, setError] = useState('')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+
+  useEffect(() => {
+    if (!shift) return
+    setFormData({
+      guardId: shift.guard_id,
+      clientSite: shift.client_site,
+      date: toLocalDateInputValue(shift.start_time),
+      startTime: toLocalTimeInputValue(shift.start_time),
+      endTime: toLocalTimeInputValue(shift.end_time),
+    })
+    setError('')
+    setShowDeleteConfirm(false)
+  }, [shift])
 
   useEffect(() => {
     fetchGuards()
@@ -106,9 +124,11 @@ const EditScheduleModal: FC<EditScheduleModalProps> = ({ shift, onClose, onSave,
     setError('')
 
     try {
-      // Combine date and time into RFC3339 format
-      const startDateTime = `${formData.date}T${formData.startTime}:00Z`
-      const endDateTime = `${formData.date}T${formData.endTime}:00Z`
+      const { startTime, endTime } = localScheduleToUtc(
+        formData.date,
+        formData.startTime,
+        formData.endTime,
+      )
 
       const response = await fetch(`${API_BASE_URL}/api/guard-replacement/shifts/${shift.id}`, {
         method: 'PUT',
@@ -117,10 +137,10 @@ const EditScheduleModal: FC<EditScheduleModalProps> = ({ shift, onClose, onSave,
           ...getAuthHeaders()
         },
         body: JSON.stringify({
-          guard_id: formData.guardId,
-          client_site: formData.clientSite,
-          start_time: startDateTime,
-          end_time: endDateTime
+          guardId: formData.guardId,
+          clientSite: formData.clientSite,
+          startTime,
+          endTime
         })
       })
 

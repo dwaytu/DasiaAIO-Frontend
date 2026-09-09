@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { AlertTriangle, ClipboardCheck, Bell } from 'lucide-react';
+import { API_BASE_URL } from '../../config';
 import { ActionInbox } from './ActionInbox';
 import type { InboxItem } from './ActionInbox';
 import { WorkflowTimeline } from './WorkflowTimeline';
 import type { TimelineEntry } from './WorkflowTimeline';
 import { getAuthHeaders } from '../../utils/api';
+import { fetchArrayPayload } from './inboxPayloads';
 import { parsePendingApprovalsPayload, type PendingApprovalRecord } from './pendingApprovals';
 
 // ─── API response types ────────────────────────────────────────────────────
@@ -58,20 +60,30 @@ export const SuperadminInboxPanel = ({
 
   useEffect(() => {
     let cancelled = false;
+    const controller = new AbortController();
     const headers = getAuthHeaders({ 'Content-Type': 'application/json' });
 
     const fetchAll = async (): Promise<void> => {
       setLoading(true);
 
       const [notifResult, approvalResult, incidentResult] = await Promise.allSettled([
-        fetch(`/api/users/${encodeURIComponent(userId)}/notifications`, { headers }).then<Notification[]>((r) =>
-          r.ok ? r.json() : Promise.reject(r.status)
+        fetchArrayPayload<Notification>(
+          `${API_BASE_URL}/api/users/${encodeURIComponent(userId)}/notifications`,
+          headers,
+          ['notifications'],
+          controller.signal,
         ),
-        fetch('/api/users/pending-approvals', { headers }).then<unknown>(
+        fetch(`${API_BASE_URL}/api/users/pending-approvals`, {
+          headers,
+          signal: controller.signal,
+        }).then<unknown>(
           (r) => (r.ok ? r.json() : Promise.reject(r.status))
         ),
-        fetch('/api/incidents', { headers }).then<Incident[]>((r) =>
-          r.ok ? r.json() : Promise.reject(r.status)
+        fetchArrayPayload<Incident>(
+          `${API_BASE_URL}/api/incidents`,
+          headers,
+          ['incidents'],
+          controller.signal,
         ),
       ]);
 
@@ -181,6 +193,7 @@ export const SuperadminInboxPanel = ({
     void fetchAll();
     return () => {
       cancelled = true;
+      controller.abort();
     };
   }, [userId, onAction]);
 

@@ -199,9 +199,7 @@ const CreateGuardAccountModal: FC<CreateGuardAccountModalProps> = ({
       onClose={() => {
         if (!submitting) onClose()
       }}
-      widthClassName="max-w-2xl"
-      closeOnOverlayClick={!submitting}
-      closeOnEsc={!submitting}
+      size="lg"
     >
       <form className="space-y-4" onSubmit={submit}>
         <p className="text-sm text-text-secondary">{modalDescription}</p>

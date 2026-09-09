@@ -27,6 +27,7 @@ async function mockGuardDashboardApi(route: Route): Promise<void> {
             shift_id: 'shift-1',
             check_in_time: buildIsoOffset(-1),
             check_out_time: null,
+            status: 'checked_in',
           },
         ],
       }),
@@ -45,6 +46,7 @@ async function mockGuardDashboardApi(route: Route): Promise<void> {
             client_site: 'Tower One Lobby',
             start_time: buildIsoOffset(-1),
             end_time: buildIsoOffset(7),
+            status: 'active',
           },
         ],
       }),
@@ -60,11 +62,11 @@ async function mockGuardDashboardApi(route: Route): Promise<void> {
         allocations: [
           {
             id: 'alloc-1',
-            firearm_id: 'f1',
-            firearm_model: 'Glock 17',
-            firearm_caliber: '9mm',
-            firearm_serial_number: 'SN-1001',
-            allocation_date: buildIsoOffset(-24),
+            firearmId: 'f1',
+            firearmModel: 'Glock 17',
+            firearmCaliber: '9mm',
+            firearmSerialNumber: 'SN-1001',
+            allocationDate: buildIsoOffset(-24),
             status: 'active',
           },
         ],
@@ -81,9 +83,9 @@ async function mockGuardDashboardApi(route: Route): Promise<void> {
         permits: [
           {
             id: 'permit-1',
-            permit_type: 'Carry Permit',
-            issued_date: buildIsoOffset(-24 * 30),
-            expiry_date: buildIsoOffset(24 * 14),
+            permitType: 'Carry Permit',
+            issuedDate: buildIsoOffset(-24 * 30),
+            expiryDate: buildIsoOffset(24 * 14),
             status: 'active',
           },
         ],
@@ -157,21 +159,19 @@ test.describe('Guard Dashboard UX Regression', () => {
 
   test('mission-first landing and single sticky bottom region are visible', async ({ page }) => {
     const missionWorkspace = page.getByRole('region', { name: 'Guard mission workspace' })
-    const readinessCheck = missionWorkspace.getByRole('region', { name: 'Mission readiness check' })
-
-    await expect(page.getByRole('heading', { name: 'Mission Screen' })).toBeVisible()
-    await expect(missionWorkspace.getByRole('heading', { name: 'Immediate Action' })).toBeVisible()
-    await expect(missionWorkspace.getByText(/(check in|stay on post) at tower one lobby/i)).toBeVisible()
-    await expect(readinessCheck).toContainText(/(tracking and sync|location consent|reconnect)/i)
-    await expect(missionWorkspace.getByText(/^Duty Status$/)).toBeVisible()
-    await expect(missionWorkspace.getByText(/^Current Post$/)).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Mission' })).toBeVisible()
+    await expect(missionWorkspace.getByText(/^on post$/i)).toBeVisible()
+    await expect(missionWorkspace.getByText(/tower one lobby/i).first()).toBeVisible()
+    await expect(missionWorkspace.getByRole('region', { name: 'Current duty status' })).toBeVisible()
     await expect(page.getByRole('button', { name: /Report Incident/i })).toBeVisible()
 
-    await expect(page.getByRole('heading', { name: 'Mission Screen' })).toBeInViewport()
+    await expect(page.getByRole('heading', { name: 'Mission' })).toBeInViewport()
+    await page.getByRole('button', { name: /Report Incident/i }).scrollIntoViewIfNeeded()
     await expect(page.getByRole('button', { name: /Report Incident/i })).toBeInViewport()
+    await expect(page.getByRole('button', { name: /Emergency SOS/i })).toBeInViewport()
 
     await expect(page.getByTestId('guard-sticky-region')).toHaveCount(1)
-    await expect(page.locator('[aria-label="Primary guard actions and navigation"]')).toHaveCount(1)
+    await expect(page.getByTestId('guard-sticky-region').getByRole('navigation', { name: 'Guard primary navigation' })).toHaveCount(1)
     await expect(page.getByRole('navigation', { name: 'Guard primary navigation' })).toBeVisible()
   })
 
@@ -180,110 +180,86 @@ test.describe('Guard Dashboard UX Regression', () => {
 
     await expect(page.getByRole('heading', { name: 'Resource Snapshot' })).toBeVisible()
     await expect(page.getByText('Allocated Firearms')).toBeVisible()
-    await expect(page.getByRole('heading', { name: 'Assigned Firearms' })).toBeVisible()
-    await expect(page.getByRole('heading', { name: 'Permit Records' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Your Resources' })).toBeVisible()
+    await expect(page.getByText('Glock 17 (9mm)')).toBeVisible()
+    await expect(page.getByText('Carry Permit')).toBeVisible()
 
     const summaryY = (await page.getByText('Allocated Firearms').first().boundingBox())?.y
-    const detailsY = (await page.getByRole('heading', { name: 'Assigned Firearms' }).boundingBox())?.y
+    const detailsY = (await page.getByRole('heading', { name: 'Your Resources' }).boundingBox())?.y
 
     expect(summaryY).toBeDefined()
     expect(detailsY).toBeDefined()
     expect(summaryY!).toBeLessThan(detailsY!)
   })
 
-  test('support section groups workflows and exposes contextual shift selector', async ({ page }) => {
+  test('support section exposes the current support-ticket workflow', async ({ page }) => {
     await page.getByRole('button', { name: 'Support' }).click()
 
-    await expect(page.getByRole('heading', { name: 'Field Instructions' })).toBeVisible()
-    await expect(page.getByRole('heading', { name: 'Schedule Change Requests' })).toBeVisible()
     await expect(page.getByRole('heading', { name: 'Support Tickets' })).toBeVisible()
-    await expect(page.getByRole('heading', { name: 'Shift Swaps' })).toBeVisible()
+    await expect(page.getByText('Radio battery issue')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'New Ticket' })).toBeVisible()
 
-    const shiftSelector = page.getByLabel('Scheduled Shift')
-    await expect(shiftSelector).toBeVisible()
-    await expect(shiftSelector.locator('option')).toHaveCount(2)
-    await expect(shiftSelector.locator('option').nth(1)).toContainText('Tower One Lobby')
-    await expect(page.getByText(/enter the sentinel user id for the guard covering your post/i)).toBeVisible()
+    await page.getByRole('button', { name: 'New Ticket' }).click()
+    await expect(page.getByRole('heading', { name: 'Create Support Ticket' })).toBeVisible()
+    await expect(page.getByLabel('Category')).toBeVisible()
+    await expect(page.getByLabel('Subject')).toBeVisible()
+    await expect(page.getByLabel('Description')).toBeVisible()
   })
 
-  test('support section degrades gracefully when swap history is unavailable', async ({ page }) => {
-    await page.route('**/api/shifts/swap-requests', async (route) => {
+  test('support section exposes a retry when tickets are unavailable', async ({ page }) => {
+    await page.route('**/api/support-tickets/**', async (route) => {
       await route.fulfill({
-        status: 404,
+        status: 503,
         contentType: 'application/json',
-        body: JSON.stringify({ message: 'Not found' }),
+        body: JSON.stringify({ error: 'Support service unavailable' }),
       })
     })
 
     await page.getByRole('button', { name: 'Support' }).click()
 
-    await expect(page.getByText('Shift swap updates are temporarily unavailable. You can still submit a manual request below.')).toBeVisible()
-    await expect(page.getByText('Swap request history is unavailable right now.')).toBeVisible()
-    await expect(page.getByLabel('Scheduled Shift')).toBeVisible()
+    await expect(page.getByText(/support service unavailable/i)).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Retry' })).toBeVisible()
   })
 
-  test('map section keeps status visible and supports expand flow', async ({ page }) => {
+  test('map section keeps tracking status and fallback location visible', async ({ page }) => {
     await page.getByRole('button', { name: 'Map' }).click()
 
-    await expect(page.getByRole('heading', { name: 'Location Status' })).toBeVisible()
-    await expect(page.getByText('Map Feed')).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Expand Live Map' })).toBeVisible()
-
-    await page.getByRole('button', { name: 'Expand Live Map' }).click()
-
-    await expect(page.getByRole('button', { name: 'Collapse Live Map' })).toBeVisible()
-
-    const mapFrame = page.getByTitle('Guard location map')
-    if (await mapFrame.count()) {
-      await expect(mapFrame).toBeVisible()
-    } else {
-      await expect(page.getByText('No live coordinates yet. Enable tracking from Mission screen, then reopen map.')).toBeVisible()
-    }
+    await expect(page.getByRole('heading', { name: 'Live Map' })).toBeVisible()
+    await expect(page.getByText(/tracking blocked \(consent required\)/i)).toBeVisible()
+    await expect(page.getByText(/no location heartbeat yet/i).first()).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Open Full Map' })).toBeVisible()
   })
 
-  test('profile opens inline, theme toggle persists, and settings route is reachable', async ({ page }) => {
-    await expect(page.getByRole('button', { name: /switch to light mode/i })).toBeVisible()
-    await page.getByRole('button', { name: /switch to light mode/i }).click()
-    await expect(page.locator('html')).toHaveClass(/light/)
-
-    await page.getByRole('button', { name: 'Profile' }).click()
+  test('profile and settings are reachable from the guard account menu', async ({ page }) => {
+    await expect(page.getByRole('button', { name: /switch to light mode/i })).toHaveCount(0)
+    await page.getByRole('button', { name: 'Open profile menu' }).click()
+    await page.getByRole('button', { name: 'My Profile' }).click()
     const profileDialog = page.getByRole('dialog', { name: /guard profile settings/i })
     await expect(profileDialog).toBeVisible()
     await expect(profileDialog.getByRole('heading', { name: 'Account Settings' })).toBeVisible()
     await profileDialog.getByRole('button', { name: /back to mission shell/i }).click()
     await expect(profileDialog).not.toBeVisible()
 
+    await page.getByRole('button', { name: 'Open profile menu' }).click()
     await page.getByRole('button', { name: 'Settings' }).click()
     await expect(page.getByRole('heading', { name: 'Guard Settings' })).toBeVisible()
     await expect(page.getByRole('heading', { name: 'Notifications' })).toBeVisible()
   })
 
   test('self-location is visible on map tab from device GPS without heartbeat persistence', async ({ page, context }) => {
-    // Grant geolocation permission and mock GPS coordinates
     await context.grantPermissions(['geolocation'])
     await context.setGeolocation({ latitude: 7.45, longitude: 125.81 })
-
-    // Navigate to the map tab
-    await page.getByRole('button', { name: 'Map' }).click()
-
-    // The map section should be visible with GPS coordinates, not the
-    // "No live coordinates yet" fallback used when position is missing.
-    // The fix in UserDashboard.tsx allows device-source positions to be
-    // shown immediately without waiting for heartbeat persistence.
-    const mapSection = page.getByRole('region', { name: /map|location/i })
-    const noCoords = page.getByText('No live coordinates yet')
-    const mapFrame = page.locator('iframe[title*="map" i], iframe[src*="openstreetmap" i]')
-
-    // Either the map iframe is rendered with real coords, or at minimum
-    // the "no coordinates" fallback is NOT displayed when GPS is available.
-    const hasMapFrame = await mapFrame.isVisible().catch(() => false)
-    const hasNoCoords = await noCoords.isVisible().catch(() => false)
-
-    // When device GPS is available and location context resolved,
-    // the dashboard should NOT show the "no coordinates" message.
-    // NOTE: If the location context geolocation watch has not resolved
-    // by the time the map tab renders, the fallback may still appear
-    // briefly — the key assertion is that the map infrastructure exists.
-    expect(hasMapFrame || !hasNoCoords).toBeTruthy()
+    await page.route('**/api/tracking/consent/grant', route => route.fulfill({
+      json: { legalConsentAccepted: true, locationTrackingConsent: true },
+    }))
+    await page.route('**/api/tracking/consent', route => route.fulfill({
+      json: { legalConsentAccepted: true, locationTrackingConsent: true },
+    }))
+    await page.getByRole('button', { name: 'Enable Consent' }).click()
+    await page.getByRole('button', { name: 'Map', exact: true }).click()
+    const map = page.getByRole('region', { name: 'Guard map workspace' })
+    await expect(map.getByText('7.450000, 125.810000')).toBeVisible({ timeout: 15_000 })
+    await expect(map.locator('.leaflet-container')).toBeVisible()
+    await expect(map.getByText(/does not indicate your live position/i)).toHaveCount(0)
   })
 })

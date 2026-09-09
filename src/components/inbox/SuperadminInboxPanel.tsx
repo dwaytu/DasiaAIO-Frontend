@@ -8,6 +8,7 @@ import type { TimelineEntry } from './WorkflowTimeline';
 import { getAuthHeaders } from '../../utils/api';
 import { fetchArrayPayload } from './inboxPayloads';
 import { parsePendingApprovalsPayload, type PendingApprovalRecord } from './pendingApprovals';
+import { fetchOperationalRequestInboxItems } from './operationalRequestInbox';
 
 // ─── API response types ────────────────────────────────────────────────────
 
@@ -66,7 +67,7 @@ export const SuperadminInboxPanel = ({
     const fetchAll = async (): Promise<void> => {
       setLoading(true);
 
-      const [notifResult, approvalResult, incidentResult] = await Promise.allSettled([
+      const [notifResult, approvalResult, incidentResult, requestsResult] = await Promise.allSettled([
         fetchArrayPayload<Notification>(
           `${API_BASE_URL}/api/users/${encodeURIComponent(userId)}/notifications`,
           headers,
@@ -85,6 +86,7 @@ export const SuperadminInboxPanel = ({
           ['incidents'],
           controller.signal,
         ),
+        fetchOperationalRequestInboxItems(true, controller.signal, onAction),
       ]);
 
       const notifications: Notification[] =
@@ -93,6 +95,8 @@ export const SuperadminInboxPanel = ({
         approvalResult.status === 'fulfilled' ? parsePendingApprovalsPayload(approvalResult.value) : [];
       const incidents: Incident[] =
         incidentResult.status === 'fulfilled' ? incidentResult.value : [];
+      const operationalRequests =
+        requestsResult.status === 'fulfilled' ? requestsResult.value : [];
 
       // ── Stats ──────────────────────────────────────────────────────────
       const incidentsThisMonth = incidents.filter((i) => isThisMonth(i.created_at)).length;
@@ -106,6 +110,7 @@ export const SuperadminInboxPanel = ({
       // ── Inbox items ────────────────────────────────────────────────────
       const now = Date.now();
       const items: InboxItem[] = [];
+      items.push(...operationalRequests);
 
       for (const incident of incidents) {
         if (incident.status !== 'closed' && incident.status !== 'resolved') {

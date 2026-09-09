@@ -179,20 +179,20 @@ describe('guard dashboard redesign tranche', () => {
         firearmItems={[
           {
             id: 'f-1',
-            firearm_id: 'firearm-1',
-            firearm_model: 'Glock 17',
-            firearm_caliber: '9mm',
-            firearm_serial_number: 'SN-001',
-            allocation_date: '2026-03-01T00:00:00.000Z',
+            firearmId: 'firearm-1',
+            firearmModel: 'Glock 17',
+            firearmCaliber: '9mm',
+            firearmSerialNumber: 'SN-001',
+            allocationDate: '2026-03-01T00:00:00.000Z',
             status: 'active',
           },
         ]}
         permitItems={[
           {
             id: 'p-1',
-            permit_type: 'Carry Permit',
-            issued_date: '2026-01-01T00:00:00.000Z',
-            expiry_date: '2026-12-01T00:00:00.000Z',
+            permitType: 'Carry Permit',
+            issuedDate: '2026-01-01T00:00:00.000Z',
+            expiryDate: '2026-12-01T00:00:00.000Z',
             status: 'active',
           },
         ]}

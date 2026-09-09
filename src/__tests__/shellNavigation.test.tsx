@@ -6,6 +6,7 @@ describe('shell navigation chrome', () => {
 
     expect(labels).toContain('Dashboard')
     expect(labels).toContain('Approvals')
+    expect(labels).toContain('Requests')
     expect(labels).toContain('Schedule')
     expect(labels).toContain('Calendar')
     expect(labels).toContain('Settings')
@@ -15,7 +16,7 @@ describe('shell navigation chrome', () => {
     expect(labels).not.toContain('Audit')
     expect(labels).toContain('DTR Report')
     expect(labels).toContain('Firearm Compliance')
-    expect(labels).toHaveLength(14)
+    expect(labels).toHaveLength(15)
   })
 
   it('returns empty sidebar for guard (uses bottom nav)', () => {
@@ -35,7 +36,8 @@ describe('shell navigation chrome', () => {
     expect(labels).toContain('DTR Report')
     expect(labels).toContain('Maintenance')
     expect(labels).toContain('Firearm Compliance')
-    expect(labels).toHaveLength(16)
+    expect(labels).toContain('Requests')
+    expect(labels).toHaveLength(17)
   })
 
   it('returns supervisor nav with Missions', () => {
@@ -43,6 +45,7 @@ describe('shell navigation chrome', () => {
 
     expect(labels).toContain('Missions')
     expect(labels).toContain('Approvals')
+    expect(labels).toContain('Requests')
     expect(labels).toContain('Calendar')
     expect(labels).toContain('Operations Map')
     expect(labels).toContain('Settings')
@@ -50,7 +53,7 @@ describe('shell navigation chrome', () => {
     expect(labels).toContain('DTR Report')
     expect(labels).toContain('Maintenance')
     expect(labels).toContain('Firearm Compliance')
-    expect(labels).toHaveLength(11)
+    expect(labels).toHaveLength(12)
   })
 
   it('fails closed for malformed roles', () => {

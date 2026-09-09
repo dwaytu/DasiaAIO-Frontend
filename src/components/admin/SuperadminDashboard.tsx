@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, FC, Suspense, lazy } from 'react'
+import { useState, useEffect, useMemo, useCallback, FC, Suspense, lazy } from 'react'
 import { useNavigate } from 'react-router'
 import EditUserModal from '../EditUserModal'
 import EditScheduleModal from '../EditScheduleModal'
@@ -39,6 +39,7 @@ import { SuperadminInboxPanel } from '../inbox/SuperadminInboxPanel'
 import { useOperationalMapData } from '../../hooks/useOperationalMapData'
 import CreateGuardAccountModal from './CreateGuardAccountModal'
 import { localScheduleToUtc } from '../../utils/scheduleDateTime'
+import OperationalRequestsPanel from '../requests/OperationalRequestsPanel'
 
 const AuditDashboard = lazy(() => import('../AuditDashboard'))
 
@@ -277,7 +278,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [editingShift, setEditingShift] = useState<any | null>(null)
   const [error, setError] = useState<string>('')
-  const [activeSection, setActiveSection] = useState<'inbox' | 'dashboard' | 'approvals' | 'schedule' | 'missions' | 'analytics' | 'trips' | 'audit-log' | 'manage' | 'operations-map'>('dashboard')
+  const [activeSection, setActiveSection] = useState<'inbox' | 'dashboard' | 'approvals' | 'requests' | 'schedule' | 'missions' | 'analytics' | 'trips' | 'audit-log' | 'manage' | 'operations-map'>('dashboard')
   const [shifts, setShifts] = useState<any[]>([])
   const [shiftsLoading, setShiftsLoading] = useState<boolean>(false)
   const [missions, setMissions] = useState<any[]>([])
@@ -336,6 +337,17 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
     normalizedViewerRole === 'supervisor'
   const navItems = getSidebarNav(user.role)
   const navigate = useNavigate()
+  const handleInboxAction = useCallback((type: string) => {
+    if (type === 'operational-request') {
+      navigate(ROUTES.REQUESTS)
+    } else if (type === 'approval') {
+      navigate(ROUTES.APPROVALS)
+    } else if (type === 'firearm') {
+      navigate(ROUTES.FIREARMS)
+    } else if (type === 'shift') {
+      navigate(ROUTES.SCHEDULE)
+    }
+  }, [navigate])
 
   const canViewUserRow = (targetRoleRaw: string) => {
     const targetRole = normalizeRole(targetRoleRaw)
@@ -355,6 +367,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
     activeSection === 'inbox' ? 'Inbox' :
     activeSection === 'dashboard' ? 'Dashboard' :
     activeSection === 'approvals' ? 'Guard Approvals' :
+    activeSection === 'requests' ? 'Operational Requests' :
     activeSection === 'schedule' ? 'Guard Schedules' :
     activeSection === 'missions' ? 'Mission Assignment' :
     activeSection === 'analytics' ? 'Analytics & Reports' :
@@ -365,6 +378,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   const badgeLabel =
     activeSection === 'dashboard' ? 'Overview' :
     activeSection === 'approvals' ? 'Approvals' :
+    activeSection === 'requests' ? 'Requests' :
     activeSection === 'trips' ? 'Trips' :
     activeSection === 'audit-log' ? 'Audit Log' :
     activeSection === 'manage' ? 'Management' :
@@ -411,11 +425,12 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
 
   useEffect(() => {
     if (!activeView) return
-    const viewToSection: Record<string, 'inbox' | 'dashboard' | 'approvals' | 'schedule' | 'missions' | 'analytics' | 'trips' | 'audit-log' | 'manage' | 'operations-map'> = {
+    const viewToSection: Record<string, 'inbox' | 'dashboard' | 'approvals' | 'requests' | 'schedule' | 'missions' | 'analytics' | 'trips' | 'audit-log' | 'manage' | 'operations-map'> = {
       inbox: 'inbox',
       users: 'dashboard',
       dashboard: 'dashboard',
       approvals: 'approvals',
+      requests: 'requests',
       schedule: 'schedule',
       missions: 'missions',
       analytics: 'analytics',
@@ -990,11 +1005,11 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
         {activeSection === 'inbox' ? (
           <div className="p-6">
             {isSuperadminViewer ? (
-              <SuperadminInboxPanel userId={user.id} />
+              <SuperadminInboxPanel userId={user.id} onAction={handleInboxAction} />
             ) : isAdminViewer ? (
-              <AdminInboxPanel userId={user.id} />
+              <AdminInboxPanel userId={user.id} onAction={handleInboxAction} />
             ) : (
-              <SupervisorInboxPanel userId={user.id} />
+              <SupervisorInboxPanel userId={user.id} onAction={handleInboxAction} />
             )}
           </div>
         ) : activeSection === 'dashboard' && error ? (
@@ -1469,8 +1484,12 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
               </div>
             </section>
           </div>
+        ) : activeSection === 'requests' ? (
+          <div className="flex-1 overflow-y-auto p-4 md:p-8">
+            <OperationalRequestsPanel user={user} />
+          </div>
         ) : activeSection === 'approvals' ? (
-          <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in">
+          <div className="flex-1 space-y-6 p-4 md:p-8 overflow-y-auto w-full animate-fade-in">
             {approvalsLoading ? (
               <TableLoadingState
                 title="Pending Guard Registrations"
@@ -1545,6 +1564,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                 </div>
               </section>
             )}
+            <OperationalRequestsPanel user={user} />
           </div>
         ) : activeSection === 'schedule' ? (
           <div className="flex-1 flex flex-col p-4 md:p-8 overflow-hidden w-full animate-fade-in">

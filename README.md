@@ -119,5 +119,15 @@ Release scripts validate production-critical settings and fail fast when configu
 
 ## Notes
 
+### Browser Regression Tests
+
+`npm run test:e2e` runs UI regressions plus a live login/logout smoke test.
+Start the local backend and use a provisioned test guard account, setting
+`E2E_USERNAME` and `E2E_PASSWORD` in the shell before running the suite.
+The aliases `AUDIT_GUARD_IDENTIFIER` and `AUDIT_GUARD_PASSWORD` are also accepted.
+Do not use production credentials or commit credentials to test files.
+The remaining browser specs mock their API responses and can run without a
+backend using `npx playwright test guard-dashboard inbox operational-requests`.
+
 - This codebase follows SOC-style command-center UI conventions defined in root governance docs.
 - `VITE_API_BASE_URL` is the authoritative backend origin for all protected API calls.

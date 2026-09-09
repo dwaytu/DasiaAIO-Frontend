@@ -11,6 +11,7 @@ export type Permission =
   | 'manage_maintenance'
   | 'manage_armored_cars'
   | 'view_guard_workspace'
+  | 'manage_requests'
 
 const rolePermissions: Record<Role, Permission[]> = {
   superadmin: [
@@ -24,6 +25,7 @@ const rolePermissions: Record<Role, Permission[]> = {
     'manage_maintenance',
     'manage_armored_cars',
     'view_guard_workspace',
+    'manage_requests',
   ],
   admin: [
     'manage_users',
@@ -35,6 +37,7 @@ const rolePermissions: Record<Role, Permission[]> = {
     'manage_maintenance',
     'manage_armored_cars',
     'view_guard_workspace',
+    'manage_requests',
   ],
   supervisor: [
     'approve_guards',
@@ -45,6 +48,7 @@ const rolePermissions: Record<Role, Permission[]> = {
     'manage_maintenance',
     'manage_armored_cars',
     'view_guard_workspace',
+    'manage_requests',
   ],
   guard: ['view_guard_workspace'],
 }

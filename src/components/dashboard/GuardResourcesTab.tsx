@@ -5,19 +5,19 @@ import StatCard from './ui/StatCard'
 
 interface AllocationItem {
   id: string
-  firearm_id: string
-  firearm_model: string
-  firearm_caliber: string
-  firearm_serial_number: string
-  allocation_date: string
+  firearmId: string
+  firearmModel: string
+  firearmCaliber: string
+  firearmSerialNumber: string
+  allocationDate: string
   status: string
 }
 
 interface PermitItem {
   id: string
-  permit_type: string
-  issued_date: string
-  expiry_date: string
+  permitType: string
+  issuedDate: string
+  expiryDate: string
   status: string
 }
 
@@ -29,7 +29,7 @@ interface GuardResourcesTabProps {
 const GuardResourcesTab: FC<GuardResourcesTabProps> = ({ firearmItems, permitItems }) => {
   const activePermits = permitItems.filter((item) => item.status.toLowerCase() === 'active').length
   const expiringSoonCount = permitItems.filter((item) => {
-    const expiry = new Date(item.expiry_date).getTime()
+    const expiry = new Date(item.expiryDate).getTime()
     if (Number.isNaN(expiry)) return false
     const daysUntilExpiry = (expiry - Date.now()) / (1000 * 60 * 60 * 24)
     return daysUntilExpiry >= 0 && daysUntilExpiry <= 30
@@ -94,11 +94,11 @@ const GuardResourcesTab: FC<GuardResourcesTabProps> = ({ firearmItems, permitIte
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-text-primary">
-                    {item.firearm_model} ({item.firearm_caliber})
+                    {item.firearmModel} ({item.firearmCaliber})
                   </p>
-                  <p className="text-xs text-text-secondary">Serial: {item.firearm_serial_number}</p>
+                  <p className="text-xs text-text-secondary">Serial: {item.firearmSerialNumber}</p>
                   <p className="text-xs text-text-tertiary">
-                    Allocated: {new Date(item.allocation_date).toLocaleDateString()}
+                    Allocated: {new Date(item.allocationDate).toLocaleDateString()}
                   </p>
                 </div>
                 <span className="rounded-full bg-danger-bg text-danger-text border border-danger-border px-2 py-0.5 text-[10px] font-bold uppercase">
@@ -111,9 +111,9 @@ const GuardResourcesTab: FC<GuardResourcesTabProps> = ({ firearmItems, permitIte
             <li key={`permit-${item.id}`} className="rounded border border-border-subtle bg-surface-elevated p-3">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-text-primary">{item.permit_type}</p>
+                  <p className="text-sm font-semibold text-text-primary">{item.permitType}</p>
                   <p className="text-xs text-text-secondary">
-                    Issued: {new Date(item.issued_date).toLocaleDateString()} · Expires: {new Date(item.expiry_date).toLocaleDateString()}
+                    Issued: {new Date(item.issuedDate).toLocaleDateString()} · Expires: {new Date(item.expiryDate).toLocaleDateString()}
                   </p>
                   <p className="text-xs text-text-tertiary">Status: {item.status}</p>
                 </div>

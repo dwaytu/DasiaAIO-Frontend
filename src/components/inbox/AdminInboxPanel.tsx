@@ -5,6 +5,7 @@ import { WorkflowTimeline, TimelineEntry } from './WorkflowTimeline';
 import { getAuthHeaders } from '../../utils/api';
 import { fetchArrayPayload, fetchObjectPayload } from './inboxPayloads';
 import { parsePendingApprovalsPayload, type PendingApprovalRecord } from './pendingApprovals';
+import { fetchOperationalRequestInboxItems } from './operationalRequestInbox';
 
 interface AdminInboxPanelProps {
   userId: string;
@@ -78,9 +79,11 @@ function buildInboxItems(
   approvals: PendingApproval[],
   firearms: FirearmItem[],
   notifications: AdminNotification[],
+  operationalRequests: InboxItem[],
   onAction?: (type: string, id: string) => void,
 ): InboxItem[] {
   const items: InboxItem[] = [];
+  items.push(...operationalRequests);
 
   for (const approval of approvals) {
     items.push({
@@ -167,7 +170,7 @@ export const AdminInboxPanel = ({ userId, onAction }: AdminInboxPanelProps): Rea
     async function load(): Promise<void> {
       const headers = getAuthHeaders({ 'Content-Type': 'application/json' });
 
-      const [approvalsResult, firearmsResult, notificationsResult, metricsResult] =
+      const [approvalsResult, firearmsResult, notificationsResult, metricsResult, requestsResult] =
         await Promise.allSettled([
           safeFetchPendingApprovals(
             `${API_BASE_URL}/api/users/pending-approvals`,
@@ -200,6 +203,7 @@ export const AdminInboxPanel = ({ userId, onAction }: AdminInboxPanelProps): Rea
             headers,
             controller.signal,
           ),
+          fetchOperationalRequestInboxItems(true, controller.signal, onAction),
         ]);
 
       if (cancelled) return;
@@ -212,8 +216,10 @@ export const AdminInboxPanel = ({ userId, onAction }: AdminInboxPanelProps): Rea
         notificationsResult.status === 'fulfilled' ? notificationsResult.value : [];
       const metricsData =
         metricsResult.status === 'fulfilled' ? toOperationalMetrics(metricsResult.value) : null;
+      const operationalRequests =
+        requestsResult.status === 'fulfilled' ? requestsResult.value : [];
 
-      setInboxItems(buildInboxItems(approvals, firearms, notifications, onAction));
+      setInboxItems(buildInboxItems(approvals, firearms, notifications, operationalRequests, onAction));
       setTimelineEntries(buildTimelineEntries(notifications));
       setMetrics(metricsData);
       setLoading(false);

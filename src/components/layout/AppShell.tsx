@@ -105,6 +105,7 @@ export default function AppShell() {
     'feedback-dashboard',
     'inbox',
     'support',
+    'requests',
     'notifications',
     'missions',
     'trips',

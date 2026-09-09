@@ -11,6 +11,7 @@ export interface NavItem {
 const SUPERADMIN_NAV: NavItem[] = [
   { view: 'dashboard', label: 'Dashboard', group: 'Core' },
   { view: 'approvals', label: 'Approvals', group: 'Core', permission: 'approve_guards' },
+  { view: 'requests', label: 'Requests', group: 'Core', permission: 'manage_requests' },
   { view: 'schedule', label: 'Schedule', group: 'Core' },
   { view: 'calendar', label: 'Calendar', group: 'Core' },
   { view: 'feedback-dashboard', label: 'Feedback', group: 'Intelligence' },
@@ -30,6 +31,7 @@ const SUPERADMIN_NAV: NavItem[] = [
 const ADMIN_NAV: NavItem[] = [
   { view: 'dashboard', label: 'Dashboard', group: 'Core' },
   { view: 'approvals', label: 'Approvals', group: 'Core', permission: 'approve_guards' },
+  { view: 'requests', label: 'Requests', group: 'Core', permission: 'manage_requests' },
   { view: 'schedule', label: 'Schedule', group: 'Core' },
   { view: 'calendar', label: 'Calendar', group: 'Core' },
   { view: 'allocation', label: 'Allocation', group: 'Operations', permission: 'manage_allocations' },
@@ -50,6 +52,7 @@ const SUPERVISOR_NAV: NavItem[] = [
   { view: 'calendar', label: 'Calendar', group: 'Core' },
   { view: 'missions', label: 'Missions', group: 'Field' },
   { view: 'approvals', label: 'Approvals', group: 'Operations', permission: 'approve_guards' },
+  { view: 'requests', label: 'Requests', group: 'Operations', permission: 'manage_requests' },
   { view: 'allocation', label: 'Allocation', group: 'Operations', permission: 'manage_allocations' },
   { view: 'dtr', label: 'DTR Report', group: 'Operations', permission: 'view_analytics' },
   { view: 'maintenance', label: 'Maintenance', group: 'Resources', permission: 'manage_maintenance' },

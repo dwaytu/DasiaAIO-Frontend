@@ -15,6 +15,7 @@ import { useLocationConsent } from '../../hooks/useLocationConsent'
 import GuardResourcesTab from '../dashboard/GuardResourcesTab'
 import GuardMapTab from '../dashboard/GuardMapTab'
 import SupportTickets from './SupportTickets'
+import OperationalRequestsPanel from '../requests/OperationalRequestsPanel'
 import EmergencyContactsBar from './EmergencyContactsBar'
 import DashboardCard from '../dashboard/ui/DashboardCard'
 import SectionHeader from '../dashboard/ui/SectionHeader'
@@ -55,23 +56,23 @@ interface ShiftItem {
 
 interface AllocationItem {
   id: string
-  firearm_id: string
-  firearm_model: string
-  firearm_caliber: string
-  firearm_serial_number: string
-  allocation_date: string
+  firearmId: string
+  firearmModel: string
+  firearmCaliber: string
+  firearmSerialNumber: string
+  allocationDate: string
   status: string
 }
 
 interface PermitItem {
   id: string
-  permit_type: string
-  issued_date: string
-  expiry_date: string
+  permitType: string
+  issuedDate: string
+  expiryDate: string
   status: string
 }
 
-type GuardSection = 'inbox' | 'mission' | 'resources' | 'support' | 'map'
+type GuardSection = 'inbox' | 'mission' | 'resources' | 'requests' | 'support' | 'map'
 
 type IncidentPriority = 'low' | 'medium' | 'high' | 'critical'
 
@@ -91,6 +92,7 @@ interface LastKnownLocation {
 function resolveSectionFromView(activeView?: string): GuardSection {
   if (activeView === 'inbox') return 'inbox'
   if (activeView === 'support') return 'support'
+  if (activeView === 'requests') return 'requests'
   if (activeView === 'firearms' || activeView === 'permits') return 'resources'
   if (activeView === 'map') return 'map'
   return 'mission'
@@ -707,6 +709,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
   const navItems: Array<{ key: GuardSection; label: string }> = [
     { key: 'mission', label: 'Mission' },
     { key: 'resources', label: 'Resources' },
+    { key: 'requests', label: 'Requests' },
     { key: 'support', label: 'Support' },
     { key: 'map', label: 'Map' },
   ]
@@ -1059,6 +1062,10 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
 
           {!isInitialLoading && activeSection === 'support' ? (
             <SupportTickets userId={user.id} />
+          ) : null}
+
+          {!isInitialLoading && activeSection === 'requests' ? (
+            <OperationalRequestsPanel user={user} />
           ) : null}
 
           {!isInitialLoading && activeSection === 'map' ? (

@@ -5,6 +5,7 @@ import { WorkflowTimeline, TimelineEntry, TimelineStatus } from './WorkflowTimel
 import { getAuthHeaders } from '../../utils/api';
 import { fetchArrayPayload } from './inboxPayloads';
 import { parsePendingApprovalsPayload, type PendingApprovalRecord } from './pendingApprovals';
+import { fetchOperationalRequestInboxItems } from './operationalRequestInbox';
 
 export interface SupervisorInboxPanelProps {
   userId: string;
@@ -45,9 +46,11 @@ function toInboxItems(
   incidents: Incident[],
   shifts: Shift[],
   notifications: Notification[],
+  operationalRequests: InboxItem[],
   onAction?: (type: string, id: string) => void,
 ): InboxItem[] {
   const items: InboxItem[] = [];
+  items.push(...operationalRequests);
 
   for (const a of approvals) {
     items.push({
@@ -155,7 +158,7 @@ export const SupervisorInboxPanel = ({
       setLoading(true);
       setAllFailed(false);
 
-      const [approvalsResult, incidentsResult, shiftsResult, notificationsResult] =
+      const [approvalsResult, incidentsResult, shiftsResult, notificationsResult, requestsResult] =
         await Promise.allSettled([
           fetch(`${API_BASE_URL}/api/users/pending-approvals`, {
             headers,
@@ -179,11 +182,12 @@ export const SupervisorInboxPanel = ({
             ['notifications'],
             controller.signal,
           ),
+          fetchOperationalRequestInboxItems(false, controller.signal, onAction),
         ]);
 
       if (cancelled) return;
 
-      const succeeded = [approvalsResult, incidentsResult, shiftsResult, notificationsResult].some(
+      const succeeded = [approvalsResult, incidentsResult, shiftsResult, notificationsResult, requestsResult].some(
         (r) => r.status === 'fulfilled',
       );
 
@@ -212,8 +216,10 @@ export const SupervisorInboxPanel = ({
         notificationsResult.status === 'fulfilled'
           ? notificationsResult.value
           : [];
+      const operationalRequests =
+        requestsResult.status === 'fulfilled' ? requestsResult.value : [];
 
-      setInboxItems(toInboxItems(approvals, incidentsRaw, shifts, notifications, onAction));
+      setInboxItems(toInboxItems(approvals, incidentsRaw, shifts, notifications, operationalRequests, onAction));
       setTimelineEntries(toTimelineEntries(incidentsRaw));
       setLoading(false);
     };

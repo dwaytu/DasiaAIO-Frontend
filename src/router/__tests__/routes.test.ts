@@ -22,6 +22,7 @@ describe('ROUTES', () => {
     expect(ROUTES.SHIFT_SWAPS).toBe('/shift-swaps')
     expect(ROUTES.NOTIFICATIONS).toBe('/notifications')
     expect(ROUTES.SUPPORT).toBe('/support')
+    expect(ROUTES.REQUESTS).toBe('/requests')
     expect(ROUTES.INBOX).toBe('/inbox')
   })
 
@@ -54,6 +55,7 @@ describe('VIEW_TO_ROUTE', () => {
     expect(VIEW_TO_ROUTE['inbox']).toBe(ROUTES.INBOX)
     expect(VIEW_TO_ROUTE['notifications']).toBe(ROUTES.INBOX)
     expect(VIEW_TO_ROUTE['support']).toBe(ROUTES.SUPPORT)
+    expect(VIEW_TO_ROUTE['requests']).toBe(ROUTES.REQUESTS)
   })
 
   it('all values are valid ROUTES entries', () => {

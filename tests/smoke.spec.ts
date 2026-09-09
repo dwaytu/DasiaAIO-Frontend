@@ -4,12 +4,15 @@
 
 import { test, expect, type BrowserContext, type Page } from '@playwright/test'
 
-const USERNAME = process.env.E2E_USERNAME ?? 'admin'
-const PASSWORD = process.env.E2E_PASSWORD ?? 'admin123'
+const USERNAME = process.env.E2E_USERNAME ?? process.env.AUDIT_GUARD_IDENTIFIER
+const PASSWORD = process.env.E2E_PASSWORD ?? process.env.AUDIT_GUARD_PASSWORD
 
 test.describe.configure({ mode: 'serial' })
 
 async function login(page: Page) {
+  if (!USERNAME || !PASSWORD) {
+    throw new Error('Set E2E_USERNAME and E2E_PASSWORD to a provisioned test account before running live smoke tests.')
+  }
   for (let attempt = 0; attempt < 2; attempt += 1) {
     await page.goto('/')
     await page.getByLabel(/email.*username.*phone|identifier/i).fill(USERNAME)
@@ -24,7 +27,7 @@ async function login(page: Page) {
     const loginError = page.locator('.soc-auth-alert-error')
     if (await loginError.isVisible().catch(() => false)) {
       const errorText = ((await loginError.textContent()) || '').trim()
-      const waitMatch = errorText.match(/try again in\\s+(\\d+)\\s+second/i)
+      const waitMatch = errorText.match(/try again in\s+(\d+)\s+second/i)
       if (waitMatch && attempt === 0) {
         await page.waitForTimeout((Number(waitMatch[1]) + 1) * 1000)
         continue
@@ -97,8 +100,8 @@ test.describe('Authenticated Workflows', () => {
       await page.getByRole('button', { name: /report incident/i }).click()
       const descriptionInput = page.getByLabel(/what happened\?/i)
       await expect(descriptionInput).toBeVisible({ timeout: 8_000 })
-      await page.getByRole('button', { name: /submit incident/i }).click()
-      await expect(page.getByText(/please describe what happened/i)).toBeVisible({ timeout: 8_000 })
+      await page.getByRole('button', { name: 'Submit Report' }).click()
+      await expect.poll(() => descriptionInput.evaluate((input: HTMLTextAreaElement) => input.validity.valueMissing)).toBe(true)
       return
     }
 
@@ -108,6 +111,11 @@ test.describe('Authenticated Workflows', () => {
   })
 
   test('logout returns to login page', async () => {
+    const incidentDialog = page.getByRole('dialog').filter({ has: page.getByLabel(/what happened\?/i) })
+    if (await incidentDialog.isVisible().catch(() => false)) {
+      await incidentDialog.getByRole('button', { name: /cancel|close/i }).first().click()
+    }
+    await page.getByRole('button', { name: 'Open profile menu' }).first().click()
     const logoutBtn = page.getByRole('button', { name: /logout|sign out/i }).filter({ visible: true }).first()
     await expect(logoutBtn).toBeVisible({ timeout: 8_000 })
     await logoutBtn.click()

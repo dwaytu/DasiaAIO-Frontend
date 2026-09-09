@@ -12,6 +12,7 @@ const GUARD_ALLOWED_PATHS = new Set([
   ROUTES.PROFILE,
   ROUTES.SETTINGS,
   ROUTES.SUPPORT,
+  ROUTES.REQUESTS,
 ])
 
 export function AuthGuard() {

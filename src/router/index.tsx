@@ -101,7 +101,7 @@ function ProfileWrapper() {
   )
 }
 
-function GuardSectionWrapper({ section }: { section: 'inbox' | 'support' }) {
+function GuardSectionWrapper({ section }: { section: 'inbox' | 'support' | 'requests' }) {
   const { user, onLogout, onViewChange } = useLegacyProps()
   if (!user) return null
 
@@ -129,6 +129,13 @@ function SupportRouteWrapper() {
   if (!user) return null
   if (user.role === 'guard') return <GuardSectionWrapper section="support" />
   return <Navigate to={ROUTES.INBOX} replace />
+}
+
+function RequestsRouteWrapper() {
+  const { user } = useAuth()
+  if (!user) return null
+  if (user.role === 'guard') return <GuardSectionWrapper section="requests" />
+  return <LegacyPage Component={SuperadminDashboard} />
 }
 
 const ELEVATED_ROLES = ['superadmin', 'admin', 'supervisor']
@@ -188,6 +195,7 @@ export const appRoutes: RouteObject[] = [
           { path: ROUTES.SHIFT_SWAPS, element: <Navigate to={ROUTES.CALENDAR} replace /> },
           { path: ROUTES.NOTIFICATIONS, element: <Navigate to={ROUTES.INBOX} replace /> },
           { path: ROUTES.SUPPORT, element: <SupportRouteWrapper /> },
+          { path: ROUTES.REQUESTS, element: <RequestsRouteWrapper /> },
         ],
       },
 

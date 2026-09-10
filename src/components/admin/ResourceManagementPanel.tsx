@@ -27,6 +27,7 @@ interface Firearm {
   model: string
   caliber: string
   status: string
+  licenseExpiryDate?: string | null
   lastMaintenance?: string
 }
 
@@ -677,7 +678,7 @@ const FirearmsTab: FC = () => {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [showAddModal, setShowAddModal] = useState(false)
-  const [newFirearm, setNewFirearm] = useState({ serialNumber: '', model: '', caliber: '' })
+  const [newFirearm, setNewFirearm] = useState({ serialNumber: '', model: '', caliber: '', licenseExpiryDate: '' })
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
@@ -711,7 +712,7 @@ const FirearmsTab: FC = () => {
       })
       if (!response.ok) throw new Error('Failed to add firearm')
       setSuccess('Firearm added successfully')
-      setNewFirearm({ serialNumber: '', model: '', caliber: '' })
+       setNewFirearm({ serialNumber: '', model: '', caliber: '', licenseExpiryDate: '' })
       setShowAddModal(false)
       await fetchFirearms()
     } catch (err) {
@@ -775,6 +776,10 @@ const FirearmsTab: FC = () => {
               <label htmlFor="firearm-caliber" className="block text-xs font-semibold text-text-secondary mb-1">Caliber</label>
               <input id="firearm-caliber" type="text" required value={newFirearm.caliber} onChange={(e) => setNewFirearm({ ...newFirearm, caliber: e.target.value })} className="w-full px-3 py-2 text-sm border border-border rounded bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-(--color-focus-ring)" placeholder="e.g., 9mm" />
             </div>
+            <div className="sm:col-span-3">
+              <label htmlFor="firearm-license-expiry" className="block text-xs font-semibold text-text-secondary mb-1">License Expiration Date <span className="font-normal text-text-tertiary">(optional)</span></label>
+              <input id="firearm-license-expiry" type="date" value={newFirearm.licenseExpiryDate} onChange={(e) => setNewFirearm({ ...newFirearm, licenseExpiryDate: e.target.value })} className="w-full px-3 py-2 text-sm border border-border rounded bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-(--color-focus-ring)" />
+            </div>
           </div>
           <button type="submit" disabled={submitting} className="w-full rounded bg-(--color-info-bg) text-(--color-info-text) border border-(--color-info-border) py-2 font-semibold text-sm hover:opacity-90 disabled:opacity-50 transition-opacity">
             {submitting ? 'Adding...' : 'Add Firearm'}
@@ -792,6 +797,7 @@ const FirearmsTab: FC = () => {
                 <th className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Serial</th>
                 <th className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Model</th>
                 <th className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider hidden sm:table-cell">Caliber</th>
+                <th className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">License Expiry</th>
                 <th className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Status</th>
                 <th className="px-4 py-3 text-right font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Actions</th>
               </tr>
@@ -802,6 +808,7 @@ const FirearmsTab: FC = () => {
                   <td className="px-4 py-3 text-text-primary text-sm">{f.serialNumber}</td>
                   <td className="px-4 py-3 text-text-primary text-sm">{f.model}</td>
                   <td className="px-4 py-3 text-text-secondary text-sm hidden sm:table-cell">{f.caliber}</td>
+                  <td className="px-4 py-3 text-text-primary text-sm">{f.licenseExpiryDate ? new Date(f.licenseExpiryDate).toLocaleDateString() : 'N/A'}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold ${
                       f.status === 'available' ? 'bg-success-bg text-success-text ring-1 ring-success-border' :

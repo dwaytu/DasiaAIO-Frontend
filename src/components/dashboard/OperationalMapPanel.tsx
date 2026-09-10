@@ -1011,7 +1011,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
           <MapClickPicker enabled={isElevatedUser && mapPickMode !== 'idle'} onPick={handleMapPick} />
 
           <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             url={getOperationalMapTileUrl(theme)}
           />
 
@@ -1287,7 +1287,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
               event.preventDefault()
               clearSelection()
             }}
-            className="absolute right-3 top-3 z-[500] w-full max-w-[280px] rounded border border-border bg-surface-elevated p-3 outline-none focus-visible:ring-2 focus-visible:ring-focus"
+            className="soc-modal-surface absolute right-3 top-3 z-[500] w-full max-w-[280px] rounded border border-border bg-surface-elevated p-3 outline-none focus-visible:ring-2 focus-visible:ring-focus"
           >
             <div className="flex items-start justify-between gap-2">
               <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] ${eventTypeBadgeClass[selectedEvent.type]}`}>

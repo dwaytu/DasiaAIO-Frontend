@@ -14,6 +14,7 @@ interface Firearm {
   model: string
   caliber: string
   status: string
+  licenseExpiryDate?: string | null
   lastMaintenance?: string
   [key: string]: any
 }
@@ -102,6 +103,7 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
                         <th className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Serial Number</th>
                         <th className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Model</th>
                         <th className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Caliber</th>
+                        <th className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">License Expiry</th>
                         <th className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Status</th>
                         <th className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Last Maintenance</th>
                       </tr>
@@ -112,6 +114,7 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
                           <td className="px-4 py-3 text-text-primary">{f.serialNumber}</td>
                           <td className="px-4 py-3 text-text-primary">{f.model}</td>
                           <td className="px-4 py-3 text-text-primary">{f.caliber}</td>
+                          <td className="px-4 py-3 text-text-primary">{f.licenseExpiryDate ? new Date(f.licenseExpiryDate).toLocaleDateString() : 'N/A'}</td>
                           <td className="px-4 py-3">
                             <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${getStatusBadgeColor(f.status)}`}>
                               {f.status}

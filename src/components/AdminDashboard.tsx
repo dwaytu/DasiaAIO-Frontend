@@ -1178,7 +1178,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                 onClick={() => setSelectedApproval(null)}
                 aria-label="Close approval details"
               />
-              <aside className="soc-scroll-area h-full w-full max-w-md overflow-y-auto bg-surface p-6 shadow-2xl">
+              <aside className="soc-modal-surface soc-scroll-area h-full w-full max-w-md overflow-y-auto bg-surface p-6 shadow-2xl">
                 <h3 className="text-xl font-bold text-text-primary">Approval Details</h3>
                 <p className="mt-1 text-sm text-text-secondary">Review applicant information before deciding.</p>
 

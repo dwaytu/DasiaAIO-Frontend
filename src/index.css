@@ -551,6 +551,12 @@
     z-index: 6 !important;
   }
 
+  .leaflet-popup-content-wrapper,
+  .leaflet-popup-tip {
+    background: var(--color-surface-elevated) !important;
+    color: var(--color-text-primary) !important;
+  }
+
   .leaflet-control {
     z-index: 7 !important;
   }
@@ -561,7 +567,7 @@
   }
 
   .dark .leaflet-tile-pane {
-    filter: grayscale(0.3) saturate(0.8);
+    filter: invert(0.88) hue-rotate(180deg) grayscale(0.3) saturate(0.75) brightness(0.78) contrast(1.12);
   }
 
   .soc-dashboard-card {
@@ -1167,7 +1173,7 @@
 
   .soc-dropdown-surface {
     border: 1px solid var(--color-border);
-    background: color-mix(in srgb, var(--color-surface-elevated) 96%, transparent);
+    background: var(--color-surface-elevated);
     box-shadow: var(--shadow-modal);
   }
 
@@ -1278,6 +1284,16 @@
     width: 100%;
     max-height: calc(100dvh - calc(var(--space-unit) * 4));
     overflow-y: auto;
+    background-color: var(--color-surface-elevated) !important;
+    color: var(--color-text-primary);
+    isolation: isolate;
+  }
+
+  /* Every modal surface is fully opaque so underlying dashboards cannot reduce readability. */
+  .soc-modal-surface {
+    background-color: var(--color-surface-elevated) !important;
+    color: var(--color-text-primary);
+    isolation: isolate;
   }
 
   .guard-section-frame {

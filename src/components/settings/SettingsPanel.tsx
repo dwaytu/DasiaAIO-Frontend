@@ -39,7 +39,7 @@ const SettingsPanel: FC<SettingsPanelProps> = ({ user, open, onClose, onOpenFull
         aria-label="Close settings"
         onClick={onClose}
       />
-      <aside ref={panelRef} role="dialog" aria-modal="true" aria-labelledby="settings-panel-title" className="soc-settings-drawer relative z-[1] flex h-full w-full max-w-2xl flex-col border-l border-border-elevated bg-surface shadow-2xl">
+      <aside ref={panelRef} role="dialog" aria-modal="true" aria-labelledby="settings-panel-title" className="soc-modal-surface soc-settings-drawer relative z-[1] flex h-full w-full max-w-2xl flex-col border-l border-border-elevated bg-surface shadow-2xl">
         <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-4 sm:px-6">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-tertiary">Global Settings</p>

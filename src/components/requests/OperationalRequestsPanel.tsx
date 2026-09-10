@@ -497,6 +497,12 @@ export default function OperationalRequestsPanel({ user }: OperationalRequestsPa
                 <button type="button" onClick={beginResubmit} className="soc-btn soc-btn-primary min-h-11 w-full"><RotateCcw className="h-4 w-4" aria-hidden="true" />Correct and Resubmit</button>
               ) : null}
 
+              {selected.status === 'pending' && selected.requesterId === user.id ? (
+                <div role="status" className="rounded border border-info-border bg-info-bg p-3 text-sm text-info-text">
+                  You submitted this request. Review actions are available to a different supervisor, administrator, or superadmin. You will receive an inbox notification when the request is approved or denied.
+                </div>
+              ) : null}
+
               {requestActions(selected, user).length > 0 ? (
                 <div className="flex flex-wrap gap-2 border-t border-border pt-4">
                   {requestActions(selected, user).map((action) => (

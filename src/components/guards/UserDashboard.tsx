@@ -1121,7 +1121,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
             role="dialog"
             aria-modal="true"
             aria-label="Guard profile settings"
-            className="flex max-h-[min(92dvh,960px)] w-full max-w-5xl flex-col overflow-hidden rounded border border-border bg-background shadow-xl"
+            className="soc-modal-surface flex max-h-[min(92dvh,960px)] w-full max-w-5xl flex-col overflow-hidden rounded border border-border bg-background shadow-xl"
           >
             <div className="soc-scroll-area flex-1 overflow-y-auto p-4 md:p-6">
               <ProfileModalContent
@@ -1141,7 +1141,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
             role="dialog"
             aria-modal="true"
             aria-labelledby="guard-instructions-title"
-            className="w-full max-w-xl rounded border border-border bg-surface p-5 shadow-xl"
+            className="soc-modal-surface w-full max-w-xl rounded border border-border bg-surface p-5 shadow-xl"
           >
             <h2 id="guard-instructions-title" className="text-xl font-bold text-text-primary">Field Instructions</h2>
             <ul className="mt-3 space-y-2 text-sm text-text-secondary">
@@ -1177,7 +1177,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
             role="dialog"
             aria-modal="true"
             aria-labelledby="incident-report-title"
-            className="w-full max-w-xl rounded border border-border bg-surface p-5 shadow-xl"
+            className="soc-modal-surface w-full max-w-xl rounded border border-border bg-surface p-5 shadow-xl"
           >
             <h2 id="incident-report-title" className="text-xl font-bold text-text-primary">Report Incident</h2>
             <form className="mt-3 space-y-3" onSubmit={handleIncidentSubmit}>

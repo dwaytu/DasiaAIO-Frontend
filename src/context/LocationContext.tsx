@@ -5,6 +5,12 @@ import {
   getLocationPermissionState,
   hasAcceptedLocationConsent,
   requestRuntimeLocationPermission,
+  requestNativeBackgroundLocationPermission,
+  requestNativeTrackingNotificationPermission,
+  startNativeBackgroundLocationTracking,
+  stopNativeBackgroundLocationTracking,
+  getNativeBackgroundLocationStatus,
+  addNativeBackgroundLocationListener,
   type ResolvedLocation,
   resolveDeviceLocation,
   startResolvedLocationWatch,
@@ -158,6 +164,11 @@ export function LocationProvider({ children }: LocationProviderProps) {
       return
     }
 
+    // Capacitor permissions are owned by the native plugin. The browser
+    // Permissions API can report a stale or unsupported state inside WebView
+    // and overwrite the native result during startup.
+    if (detectRuntimePlatform() === 'capacitor') return
+
     void getLocationPermissionState().then((state) => {
       setGeoPermissionState(state as LocationPermissionState)
       if (state === 'denied') {
@@ -175,6 +186,8 @@ export function LocationProvider({ children }: LocationProviderProps) {
     if (!canSendTrackingHeartbeat) return
 
     const platform = detectRuntimePlatform()
+    if (platform === 'capacitor') return
+
     let disposed = false
     let stopWatch: (() => void | Promise<void>) | null = null
 
@@ -215,6 +228,120 @@ export function LocationProvider({ children }: LocationProviderProps) {
     }
   }, [hasAcceptedToa, hasLocationConsent, isLoggedIn, user?.id, user?.role])
 
+  // Android uses a foreground service so tracking can continue while the app
+  // is backgrounded. The service posts only consented, precise samples and
+  // exposes its latest state back to the WebView for the guard UI.
+  useEffect(() => {
+    if (!isLoggedIn || !user || !hasAcceptedToa || !hasLocationConsent) return
+    if (!canProduceTrackingHeartbeat(user.role)) return
+    if (detectRuntimePlatform() !== 'capacitor') return
+
+    let disposed = false
+    let removeListeners: Array<() => Promise<void>> = []
+
+    const applyServiceStatus = (status: {
+      lastHeartbeatAt?: string | null
+      lastLatitude?: number | null
+      lastLongitude?: number | null
+      lastAccuracyMeters?: number | null
+      state?: string
+      message?: string | null
+    }) => {
+      if (disposed) return
+
+      if (
+        Number.isFinite(status.lastLatitude) &&
+        Number.isFinite(status.lastLongitude)
+      ) {
+        setLastResolvedLocation({
+          latitude: status.lastLatitude as number,
+          longitude: status.lastLongitude as number,
+          accuracyMeters: Number.isFinite(status.lastAccuracyMeters)
+            ? (status.lastAccuracyMeters as number)
+            : null,
+          heading: null,
+          speedKph: null,
+          source: 'capacitor',
+        })
+      }
+
+      if (status.lastHeartbeatAt) {
+        setLastHeartbeatAt(status.lastHeartbeatAt)
+        setLastHeartbeatApproximate(false)
+        setGeoPermissionState('granted')
+        setHeartbeatPaused(false)
+      }
+
+      if (status.state === 'error' || status.state === 'paused') {
+        setHeartbeatPaused(true)
+        if (status.message) setGeoNotice(status.message)
+      }
+    }
+
+    const startService = async () => {
+      try {
+        const nativePermission = await requestRuntimeLocationPermission('capacitor')
+        if (nativePermission !== 'granted') {
+          if (!disposed) {
+            setGeoPermissionState(nativePermission)
+            setHeartbeatPaused(true)
+            setGeoNotice('Precise location permission is required before background tracking can start.')
+          }
+          return
+        }
+
+        setGeoPermissionState('granted')
+
+        const existing = await getNativeBackgroundLocationStatus()
+        if (existing) applyServiceStatus(existing)
+
+        const eventNames = ['location', 'heartbeat', 'error', 'state'] as const
+        for (const eventName of eventNames) {
+          if (disposed) return
+          const remove = await addNativeBackgroundLocationListener(eventName, applyServiceStatus)
+          if (remove) {
+            if (disposed) {
+              await remove()
+              return
+            }
+            removeListeners.push(remove)
+          }
+        }
+
+        const token = getAuthToken()
+        if (!token || disposed) return
+
+        const isMobileClient = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+        const started = await startNativeBackgroundLocationTracking({
+          apiBaseUrl: API_BASE_URL,
+          token,
+          userId: user.id,
+          label: user.fullName || user.full_name || user.username,
+          requiredAccuracyMeters: getRequiredAccuracyMeters(isMobileClient, getTrackingAccuracyMode()),
+          intervalMs: 20000,
+        })
+        if (disposed) {
+          await stopNativeBackgroundLocationTracking()
+          return
+        }
+        applyServiceStatus(started)
+      } catch (error) {
+        if (!disposed) {
+          setHeartbeatPaused(true)
+          setGeoNotice(error instanceof Error ? error.message : 'Background location service could not start.')
+        }
+      }
+    }
+
+    void startService()
+
+    return () => {
+      disposed = true
+      for (const remove of removeListeners) void remove()
+      void stopNativeBackgroundLocationTracking()
+    }
+  }, [hasAcceptedToa, hasLocationConsent, isLoggedIn, user?.id, user?.role, user?.username, user?.fullName, user?.full_name])
+
   // ---------------------------------------------------------------------------
   // Location heartbeat — periodic position updates while consented and logged in
   // ---------------------------------------------------------------------------
@@ -233,6 +360,8 @@ export function LocationProvider({ children }: LocationProviderProps) {
     let lastSent = 0
     let disposed = false
     const platform = detectRuntimePlatform()
+    if (platform === 'capacitor') return
+
     const isMobileClient = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
     const trackingMode = getTrackingAccuracyMode()
     const requiredAccuracyMeters = getRequiredAccuracyMeters(isMobileClient, trackingMode)
@@ -462,6 +591,10 @@ export function LocationProvider({ children }: LocationProviderProps) {
     setGeoPermissionState(permissionState)
 
     if (permissionState === 'granted') {
+      if (platform === 'capacitor') {
+        await requestNativeTrackingNotificationPermission()
+        await requestNativeBackgroundLocationPermission()
+      }
       setGeoNotice('Location access granted.')
       return
     }

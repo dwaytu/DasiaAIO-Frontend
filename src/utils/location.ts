@@ -46,11 +46,41 @@ type CapacitorGeolocationPlugin = {
   clearWatch?: (options: { id: string | number }) => Promise<void>
 }
 
+type BackgroundLocationStatus = {
+  running?: boolean
+  lastHeartbeatAt?: string | null
+  lastLatitude?: number | null
+  lastLongitude?: number | null
+  lastAccuracyMeters?: number | null
+  state?: string
+  message?: string | null
+}
+
+type BackgroundLocationPlugin = {
+  start: (options: {
+    apiBaseUrl: string
+    token: string
+    userId: string
+    label: string
+    requiredAccuracyMeters: number
+    intervalMs: number
+  }) => Promise<BackgroundLocationStatus>
+  stop: () => Promise<void>
+  getStatus: () => Promise<BackgroundLocationStatus>
+  requestBackgroundPermission?: () => Promise<{ status?: string }>
+  requestNotificationPermission?: () => Promise<{ status?: string }>
+  addListener?: (
+    eventName: 'location' | 'heartbeat' | 'error' | 'state',
+    listenerFunc: (payload: BackgroundLocationStatus) => void,
+  ) => Promise<{ remove: () => Promise<void> | void }>
+}
+
 type RuntimeWindow = Window & {
   Capacitor?: {
     isNativePlatform?: () => boolean
     Plugins?: {
       Geolocation?: CapacitorGeolocationPlugin
+      BackgroundLocation?: BackgroundLocationPlugin
     }
   }
 }
@@ -63,6 +93,13 @@ function getCapacitorGeolocationPlugin(): CapacitorGeolocationPlugin | null {
   const runtimeWindow = window as RuntimeWindow
   if (!runtimeWindow.Capacitor?.isNativePlatform?.()) return null
   return runtimeWindow.Capacitor?.Plugins?.Geolocation || null
+}
+
+function getCapacitorBackgroundLocationPlugin(): BackgroundLocationPlugin | null {
+  if (typeof window === 'undefined') return null
+  const runtimeWindow = window as RuntimeWindow
+  if (!runtimeWindow.Capacitor?.isNativePlatform?.()) return null
+  return runtimeWindow.Capacitor?.Plugins?.BackgroundLocation || null
 }
 
 function toResolvedLocation(position: BrowserPosition, source: ResolvedLocation['source']): ResolvedLocation {
@@ -242,6 +279,72 @@ export async function requestRuntimeLocationPermission(platform: RuntimePlatform
     return 'granted'
   } catch {
     return 'denied'
+  }
+}
+
+export async function requestNativeBackgroundLocationPermission(): Promise<string> {
+  const plugin = getCapacitorBackgroundLocationPlugin()
+  if (!plugin?.requestBackgroundPermission) return 'unsupported'
+
+  try {
+    const result = await plugin.requestBackgroundPermission()
+    return result.status || 'unknown'
+  } catch {
+    return 'denied'
+  }
+}
+
+export async function requestNativeTrackingNotificationPermission(): Promise<string> {
+  const plugin = getCapacitorBackgroundLocationPlugin()
+  if (!plugin?.requestNotificationPermission) return 'unsupported'
+
+  try {
+    const result = await plugin.requestNotificationPermission()
+    return result.status || 'unknown'
+  } catch {
+    return 'denied'
+  }
+}
+
+export async function startNativeBackgroundLocationTracking(options: {
+  apiBaseUrl: string
+  token: string
+  userId: string
+  label: string
+  requiredAccuracyMeters: number
+  intervalMs?: number
+}): Promise<BackgroundLocationStatus> {
+  const plugin = getCapacitorBackgroundLocationPlugin()
+  if (!plugin) throw new Error('Native background location service is unavailable.')
+
+  return plugin.start({
+    ...options,
+    intervalMs: options.intervalMs || 20000,
+  })
+}
+
+export async function stopNativeBackgroundLocationTracking(): Promise<void> {
+  const plugin = getCapacitorBackgroundLocationPlugin()
+  if (!plugin) return
+  await plugin.stop()
+}
+
+export async function getNativeBackgroundLocationStatus(): Promise<BackgroundLocationStatus | null> {
+  const plugin = getCapacitorBackgroundLocationPlugin()
+  if (!plugin?.getStatus) return null
+  return plugin.getStatus()
+}
+
+export async function addNativeBackgroundLocationListener(
+  eventName: 'location' | 'heartbeat' | 'error' | 'state',
+  listener: (payload: BackgroundLocationStatus) => void,
+): Promise<(() => Promise<void>) | null> {
+  const plugin = getCapacitorBackgroundLocationPlugin()
+  if (!plugin?.addListener) return null
+
+  const handle = await plugin.addListener(eventName, listener)
+  return async () => {
+    await handle.remove()
   }
 }
 

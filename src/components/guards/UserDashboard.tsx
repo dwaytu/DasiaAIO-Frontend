@@ -616,7 +616,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
   const currentShiftCheckedIn = currentShift ? checkInStatus[currentShift.id] === 'checked_in' : false
   const isTrackingActiveWithoutSchedule = !currentShift && locationHeartbeatStatus === 'active'
   const trackingExecutionNote = runtimePlatform === 'capacitor'
-    ? 'Mobile tracking sends updates while SENTINEL stays open in the foreground. Background tracking is not enabled in this build.'
+    ? 'Android tracking uses a visible foreground service so updates can continue while SENTINEL is in the background. Location permission, consent, network access, and device power settings still apply.'
     : 'Keep this dashboard tab open to continue sending location updates.'
   const trackingLastUpdateLabel = lastKnownLocation
     ? new Date(lastKnownLocation.recordedAt).toLocaleString()

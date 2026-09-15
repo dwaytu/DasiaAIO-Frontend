@@ -13,6 +13,7 @@ import LiveFreshnessPill from './dashboard/ui/LiveFreshnessPill'
 import MetricStatCard from './dashboard/ui/MetricStatCard'
 import { DashboardLoadingState } from './dashboard/ui/DashboardLoadingState'
 import { formatCompactNumber, formatRatioLabel } from '../utils/numberFormat'
+import { resolveUnavailable } from '../utils/analyticsPresentation'
 
 interface AnalyticsDashboardProps {
   user: User
@@ -49,6 +50,7 @@ interface AnalyticsData {
     vehicles_unavailable: number
     guards_on_duty: number
     guards_available: number
+    guards_unavailable?: number
   }
   mission_stats: {
     total_missions_this_month: number
@@ -72,6 +74,22 @@ interface AnalyticsData {
     attended_shifts: number
     late_check_ins: number
     no_shows: number
+  }>
+  evaluation_analytics?: {
+    period_days: number
+    total_evaluations: number
+    guards_evaluated: number
+    average_rating: number
+    low_rating_count: number
+    rating_distribution: Array<{
+      rating: number
+      count: number
+    }>
+  }
+  evaluation_trend?: Array<{
+    date: string
+    average_rating: number
+    evaluation_count: number
   }>
 }
 
@@ -154,10 +172,22 @@ function SimpleBarChart({ data, height = 200, barColor = 'var(--color-info-borde
 
 interface LineChartData { label: string; value: number }
 
-function SimpleLineChart({ data, height = 200, lineColor = 'var(--color-success-text)' }: { data: LineChartData[]; height?: number; lineColor?: string }) {
+function SimpleLineChart({
+  data,
+  height = 200,
+  lineColor = 'var(--color-success-text)',
+  maxValue,
+  suffix = '%',
+}: {
+  data: LineChartData[]
+  height?: number
+  lineColor?: string
+  maxValue?: number
+  suffix?: string
+}) {
   const gradientId = useId()
   if (data.length === 0) return null
-  const maxVal = Math.max(...data.map(d => d.value), 1)
+  const maxVal = Math.max(maxValue ?? 0, ...data.map(d => d.value), 1)
   const minVal = Math.min(...data.map(d => d.value), 0)
   const range = maxVal - minVal || 1
   const padding = { top: 20, right: 16, bottom: 36, left: 16 }
@@ -174,7 +204,7 @@ function SimpleLineChart({ data, height = 200, lineColor = 'var(--color-success-
   const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ')
   const areaPath = `${linePath} L ${points[points.length - 1].x} ${padding.top + innerH} L ${points[0].x} ${padding.top + innerH} Z`
 
-  const description = `Line chart showing: ${data.map(d => `${d.label}: ${d.value}%`).join(', ')}`
+  const description = `Line chart showing: ${data.map(d => `${d.label}: ${d.value}${suffix}`).join(', ')}`
 
   return (
     <svg
@@ -196,7 +226,7 @@ function SimpleLineChart({ data, height = 200, lineColor = 'var(--color-success-
       {points.map((p, i) => (
         <g key={data[i].label}>
           <circle cx={p.x} cy={p.y} r={4} fill={lineColor} stroke="var(--color-surface)" strokeWidth={2}>
-            <title>{`${data[i].label}: ${data[i].value}%`}</title>
+            <title>{`${data[i].label}: ${data[i].value}${suffix}`}</title>
           </circle>
           <text
             x={p.x}
@@ -218,6 +248,48 @@ function SimpleLineChart({ data, height = 200, lineColor = 'var(--color-success-
         strokeWidth={1}
       />
     </svg>
+  )
+}
+
+interface AvailabilityRow {
+  label: string
+  available: number
+  unavailable: number
+}
+
+function AvailabilityComparison({ rows }: { rows: AvailabilityRow[] }) {
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-wrap gap-4 text-xs text-text-secondary" aria-hidden="true">
+        <span className="inline-flex items-center gap-2"><span className="inline-block h-2.5 w-2.5" style={{ backgroundColor: 'var(--color-success)' }} />Available</span>
+        <span className="inline-flex items-center gap-2"><span className="inline-block h-2.5 w-2.5" style={{ backgroundColor: 'var(--color-danger)' }} />Unavailable</span>
+      </div>
+      {rows.map((row) => {
+        const total = row.available + row.unavailable
+        const availablePercent = total > 0 ? (row.available / total) * 100 : 0
+        const unavailablePercent = total > 0 ? 100 - availablePercent : 0
+
+        return (
+          <div key={row.label}>
+            <div className="mb-2 flex items-center justify-between gap-4">
+              <span className="text-sm font-semibold text-text-primary">{row.label}</span>
+              <span className="text-xs tabular-nums text-text-secondary">
+                {row.available} available / {row.unavailable} unavailable
+              </span>
+            </div>
+            <div
+              className="flex h-4 w-full overflow-hidden rounded"
+              role="img"
+              aria-label={`${row.label}: ${row.available} available and ${row.unavailable} unavailable`}
+              style={{ backgroundColor: 'var(--color-border)' }}
+            >
+              <div className="h-full" style={{ width: `${availablePercent}%`, backgroundColor: 'var(--color-success)' }} />
+              <div className="h-full" style={{ width: `${unavailablePercent}%`, backgroundColor: 'var(--color-danger)' }} />
+            </div>
+          </div>
+        )
+      })}
+    </div>
   )
 }
 
@@ -402,23 +474,37 @@ const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onVie
   // At this point analytics is guaranteed non-null (guarded above)
   if (!analytics) return null
 
+  const guardUnavailable = resolveUnavailable(
+    analytics.overview.total_guards,
+    analytics.resource_utilization.guards_available,
+    analytics.resource_utilization.guards_unavailable,
+  )
+  const evaluationAnalytics = analytics.evaluation_analytics ?? {
+    period_days: Number(dateRange),
+    total_evaluations: 0,
+    guards_evaluated: 0,
+    average_rating: 0,
+    low_rating_count: 0,
+    rating_distribution: [1, 2, 3, 4, 5].map((rating) => ({ rating, count: 0 })),
+  }
+
   const resourceBars = [
     {
       label: 'Firearms',
       inUse: analytics.resource_utilization.firearms_in_use,
-      total: analytics.resource_utilization.firearms_in_use + analytics.resource_utilization.firearms_available,
+      total: analytics.resource_utilization.firearms_available + analytics.resource_utilization.firearms_unavailable,
       tone: 'bg-warning-border',
     },
     {
       label: 'Vehicles',
       inUse: analytics.resource_utilization.vehicles_deployed,
-      total: analytics.resource_utilization.vehicles_deployed + analytics.resource_utilization.vehicles_available,
+      total: analytics.resource_utilization.vehicles_available + analytics.resource_utilization.vehicles_unavailable,
       tone: 'bg-info-border',
     },
     {
       label: 'Guards',
       inUse: analytics.resource_utilization.guards_on_duty,
-      total: analytics.resource_utilization.guards_on_duty + analytics.resource_utilization.guards_available,
+      total: analytics.resource_utilization.guards_available + guardUnavailable,
       tone: 'bg-success-border',
     },
   ]
@@ -426,13 +512,22 @@ const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onVie
   const missionCompletion = analytics.performance_metrics.mission_completion_rate
   const missionTrendTone = missionCompletion >= 85 ? 'success' : missionCompletion >= 65 ? 'warning' : 'danger'
 
-  const resourceAvailabilityData: BarChartData[] = [
-    { label: 'Guards Available', value: analytics.resource_utilization.guards_available },
-    { label: 'Guards Unavailable', value: analytics.resource_utilization.guards_on_duty },
-    { label: 'Firearms Available', value: analytics.resource_utilization.firearms_available },
-    { label: 'Firearms Unavailable', value: analytics.resource_utilization.firearms_unavailable },
-    { label: 'Vehicles Available', value: analytics.resource_utilization.vehicles_available },
-    { label: 'Vehicles Unavailable', value: analytics.resource_utilization.vehicles_unavailable },
+  const resourceAvailabilityRows: AvailabilityRow[] = [
+    {
+      label: 'Guards',
+      available: analytics.resource_utilization.guards_available,
+      unavailable: guardUnavailable,
+    },
+    {
+      label: 'Firearms',
+      available: analytics.resource_utilization.firearms_available,
+      unavailable: analytics.resource_utilization.firearms_unavailable,
+    },
+    {
+      label: 'Vehicles',
+      available: analytics.resource_utilization.vehicles_available,
+      unavailable: analytics.resource_utilization.vehicles_unavailable,
+    },
   ]
 
   const attendanceBreakdownData: BarChartData[] = [
@@ -450,12 +545,15 @@ const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onVie
       value: point.scheduled_shifts > 0 ? (point.attended_shifts / point.scheduled_shifts) * 100 : 0,
     }))
 
-  const lineChartData: LineChartData[] = [
-    { label: 'Completion', value: analytics.performance_metrics.mission_completion_rate },
-    { label: 'Attendance', value: analytics.performance_metrics.guard_attendance_rate },
-    { label: 'Firearms', value: analytics.performance_metrics.firearm_availability_rate },
-    { label: 'Vehicles', value: analytics.performance_metrics.vehicle_utilization_rate },
-  ]
+  const evaluationDistributionData: BarChartData[] = evaluationAnalytics.rating_distribution
+    .map((bucket) => ({ label: `${bucket.rating} Star`, value: bucket.count }))
+
+  const evaluationTrendData: LineChartData[] = (analytics.evaluation_trend ?? [])
+    .filter((_, index, trend) => trend.length <= 14 || index % Math.ceil(trend.length / 14) === 0)
+    .map((point) => ({
+      label: new Date(`${point.date}T00:00:00`).toLocaleDateString([], { month: 'short', day: 'numeric' }),
+      value: point.average_rating,
+    }))
 
   const completedPercent = analytics.mission_stats.total_missions_this_month > 0
     ? Math.round((analytics.mission_stats.completed_missions_this_month / analytics.mission_stats.total_missions_this_month) * 100)
@@ -521,7 +619,7 @@ const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onVie
       <section aria-label="Key performance indicators">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <MetricStatCard
-            label="Active Guards"
+            label="Guards On Duty"
             value={formatCompactNumber(analytics.overview.active_guards)}
             hint={`${formatCompactNumber(analytics.overview.total_guards)} total personnel`}
             tone="guard"
@@ -597,10 +695,20 @@ const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onVie
       <section aria-label="Analytics charts">
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
           <DashboardCard title="Resource Availability">
-            <SimpleBarChart data={resourceAvailabilityData} height={220} barColor="var(--color-info-border)" />
+            <AvailabilityComparison rows={resourceAvailabilityRows} />
           </DashboardCard>
-          <DashboardCard title="Performance Metrics Trend">
-            <SimpleLineChart data={lineChartData} height={220} lineColor="var(--color-success-text)" />
+          <DashboardCard title="Client Evaluation Trend">
+            {evaluationTrendData.length > 0 ? (
+              <SimpleLineChart
+                data={evaluationTrendData}
+                height={220}
+                lineColor="var(--color-info-text)"
+                maxValue={5}
+                suffix="/5"
+              />
+            ) : (
+              <p className="py-20 text-center text-sm text-text-secondary">No client evaluations for the selected period.</p>
+            )}
           </DashboardCard>
         </div>
       </section>
@@ -615,13 +723,46 @@ const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onVie
           </DashboardCard>
           <DashboardCard title="Guard Attendance Trend">
             {attendanceTrendData.length > 0 ? (
-              <SimpleLineChart data={attendanceTrendData} height={220} lineColor="var(--color-success-text)" />
+              <SimpleLineChart data={attendanceTrendData} height={220} lineColor="var(--color-success-text)" maxValue={100} />
             ) : (
               <p className="py-20 text-center text-sm text-text-secondary">No attendance records for the selected period.</p>
             )}
             <p className="mt-2 text-center text-xs text-text-secondary">Daily attended shifts as a percentage of scheduled shifts</p>
           </DashboardCard>
         </div>
+      </section>
+
+      <section aria-label="Client evaluation analytics" className="space-y-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <MetricStatCard
+            label="Average Client Rating"
+            value={`${evaluationAnalytics.average_rating.toFixed(1)}/5`}
+            hint={`Across ${evaluationAnalytics.total_evaluations} evaluation${evaluationAnalytics.total_evaluations === 1 ? '' : 's'}`}
+            tone="analytics"
+          />
+          <MetricStatCard
+            label="Guards Evaluated"
+            value={formatCompactNumber(evaluationAnalytics.guards_evaluated)}
+            hint={`During the last ${evaluationAnalytics.period_days} days`}
+            tone="guard"
+          />
+          <MetricStatCard
+            label="Evaluation Records"
+            value={formatCompactNumber(evaluationAnalytics.total_evaluations)}
+            hint="Verified client evaluation entries"
+            tone="default"
+          />
+          <MetricStatCard
+            label="Low Ratings"
+            value={formatCompactNumber(evaluationAnalytics.low_rating_count)}
+            hint="Ratings below 3 out of 5"
+            tone="maintenance"
+          />
+        </div>
+        <DashboardCard title="Client Rating Distribution">
+          <SimpleBarChart data={evaluationDistributionData} height={220} barColor="var(--color-info-border)" />
+          <p className="mt-2 text-center text-xs text-text-secondary">Advisory summary based on preserved client evaluation records.</p>
+        </DashboardCard>
       </section>
 
       {/* ── Performance Metrics ────────────────────────── */}

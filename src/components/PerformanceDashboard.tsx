@@ -4,7 +4,9 @@ import {
   Award,
   CalendarCheck,
   Clock,
+  Download,
   FileText,
+  Printer,
   Repeat2,
   Star,
   TrendingUp,
@@ -18,6 +20,7 @@ import type { User as AppUser } from '../context/AuthContext'
 import { getSidebarNav } from '../config/navigation'
 import { logError } from '../utils/logger'
 import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
+import { buildPerformanceCsv } from '../utils/analyticsPresentation'
 
 interface Props {
   user: AppUser
@@ -334,6 +337,18 @@ const PerformanceDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeV
     setAppliedFilters(empty)
   }
 
+  const downloadCsv = () => {
+    const blob = new Blob([buildPerformanceCsv(report.guards)], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `sentinel-guard-performance-${report.period.from ?? 'start'}-${report.period.to ?? 'present'}.csv`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <OperationalShell
       user={user}
@@ -361,8 +376,11 @@ const PerformanceDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeV
                 <p className="mt-1 text-sm text-text-secondary">
                   {periodLabel}
                 </p>
+                <p className="mt-1 text-xs text-text-tertiary">
+                  Advisory metrics derived from attendance, incident, evaluation, merit, and replacement records.
+                </p>
               </div>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto]">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto_auto_auto]">
                 <label className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
                   From
                   <input
@@ -386,6 +404,23 @@ const PerformanceDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeV
                 </button>
                 <button type="button" onClick={clearFilters} className="soc-btn soc-btn-neutral min-h-11 self-end">
                   Clear
+                </button>
+                <button
+                  type="button"
+                  onClick={downloadCsv}
+                  disabled={report.guards.length === 0}
+                  className="soc-btn soc-btn-neutral inline-flex min-h-11 items-center justify-center gap-2 self-end disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Download className="h-4 w-4" aria-hidden="true" />
+                  CSV
+                </button>
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="soc-btn soc-btn-neutral inline-flex min-h-11 items-center justify-center gap-2 self-end"
+                >
+                  <Printer className="h-4 w-4" aria-hidden="true" />
+                  Print
                 </button>
               </div>
             </div>

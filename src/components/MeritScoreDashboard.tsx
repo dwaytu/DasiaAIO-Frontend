@@ -7,7 +7,7 @@ import LoadingSkeleton from './shared/LoadingSkeleton'
 import type { User } from '../context/AuthContext'
 import { getSidebarNav } from '../config/navigation'
 import { logError } from '../utils/logger'
-import { getAuthHeaders } from '../utils/api'
+import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
 
 interface Props {
   user: User
@@ -129,8 +129,9 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
   const [error, setError] = useState<string>('')
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false)
   const [showEvaluationForm, setShowEvaluationForm] = useState<boolean>(false)
+  const [evaluationStatus, setEvaluationStatus] = useState<string>('')
+  const [submittingEvaluation, setSubmittingEvaluation] = useState<boolean>(false)
   const [evaluationData, setEvaluationData] = useState({
-    evaluatorName: '',
     rating: 5,
     comment: '',
   })
@@ -138,14 +139,17 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
   const currentView = activeView || 'merit'
 
   useEffect(() => {
-    fetchRankings()
+    const controller = new AbortController()
+    void fetchRankings(controller.signal)
+    return () => controller.abort()
   }, [])
 
-  const fetchRankings = async () => {
+  const fetchRankings = async (signal?: AbortSignal) => {
     try {
       setLoading(true)
       const response = await fetch(`${API_BASE_URL}/api/merit/rankings/all`, {
-        headers: getAuthHeaders()
+        headers: getAuthHeaders(),
+        signal,
       })
       if (response.ok) {
         const data = await response.json()
@@ -155,6 +159,7 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
         setError('Failed to load merit score rankings')
       }
     } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return
       setError('Error loading merit scores. Make sure backend is running.')
       logError('Error fetching rankings:', err)
     } finally {
@@ -195,30 +200,54 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
     if (!selectedGuard) return
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/merit/evaluations/submit`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...getAuthHeaders(),
+      setSubmittingEvaluation(true)
+      setEvaluationStatus('')
+      await fetchJsonOrThrow(
+        `${API_BASE_URL}/api/merit/evaluations/submit`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...getAuthHeaders(),
+          },
+          body: JSON.stringify({
+            guardId: selectedGuard.guardId,
+            rating: evaluationData.rating,
+            comment: evaluationData.comment,
+          }),
         },
-        body: JSON.stringify({
-          guardId: selectedGuard.guardId,
-          evaluatorName: evaluationData.evaluatorName,
-          evaluatorRole: 'Supervisor',
-          rating: parseFloat(evaluationData.rating.toString()),
-          comment: evaluationData.comment,
-        }),
-      })
+        'Failed to submit evaluation',
+      )
 
-      if (response.ok) {
-        setShowEvaluationForm(false)
-        setEvaluationData({ evaluatorName: '', rating: 5, comment: '' })
-        await fetchGuardDetails(selectedGuard.guardId)
-        alert('Evaluation submitted successfully')
+      let successMessage = 'Evaluation saved and merit score recalculated.'
+      try {
+        await fetchJsonOrThrow(
+          `${API_BASE_URL}/api/merit/calculate`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...getAuthHeaders(),
+            },
+            body: JSON.stringify({ guardId: selectedGuard.guardId }),
+          },
+          'Merit recalculation failed',
+        )
+      } catch (recalculationError) {
+        logError('Error recalculating merit score:', recalculationError)
+        successMessage = 'Evaluation saved. Merit score will update after recalculation.'
       }
+
+      setShowEvaluationForm(false)
+      setEvaluationData({ rating: 5, comment: '' })
+      setEvaluationStatus(successMessage)
+      await fetchGuardDetails(selectedGuard.guardId)
+      await fetchRankings()
     } catch (err) {
       logError('Error submitting evaluation:', err)
-      alert('Failed to submit evaluation')
+      setEvaluationStatus(err instanceof Error ? err.message : 'Failed to submit evaluation')
+    } finally {
+      setSubmittingEvaluation(false)
     }
   }
 
@@ -357,26 +386,23 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
                     </button>
                   </div>
 
+                  {evaluationStatus ? (
+                    <div className="mb-4 rounded border border-info-border bg-info-bg px-3 py-2 text-sm text-info-text" role="status">
+                      {evaluationStatus}
+                    </div>
+                  ) : null}
+
                   {showEvaluationForm && (
                     <div className="mb-6 p-6 command-panel">
                       <div className="space-y-4">
-                        <div>
-                          <label className="block text-sm font-semibold text-text-primary mb-2">Evaluator Name</label>
-                          <input
-                            type="text"
-                            value={evaluationData.evaluatorName}
-                            onChange={(e) => setEvaluationData({ ...evaluationData, evaluatorName: e.target.value })}
-                            placeholder="Your name"
-                            className="w-full px-4 py-2 border border-border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                          />
-                        </div>
+                        <p className="text-sm text-text-secondary">Evaluator identity is recorded from the signed-in account.</p>
 
                         <div>
-                          <label className="block text-sm font-semibold text-text-primary mb-2">Rating (0-5 stars)</label>
+                          <label className="block text-sm font-semibold text-text-primary mb-2">Rating (1-5 stars)</label>
                           <select
                             value={evaluationData.rating}
                             onChange={(e) => setEvaluationData({ ...evaluationData, rating: parseInt(e.target.value) })}
-                            className="w-full px-4 py-2 border border-border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            className="w-full rounded border border-border bg-surface px-4 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-info-border"
                           >
                             <option value="1">1 ★ Poor</option>
                             <option value="2">2 ★ Fair</option>
@@ -393,15 +419,17 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
                             onChange={(e) => setEvaluationData({ ...evaluationData, comment: e.target.value })}
                             placeholder="Add your feedback..."
                             rows={3}
-                            className="w-full px-4 py-2 border border-border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            maxLength={2000}
+                            className="w-full rounded border border-border bg-surface px-4 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-info-border"
                           />
                         </div>
 
                         <button
                           onClick={handleSubmitEvaluation}
-                          className="w-full soc-btn"
+                          disabled={submittingEvaluation}
+                          className="w-full soc-btn disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                          Submit Evaluation
+                          {submittingEvaluation ? 'Submitting...' : 'Submit Evaluation'}
                         </button>
                       </div>
                     </div>

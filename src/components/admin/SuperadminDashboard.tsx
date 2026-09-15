@@ -41,6 +41,10 @@ import CreateGuardAccountModal from './CreateGuardAccountModal'
 import { localScheduleToUtc } from '../../utils/scheduleDateTime'
 import OperationalRequestsPanel from '../requests/OperationalRequestsPanel'
 
+function isAbortError(error: unknown): boolean {
+  return error instanceof Error && error.name === 'AbortError'
+}
+
 const AuditDashboard = lazy(() => import('../AuditDashboard'))
 
 interface User {
@@ -395,8 +399,10 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   }
 
   useEffect(() => {
+    const controller = new AbortController()
+
     if (canManageUsers) {
-      fetchData()
+      void fetchData(controller.signal)
     } else {
       setLoading(false)
       setUsers([])
@@ -421,6 +427,8 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
     } else if (activeSection === 'missions') {
       fetchMissions()
     }
+
+    return () => controller.abort()
   }, [activeSection, canManageUsers])
 
   useEffect(() => {
@@ -445,12 +453,12 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
     }
   }, [activeView])
 
-  const fetchData = async () => {
+  const fetchData = async (signal?: AbortSignal) => {
     try {
       setLoading(true)
       const data = await fetchJsonOrThrow<any>(
         `${API_BASE_URL}/api/users`,
-        { headers: getAuthHeaders() },
+        { headers: getAuthHeaders(), signal },
         'Failed to fetch users',
       )
       const users = Array.isArray(data) ? data : (data.users || data || [])
@@ -471,9 +479,10 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
         guards: guardCount,
       })
     } catch (err) {
+      if (signal?.aborted || isAbortError(err)) return
       logError('Error fetching data:', err)
     } finally {
-      setLoading(false)
+      if (!signal?.aborted) setLoading(false)
     }
   }
 

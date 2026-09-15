@@ -195,7 +195,7 @@ test.describe('Guard Dashboard UX Regression', () => {
   test('support section exposes the current support-ticket workflow', async ({ page }) => {
     await page.getByRole('button', { name: 'Support' }).click()
 
-    await expect(page.getByRole('heading', { name: 'Support Tickets' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Support Tickets', exact: true })).toBeVisible()
     await expect(page.getByText('Radio battery issue')).toBeVisible()
     await expect(page.getByRole('button', { name: 'New Ticket' })).toBeVisible()
 

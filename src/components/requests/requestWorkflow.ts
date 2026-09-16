@@ -6,7 +6,7 @@ import type { OperationalRequest } from './types'
 export function requestActions(request: OperationalRequest, user: User): RequestAction[] {
   const role = normalizeRole(user.role)
   const own = request.requesterId === user.id
-  const canReview = role === 'supervisor' || role === 'admin' || role === 'superadmin'
+  const canReview = role === 'admin' || role === 'superadmin'
   const canFulfill = role === 'admin' || role === 'superadmin'
 
   if (request.status === 'pending') {

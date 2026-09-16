@@ -7,11 +7,12 @@ import { resolveLocationWithFallback } from '../../utils/location'
 interface PanicButtonProps {
   userId: string
   userDisplayName?: string
+  siteName?: string
 }
 
 type ButtonState = 'idle' | 'sending' | 'sent' | 'queued' | 'failed'
 
-const PanicButton: FC<PanicButtonProps> = ({ userId, userDisplayName }) => {
+const PanicButton: FC<PanicButtonProps> = ({ userId, userDisplayName, siteName }) => {
   const [state, setState] = useState<ButtonState>('idle')
   const [failureMessage, setFailureMessage] = useState('')
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -48,6 +49,7 @@ const PanicButton: FC<PanicButtonProps> = ({ userId, userDisplayName }) => {
       title: '\u{1F6A8} SOS EMERGENCY',
       description: `Emergency panic alert triggered by ${userDisplayName || userId}`,
       location,
+      siteName: siteName?.trim() || undefined,
       priority: 'critical',
     }
 
@@ -93,7 +95,7 @@ const PanicButton: FC<PanicButtonProps> = ({ userId, userDisplayName }) => {
       setFailureMessage('')
       resetTimerRef.current = null
     }, 5000)
-  }, [state, userDisplayName, userId])
+  }, [siteName, state, userDisplayName, userId])
 
   return (
     <div className="fixed bottom-32 right-4 z-(--z-toast) flex flex-col items-center gap-1">

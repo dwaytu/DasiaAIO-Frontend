@@ -7,6 +7,7 @@ export interface Incident {
   title: string
   description: string
   location: string
+  site_name?: string | null
   reported_by: string
   reported_by_name?: string
   status: 'open' | 'investigating' | 'resolved'
@@ -19,6 +20,7 @@ export interface CreateIncidentPayload {
   title: string
   description: string
   location: string
+  siteName?: string
   priority: 'low' | 'medium' | 'high' | 'critical'
 }
 

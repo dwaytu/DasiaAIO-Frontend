@@ -110,8 +110,10 @@ export default function OperationalRequestsPanel({ user }: OperationalRequestsPa
     [requests, selectedId],
   )
   const needsResource = form.requestType === 'deposit' || form.requestType === 'return'
-  const ownCorrection = selected?.status === 'needs_correction' && selected.requesterId === user.id
-  const isElevated = normalizeRole(user.role) !== 'guard'
+  const role = normalizeRole(user.role)
+  const canCreateRequest = role === 'guard' || role === 'supervisor'
+  const ownCorrection = canCreateRequest && selected?.status === 'needs_correction' && selected.requesterId === user.id
+  const isElevated = role !== 'guard'
 
   const refresh = useCallback(() => setRefreshKey((key) => key + 1), [])
 
@@ -303,19 +305,21 @@ export default function OperationalRequestsPanel({ user }: OperationalRequestsPa
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} aria-hidden="true" />
             Refresh
           </button>
-          <button
-            type="button"
-            onClick={() => {
-              setForm(EMPTY_FORM)
-              setSelectedId(null)
-              setShowForm((visible) => !visible)
-            }}
-            disabled={busy}
-            className="soc-btn soc-btn-primary min-h-11"
-          >
-            {showForm ? <X className="h-4 w-4" aria-hidden="true" /> : <Plus className="h-4 w-4" aria-hidden="true" />}
-            {showForm ? 'Close' : 'New Request'}
-          </button>
+          {canCreateRequest ? (
+            <button
+              type="button"
+              onClick={() => {
+                setForm(EMPTY_FORM)
+                setSelectedId(null)
+                setShowForm((visible) => !visible)
+              }}
+              disabled={busy}
+              className="soc-btn soc-btn-primary min-h-11"
+            >
+              {showForm ? <X className="h-4 w-4" aria-hidden="true" /> : <Plus className="h-4 w-4" aria-hidden="true" />}
+              {showForm ? 'Close' : 'New Request'}
+            </button>
+          ) : null}
         </div>
       </header>
 
@@ -499,7 +503,7 @@ export default function OperationalRequestsPanel({ user }: OperationalRequestsPa
 
               {selected.status === 'pending' && selected.requesterId === user.id ? (
                 <div role="status" className="rounded border border-info-border bg-info-bg p-3 text-sm text-info-text">
-                  You submitted this request. Review actions are available to a different supervisor, administrator, or superadmin. You will receive an inbox notification when the request is approved or denied.
+                  You submitted this request. Review actions are available to an administrator or superadmin. You will receive an inbox notification when the request is approved or denied.
                 </div>
               ) : null}
 

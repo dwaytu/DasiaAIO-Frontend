@@ -1,5 +1,6 @@
 import { FC } from 'react'
 import type { Incident } from '../../hooks/useIncidents'
+import { resolveIncidentSiteName } from '../../utils/incidentSite'
 
 interface IncidentSeverityMonitoringPanelProps {
   incidents: Incident[]
@@ -92,7 +93,7 @@ const IncidentSeverityMonitoringPanel: FC<IncidentSeverityMonitoringPanelProps> 
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="truncate font-mono text-xs font-semibold text-(--color-text)">{incident.title}</p>
-                      <p className="truncate font-mono text-[11px] text-(--color-muted-text)">{incident.location}</p>
+                      <p className="truncate font-mono text-[11px] text-(--color-muted-text)">{resolveIncidentSiteName(incident)}</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className={`inline-flex rounded border px-2 py-0.5 font-mono text-[11px] font-semibold uppercase ${severityBadgeClass[incident.priority]}`}>

@@ -1,5 +1,6 @@
 import { FC } from 'react'
 import type { Incident } from '../../hooks/useIncidents'
+import { resolveIncidentSiteName } from '../../utils/incidentSite'
 
 interface ActiveIncidentsWidgetProps {
   incidents: Incident[]
@@ -138,7 +139,7 @@ const ActiveIncidentsWidget: FC<ActiveIncidentsWidgetProps> = ({
                       {incident.title}
                     </p>
                     <p className="truncate font-mono text-xs text-(--color-muted-text)">
-                      {incident.location}
+                      {resolveIncidentSiteName(incident)}
                     </p>
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1">

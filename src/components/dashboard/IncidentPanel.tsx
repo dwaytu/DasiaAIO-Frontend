@@ -2,6 +2,7 @@ import { FC, useState } from 'react'
 import { normalizeRole } from '../../types/auth'
 import { useIncidents } from '../../hooks/useIncidents'
 import type { Incident } from '../../hooks/useIncidents'
+import { resolveIncidentSiteName } from '../../utils/incidentSite'
 import IncidentReportForm from './IncidentReportForm'
 
 const PRIORITY_BADGE: Record<
@@ -210,7 +211,7 @@ const IncidentPanel: FC = () => {
                       </div>
                     </td>
                     <td className="max-w-[160px] truncate px-4 py-2 font-mono text-xs text-(--color-muted-text)">
-                      <span title={incident.location}>{incident.location}</span>
+                      <span title={resolveIncidentSiteName(incident)}>{resolveIncidentSiteName(incident)}</span>
                     </td>
                     <td className="px-4 py-2">
                       <span className={`rounded px-1.5 py-0.5 font-mono text-[11px] font-bold ${pb.cls}`}>

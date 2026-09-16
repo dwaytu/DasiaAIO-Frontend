@@ -28,12 +28,8 @@ describe('operational request action controls', () => {
     expect(requestActions(request('pending', 'guard-2'), guard)).toEqual([])
   })
 
-  it('lets supervisors review pending requests but not fulfill them', () => {
-    expect(requestActions(request('pending'), supervisor)).toEqual([
-      'approve',
-      'return-for-correction',
-      'reject',
-    ])
+  it('lets supervisors submit requests but not review them', () => {
+    expect(requestActions(request('pending'), supervisor)).toEqual([])
     expect(requestActions(request('approved'), supervisor)).toEqual([])
   })
 

@@ -70,17 +70,6 @@ const getSuggestedAction = (alert: PredictiveAlert): string => {
   return 'Keep under observation and log the trend in the shift handoff report.'
 }
 
-const getConfidence = (alert: PredictiveAlert): number => {
-  if (alert.severity === 'critical') return 0.93
-  if (alert.severity === 'warning') return 0.84
-  return 0.74
-}
-
-const getExplanation = (alert: PredictiveAlert): string => {
-  const contextKeys = isContextObject(alert.context) ? Object.keys(alert.context).length : 0
-  return `Risk level is based on ${contextKeys} contextual data point(s) and ${alert.severity} signal weighting.`
-}
-
 const PredictiveAlertsPanel: FC<PredictiveAlertsPanelProps> = ({
   alerts,
   loading = false,
@@ -159,8 +148,6 @@ const PredictiveAlertsPanel: FC<PredictiveAlertsPanelProps> = ({
                         </p>
                       )}
                       <p className="font-mono text-[11px] font-semibold text-text-primary">Risk level: {alert.severity.toUpperCase()}</p>
-                      <p className="font-mono text-[11px] text-text-secondary">Confidence: {(getConfidence(alert) * 100).toFixed(0)}%</p>
-                      <p className="font-mono text-[11px] text-text-secondary">Explanation: {getExplanation(alert)}</p>
                       <p className="font-mono text-[11px] text-text-secondary">
                         Suggested action: {getSuggestedAction(alert)}
                       </p>

@@ -31,6 +31,7 @@ import { usePredictiveAlerts } from '../../hooks/usePredictiveAlerts'
 import { useGuardAbsencePrediction } from '../../hooks/useGuardAbsencePrediction'
 import { useReplacementSuggestions } from '../../hooks/useReplacementSuggestions'
 import { useVehicleMaintenancePrediction } from '../../hooks/useVehicleMaintenancePrediction'
+import { resolveIncidentSiteName } from '../../utils/incidentSite'
 
 interface CommandCenterDashboardProps {
   quickActions: QuickActionItem[]
@@ -200,7 +201,7 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
         id: `incident-${incident.id}`,
         category: incident.status === 'resolved' ? 'system' : 'mission',
         timestamp: formatTime(incident.created_at),
-        description: `${incident.title} reported at ${incident.location}.`,
+        description: `${incident.title} reported at ${resolveIncidentSiteName(incident, displayShifts)}.`,
       })
     })
 
@@ -237,7 +238,7 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
             ? 'warning'
             : 'info') as 'critical' | 'warning' | 'info',
         title: incident.title,
-        detail: `${incident.location} - ${humanizeStatus(incident.status)}`,
+        detail: `${resolveIncidentSiteName(incident, displayShifts)} - ${humanizeStatus(incident.status)}`,
         createdAt: incident.created_at || '',
         isPanic: incident.title?.includes('SOS EMERGENCY') ?? false,
       }))
@@ -254,7 +255,7 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
     })
 
     return combined.slice(0, 25)
-  }, [alerts, displayIncidents])
+  }, [alerts, displayIncidents, displayShifts])
 
   if (isBootstrapping) {
     return (

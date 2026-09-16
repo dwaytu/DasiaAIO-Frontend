@@ -174,7 +174,7 @@ export function ActionInbox({
                               e.stopPropagation();
                               item.onAction?.();
                             }}
-                            className="text-xs text-primary font-medium hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
+                            className="soc-btn-neutral min-h-11 px-2 py-1 text-xs"
                           >
                             {item.actionLabel}
                           </button>

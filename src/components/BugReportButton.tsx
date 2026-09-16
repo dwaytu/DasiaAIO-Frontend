@@ -67,7 +67,7 @@ const BugReportButton: React.FC<BugReportButtonProps> = ({ userId }) => {
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="fixed right-4 z-[58] rounded-full bg-red-500 p-3.5 text-white shadow-lg transition-all hover:scale-105 hover:bg-red-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
+        className="soc-btn soc-btn-danger soc-btn-icon fixed right-4 z-[58] h-14 w-14 rounded-full p-0 shadow-lg transition-transform hover:scale-105"
         style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}
         title="Report a Bug"
       >
@@ -82,7 +82,7 @@ const BugReportButton: React.FC<BugReportButtonProps> = ({ userId }) => {
               {/* Header */}
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <Bug className="text-red-500" size={24} />
+                  <Bug className="text-danger-text" size={24} />
                   <h2 className="text-xl font-bold text-text-primary">Report a Bug</h2>
                 </div>
                 <button
@@ -182,14 +182,14 @@ const BugReportButton: React.FC<BugReportButtonProps> = ({ userId }) => {
                   <button
                     type="button"
                     onClick={() => setIsOpen(false)}
-                    className="soc-btn-secondary flex-1 rounded px-4 py-2 font-semibold"
+                    className="soc-btn soc-btn-neutral flex-1"
                     disabled={isSubmitting}
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 rounded bg-red-500 px-4 py-2 font-semibold text-white transition-colors hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="soc-btn soc-btn-danger flex-1"
                     disabled={isSubmitting}
                   >
                     {isSubmitting ? 'Submitting...' : 'Submit Report'}

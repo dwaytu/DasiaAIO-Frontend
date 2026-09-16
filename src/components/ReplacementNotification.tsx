@@ -1,9 +1,9 @@
 import { FC } from 'react'
 
 const ReplacementNotification: FC<any> = () => (
-  <div className="bg-surface rounded shadow-md p-6">
-    <h2 className="text-xl font-bold text-gray-800">Replacement Notification</h2>
-  </div>
+  <section className="soc-surface p-6" aria-labelledby="replacement-notification-title">
+    <h2 id="replacement-notification-title" className="soc-section-title">Replacement Notification</h2>
+  </section>
 )
 
 export default ReplacementNotification

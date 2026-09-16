@@ -1,4 +1,4 @@
-import { getSidebarNav } from '../config/navigation'
+import { getMobileBottomNavViews, getSidebarNav } from '../config/navigation'
 
 describe('shell navigation chrome', () => {
   it('returns role-specific sidebar items for admin', () => {
@@ -54,6 +54,11 @@ describe('shell navigation chrome', () => {
     expect(labels).toContain('Maintenance')
     expect(labels).toContain('Firearm Compliance')
     expect(labels).toHaveLength(11)
+  })
+
+  it('removes approval from elevated mobile navigation when unavailable', () => {
+    expect(getMobileBottomNavViews(getSidebarNav('supervisor'))).toEqual(['dashboard', 'schedule', 'inbox'])
+    expect(getMobileBottomNavViews(getSidebarNav('admin'))).toContain('approvals')
   })
 
   it('fails closed for malformed roles', () => {

@@ -8,11 +8,11 @@ interface TodaysShiftOperationsProps {
 }
 
 const statusTone: Record<string, string> = {
-  in_progress: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200',
-  scheduled: 'border-sky-500/40 bg-sky-500/10 text-sky-200',
-  completed: 'border-slate-500/40 bg-slate-500/10 text-slate-200',
-  absent: 'border-red-500/40 bg-red-500/10 text-red-200',
-  no_show: 'border-red-500/40 bg-red-500/10 text-red-200',
+  in_progress: 'soc-status-success',
+  scheduled: 'soc-status-info',
+  completed: 'soc-status-neutral',
+  absent: 'soc-status-danger',
+  no_show: 'soc-status-danger',
 }
 
 const normalizeStatus = (value: string | undefined): string => (value || 'scheduled').toLowerCase()
@@ -48,7 +48,7 @@ const TodaysShiftOperations: FC<TodaysShiftOperationsProps> = ({
         {loading && <p className="text-center font-mono text-xs text-(--color-muted-text)">Loading today's shifts...</p>}
 
         {!loading && error && (
-          <p role="alert" className="text-center font-mono text-xs text-red-400">
+          <p role="alert" className="text-center font-mono text-xs text-danger-text">
             {error}
           </p>
         )}

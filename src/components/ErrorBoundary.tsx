@@ -66,7 +66,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
           <button
             type="button"
             onClick={this.handleRetry}
-            className="mt-5 min-h-11 rounded-md bg-info px-4 py-2 text-sm font-semibold text-white"
+            className="soc-btn-primary mt-5"
           >
             Reload section
           </button>

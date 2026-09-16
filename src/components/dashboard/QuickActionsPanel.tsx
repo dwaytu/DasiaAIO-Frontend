@@ -52,6 +52,7 @@ const QuickActionsPanel: FC<QuickActionsPanelProps> = ({ actions }) => {
 
         return (
           <button
+            type="button"
             key={action.label}
             onClick={action.onClick}
             disabled={action.disabled}

@@ -122,11 +122,11 @@ const TripManagement: FC = () => {
   const getStatusColor = (status?: string) => {
     switch (status) {
       case 'completed':
-        return 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30'
+        return 'soc-status-success'
       case 'in_progress':
-        return 'bg-blue-500/15 text-blue-300 ring-1 ring-blue-500/30'
+        return 'soc-status-info'
       case 'scheduled':
-        return 'bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30'
+        return 'soc-status-warning'
       default:
         return 'bg-surface-hover text-text-primary'
     }

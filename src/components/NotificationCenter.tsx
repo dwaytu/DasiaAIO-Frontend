@@ -1,4 +1,5 @@
 import { FC, useEffect } from 'react'
+import { AlertTriangle, CheckCircle2, Info, X, XCircle } from 'lucide-react'
 
 export interface Notification {
   id: string
@@ -13,64 +14,45 @@ interface NotificationProps {
   onDismiss: (id: string) => void
 }
 
+const TYPE_STYLES: Record<Notification['type'], string> = {
+  success: 'bg-success-bg border-success-border text-success-text',
+  error: 'bg-danger-bg border-danger-border text-danger-text',
+  warning: 'bg-warning-bg border-warning-border text-warning-text',
+  info: 'bg-info-bg border-info-border text-info-text',
+}
+
+const TYPE_ICONS = {
+  success: CheckCircle2,
+  error: XCircle,
+  warning: AlertTriangle,
+  info: Info,
+} as const
+
 const NotificationItem: FC<NotificationProps> = ({ notification, onDismiss }) => {
   useEffect(() => {
-    const timer = setTimeout(() => {
-      onDismiss(notification.id)
-    }, 5000) // Auto dismiss after 5 seconds
-
+    const timer = setTimeout(() => onDismiss(notification.id), 5000)
     return () => clearTimeout(timer)
   }, [notification.id, onDismiss])
 
-  const getTypeStyles = () => {
-    switch (notification.type) {
-      case 'success':
-        return 'bg-green-50 border-green-500 text-green-900'
-      case 'error':
-        return 'bg-red-50 border-red-500 text-red-900'
-      case 'warning':
-        return 'bg-yellow-50 border-yellow-500 text-yellow-900'
-      case 'info':
-      default:
-        return 'bg-blue-50 border-blue-500 text-blue-900'
-    }
-  }
-
-  const getIcon = () => {
-    switch (notification.type) {
-      case 'success':
-        return '✓'
-      case 'error':
-        return '✕'
-      case 'warning':
-        return '⚠'
-      case 'info':
-      default:
-        return 'ℹ'
-    }
-  }
+  const Icon = TYPE_ICONS[notification.type]
 
   return (
-    <div 
-      className={`${getTypeStyles()} border-l-4 p-4 mb-3 rounded shadow-lg animate-slide-in-right flex items-start justify-between max-w-md`}
-    >
-      <div className="flex items-start gap-3 flex-1">
-        <div className="text-2xl font-bold">{getIcon()}</div>
+    <div className={`${TYPE_STYLES[notification.type]} mb-3 flex max-w-md items-start justify-between rounded border-l-4 p-4 shadow-lg animate-slide-in-right`} role="status">
+      <div className="flex flex-1 items-start gap-3">
+        <Icon className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
         <div className="flex-1">
-          <h4 className="font-bold text-sm mb-1">{notification.title}</h4>
+          <h4 className="mb-1 text-sm font-bold">{notification.title}</h4>
           <p className="text-xs opacity-90">{notification.message}</p>
-          <p className="text-xs opacity-70 mt-1">
-            {notification.timestamp.toLocaleTimeString()}
-          </p>
+          <p className="mt-1 text-xs opacity-70">{notification.timestamp.toLocaleTimeString()}</p>
         </div>
       </div>
       <button
         type="button"
         onClick={() => onDismiss(notification.id)}
-        className="ml-2 min-h-10 min-w-10 rounded-md text-xl font-bold opacity-60 transition-opacity hover:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
+        className="soc-btn-neutral ml-2 min-h-11 min-w-11 p-2"
         aria-label={`Dismiss notification: ${notification.title}`}
       >
-        ×
+        <X className="h-4 w-4" aria-hidden="true" />
       </button>
     </div>
   )
@@ -91,13 +73,10 @@ const NotificationCenter: FC<NotificationCenterProps> = ({ notifications, onDism
         right: 'calc(1rem + env(safe-area-inset-right, 0px))',
         left: 'calc(1rem + env(safe-area-inset-left, 0px))',
       }}
+      aria-label="Notifications"
     >
       {notifications.map((notification) => (
-        <NotificationItem
-          key={notification.id}
-          notification={notification}
-          onDismiss={onDismiss}
-        />
+        <NotificationItem key={notification.id} notification={notification} onDismiss={onDismiss} />
       ))}
     </div>
   )
@@ -105,15 +84,14 @@ const NotificationCenter: FC<NotificationCenterProps> = ({ notifications, onDism
 
 export default NotificationCenter
 
-// Utility function to create notifications
 export const createNotification = (
-  type: 'success' | 'error' | 'info' | 'warning',
+  type: Notification['type'],
   title: string,
-  message: string
+  message: string,
 ): Notification => ({
-  id: `notification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+  id: `notification-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
   type,
   title,
   message,
-  timestamp: new Date()
+  timestamp: new Date(),
 })

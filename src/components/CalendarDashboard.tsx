@@ -642,7 +642,7 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
                             ? 'bg-(--color-surface-elevated) border-(--color-border-elevated)'
                             : dayHasAttention
                             ? 'bg-surface border-(--color-danger-border) hover:border-(--color-danger-border) hover:bg-surface-hover/40'
-                            : 'bg-surface border-border hover:border-blue-400/60 hover:bg-surface-hover/40'
+                            : 'bg-surface border-border hover:border-info-border hover:bg-surface-hover'
                           }
                         `}
                       >

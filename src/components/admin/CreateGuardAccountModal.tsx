@@ -171,6 +171,7 @@ const CreateGuardAccountModal: FC<CreateGuardAccountModalProps> = ({
           headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
           body: JSON.stringify({
             fullName: form.fullName.trim(),
+            guardNumber: form.guardNumber.trim() ? Number.parseInt(form.guardNumber.trim(), 10) : null,
             username: form.username.trim(),
             email: form.email.trim(),
             password: form.password,
@@ -224,7 +225,7 @@ const CreateGuardAccountModal: FC<CreateGuardAccountModalProps> = ({
               type="text"
               value={form.fullName}
               onChange={(e) => setField('fullName', e.target.value)}
-              className="w-full rounded border border-border-subtle bg-background px-3 py-2 text-sm text-text-primary"
+              className="soc-field"
               disabled={submitting}
             />
             {errors.fullName ? <span className="text-xs text-danger-text">{errors.fullName}</span> : null}
@@ -236,7 +237,7 @@ const CreateGuardAccountModal: FC<CreateGuardAccountModalProps> = ({
               type="text"
               value={form.guardNumber}
               onChange={(e) => setField('guardNumber', e.target.value)}
-              className="w-full rounded border border-border-subtle bg-background px-3 py-2 text-sm text-text-primary"
+              className="soc-field"
               disabled={submitting}
             />
           </label>
@@ -250,7 +251,7 @@ const CreateGuardAccountModal: FC<CreateGuardAccountModalProps> = ({
                 setUsernameCustomized(true)
                 setField('username', e.target.value)
               }}
-              className="w-full rounded border border-border-subtle bg-background px-3 py-2 text-sm text-text-primary"
+              className="soc-field"
               disabled={submitting}
             />
             {errors.username ? <span className="text-xs text-danger-text">{errors.username}</span> : null}
@@ -265,7 +266,7 @@ const CreateGuardAccountModal: FC<CreateGuardAccountModalProps> = ({
                 setEmailCustomized(true)
                 setField('email', e.target.value)
               }}
-              className="w-full rounded border border-border-subtle bg-background px-3 py-2 text-sm text-text-primary"
+              className="soc-field"
               disabled={submitting}
             />
             {errors.email ? <span className="text-xs text-danger-text">{errors.email}</span> : null}

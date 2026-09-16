@@ -153,7 +153,7 @@ const GuardSupportTab: FC<GuardSupportTabProps> = ({
             <button
               type="submit"
               disabled={scheduleSubmitting}
-              className="min-h-10 rounded-md border border-border bg-surface-elevated px-4 py-2 text-sm font-semibold text-text-primary"
+              className="soc-btn soc-btn-primary"
             >
               {scheduleSubmitting ? 'Submitting...' : 'Submit Request'}
             </button>
@@ -172,7 +172,7 @@ const GuardSupportTab: FC<GuardSupportTabProps> = ({
             type="button"
             onClick={() => setTicketOpen((p) => !p)}
             aria-expanded={ticketOpen}
-            className="min-h-10 rounded-md border border-border bg-surface-elevated px-3 py-1.5 text-xs font-semibold text-text-primary"
+            className="soc-btn soc-btn-neutral px-3 text-xs"
           >
             {ticketOpen ? 'Close' : 'New Ticket'}
           </button>
@@ -202,7 +202,7 @@ const GuardSupportTab: FC<GuardSupportTabProps> = ({
             <button
               type="submit"
               disabled={ticketSubmitting}
-              className="min-h-10 rounded-md border border-border bg-surface-elevated px-4 py-2 text-sm font-semibold text-text-primary"
+              className="soc-btn soc-btn-primary"
             >
               {ticketSubmitting ? 'Submitting...' : 'Create Ticket'}
             </button>

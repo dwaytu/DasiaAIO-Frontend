@@ -61,7 +61,7 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
       case 'deployed': return 'bg-info-bg text-info-text ring-1 ring-info-border'
       case 'maintenance': return 'bg-warning-bg text-warning-text ring-1 ring-warning-border'
       case 'lost': return 'bg-danger-bg text-danger-text ring-1 ring-danger-border'
-      default: return 'bg-zinc-500/15 text-zinc-400 ring-1 ring-zinc-500/30'
+      default: return 'soc-status-neutral'
     }
   }
 

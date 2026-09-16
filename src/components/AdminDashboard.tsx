@@ -118,10 +118,10 @@ const StatusIndicator: FC<{ status: UserDerivedStatus }> = ({ status }) => {
       pill: 'bg-success-bg text-success-text ring-1 ring-success-border',
     },
     inactive: {
-      dot: 'bg-zinc-400',
+      dot: 'bg-text-tertiary',
       glow: '0 0 6px rgba(161,161,170,0.7)',
       label: 'Inactive',
-      pill: 'bg-zinc-500/15 text-zinc-300 ring-1 ring-zinc-500/30',
+      pill: 'soc-status-neutral',
     },
     pending: {
       dot: 'bg-(--color-warning)',
@@ -227,10 +227,16 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
   }, [activeSection, canApproveGuards])
 
   useEffect(() => {
+    if (activeView === 'approvals' && !canApproveGuards) {
+      setActiveSection('users')
+      onViewChange?.('users')
+      return
+    }
+
     if (activeView === 'users' || activeView === 'approvals' || activeView === 'schedule') {
       setActiveSection(activeView)
     }
-  }, [activeView])
+  }, [activeView, canApproveGuards, onViewChange])
 
   const fetchUsers = async () => {
     try {
@@ -595,7 +601,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                         <button
                           type="button"
                           onClick={() => setCreateGuardModalOpen(true)}
-                          className="min-h-11 rounded border border-info-border bg-info-bg px-3 py-2 text-sm font-semibold text-info-text transition-opacity hover:opacity-90"
+                          className="soc-btn soc-btn-primary"
                         >
                           Create Guard Account
                         </button>
@@ -605,10 +611,11 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                         <svg className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                         <input
                           type="text"
+                          aria-label="Search users"
                           placeholder="Search users..."
                           value={searchQuery}
                           onChange={e => setSearchQuery(e.target.value)}
-                          className="w-44 rounded border border-border-subtle bg-background py-2 pl-9 pr-4 text-sm text-text-primary placeholder:text-text-tertiary focus:border-indigo-500 focus:outline-none"
+                          className="soc-field w-44 pl-9 pr-4 placeholder:text-text-tertiary"
                         />
                       </div>
                       <button
@@ -695,7 +702,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                           type="button"
                           onClick={handleBulkApproveSelected}
                           disabled={bulkProcessing}
-                          className="rounded border border-success-border bg-success-bg px-3 py-1.5 text-xs font-semibold text-success-text disabled:opacity-60"
+                          className="soc-btn soc-btn-success"
                         >
                           Approve Selected
                         </button>
@@ -703,7 +710,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                           type="button"
                           onClick={handleBulkSuspendSelected}
                           disabled={bulkProcessing}
-                          className="rounded border border-warning-border bg-warning-bg px-3 py-1.5 text-xs font-semibold text-warning-text disabled:opacity-60"
+                          className="soc-btn soc-btn-warning"
                         >
                           Suspend Selected
                         </button>
@@ -711,7 +718,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                           type="button"
                           onClick={handleBulkDeleteSelected}
                           disabled={bulkProcessing}
-                          className="rounded border border-danger-border bg-danger-bg px-3 py-1.5 text-xs font-semibold text-danger-text disabled:opacity-60"
+                          className="soc-btn soc-btn-danger"
                         >
                           Delete Selected
                         </button>
@@ -896,13 +903,13 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                               </div>
                               <div className="mt-3 flex flex-wrap gap-2">
                                 {pendingApproval ? (
-                                  <button type="button" onClick={() => handleApproveIfPending(u)} className="min-h-11 rounded-md border border-success-border bg-success-bg px-2.5 py-1.5 text-xs font-semibold text-success-text">Approve</button>
+                                  <button type="button" onClick={() => handleApproveIfPending(u)} className="soc-btn soc-btn-success">Approve</button>
                                 ) : null}
-                                <button type="button" onClick={() => handleEditUser(u)} className="min-h-11 rounded-md border border-info-border bg-info-bg px-2.5 py-1.5 text-xs font-semibold text-info-text">Edit</button>
-                                <button type="button" onClick={() => handleResetPasswordAction(u)} className="min-h-11 rounded-md border border-info-border bg-info-bg px-2.5 py-1.5 text-xs font-semibold text-info-text">Reset</button>
-                                <button type="button" onClick={() => handleSuspendAction(u)} className="min-h-11 rounded-md border border-warning-border bg-warning-bg px-2.5 py-1.5 text-xs font-semibold text-warning-text">Suspend</button>
+                                <button type="button" onClick={() => handleEditUser(u)} className="soc-btn soc-btn-neutral">Edit</button>
+                                <button type="button" onClick={() => handleResetPasswordAction(u)} className="soc-btn soc-btn-neutral">Reset</button>
+                                <button type="button" onClick={() => handleSuspendAction(u)} className="soc-btn soc-btn-neutral">Suspend</button>
                                 {canDelete ? (
-                                  <button type="button" onClick={() => handleDeleteUser(u.id, u.email)} className="min-h-11 rounded-md border border-danger-border bg-danger-bg px-2.5 py-1.5 text-xs font-semibold text-danger-text">Delete</button>
+                                  <button type="button" onClick={() => handleDeleteUser(u.id, u.email)} className="soc-btn soc-btn-danger">Delete</button>
                                 ) : null}
                               </div>
                             </article>
@@ -920,8 +927,8 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                   <div className="flex items-center justify-between border-t border-border-subtle px-5 py-3">
                     <p className="text-xs text-text-tertiary">Showing {filteredUsers.length} of {users.length} users</p>
                     <div className="flex gap-2">
-                      <button type="button" className="min-h-11 rounded border border-border-subtle bg-background px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-hover">Previous</button>
-                      <button type="button" className="min-h-11 rounded border border-border-subtle bg-background px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-hover">Next</button>
+                      <button type="button" className="soc-btn soc-btn-neutral">Previous</button>
+                      <button type="button" className="soc-btn soc-btn-neutral">Next</button>
                     </div>
                   </div>
                 </section>
@@ -1188,6 +1195,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
           {selectedApproval && (
             <div className="fixed inset-0 z-[95] flex">
               <button
+                type="button"
                 className="h-full flex-1 bg-black/45 backdrop-blur-[1px]"
                 onClick={() => setSelectedApproval(null)}
                 aria-label="Close approval details"
@@ -1208,19 +1216,19 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                 <div className="mt-5 flex gap-2">
                   <button
                     onClick={() => handleApprovalAction(selectedApproval.id, 'approve')}
-                    className="rounded bg-(--color-success) px-3 py-2 text-sm font-semibold text-white hover:opacity-90"
+                    className="soc-btn-success"
                   >
                     Approve
                   </button>
                   <button
                     onClick={() => handleApprovalAction(selectedApproval.id, 'reject')}
-                    className="rounded bg-(--color-danger) px-3 py-2 text-sm font-semibold text-white hover:opacity-90"
+                    className="soc-btn-danger"
                   >
                     Reject
                   </button>
                   <button
                     onClick={() => setSelectedApproval(null)}
-                    className="rounded border border-border px-3 py-2 text-sm font-semibold text-text-primary hover:bg-surface-hover"
+                    className="soc-btn-neutral"
                   >
                     Close
                   </button>

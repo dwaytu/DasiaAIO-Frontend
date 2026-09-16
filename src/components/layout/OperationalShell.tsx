@@ -1,8 +1,9 @@
-import { CSSProperties, FC, ReactNode, useEffect, useMemo, useState } from 'react'
+import { CSSProperties, FC, ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { Bell, Calendar, ClipboardCheck, LayoutDashboard, MoreHorizontal, X } from 'lucide-react'
 import Sidebar, { SidebarItem } from '../Sidebar'
 import Header from '../shared/Header'
 import type { User } from '../../context/AuthContext'
+import { getMobileBottomNavViews } from '../../config/navigation'
 
 const SIDEBAR_COLLAPSED_STORAGE_KEY = 'dasi.sidebar.collapsed'
 
@@ -51,18 +52,25 @@ const OperationalShell: FC<OperationalShellProps> = ({
     }
   })
   const [moreDrawerOpen, setMoreDrawerOpen] = useState(false)
+  const moreDrawerRef = useRef<HTMLDivElement | null>(null)
+  const previousMoreFocusRef = useRef<HTMLElement | null>(null)
   const isElevatedRole = user.role !== 'guard'
-  const mobileBottomTabs = [
-    { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { key: 'approvals', label: 'Approvals', icon: ClipboardCheck },
-    { key: 'schedule', label: 'Schedule', icon: Calendar },
-    { key: 'inbox', label: 'Alerts', icon: Bell },
-  ]
+  const mobileBottomTabs = useMemo(() => {
+    const tabs = [
+      { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { key: 'approvals', label: 'Approvals', icon: ClipboardCheck },
+      { key: 'schedule', label: 'Schedule', icon: Calendar },
+      { key: 'inbox', label: 'Alerts', icon: Bell },
+    ]
+
+    const visibleViews = getMobileBottomNavViews(navItems)
+    return tabs.filter((tab) => visibleViews.includes(tab.key))
+  }, [navItems])
 
   const moreNavItems = useMemo(() => {
     const bottomTabKeys = new Set(mobileBottomTabs.map((tab) => tab.key))
     return navItems.filter((item) => !bottomTabKeys.has(item.view))
-  }, [navItems])
+  }, [mobileBottomTabs, navItems])
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -75,6 +83,26 @@ const OperationalShell: FC<OperationalShellProps> = ({
       // Ignore storage failures (private mode, restricted context) and keep in-memory behavior.
     }
   }, [sidebarCollapsed])
+
+  useEffect(() => {
+    if (!moreDrawerOpen) {
+      if (previousMoreFocusRef.current?.isConnected) {
+        previousMoreFocusRef.current.focus()
+        previousMoreFocusRef.current = null
+      }
+      return
+    }
+
+    previousMoreFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    const firstAction = moreDrawerRef.current?.querySelector<HTMLElement>('button:not([disabled])')
+    firstAction?.focus()
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMoreDrawerOpen(false)
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [moreDrawerOpen])
 
   const desktopSidebarWidth = sidebarCollapsed
     ? 'var(--sidebar-width-collapsed)'
@@ -151,6 +179,7 @@ const OperationalShell: FC<OperationalShellProps> = ({
               <div className="absolute inset-0 bg-black/40" />
               <div
                 id="operational-more-drawer"
+                ref={moreDrawerRef}
                 className="absolute bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] left-2 right-2 rounded border border-border bg-surface p-2 shadow-lg"
                 onClick={(e) => e.stopPropagation()}
               >
@@ -159,7 +188,8 @@ const OperationalShell: FC<OperationalShellProps> = ({
                   <button
                     type="button"
                     onClick={() => setMoreDrawerOpen(false)}
-                    className="p-1 text-text-secondary hover:text-text-primary"
+                    className="soc-btn-neutral min-h-11 min-w-11 p-2"
+                    aria-label="Close more menu"
                   >
                     <X className="h-4 w-4" aria-hidden="true" />
                     <span className="sr-only">Close menu</span>
@@ -174,7 +204,7 @@ const OperationalShell: FC<OperationalShellProps> = ({
                           onNavigate(item.view)
                           setMoreDrawerOpen(false)
                         }}
-                        className="min-h-11 w-full rounded px-2 py-2 text-xs font-semibold text-text-secondary transition-colors hover:bg-surface-elevated hover:text-text-primary"
+                        className="soc-btn-neutral min-h-11 w-full px-2 py-2 text-xs"
                       >
                         {item.label}
                       </button>

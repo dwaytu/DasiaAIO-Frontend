@@ -437,7 +437,7 @@ const SupportTickets: FC<SupportTicketsProps> = ({ userId }) => {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="min-h-11 rounded bg-info px-6 py-2 text-sm font-semibold text-white transition-colors hover:bg-info/90 disabled:opacity-50"
+                  className="soc-btn soc-btn-primary"
                 >
                   {submitting ? 'Submitting...' : 'Submit Ticket'}
                 </button>
@@ -445,7 +445,7 @@ const SupportTickets: FC<SupportTicketsProps> = ({ userId }) => {
                   type="button"
                   onClick={switchToList}
                   disabled={submitting}
-                  className="min-h-11 rounded border border-border bg-surface px-4 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-surface-elevated disabled:opacity-50"
+                  className="soc-btn soc-btn-neutral"
                 >
                   Cancel
                 </button>

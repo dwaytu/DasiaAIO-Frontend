@@ -13,7 +13,7 @@ const SectionHeader: FC<SectionHeaderProps> = ({ title, subtitle, actions }) => 
         <h2 className="soc-section-title">{title}</h2>
         {subtitle ? <p className="soc-body mt-1 text-text-secondary">{subtitle}</p> : null}
       </div>
-      {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
+      {actions ? <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">{actions}</div> : null}
     </header>
   )
 }

@@ -254,21 +254,21 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
   const getMeritRankColor = (rank: string) => {
     switch (rank) {
       case 'Gold':
-        return 'bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30'
+        return 'soc-status-warning'
       case 'Silver':
-        return 'bg-zinc-500/15 text-zinc-400 ring-1 ring-zinc-500/30'
+        return 'soc-status-neutral'
       case 'Bronze':
-        return 'bg-orange-100 text-orange-800'
+        return 'soc-status-danger'
       default:
-        return 'bg-blue-500/15 text-blue-300 ring-1 ring-blue-500/30'
+        return 'soc-status-info'
     }
   }
 
   const getScoreColor = (score: number) => {
-    if (score >= 90) return 'text-green-600'
-    if (score >= 80) return 'text-blue-600'
-    if (score >= 70) return 'text-yellow-600'
-    return 'text-red-600'
+    if (score >= 90) return 'text-success-text'
+    if (score >= 80) return 'text-info-text'
+    if (score >= 70) return 'text-warning-text'
+    return 'text-danger-text'
   }
 
   return (
@@ -355,19 +355,19 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
                     </div>
                     <div>
                       <p className="text-sm text-text-secondary">On Time</p>
-                      <p className="text-2xl font-bold text-green-600">{selectedGuard.stats.onTimeCount}</p>
+                      <p className="text-2xl font-bold text-success-text">{selectedGuard.stats.onTimeCount}</p>
                     </div>
                     <div>
                       <p className="text-sm text-text-secondary">Late</p>
-                      <p className="text-2xl font-bold text-yellow-600">{selectedGuard.stats.lateCount}</p>
+                      <p className="text-2xl font-bold text-warning-text">{selectedGuard.stats.lateCount}</p>
                     </div>
                     <div>
                       <p className="text-sm text-text-secondary">No Shows</p>
-                      <p className="text-2xl font-bold text-red-600">{selectedGuard.stats.noShowCount}</p>
+                      <p className="text-2xl font-bold text-danger-text">{selectedGuard.stats.noShowCount}</p>
                     </div>
                     <div>
                       <p className="text-sm text-text-secondary">Evaluations</p>
-                      <p className="text-2xl font-bold text-indigo-600">{selectedGuard.stats.evaluations}</p>
+                      <p className="text-2xl font-bold text-info-text">{selectedGuard.stats.evaluations}</p>
                     </div>
                   </div>
                 </section>
@@ -438,13 +438,13 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
                   {evaluations.length > 0 ? (
                     <div className="space-y-4">
                       {evaluations.map((evaluation) => (
-                        <div key={evaluation.id} className="border-l-4 border-indigo-500 pl-4 py-2">
+                        <div key={evaluation.id} className="border-l-4 border-info pl-4 py-2">
                           <div className="flex items-start justify-between">
                             <div>
                               <p className="font-semibold text-text-primary">{evaluation.evaluatorName}</p>
                                 <p className="text-sm text-text-secondary">{new Date(evaluation.createdAt).toLocaleDateString()}</p>
                             </div>
-                            <span className="text-lg font-bold text-yellow-500">{'★'.repeat(Math.ceil(evaluation.rating))}</span>
+                            <span className="text-lg font-bold text-warning">{'★'.repeat(Math.ceil(evaluation.rating))}</span>
                           </div>
                           {evaluation.comment && <p className="text-text-primary mt-2">{evaluation.comment}</p>}
                         </div>
@@ -492,7 +492,7 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
                         {rankings.map((guard) => (
                           <tr key={guard.guardId} className="border-b border-border hover:bg-surface-hover">
                             <td className="px-4 py-3">
-                              <span className="inline-block w-8 h-8 bg-indigo-600 text-white text-center rounded-full font-bold">
+                              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-info text-(--color-primary-text) font-bold">
                                 {guard.rank}
                               </span>
                             </td>
@@ -511,14 +511,14 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
                               <div className="flex items-center gap-2">
                                 <div className="flex-1 bg-border rounded-full h-2 overflow-hidden">
                                   <div
-                                    className="bg-blue-600 h-full transition-all duration-300"
+                                    className="bg-info h-full transition-all duration-300"
                                     style={{ width: `${guard.onTimePercentage}%` }}
                                   ></div>
                                 </div>
                                 <span className="text-sm font-medium text-text-primary min-w-12">{guard.onTimePercentage.toFixed(0)}%</span>
                               </div>
                             </td>
-                            <td className="px-4 py-3 text-center text-lg font-bold text-yellow-500">
+                            <td className="px-4 py-3 text-center text-lg font-bold text-warning">
                               {(guard.clientRating / 20).toFixed(1)} ★
                             </td>
                             <td className="px-4 py-3">

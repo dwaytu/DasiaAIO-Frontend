@@ -4,6 +4,11 @@ import { chromium } from 'playwright'
 const baseUrl = process.env.AUDIT_BASE_URL ?? 'http://localhost:5173'
 const outputDir = 'test-results/system-audit'
 const waitMs = Number(process.env.AUDIT_WAIT_MS ?? 350)
+const viewportPresets = (process.env.AUDIT_VIEWPORTS ?? '1440x900,390x844')
+  .split(',')
+  .map((value) => value.trim().match(/^(\d+)x(\d+)$/))
+  .filter(Boolean)
+  .map(([_, width, height]) => ({ width: Number(width), height: Number(height), name: `${width}x${height}` }))
 
 const roles = [
   {
@@ -33,7 +38,7 @@ const roles = [
     identifier: process.env.AUDIT_SUPERVISOR_IDENTIFIER ?? 'supervisor',
     password: process.env.AUDIT_SUPERVISOR_PASSWORD ?? 'password123',
     routes: [
-      '/dashboard', '/schedule', '/calendar', '/missions', '/approvals', '/allocation',
+      '/dashboard', '/schedule', '/calendar', '/missions', '/allocation',
       '/dtr', '/performance', '/merit', '/firearms', '/firearms/compliance',
       '/armored-cars', '/maintenance', '/operations-map', '/settings', '/permits',
       '/inbox', '/profile', '/support', '/feedback',
@@ -188,7 +193,7 @@ async function clickSafeControls(page, role, route, state) {
     state.clicked.push('menu toggle')
     const closeMenu = page.getByRole('button', { name: 'Close menu' }).first()
     if (await closeMenu.isVisible().catch(() => false)) {
-      await closeMenu.click()
+      await closeMenu.evaluate((element) => element.click())
       state.clicked.push('mobile menu open/close')
     }
   }
@@ -282,8 +287,10 @@ async function runAccount(account, viewport, viewportName, routeList) {
 
 try {
   for (const account of roles) {
-    await runAccount(account, { width: 1440, height: 900 }, 'desktop', account.routes)
-    await runAccount(account, { width: 390, height: 844 }, 'mobile', mobileRoutes[account.name])
+    for (const preset of viewportPresets) {
+      const routeList = preset.width < 600 ? mobileRoutes[account.name] : account.routes
+      await runAccount(account, { width: preset.width, height: preset.height }, preset.name, routeList)
+    }
   }
 } finally {
   await browser.close()

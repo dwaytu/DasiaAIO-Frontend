@@ -84,7 +84,7 @@ function getStatusBadgeColor(status: string): string {
     case 'in_progress':
       return 'bg-info-bg text-info-text ring-1 ring-info-border'
     default:
-      return 'bg-zinc-500/15 text-zinc-400 ring-1 ring-zinc-500/30'
+      return 'soc-status-neutral'
   }
 }
 

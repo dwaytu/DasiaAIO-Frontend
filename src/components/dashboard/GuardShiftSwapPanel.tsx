@@ -262,7 +262,7 @@ const GuardShiftSwapPanel: FC<Props> = ({ currentUserId, currentUserRole, shiftO
             <button
               type="submit"
               disabled={submitting}
-              className="min-h-11 rounded-md border border-border bg-surface-elevated px-4 py-2 text-sm font-semibold text-text-primary disabled:opacity-50"
+              className="soc-btn soc-btn-primary"
             >
               {submitting ? 'Submitting…' : 'Request Swap'}
             </button>

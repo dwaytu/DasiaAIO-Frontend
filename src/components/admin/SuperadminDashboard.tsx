@@ -157,10 +157,10 @@ const StatusIndicator: FC<{ status: UserDerivedStatus }> = ({ status }) => {
       pill: 'bg-success-bg text-success-text ring-1 ring-success-border',
     },
     inactive: {
-      dot: 'bg-zinc-400',
+      dot: 'bg-text-tertiary',
       glow: '0 0 6px rgba(161,161,170,0.7)',
       label: 'Inactive',
-      pill: 'bg-zinc-500/15 text-zinc-300 ring-1 ring-zinc-500/30',
+      pill: 'soc-status-neutral',
     },
     pending: {
       dot: 'bg-(--color-warning)',
@@ -1114,7 +1114,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                     <button
                       type="button"
                       onClick={() => setCreateGuardModalOpen(true)}
-                      className="min-h-11 rounded border border-info-border bg-info-bg px-3 py-2 text-sm font-semibold text-info-text transition-opacity hover:opacity-90"
+                      className="soc-btn soc-btn-primary"
                     >
                       Create Guard Account
                     </button>
@@ -1141,6 +1141,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                     <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-tertiary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                     <input
                       type="text"
+                      aria-label="Search users"
                       placeholder="Search users..."
                       value={searchQuery}
                       onChange={e => setSearchQuery(e.target.value)}
@@ -1229,7 +1230,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                       type="button"
                       onClick={handleBulkApproveSelected}
                       disabled={bulkProcessing}
-                      className="rounded border border-success-border bg-success-bg px-3 py-1.5 text-xs font-semibold text-success-text disabled:opacity-60"
+                      className="soc-btn soc-btn-success"
                     >
                       Approve Selected
                     </button>
@@ -1238,7 +1239,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                       onClick={handleBulkSuspendSelected}
                       disabled={bulkProcessing}
                       title="Coming soon"
-                      className="rounded border border-warning-border bg-warning-bg px-3 py-1.5 text-xs font-semibold text-warning-text opacity-50 cursor-not-allowed disabled:opacity-60"
+                      className="soc-btn soc-btn-warning opacity-50 cursor-not-allowed"
                     >
                       Suspend Selected
                     </button>
@@ -1246,7 +1247,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                       type="button"
                       onClick={handleBulkDeleteSelected}
                       disabled={bulkProcessing}
-                      className="rounded border border-danger-border bg-danger-bg px-3 py-1.5 text-xs font-semibold text-danger-text disabled:opacity-60"
+                      className="soc-btn soc-btn-danger"
                     >
                       Delete Selected
                     </button>
@@ -1445,7 +1446,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                               <button
                                 type="button"
                                 onClick={() => handleApproveIfPending(u)}
-                                className="min-h-11 rounded-md border border-success-border bg-success-bg px-2.5 py-1.5 text-xs font-semibold text-success-text"
+                                className="soc-btn soc-btn-success"
                               >
                                 Approve
                               </button>
@@ -1453,7 +1454,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                             <button
                               type="button"
                               onClick={() => handleEditUser(u)}
-                              className="min-h-11 rounded-md border border-info-border bg-info-bg px-2.5 py-1.5 text-xs font-semibold text-info-text"
+                              className="soc-btn soc-btn-neutral"
                             >
                               Edit
                             </button>
@@ -1461,7 +1462,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                               type="button"
                               onClick={() => handleResetPasswordAction(u)}
                               title="Coming soon"
-                              className="min-h-11 rounded-md border border-info-border bg-info-bg px-2.5 py-1.5 text-xs font-semibold text-info-text opacity-50 cursor-not-allowed"
+                              className="soc-btn soc-btn-neutral opacity-50 cursor-not-allowed"
                             >
                               Reset
                             </button>
@@ -1469,7 +1470,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                               type="button"
                               onClick={() => handleSuspendAction(u)}
                               title="Coming soon"
-                              className="min-h-11 rounded-md border border-warning-border bg-warning-bg px-2.5 py-1.5 text-xs font-semibold text-warning-text opacity-50 cursor-not-allowed"
+                              className="soc-btn soc-btn-neutral opacity-50 cursor-not-allowed"
                             >
                               Suspend
                             </button>
@@ -1477,7 +1478,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                               <button
                                 type="button"
                                 onClick={() => handleDeleteUser(u.id, u.email)}
-                                className="min-h-11 rounded-md border border-danger-border bg-danger-bg px-2.5 py-1.5 text-xs font-semibold text-danger-text"
+                                className="soc-btn soc-btn-danger"
                               >
                                 Delete
                               </button>
@@ -1497,8 +1498,8 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
               <div className="flex items-center justify-between px-5 py-3 border-t border-border-subtle">
                 <p className="text-xs text-text-tertiary">Showing {totalVisibleUsers} of {users.length} users</p>
                 <div className="flex gap-2">
-                  <button type="button" className="min-h-11 rounded border border-border-subtle bg-background px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-hover">Previous</button>
-                  <button type="button" className="min-h-11 rounded border border-border-subtle bg-background px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-hover">Next</button>
+                  <button type="button" className="soc-btn soc-btn-neutral">Previous</button>
+                  <button type="button" className="soc-btn soc-btn-neutral">Next</button>
                 </div>
               </div>
             </section>
@@ -1642,7 +1643,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                                 shift.status === 'completed' ? 'bg-success-bg text-success-text ring-1 ring-success-border' :
                                 shift.status === 'scheduled' ? 'bg-info-bg text-info-text ring-1 ring-info-border' :
                                 shift.status === 'in_progress' ? 'bg-warning-bg text-warning-text ring-1 ring-warning-border' :
-                                'bg-zinc-500/15 text-zinc-400 ring-1 ring-zinc-500/30'
+                                'soc-status-neutral'
                               }`}>
                                 {shift.status}
                               </span>
@@ -1984,7 +1985,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                               mission.status === 'completed' ? 'bg-success-bg text-success-text ring-1 ring-success-border' :
                               mission.status === 'scheduled' ? 'bg-info-bg text-info-text ring-1 ring-info-border' :
                               mission.status === 'in_progress' ? 'bg-warning-bg text-warning-text ring-1 ring-warning-border' :
-                              'bg-zinc-500/15 text-zinc-400 ring-1 ring-zinc-500/30'
+                              'soc-status-neutral'
                             }`}>
                               {mission.status || 'unknown'}
                             </span>

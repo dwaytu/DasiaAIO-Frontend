@@ -149,7 +149,7 @@ export default function AuditLogViewer() {
                 value={searchDraft}
                 onChange={(event) => setSearchDraft(event.target.value)}
                 placeholder="Search by action, entity, or actor"
-                className="w-full rounded border border-border bg-background py-2 pl-10 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="soc-field pl-10 pr-3 placeholder:text-text-tertiary"
               />
             </div>
           </label>
@@ -161,7 +161,7 @@ export default function AuditLogViewer() {
               name="auditResult"
               value={filters.result ?? 'all'}
               onChange={(event) => updateFilter({ page: 1, result: event.target.value === 'all' ? undefined : event.target.value })}
-              className="rounded border border-border bg-background px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="soc-field w-auto"
             >
               {resultOptions.map((option) => (
                 <option key={option.value} value={option.value}>{option.label}</option>
@@ -176,7 +176,7 @@ export default function AuditLogViewer() {
               name="auditEntityType"
               value={filters.entityType ?? 'all'}
               onChange={(event) => updateFilter({ page: 1, entityType: event.target.value === 'all' ? undefined : event.target.value })}
-              className="rounded border border-border bg-background px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="soc-field w-auto"
             >
               {entityOptions.map((option) => (
                 <option key={option.value} value={option.value}>{option.label}</option>
@@ -192,7 +192,7 @@ export default function AuditLogViewer() {
                 name="auditPageSize"
                 value={filters.pageSize ?? BASE_FILTERS.pageSize}
                 onChange={(event) => updateFilter({ page: 1, pageSize: Number(event.target.value) })}
-                className="w-full rounded border border-border bg-background px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="soc-field"
               >
                 {[10, 25, 50, 100].map((size) => (
                   <option key={size} value={size}>{size} per page</option>
@@ -201,7 +201,7 @@ export default function AuditLogViewer() {
             </div>
             <button
               type="submit"
-              className="self-center rounded border border-border bg-surface px-3 py-2 text-xs font-semibold text-text-primary transition-colors hover:bg-surface-hover"
+              className="soc-btn soc-btn-neutral self-center px-3 text-xs"
             >
               Apply search
             </button>
@@ -280,7 +280,7 @@ export default function AuditLogViewer() {
                         <div className="text-xs text-text-tertiary">{log.entity_id || '—'}</div>
                       </td>
                       <td className="px-4 py-3 text-sm text-text-primary">
-                        <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wide ${statusChips[log.result] || 'bg-zinc-500/15 text-zinc-300 ring-1 ring-zinc-500/30'}`}>
+                        <span className={`soc-status-neutral ${statusChips[log.result] || ''}`}>
                           {log.result}
                         </span>
                       </td>

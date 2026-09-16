@@ -1,9 +1,9 @@
 import { FC } from 'react'
 
 const AlertsCenter: FC<any> = () => (
-  <div className="bg-surface rounded shadow-md p-6">
-    <h2 className="text-xl font-bold text-gray-800">Alerts Center</h2>
-  </div>
+  <section className="soc-surface p-6" aria-labelledby="alerts-center-title">
+    <h2 id="alerts-center-title" className="soc-section-title">Alerts Center</h2>
+  </section>
 )
 
 export default AlertsCenter

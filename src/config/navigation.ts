@@ -8,6 +8,14 @@ export interface NavItem {
   permission?: Permission
 }
 
+export const MOBILE_BOTTOM_NAV_VIEWS = ['dashboard', 'approvals', 'schedule', 'inbox'] as const
+
+export function getMobileBottomNavViews(items: Array<Pick<NavItem, 'view'>>): string[] {
+  const hasApprovalAccess = items.some((item) => item.view === 'approvals')
+
+  return MOBILE_BOTTOM_NAV_VIEWS.filter((view) => view !== 'approvals' || hasApprovalAccess)
+}
+
 const SUPERADMIN_NAV: NavItem[] = [
   { view: 'dashboard', label: 'Dashboard', group: 'Core' },
   { view: 'approvals', label: 'Approvals', group: 'Core', permission: 'approve_guards' },

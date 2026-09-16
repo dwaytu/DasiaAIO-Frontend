@@ -100,7 +100,7 @@ const PanicButton: FC<PanicButtonProps> = ({ userId, userDisplayName, siteName }
   return (
     <div className="fixed bottom-32 right-4 z-(--z-toast) flex flex-col items-center gap-1">
       <span
-        className="absolute inset-0 m-auto h-16 w-16 animate-ping rounded-full bg-red-500 opacity-30"
+        className="absolute inset-0 m-auto h-16 w-16 animate-ping rounded-full bg-danger opacity-30"
         aria-hidden="true"
       />
       <button
@@ -108,7 +108,7 @@ const PanicButton: FC<PanicButtonProps> = ({ userId, userDisplayName, siteName }
         onClick={() => void handlePanic()}
         disabled={state === 'sending'}
         aria-label="Emergency SOS — tap to send distress signal"
-        className="relative flex h-16 w-16 items-center justify-center rounded-full bg-red-600 text-white font-black text-lg shadow-lg shadow-red-500/40 transition-transform active:scale-95 focus:outline-2 focus:outline-offset-2 focus:outline-red-400"
+        className="soc-btn soc-btn-emergency relative h-16 w-16 min-h-16 min-w-16 rounded-full p-0 text-lg font-black shadow-lg transition-transform active:scale-95"
       >
         {state === 'idle' && 'SOS'}
         {state === 'sending' && (
@@ -121,7 +121,7 @@ const PanicButton: FC<PanicButtonProps> = ({ userId, userDisplayName, siteName }
         <div
           role="status"
           aria-live="assertive"
-          className="mt-1 whitespace-nowrap rounded-md bg-green-600 px-2 py-0.5 text-xs font-bold text-white shadow"
+          className="soc-status-success mt-1 whitespace-nowrap rounded-md px-2 py-0.5 text-xs shadow"
         >
           SOS Sent ✓
         </div>

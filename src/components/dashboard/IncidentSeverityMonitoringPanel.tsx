@@ -10,16 +10,16 @@ interface IncidentSeverityMonitoringPanelProps {
 }
 
 const severityBadgeClass: Record<Incident['priority'], string> = {
-  critical: 'border-red-500/50 bg-red-500/15 text-red-700 dark:text-red-200',
-  high: 'border-orange-400/50 bg-orange-500/15 text-orange-700 dark:text-orange-200',
-  medium: 'border-amber-400/50 bg-amber-500/15 text-amber-700 dark:text-amber-200',
-  low: 'border-emerald-500/50 bg-emerald-500/15 text-emerald-700 dark:text-emerald-200',
+  critical: 'soc-status-danger',
+  high: 'soc-status-danger',
+  medium: 'soc-status-warning',
+  low: 'soc-status-success',
 }
 
 const statusPillClass: Record<Incident['status'], string> = {
-  open: 'border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-200',
-  investigating: 'border-sky-500/40 bg-sky-500/10 text-sky-700 dark:text-sky-200',
-  resolved: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200',
+  open: 'soc-status-danger',
+  investigating: 'soc-status-info',
+  resolved: 'soc-status-success',
 }
 
 const IncidentSeverityMonitoringPanel: FC<IncidentSeverityMonitoringPanelProps> = ({
@@ -51,28 +51,28 @@ const IncidentSeverityMonitoringPanel: FC<IncidentSeverityMonitoringPanelProps> 
 
       <div className="space-y-3 px-4 py-3" role="region" aria-live="polite">
         <div className="grid grid-cols-4 gap-2">
-          <div className="rounded-md border border-red-500/35 bg-red-500/10 px-2 py-1.5 text-center">
-            <p className="font-mono text-[11px] uppercase tracking-wide text-red-700 dark:text-red-200">Critical</p>
-            <p className="font-mono text-base font-bold text-red-800 dark:text-red-100">{severitySummary.critical}</p>
+          <div className="soc-status-danger w-full justify-center rounded-md px-2 py-1.5 text-center">
+            <p className="font-mono text-[11px] uppercase tracking-wide">Critical</p>
+            <p className="font-mono text-base font-bold">{severitySummary.critical}</p>
           </div>
-          <div className="rounded-md border border-orange-400/35 bg-orange-500/10 px-2 py-1.5 text-center">
-            <p className="font-mono text-[11px] uppercase tracking-wide text-orange-700 dark:text-orange-200">High</p>
-            <p className="font-mono text-base font-bold text-orange-800 dark:text-orange-100">{severitySummary.high}</p>
+          <div className="soc-status-danger w-full justify-center rounded-md px-2 py-1.5 text-center">
+            <p className="font-mono text-[11px] uppercase tracking-wide">High</p>
+            <p className="font-mono text-base font-bold">{severitySummary.high}</p>
           </div>
-          <div className="rounded-md border border-amber-400/35 bg-amber-500/10 px-2 py-1.5 text-center">
-            <p className="font-mono text-[11px] uppercase tracking-wide text-amber-700 dark:text-amber-200">Medium</p>
-            <p className="font-mono text-base font-bold text-amber-800 dark:text-amber-100">{severitySummary.medium}</p>
+          <div className="soc-status-warning w-full justify-center rounded-md px-2 py-1.5 text-center">
+            <p className="font-mono text-[11px] uppercase tracking-wide">Medium</p>
+            <p className="font-mono text-base font-bold">{severitySummary.medium}</p>
           </div>
-          <div className="rounded-md border border-emerald-500/35 bg-emerald-500/10 px-2 py-1.5 text-center">
-            <p className="font-mono text-[11px] uppercase tracking-wide text-emerald-700 dark:text-emerald-200">Low</p>
-            <p className="font-mono text-base font-bold text-emerald-800 dark:text-emerald-100">{severitySummary.low}</p>
+          <div className="soc-status-success w-full justify-center rounded-md px-2 py-1.5 text-center">
+            <p className="font-mono text-[11px] uppercase tracking-wide">Low</p>
+            <p className="font-mono text-base font-bold">{severitySummary.low}</p>
           </div>
         </div>
 
         {loading && <p className="text-center font-mono text-xs text-(--color-muted-text)">Syncing incident severity feed...</p>}
 
         {!loading && error && (
-          <p role="alert" className="text-center font-mono text-xs text-red-400">
+          <p role="alert" className="text-center font-mono text-xs text-danger-text">
             {error}
           </p>
         )}

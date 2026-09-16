@@ -10,7 +10,7 @@ interface SentinelLogoProps {
 }
 
 const iconClasses =
-  'text-sky-700 dark:text-cyan-300 [--logo-iris-start:#1d4ed8] [--logo-iris-end:#0ea5e9] [--logo-beam-start:#22d3ee] [--logo-beam-end:#0ea5e9] dark:[--logo-iris-start:#67e8f9] dark:[--logo-iris-end:#22d3ee] dark:[--logo-beam-start:#67e8f9] dark:[--logo-beam-end:#22d3ee]'
+  'text-info-text [--logo-iris-start:#1d4ed8] [--logo-iris-end:#0ea5e9] [--logo-beam-start:#22d3ee] [--logo-beam-end:#0ea5e9] dark:[--logo-iris-start:#67e8f9] dark:[--logo-iris-end:#22d3ee] dark:[--logo-beam-start:#67e8f9] dark:[--logo-beam-end:#22d3ee]'
 
 const ReticleEyeIcon: FC<{ size: number; className?: string; animated?: boolean }> = ({ size, className = '', animated = false }) => {
   const uid = useId().replace(/:/g, '')

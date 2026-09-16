@@ -762,7 +762,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                       onClick={() => {
                         void requestGeoPermissionFromContext()
                       }}
-                      className="mt-2 min-h-10 rounded-md border border-warning-border px-3 py-1.5 text-xs font-semibold"
+                       className="soc-btn-warning mt-2 min-h-10 px-3 py-1.5 text-xs"
                     >
                       {locationBlockingNotice.actionLabel}
                     </button>
@@ -771,7 +771,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                     <button
                       type="button"
                       onClick={() => setProfileModalOpen(true)}
-                      className="mt-2 min-h-10 rounded-md border border-warning-border px-3 py-1.5 text-xs font-semibold"
+                       className="soc-btn-warning mt-2 min-h-10 px-3 py-1.5 text-xs"
                     >
                       {locationBlockingNotice.actionLabel}
                     </button>
@@ -782,7 +782,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                       onClick={() => {
                         void grantLocationConsent()
                       }}
-                      className="mt-2 min-h-10 rounded-md border border-warning-border px-3 py-1.5 text-xs font-semibold"
+                       className="soc-btn-warning mt-2 min-h-10 px-3 py-1.5 text-xs"
                     >
                       {locationBlockingNotice.actionLabel}
                     </button>
@@ -793,7 +793,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                       onClick={() => {
                         void retryLocationHeartbeat()
                       }}
-                      className="mt-2 min-h-10 rounded-md border border-warning-border px-3 py-1.5 text-xs font-semibold"
+                       className="soc-btn-warning mt-2 min-h-10 px-3 py-1.5 text-xs"
                     >
                       {locationBlockingNotice.actionLabel || 'Retry Location'}
                     </button>
@@ -802,7 +802,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                 <button
                   type="button"
                   onClick={() => setDismissedTrackingNoticeKey(locationBlockingNotice.key)}
-                  className="min-h-10 rounded-md border border-warning-border px-2 py-1 text-xs font-semibold"
+                   className="soc-btn-warning min-h-10 px-2 py-1 text-xs"
                   aria-label="Dismiss location sharing paused notice"
                 >
                   Dismiss
@@ -831,7 +831,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                 onClick={() => {
                   void handleRetryFailedQueueActions()
                 }}
-                className="mt-2 min-h-10 rounded-md border border-danger-border px-3 py-1.5 text-xs font-semibold"
+                 className="soc-btn-danger mt-2 min-h-10 px-3 py-1.5 text-xs"
               >
                 Retry Failed Queue Actions
               </button>
@@ -845,7 +845,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
               <button
                 type="button"
                 onClick={() => { void refreshData(false) }}
-                className="mt-3 min-h-11 rounded-md border border-warning-border px-3 py-2 text-sm font-semibold"
+                 className="soc-btn-warning mt-3 text-sm"
               >
                 Retry Sync
               </button>
@@ -962,10 +962,10 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                   <button
                     type="button"
                     onClick={() => { void handlePrimaryCheckAction() }}
-                    className={`min-h-14 w-full rounded px-4 py-3 text-base font-extrabold tracking-wide ${
+                    className={`min-h-14 w-full px-4 py-3 text-base font-extrabold tracking-wide ${
                       checkInStatus[currentShift.id] === 'checked_in'
-                        ? 'border border-danger-border bg-danger-bg text-danger-text'
-                        : 'border border-success-border bg-success-bg text-success-text'
+                        ? 'soc-btn-danger'
+                        : 'soc-btn-success'
                     }`}
                   >
                     {checkInStatus[currentShift.id] === 'checked_in'
@@ -979,14 +979,14 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                     setIncidentStatus('')
                     setIncidentModalOpen(true)
                   }}
-                  className="min-h-12 w-full rounded border-2 border-danger-border bg-danger-bg px-4 py-3 text-sm font-extrabold uppercase tracking-wide text-danger-text"
+                   className="soc-btn-danger min-h-12 w-full border-2 px-4 py-3 text-sm font-extrabold"
                 >
                   ⚠ Report Incident
                 </button>
                 <button
                   type="button"
                   onClick={() => setInstructionsOpen(true)}
-                  className="min-h-10 w-full rounded border border-info-border bg-info-bg px-4 py-2 text-xs font-semibold text-info-text"
+                   className="soc-btn w-full min-h-10 px-4 py-2 text-xs"
                 >
                   View Instructions
                 </button>
@@ -1099,8 +1099,8 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                       onClick={() => setActiveSection(item.key)}
                       className={`min-h-11 w-full rounded-md px-2 py-2 text-xs font-semibold transition-colors outline outline-offset-[-2px] outline-transparent ${
                         isActive
-                          ? 'bg-info text-white forced-colors:text-[ButtonText] forced-colors:outline-2 forced-colors:outline-[Highlight]'
-                          : 'bg-surface-elevated text-text-secondary'
+                          ? 'soc-btn-primary forced-colors:text-[ButtonText] forced-colors:outline-2 forced-colors:outline-[Highlight]'
+                          : 'soc-btn-neutral'
                       } ${isDisabled ? 'opacity-40' : ''}`}
                       aria-current={isActive ? 'page' : undefined}
                     >
@@ -1223,14 +1223,14 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                 <button
                   type="submit"
                   disabled={incidentSubmitting}
-                  className="min-h-11 rounded-md border border-danger-border bg-danger-bg px-4 py-2 text-sm font-semibold text-danger-text"
+                  className="soc-btn-danger"
                 >
                   {incidentSubmitting ? 'Submitting...' : 'Submit Report'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setIncidentModalOpen(false)}
-                  className="min-h-11 rounded-md border border-border bg-surface-elevated px-4 py-2 text-sm font-semibold text-text-primary"
+                  className="soc-btn-neutral"
                 >
                   Cancel
                 </button>

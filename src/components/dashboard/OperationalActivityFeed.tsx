@@ -25,12 +25,12 @@ interface OperationalActivityFeedProps {
 
 const ICONS: Record<ActivityKind, JSX.Element> = {
   guard_check_in: (
-    <svg aria-hidden="true" className="h-4 w-4 text-emerald-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+    <svg aria-hidden="true" className="h-4 w-4 text-success-text" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4Zm-7 9a7 7 0 0 1 14 0Z" />
     </svg>
   ),
   guard_check_out: (
-    <svg aria-hidden="true" className="h-4 w-4 text-amber-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+    <svg aria-hidden="true" className="h-4 w-4 text-warning-text" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4Zm-7 9a7 7 0 0 1 14 0Z" />
     </svg>
   ),
@@ -42,29 +42,29 @@ const ICONS: Record<ActivityKind, JSX.Element> = {
     </svg>
   ),
   vehicle_returned: (
-    <svg aria-hidden="true" className="h-4 w-4 text-cyan-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+    <svg aria-hidden="true" className="h-4 w-4 text-info-text" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
       <path strokeLinecap="round" strokeLinejoin="round" d="M3 13h2l2-5h9l2 5h1a2 2 0 0 1 2 2v3h-2" />
       <circle cx="7.5" cy="18.5" r="1.5" />
       <circle cx="17.5" cy="18.5" r="1.5" />
     </svg>
   ),
   firearm_issued: (
-    <svg aria-hidden="true" className="h-4 w-4 text-purple-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+    <svg aria-hidden="true" className="h-4 w-4 text-info-text" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
       <path strokeLinecap="round" strokeLinejoin="round" d="m4 10 6-2 3 2 3-1 4 2-2 3-3-1-3 2-4-1Z" />
     </svg>
   ),
   firearm_returned: (
-    <svg aria-hidden="true" className="h-4 w-4 text-indigo-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+    <svg aria-hidden="true" className="h-4 w-4 text-info-text" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
       <path strokeLinecap="round" strokeLinejoin="round" d="m4 10 6-2 3 2 3-1 4 2-2 3-3-1-3 2-4-1Z" />
     </svg>
   ),
   incident_reported: (
-    <svg aria-hidden="true" className="h-4 w-4 text-red-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+    <svg aria-hidden="true" className="h-4 w-4 text-danger-text" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3m0 4h.01M4.22 4.22a1 1 0 0 1 1.42 0l13.14 13.14a1 1 0 0 1-1.42 1.42L4.22 5.64a1 1 0 0 1 0-1.42Z" />
     </svg>
   ),
   incident_resolved: (
-    <svg aria-hidden="true" className="h-4 w-4 text-green-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+    <svg aria-hidden="true" className="h-4 w-4 text-success-text" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
       <path strokeLinecap="round" strokeLinejoin="round" d="M20 6 9 17l-5-5" />
     </svg>
   ),

@@ -236,14 +236,14 @@ const EditUserModal: FC<EditUserModalProps> = ({ user, viewerRole, onClose, onSa
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex min-h-11 items-center justify-center rounded border border-border px-4 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
+            className="soc-btn soc-btn-neutral"
             disabled={loading}
           >
             Cancel
           </button>
           <button
             type="submit"
-            className="inline-flex min-h-11 items-center justify-center rounded border border-info-border bg-info-bg px-4 py-2 text-sm font-semibold text-info-text transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring) disabled:opacity-60"
+            className="soc-btn soc-btn-primary"
             disabled={loading}
           >
             {loading ? 'Saving...' : 'Save Changes'}

@@ -26,8 +26,11 @@
     "test:e2e:ui": "playwright test --ui",
     "audit:smoke": "node scripts/audit-browser-smoke.mjs",
     "audit:functionality": "node scripts/manual-functionality-audit.mjs",
+    "audit:a11y": "node scripts/accessibility-responsive-audit.mjs",
     "audit:mutations": "node ../scripts/mutation-functionality-audit.mjs",
-    "audit:phase5": "node scripts/phase5-browser-audit.mjs"
+    "audit:phase5": "node scripts/phase5-browser-audit.mjs",
+    "audit:phase4": "node scripts/phase4-platform-audit.mjs",
+    "audit:ui-consistency": "node scripts/ui-consistency-audit.mjs"
   },
   "dependencies": {
     "@tauri-apps/plugin-process": "^2.3.1",

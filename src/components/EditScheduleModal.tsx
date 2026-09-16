@@ -234,7 +234,7 @@ const EditScheduleModal: FC<EditScheduleModalProps> = ({ shift, onClose, onSave,
               <button 
                 type="button"
                 onClick={handleDelete}
-                className="flex-1 rounded bg-red-600 py-2 font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="soc-btn soc-btn-danger flex-1"
                 disabled={loading}
               >
                 {loading ? 'Deleting...' : 'Yes, Delete'}
@@ -242,7 +242,7 @@ const EditScheduleModal: FC<EditScheduleModalProps> = ({ shift, onClose, onSave,
               <button 
                 type="button"
                 onClick={() => setShowDeleteConfirm(false)}
-                className="soc-btn-secondary flex-1 rounded py-2 font-semibold"
+                className="soc-btn soc-btn-neutral flex-1"
                 disabled={loading}
               >
                 Cancel
@@ -346,14 +346,14 @@ const EditScheduleModal: FC<EditScheduleModalProps> = ({ shift, onClose, onSave,
             <div className="flex gap-3 pt-4">
               <button 
                 type="submit" 
-                className="soc-btn-primary flex-1 rounded py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                className="soc-btn soc-btn-primary flex-1"
                 disabled={loading}
               >
                 {loading ? 'Saving...' : 'Save Changes'}
               </button>
               <button 
                 type="button" 
-                className="flex-1 rounded bg-red-600 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="soc-btn soc-btn-danger flex-1"
                 onClick={() => setShowDeleteConfirm(true)}
                 disabled={loading}
               >
@@ -361,7 +361,7 @@ const EditScheduleModal: FC<EditScheduleModalProps> = ({ shift, onClose, onSave,
               </button>
               <button 
                 type="button" 
-                className="soc-btn-secondary flex-1 rounded py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
+                className="soc-btn soc-btn-neutral flex-1"
                 onClick={onClose} 
                 disabled={loading}
               >

@@ -61,7 +61,7 @@ const GuardFirearmPermits: FC<Props> = ({ user, onLogout, onViewChange, activeVi
       case 'active': return 'bg-success-bg text-success-text ring-1 ring-success-border'
       case 'expired': return 'bg-danger-bg text-danger-text ring-1 ring-danger-border'
       case 'pending': return 'bg-warning-bg text-warning-text ring-1 ring-warning-border'
-      default: return 'bg-zinc-500/15 text-zinc-400 ring-1 ring-zinc-500/30'
+      default: return 'soc-status-neutral'
     }
   }
 
@@ -81,7 +81,7 @@ const GuardFirearmPermits: FC<Props> = ({ user, onLogout, onViewChange, activeVi
 
         {loading ? (
           <div className="flex-1 flex items-center justify-center text-center">
-            <div className="text-indigo-600 text-lg font-medium">Loading permits...</div>
+            <div className="text-info-text text-lg font-medium">Loading permits...</div>
           </div>
         ) : (
           <div className="flex-1 flex flex-col p-4 md:p-8 overflow-hidden w-full animate-fade-in">

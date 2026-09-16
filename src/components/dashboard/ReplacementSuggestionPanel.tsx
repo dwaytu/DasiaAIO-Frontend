@@ -132,7 +132,7 @@ const ReplacementSuggestionPanel: FC<ReplacementSuggestionPanelProps> = ({
                   )}
                   {index !== 0 && !item.availability && (
                     <div className="mt-2">
-                      <span className="rounded border border-zinc-500/40 bg-zinc-500/10 px-2 py-1 font-mono text-[11px] text-zinc-400">
+                      <span className="soc-status-neutral">
                         Unavailable — keep as reserve
                       </span>
                     </div>

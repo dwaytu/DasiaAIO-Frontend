@@ -10,9 +10,9 @@ interface SidebarBrandProps {
 }
 
 const statusClass: Record<SystemStatus, string> = {
-  operational: 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.65)]',
-  degraded: 'bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.65)]',
-  critical: 'bg-red-400 shadow-[0_0_10px_rgba(248,113,113,0.7)]',
+  operational: 'bg-success shadow-[0_0_10px_var(--color-success)]',
+  degraded: 'bg-warning shadow-[0_0_10px_var(--color-warning)]',
+  critical: 'bg-danger shadow-[0_0_10px_var(--color-danger)]',
 }
 
 const SidebarBrand: FC<SidebarBrandProps> = ({ onClick, compact = false, status = 'operational' }) => {
@@ -24,7 +24,7 @@ const SidebarBrand: FC<SidebarBrandProps> = ({ onClick, compact = false, status 
       aria-label="Go to dashboard"
       title="SENTINEL"
     >
-      <span className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-cyan-400/35 bg-cyan-500/10 text-cyan-300 shadow-[0_0_14px_rgba(34,211,238,0.28)]">
+      <span className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-info-border bg-info-bg text-info-text shadow-[0_0_14px_var(--color-info)]">
         <SentinelLogo size={30} variant="IconOnly" animated className="drop-shadow-[0_0_8px_rgba(34,211,238,0.45)]" />
       </span>
 

@@ -1,4 +1,5 @@
 import { FC, ReactNode } from 'react'
+import { Menu } from 'lucide-react'
 import SectionBadge from '../SectionBadge'
 import type { User } from '../../context/AuthContext'
 import HeaderGlobalActions from './HeaderGlobalActions'
@@ -24,12 +25,10 @@ const Header: FC<HeaderProps> = ({ title, badgeLabel, onLogout, rightSlot, onMen
         <button
           type="button"
           onClick={onMenuClick}
-          className="min-h-11 min-w-11 rounded p-2 text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
-          aria-label="Toggle menu"
+          className="soc-btn-neutral min-h-11 min-w-11 rounded-md p-2 text-text-secondary"
+          aria-label="Toggle navigation menu"
         >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
+          <Menu className="h-5 w-5" aria-hidden="true" />
         </button>
         <div className="min-w-0">
           <h1 className="m-0 text-xl font-bold uppercase tracking-wide text-text-primary md:text-2xl">{title}</h1>

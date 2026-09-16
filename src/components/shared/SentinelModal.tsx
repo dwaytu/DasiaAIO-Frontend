@@ -1,4 +1,5 @@
-import { ReactNode, useEffect, useId } from 'react'
+import { ReactNode, useEffect, useId, useRef } from 'react'
+import { X } from 'lucide-react'
 
 type SentinelModalSize = 'sm' | 'md' | 'lg'
 
@@ -17,6 +18,9 @@ const SIZE_CLASS: Record<SentinelModalSize, string> = {
   lg: 'max-w-2xl',
 }
 
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+
 const SentinelModal = ({
   open,
   onClose,
@@ -26,20 +30,58 @@ const SentinelModal = ({
   size = 'md',
 }: SentinelModalProps) => {
   const titleId = useId()
+  const subtitleId = useId()
+  const panelRef = useRef<HTMLDivElement | null>(null)
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null)
+  const previousActiveElementRef = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
     if (!open) return
 
-    const handleEscape = (event: KeyboardEvent) => {
+    previousActiveElementRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    closeButtonRef.current?.focus()
+
+    const getFocusableElements = () => {
+      if (!panelRef.current) return []
+      return Array.from(panelRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
+        (element) => !element.hasAttribute('aria-hidden'),
+      )
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         onClose()
+        return
+      }
+
+      if (event.key !== 'Tab') return
+
+      const focusableElements = getFocusableElements()
+      if (focusableElements.length === 0) {
+        event.preventDefault()
+        panelRef.current?.focus()
+        return
+      }
+
+      const firstElement = focusableElements[0]
+      const lastElement = focusableElements[focusableElements.length - 1]
+
+      if (event.shiftKey && document.activeElement === firstElement) {
+        event.preventDefault()
+        lastElement.focus()
+      } else if (!event.shiftKey && document.activeElement === lastElement) {
+        event.preventDefault()
+        firstElement.focus()
       }
     }
 
-    window.addEventListener('keydown', handleEscape)
+    window.addEventListener('keydown', handleKeyDown)
 
     return () => {
-      window.removeEventListener('keydown', handleEscape)
+      window.removeEventListener('keydown', handleKeyDown)
+      if (previousActiveElementRef.current?.isConnected) {
+        previousActiveElementRef.current.focus()
+      }
     }
   }, [open, onClose])
 
@@ -61,24 +103,28 @@ const SentinelModal = ({
   return (
     <div className="soc-modal-backdrop" onClick={onClose}>
       <div
-        className={`soc-modal-panel mx-4 flex w-full max-h-[85vh] flex-col ${SIZE_CLASS[size]} rounded-lg border border-border bg-surface-elevated shadow-2xl ring-1 ring-border/50`}
+        ref={panelRef}
+        tabIndex={-1}
+        className={`soc-modal-panel soc-modal-surface mx-4 flex w-full max-h-[85vh] flex-col ${SIZE_CLASS[size]} rounded-lg border border-border shadow-2xl ring-1 ring-border/50`}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
+        aria-describedby={subtitle ? subtitleId : undefined}
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex shrink-0 items-center justify-between border-b border-border bg-surface/50 px-6 py-5">
           <div>
             <h2 id={titleId} className="text-xl font-bold text-text-primary">{title}</h2>
-            {subtitle && <p className="mt-1 text-sm text-text-secondary">{subtitle}</p>}
+            {subtitle && <p id={subtitleId} className="mt-1 text-sm text-text-secondary">{subtitle}</p>}
           </div>
           <button
             type="button"
-            className="flex min-h-11 min-w-11 items-center justify-center rounded-md text-2xl text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
+            ref={closeButtonRef}
+            className="flex min-h-11 min-w-11 items-center justify-center rounded-md text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
             onClick={onClose}
-            aria-label="Close"
+            aria-label="Close dialog"
           >
-            ×
+            <X className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
         <div className="overflow-y-auto px-6 py-5">{children}</div>

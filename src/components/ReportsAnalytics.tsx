@@ -1,9 +1,9 @@
 import { FC } from 'react'
 
 const ReportsAnalytics: FC<any> = () => (
-  <div className="bg-surface rounded shadow-md p-6">
-    <h2 className="text-xl font-bold text-gray-800">Reports & Analytics</h2>
-  </div>
+  <section className="soc-surface p-6" aria-labelledby="reports-analytics-title">
+    <h2 id="reports-analytics-title" className="soc-section-title">Reports & Analytics</h2>
+  </section>
 )
 
 export default ReportsAnalytics

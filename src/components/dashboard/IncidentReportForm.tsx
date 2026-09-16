@@ -208,7 +208,7 @@ const IncidentReportForm: FC<IncidentReportFormProps> = ({ onSubmit, onCancel })
         <button
           type="submit"
           disabled={submitting}
-          className="rounded bg-(--color-danger) px-4 py-1.5 font-mono text-xs font-semibold text-white hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-danger) disabled:cursor-not-allowed disabled:opacity-60"
+          className="soc-btn soc-btn-danger font-mono text-xs"
         >
           {submitting ? 'Submitting…' : 'Submit Report'}
         </button>
@@ -216,7 +216,7 @@ const IncidentReportForm: FC<IncidentReportFormProps> = ({ onSubmit, onCancel })
           <button
             type="button"
             onClick={onCancel}
-            className="rounded border border-(--color-border) px-4 py-1.5 font-mono text-xs text-(--color-muted-text) hover:border-(--color-text) hover:text-(--color-text) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
+            className="soc-btn soc-btn-neutral font-mono text-xs"
           >
             Cancel
           </button>

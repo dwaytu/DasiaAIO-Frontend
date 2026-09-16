@@ -233,7 +233,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ user, isOpen, onT
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-tertiary">Global Actions</p>
               <h3 className="text-base font-semibold text-text-primary">Quick Inbox</h3>
             </div>
-            <button type="button" onClick={onClose} className="min-h-11 rounded border border-border bg-surface-elevated px-3 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-surface-hover">
+            <button type="button" onClick={onClose} className="soc-btn-neutral">
               Close
             </button>
           </div>
@@ -322,7 +322,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ user, isOpen, onT
           </div>
 
           <div className="border-t border-border px-4 py-4">
-            <button type="button" onClick={onViewAll} className="w-full min-h-11 rounded border border-border bg-surface-elevated px-4 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-surface-hover">
+            <button type="button" onClick={onViewAll} className="soc-btn-neutral w-full">
               View Full Inbox
             </button>
           </div>

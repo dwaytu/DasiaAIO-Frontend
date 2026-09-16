@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router'
 import { LayoutDashboard, ClipboardCheck, Calendar, Bell, MoreHorizontal, X } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
@@ -7,7 +7,7 @@ import { useLocationConsent } from '../../hooks/useLocationConsent'
 import { usePresenceHeartbeat } from '../../hooks/usePresenceHeartbeat'
 import { normalizeRole } from '../../types/auth'
 import { APP_VERSION } from '../../config'
-import { getSidebarNav } from '../../config/navigation'
+import { getMobileBottomNavViews, getSidebarNav } from '../../config/navigation'
 import { getLocationConsentStatus } from '../../utils/location'
 import { VIEW_TO_ROUTE } from '../../router/routes'
 import ToastContainer from '../shared/ToastContainer'
@@ -57,6 +57,28 @@ export default function AppShell() {
   // Local checkbox state for the ToA location consent check (UI-only, not persisted yet)
   const [localLocationConsent, setLocalLocationConsent] = useState(locationConsentPersisted)
   const [moreDrawerOpen, setMoreDrawerOpen] = useState(false)
+  const moreDrawerRef = useRef<HTMLDivElement | null>(null)
+  const previousMoreFocusRef = useRef<HTMLElement | null>(null)
+
+  useEffect(() => {
+    if (!moreDrawerOpen) {
+      if (previousMoreFocusRef.current?.isConnected) {
+        previousMoreFocusRef.current.focus()
+        previousMoreFocusRef.current = null
+      }
+      return
+    }
+
+    previousMoreFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    const firstAction = moreDrawerRef.current?.querySelector<HTMLElement>('button:not([disabled])')
+    firstAction?.focus()
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMoreDrawerOpen(false)
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [moreDrawerOpen])
 
   const normalizedRole = normalizeRole(user?.role)
 
@@ -119,6 +141,7 @@ export default function AppShell() {
     'analytics',
     'audit',
     'calendar',
+    'operations-map',
     'profile',
     'settings',
     'mdr-import',
@@ -128,16 +151,22 @@ export default function AppShell() {
     activeView.startsWith('mdr-import/')
   const showAppShellMobileNav = isElevatedRole && !isOperationalShellRoute
 
-  const mobileBottomTabs = [
-    { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { key: 'approvals', label: 'Approvals', icon: ClipboardCheck },
-    { key: 'schedule', label: 'Schedule', icon: Calendar },
-    { key: 'inbox', label: 'Alerts', icon: Bell },
-  ]
+  const availableNavItems = normalizedRole ? getSidebarNav(normalizedRole) : []
+  const mobileBottomTabs = (() => {
+    const tabs = [
+      { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { key: 'approvals', label: 'Approvals', icon: ClipboardCheck },
+      { key: 'schedule', label: 'Schedule', icon: Calendar },
+      { key: 'inbox', label: 'Alerts', icon: Bell },
+    ]
 
-  const bottomTabKeys = new Set(['dashboard', 'approvals', 'schedule', 'inbox'])
+    const visibleViews = getMobileBottomNavViews(availableNavItems)
+    return tabs.filter((tab) => visibleViews.includes(tab.key))
+  })()
+
+  const bottomTabKeys = new Set(mobileBottomTabs.map((tab) => tab.key))
   const moreNavItems = isElevatedRole
-    ? getSidebarNav(normalizedRole).filter(item => !bottomTabKeys.has(item.view))
+    ? availableNavItems.filter(item => !bottomTabKeys.has(item.view))
     : []
 
   const mobileSafeBottomOffset = 'calc(5rem + env(safe-area-inset-bottom, 0px))'
@@ -214,14 +243,14 @@ export default function AppShell() {
               onClick={() => {
                 void requestGeoPermission()
               }}
-              className="soc-btn-primary min-h-11 rounded-md px-3 py-1.5 text-xs font-semibold"
+              className="soc-btn-primary"
             >
               Prompt Location Access
             </button>
             <button
               type="button"
               onClick={dismissLocationBanner}
-              className="min-h-11 rounded-md border border-border px-3 py-1.5 text-xs font-semibold text-text-secondary"
+              className="soc-btn-neutral"
               aria-label="Dismiss location banner for 24 hours"
             >
               Dismiss
@@ -349,7 +378,7 @@ export default function AppShell() {
               <button
                 type="button"
                 onClick={declineToa}
-                className="min-h-11 rounded-md border border-border-elevated bg-surface-elevated px-4 py-2 text-sm font-semibold text-text-secondary"
+                className="soc-btn-neutral"
               >
                 Decline
               </button>
@@ -358,7 +387,7 @@ export default function AppShell() {
                 onClick={() => {
                   void handleToaAccept()
                 }}
-                className="min-h-11 rounded-md bg-info px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-55"
+                className="soc-btn-primary disabled:cursor-not-allowed"
                 disabled={!toaChecked || !localLocationConsent}
               >
                 Agree and Continue
@@ -391,14 +420,14 @@ export default function AppShell() {
               <button
                 type="button"
                 onClick={denyLocationConsent}
-                className="min-h-11 rounded-md border border-border-elevated bg-surface-elevated px-4 py-2 text-sm font-semibold text-text-secondary"
+                className="soc-btn-neutral"
               >
                 Decline
               </button>
               <button
                 type="button"
                 onClick={grantLocationConsent}
-                className="min-h-11 rounded-md bg-info px-4 py-2 text-sm font-semibold text-white"
+                className="soc-btn-primary"
               >
                 Allow tracking
               </button>
@@ -430,7 +459,7 @@ export default function AppShell() {
               <button
                 type="button"
                 onClick={dismissWhatsNewPrompt}
-                className="min-h-11 rounded-md bg-info px-4 py-2 text-sm font-semibold text-white"
+                className="soc-btn-primary"
               >
                 Continue
               </button>
@@ -466,7 +495,7 @@ export default function AppShell() {
               <button
                 type="button"
                 onClick={dismissReleasePrompt}
-                className="min-h-11 rounded-md border border-border-elevated bg-surface-elevated px-4 py-2 text-sm font-semibold text-text-secondary"
+                className="soc-btn-neutral"
               >
                 Later
               </button>
@@ -475,7 +504,7 @@ export default function AppShell() {
                 onClick={() => {
                   void downloadUpdate()
                 }}
-                className="min-h-11 rounded-md bg-info px-4 py-2 text-sm font-semibold text-white"
+                className="soc-btn-primary"
               >
                 {releasePrompt.platform === 'tauri' ? 'Update now' : 'Open release page'}
               </button>
@@ -493,12 +522,13 @@ export default function AppShell() {
               <div className="absolute inset-0 bg-black/40" />
               <div
                 id="appshell-more-drawer"
+                ref={moreDrawerRef}
                 className="absolute bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] left-2 right-2 rounded border border-border bg-surface p-2 shadow-lg"
                 onClick={e => e.stopPropagation()}
               >
                 <div className="flex items-center justify-between px-3 py-2 mb-1">
                   <span className="text-xs font-semibold uppercase tracking-wider text-text-secondary">More</span>
-                  <button type="button" onClick={() => setMoreDrawerOpen(false)} className="p-1 text-text-secondary hover:text-text-primary">
+                  <button type="button" onClick={() => setMoreDrawerOpen(false)} className="soc-btn-neutral min-h-11 min-w-11 p-2" aria-label="Close more menu">
                     <X className="h-4 w-4" aria-hidden="true" />
                     <span className="sr-only">Close menu</span>
                   </button>
@@ -511,7 +541,7 @@ export default function AppShell() {
                         <button
                           type="button"
                           onClick={() => { navigate(itemRoute); setMoreDrawerOpen(false) }}
-                          className="min-h-11 w-full rounded px-2 py-2 text-xs font-semibold text-text-secondary hover:bg-surface-elevated hover:text-text-primary transition-colors"
+                          className="soc-btn-neutral min-h-11 w-full px-2 py-2 text-xs"
                         >
                           {item.label}
                         </button>

@@ -103,7 +103,7 @@ const LiveOperationsFeed: FC<LiveOperationsFeedProps> = ({ items, onDismiss, onU
                     selectEvent({ id: item.id, type: eventType, title: item.description })
                   }
                 }}
-                className={`soc-timeline-item soc-animated-entry cursor-pointer rounded border p-3 transition-all duration-200 ${categoryStyles[item.category]} ${selectedEventId === item.id ? 'ring-2 ring-cyan-400' : ''}`}
+                className={`soc-timeline-item soc-animated-entry cursor-pointer rounded border p-3 transition-all duration-200 ${categoryStyles[item.category]} ${selectedEventId === item.id ? 'ring-2 ring-info' : ''}`}
                 style={{ animationDelay: `${index * 70}ms` }}
                 aria-pressed={selectedEventId === item.id}
               >

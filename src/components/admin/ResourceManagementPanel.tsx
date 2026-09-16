@@ -1,5 +1,5 @@
 import { FC, FormEvent, useEffect, useMemo, useRef, useState } from 'react'
-import { MapPin, Plus, Shield, Trash2, Truck, Users } from 'lucide-react'
+import { MapPin, Pencil, Plus, Shield, Trash2, Truck, Users } from 'lucide-react'
 import { API_BASE_URL } from '../../config'
 import { fetchJsonOrThrow, getAuthHeaders } from '../../utils/api'
 import { logError } from '../../utils/logger'
@@ -10,6 +10,7 @@ import EmptyState from '../shared/EmptyState'
 import LoadingSkeleton from '../shared/LoadingSkeleton'
 import SentinelModal from '../shared/SentinelModal'
 import EditUserModal from '../EditUserModal'
+import CreateGuardAccountModal from './CreateGuardAccountModal'
 
 type ManageTab = 'guards' | 'firearms' | 'vehicles' | 'clients'
 
@@ -144,7 +145,13 @@ const GuardsTab: FC<{
   )
   const viewerRole = useMemo(() => normalizeRole(currentUser?.role), [currentUser?.role])
   const creatableRoles: UserCreateRole[] = viewerRole == null ? [] : CREATABLE_ROLES_BY_VIEWER[viewerRole]
+  const nonGuardCreatableRoles = useMemo<UserCreateRole[]>(
+    () => creatableRoles.filter((role) => role !== 'guard'),
+    [creatableRoles],
+  )
+  const canCreateGuardAccount = creatableRoles.includes('guard')
   const [isAddUserOpen, setIsAddUserOpen] = useState(false)
+  const [isCreateGuardOpen, setIsCreateGuardOpen] = useState(false)
   const [isSubmittingUser, setIsSubmittingUser] = useState(false)
   const [formErrors, setFormErrors] = useState<UserCreationErrors>({})
   const [createError, setCreateError] = useState('')
@@ -156,7 +163,7 @@ const GuardsTab: FC<{
     email: '',
     password: '',
     phoneNumber: '',
-    role: creatableRoles[0] || 'guard',
+    role: nonGuardCreatableRoles[0] || 'guard',
     licenseNumber: '',
     licenseIssuedDate: '',
     licenseExpiryDate: '',
@@ -164,10 +171,10 @@ const GuardsTab: FC<{
   const nameInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    if (creatableRoles.length > 0 && !creatableRoles.includes(newUser.role)) {
-      setNewUser((prev) => ({ ...prev, role: creatableRoles[0] }))
+    if (nonGuardCreatableRoles.length > 0 && !nonGuardCreatableRoles.includes(newUser.role)) {
+      setNewUser((prev) => ({ ...prev, role: nonGuardCreatableRoles[0] }))
     }
-  }, [creatableRoles, newUser.role])
+  }, [nonGuardCreatableRoles, newUser.role])
 
   useEffect(() => {
     if (!isAddUserOpen) return
@@ -195,7 +202,7 @@ const GuardsTab: FC<{
   }, [isAddUserOpen, isSubmittingUser])
 
   const openAddUserModal = () => {
-    if (creatableRoles.length === 0) return
+    if (nonGuardCreatableRoles.length === 0) return
     setFormErrors({})
     setCreateError('')
     setNewUser({
@@ -204,7 +211,7 @@ const GuardsTab: FC<{
       email: '',
       password: '',
       phoneNumber: '',
-      role: creatableRoles[0],
+      role: nonGuardCreatableRoles[0],
       licenseNumber: '',
       licenseIssuedDate: '',
       licenseExpiryDate: '',
@@ -325,7 +332,7 @@ const GuardsTab: FC<{
         email: '',
         password: '',
         phoneNumber: '',
-        role: creatableRoles[0] || 'guard',
+        role: nonGuardCreatableRoles[0] || 'guard',
         licenseNumber: '',
         licenseIssuedDate: '',
         licenseExpiryDate: '',
@@ -366,88 +373,123 @@ const GuardsTab: FC<{
   }
 
   return (
-    <section className="table-glass rounded p-4 md:p-6">
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="soc-section-title">Guard Roster ({guards.length})</h2>
+    <section className="soc-surface overflow-hidden">
+      <div className="flex flex-col gap-4 border-b border-border-subtle bg-surface-elevated/30 p-4 md:flex-row md:items-end md:justify-between md:p-6">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-text-tertiary">Personnel</p>
+            <span className="soc-chip border border-info-border bg-info-bg text-info-text">{guards.length} registered</span>
+          </div>
+          <h2 className="mt-1 text-xl font-black uppercase tracking-wide text-text-primary">Guard roster</h2>
+          <p className="mt-1 max-w-2xl text-sm text-text-secondary">
+            Approved field personnel and their contact and license records.
+          </p>
+        </div>
         <div className="flex flex-wrap items-center gap-2">
           {createSuccess && (
-            <span className="rounded border border-success-border bg-success-bg px-3 py-1.5 text-xs font-semibold text-success-text">
+            <span className="rounded border border-success-border bg-success-bg px-3 py-2 text-xs font-semibold text-success-text" role="status">
               {createSuccess}
             </span>
           )}
-          {creatableRoles.length > 0 && (
+          {canCreateGuardAccount && (
+            <button
+              type="button"
+              onClick={() => setIsCreateGuardOpen(true)}
+              className="soc-btn soc-btn-primary"
+            >
+              <Plus size={16} aria-hidden="true" />
+              Create guard account
+            </button>
+          )}
+          {nonGuardCreatableRoles.length > 0 && (
             <button
               type="button"
               onClick={openAddUserModal}
-              className="inline-flex min-h-11 items-center justify-center rounded border border-info-border bg-info-bg px-4 py-2 text-sm font-semibold text-info-text transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
+              className="soc-btn soc-btn-neutral"
             >
-              + Add User
+              <Plus size={16} aria-hidden="true" />
+              Add account
             </button>
           )}
         </div>
       </div>
 
-      {createError && (
-        <div className="mb-4 rounded border border-danger-border bg-danger-bg p-3 text-sm text-danger-text" role="alert">
-          {createError}
-        </div>
-      )}
+      <div className="p-4 md:p-6">
+        {createError && (
+          <div className="soc-alert-error mb-4 text-sm" role="alert">
+            {createError}
+          </div>
+        )}
 
-      {guards.length === 0 ? (
-        <EmptyState icon={Users} title="No guards registered" subtitle="Guards will appear here once approved" />
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead className="thead-glass">
-              <tr>
-                <th className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Name</th>
-                <th className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Email</th>
-                <th className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider hidden md:table-cell">Phone</th>
-                <th className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider hidden lg:table-cell">License</th>
-                {isSuperadminViewer && (
-                  <th className="px-4 py-3 text-right font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Actions</th>
-                )}
-              </tr>
-            </thead>
-            <tbody>
-              {guards.map((g) => (
-                <tr key={g.id} className="border-b border-border hover:bg-surface-hover">
-                  <td className="px-4 py-3 text-text-primary">{g.full_name || g.username}</td>
-                  <td className="px-4 py-3 text-text-secondary text-sm">{g.email}</td>
-                  <td className="px-4 py-3 text-text-secondary text-sm hidden md:table-cell">{g.phone_number || '-'}</td>
-                  <td className="px-4 py-3 text-text-secondary text-sm hidden lg:table-cell">{g.license_number || '-'}</td>
+        {guards.length === 0 ? (
+          <EmptyState icon={Users} title="No guards registered" subtitle="Guards will appear here once approved" />
+        ) : (
+          <div className="overflow-x-auto rounded-md border border-border-subtle">
+            <table className="w-full min-w-[760px] border-collapse">
+              <caption className="sr-only">Registered guard personnel</caption>
+              <thead className="thead-glass">
+                <tr>
+                  <th scope="col" className="w-[25%] px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.14em] text-text-secondary">Name</th>
+                  <th scope="col" className="w-[34%] px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.14em] text-text-secondary">Email</th>
+                  <th scope="col" className="w-[18%] px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.14em] text-text-secondary hidden md:table-cell">Phone</th>
+                  <th scope="col" className="w-[15%] px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.14em] text-text-secondary hidden lg:table-cell">License</th>
                   {isSuperadminViewer && (
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex justify-end gap-2">
-                        <button
-                          onClick={() => setEditUser(g)}
-                          className="inline-flex min-h-11 items-center gap-1 rounded px-3 py-1.5 text-xs font-semibold text-info-text bg-info-bg ring-1 ring-info-border hover:opacity-90 transition-opacity"
-                        >
-                          Edit
-                        </button>
-                      <button
-                        type="button"
-                        onClick={() => onDeleteUser(g.id, g.email)}
-                        className="soc-btn soc-btn-danger"
-                      >
-                        <Trash2 size={15} aria-hidden="true" />
-                        Remove
-                      </button>
-                      </div>
-                    </td>
+                    <th scope="col" className="w-[8%] px-4 py-3 text-right text-xs font-bold uppercase tracking-[0.14em] text-text-secondary">Actions</th>
                   )}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+              </thead>
+              <tbody>
+                {guards.map((g) => (
+                  <tr key={g.id} className="group border-b border-border-subtle last:border-b-0 hover:bg-surface-hover">
+                    <td className="px-4 py-4 align-middle">
+                      <div className="flex items-center gap-3">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-info-border bg-info-bg text-xs font-black text-info-text">
+                          {(g.full_name || g.username || '?').slice(0, 1).toUpperCase()}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="truncate font-semibold text-text-primary">{g.full_name || g.username}</p>
+                          <p className="mt-0.5 text-xs uppercase tracking-[0.12em] text-text-tertiary">Guard account</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-4 align-middle text-sm text-text-secondary">{g.email}</td>
+                    <td className="px-4 py-4 align-middle text-sm tabular-nums text-text-secondary hidden md:table-cell">{g.phone_number || <span className="text-text-tertiary">Not provided</span>}</td>
+                    <td className="px-4 py-4 align-middle text-sm text-text-secondary hidden lg:table-cell">{g.license_number || <span className="text-text-tertiary">Not provided</span>}</td>
+                    {isSuperadminViewer && (
+                      <td className="px-4 py-4 align-middle text-right">
+                        <div className="flex justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setEditUser(g)}
+                            className="soc-btn soc-btn-neutral"
+                          >
+                            <Pencil size={15} aria-hidden="true" />
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onDeleteUser(g.id, g.email)}
+                            className="soc-btn soc-btn-danger"
+                          >
+                            <Trash2 size={15} aria-hidden="true" />
+                            Remove
+                          </button>
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
       <SentinelModal
         open={isAddUserOpen}
         onClose={closeAddUserModal}
-        title="Add User"
-        subtitle="Create a new account for personnel access."
+        title="Add Account"
+        subtitle="Create a non-guard account for personnel access."
       >
         <form onSubmit={handleCreateUser} className="space-y-4" noValidate>
               <div>
@@ -571,7 +613,7 @@ const GuardsTab: FC<{
                   onChange={(event) => setNewUser((prev) => ({ ...prev, role: event.target.value as UserCreateRole }))}
                   className="w-full rounded border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-(--color-focus-ring)"
                 >
-                  {creatableRoles.map((role: UserCreateRole) => (
+                  {nonGuardCreatableRoles.map((role: UserCreateRole) => (
                     <option key={role} value={role}>
                       {USER_ROLE_LABEL[role]}
                     </option>
@@ -655,7 +697,7 @@ const GuardsTab: FC<{
                 </button>
                 <button
                   type="submit"
-                  className="inline-flex min-h-11 items-center justify-center rounded border border-info-border bg-info-bg px-4 py-2 text-sm font-semibold text-info-text transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring) disabled:opacity-60"
+                  className="soc-btn soc-btn-primary"
                   disabled={isSubmittingUser}
                 >
                   {isSubmittingUser ? 'Creating...' : 'Create User'}
@@ -663,6 +705,16 @@ const GuardsTab: FC<{
               </div>
         </form>
       </SentinelModal>
+
+      <CreateGuardAccountModal
+        isOpen={isCreateGuardOpen}
+        onClose={() => setIsCreateGuardOpen(false)}
+        viewerRole={viewerRole}
+        onCreated={async () => {
+          if (onUsersChanged) await Promise.resolve(onUsersChanged())
+          setCreateSuccess('Guard account submitted successfully.')
+        }}
+      />
 
       <EditUserModal
         user={editUser}
@@ -818,7 +870,7 @@ const FirearmsTab: FC = () => {
                       f.status === 'available' ? 'bg-success-bg text-success-text ring-1 ring-success-border' :
                       f.status === 'deployed' ? 'bg-info-bg text-info-text ring-1 ring-info-border' :
                       f.status === 'maintenance' ? 'bg-warning-bg text-warning-text ring-1 ring-warning-border' :
-                      'bg-zinc-500/15 text-zinc-400 ring-1 ring-zinc-500/30'
+                      'soc-status-neutral'
                     }`}>
                       {f.status}
                     </span>
@@ -1001,7 +1053,7 @@ const VehiclesTab: FC = () => {
                       car.status === 'available' ? 'bg-success-bg text-success-text ring-1 ring-success-border' :
                       car.status === 'allocated' ? 'bg-warning-bg text-warning-text ring-1 ring-warning-border' :
                       car.status === 'maintenance' ? 'bg-info-bg text-info-text ring-1 ring-info-border' :
-                      'bg-zinc-500/15 text-zinc-400 ring-1 ring-zinc-500/30'
+                      'soc-status-neutral'
                     }`}>
                       {car.status}
                     </span>

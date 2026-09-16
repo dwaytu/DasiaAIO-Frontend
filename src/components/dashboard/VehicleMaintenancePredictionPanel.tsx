@@ -9,9 +9,9 @@ interface VehicleMaintenancePredictionPanelProps {
 }
 
 const riskPillClass: Record<string, string> = {
-  LOW: 'border-green-500/40 bg-green-500/10 text-green-200',
-  MEDIUM: 'border-amber-400/40 bg-amber-500/10 text-amber-200',
-  HIGH: 'border-red-500/40 bg-red-500/10 text-red-200',
+  LOW: 'soc-status-success',
+  MEDIUM: 'soc-status-warning',
+  HIGH: 'soc-status-danger',
 }
 
 const getUrgencyNote = (item: VehicleMaintenancePrediction): string => {
@@ -48,7 +48,7 @@ const VehicleMaintenancePredictionPanel: FC<VehicleMaintenancePredictionPanelPro
         {loading && <p className="text-center font-mono text-xs text-(--color-muted-text)">Scoring vehicle maintenance risk...</p>}
 
         {!loading && error && (
-          <p role="alert" className="text-center font-mono text-xs text-red-400">
+          <p role="alert" className="text-center font-mono text-xs text-danger-text">
             {error}
           </p>
         )}
@@ -90,14 +90,14 @@ const VehicleMaintenancePredictionPanel: FC<VehicleMaintenancePredictionPanelPro
                       <button
                         type="button"
                         onClick={() => alert(`Flag ${item.licensePlate} for immediate inspection`)}
-                        className="rounded border border-red-500/40 bg-red-500/10 px-2 py-1 font-mono text-[11px] font-semibold text-red-200 transition-colors hover:bg-red-500/20 focus-visible:outline-2 focus-visible:outline-red-400"
+                        className="soc-btn soc-btn-danger min-h-11 px-2 py-1 font-mono text-[11px]"
                       >
                         Flag for Inspection
                       </button>
                       <button
                         type="button"
                         onClick={() => alert(`Remove ${item.licensePlate} from dispatch pool`)}
-                        className="rounded border border-orange-400/40 bg-orange-500/10 px-2 py-1 font-mono text-[11px] text-orange-200 transition-colors hover:bg-orange-500/20 focus-visible:outline-2 focus-visible:outline-orange-400"
+                        className="soc-btn soc-btn-warning min-h-11 px-2 py-1 font-mono text-[11px]"
                       >
                         Remove from Dispatch
                       </button>
@@ -108,7 +108,7 @@ const VehicleMaintenancePredictionPanel: FC<VehicleMaintenancePredictionPanelPro
                       <button
                         type="button"
                         onClick={() => alert(`Schedule maintenance for ${item.licensePlate}`)}
-                        className="rounded border border-amber-400/40 bg-amber-500/10 px-2 py-1 font-mono text-[11px] text-amber-200 transition-colors hover:bg-amber-500/20 focus-visible:outline-2 focus-visible:outline-amber-400"
+                        className="soc-btn soc-btn-warning min-h-11 px-2 py-1 font-mono text-[11px]"
                       >
                         Book Maintenance
                       </button>

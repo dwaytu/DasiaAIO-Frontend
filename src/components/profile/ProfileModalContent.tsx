@@ -470,7 +470,7 @@ export const ProfileModalContent: FC<ProfileModalContentProps> = ({
               disabled={availabilityLoading}
               onClick={() => void handleToggleAvailability()}
               className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring) disabled:cursor-not-allowed disabled:opacity-50 ${
-                isAvailable ? 'bg-green-500' : 'bg-zinc-500'
+                isAvailable ? 'bg-success' : 'bg-surface-elevated'
               }`}
               aria-label={isAvailable ? 'Mark yourself as unavailable' : 'Mark yourself as available'}
             >
@@ -502,7 +502,7 @@ export const ProfileModalContent: FC<ProfileModalContentProps> = ({
               disabled={pushLoading}
               onClick={() => void handleTogglePush()}
               className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring) disabled:cursor-not-allowed disabled:opacity-50 ${
-                isPushEnabled ? 'bg-indigo-500' : 'bg-zinc-500'
+                isPushEnabled ? 'bg-info' : 'bg-surface-elevated'
               }`}
               aria-label={isPushEnabled ? 'Disable push notifications' : 'Enable push notifications'}
             >
@@ -528,7 +528,7 @@ export const ProfileModalContent: FC<ProfileModalContentProps> = ({
               name="fullName"
               value={formData.fullName}
               onChange={handleInputChange}
-              className="w-full rounded border border-border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="soc-field"
               placeholder="Enter your full name"
             />
           </div>
@@ -541,7 +541,7 @@ export const ProfileModalContent: FC<ProfileModalContentProps> = ({
               name="email"
               value={formData.email}
               onChange={handleInputChange}
-              className="w-full rounded border border-border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="soc-field"
               placeholder="Enter your email"
             />
           </div>
@@ -554,7 +554,7 @@ export const ProfileModalContent: FC<ProfileModalContentProps> = ({
               name="phoneNumber"
               value={formData.phoneNumber}
               onChange={handleInputChange}
-              className="w-full rounded border border-border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="soc-field"
               placeholder="+63-###-###-####"
             />
           </div>
@@ -580,7 +580,7 @@ export const ProfileModalContent: FC<ProfileModalContentProps> = ({
                   name="licenseNumber"
                   value={formData.licenseNumber}
                   onChange={handleInputChange}
-                  className="w-full rounded border border-border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="soc-field"
                   placeholder="Enter license number"
                 />
               </div>
@@ -593,7 +593,7 @@ export const ProfileModalContent: FC<ProfileModalContentProps> = ({
                   name="licenseIssuedDate"
                   value={formData.licenseIssuedDate}
                   onChange={handleInputChange}
-                  className="w-full rounded border border-border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="soc-field"
                 />
               </div>
 
@@ -605,7 +605,7 @@ export const ProfileModalContent: FC<ProfileModalContentProps> = ({
                   name="licenseExpiryDate"
                   value={formData.licenseExpiryDate}
                   onChange={handleInputChange}
-                  className="w-full rounded border border-border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="soc-field"
                 />
               </div>
 
@@ -617,7 +617,7 @@ export const ProfileModalContent: FC<ProfileModalContentProps> = ({
                   value={formData.address}
                   onChange={handleInputChange}
                   rows={2}
-                  className="w-full rounded border border-border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="soc-field"
                   placeholder="Enter complete address"
                 />
               </div>

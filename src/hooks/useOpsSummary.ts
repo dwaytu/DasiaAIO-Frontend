@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { API_BASE_URL } from '../config'
+import { normalizeRole } from '../types/auth'
 import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
+import { useAuth } from './useAuth'
 
 export interface OpsSummary {
   activeGuardsOnDuty: number
@@ -14,6 +16,9 @@ export interface OpsSummary {
 }
 
 export function useOpsSummary() {
+  const { user } = useAuth()
+  const viewerRole = normalizeRole(user?.role)
+  const canApproveGuards = viewerRole === 'admin' || viewerRole === 'superadmin'
   const [summary, setSummary] = useState<OpsSummary>({
     activeGuardsOnDuty: 0,
     guardsAbsentToday: 0,
@@ -36,9 +41,13 @@ export function useOpsSummary() {
       }
       const headers = getAuthHeaders()
 
+      const approvalsRequest = canApproveGuards
+        ? fetchJsonOrThrow<any>(`${API_BASE_URL}/api/users/pending-approvals`, { headers, signal }, 'Failed to load approvals')
+        : Promise.resolve({ users: [] })
+
       const [shiftsResult, approvalsResult, allocationsResult, overdueResult, tripsResult, vehiclesResult, permitsResult] = await Promise.allSettled([
         fetchJsonOrThrow<any>(`${API_BASE_URL}/api/guard-replacement/shifts`, { headers, signal }, 'Failed to load shifts'),
-        fetchJsonOrThrow<any>(`${API_BASE_URL}/api/users/pending-approvals`, { headers, signal }, 'Failed to load approvals'),
+        approvalsRequest,
         fetchJsonOrThrow<any>(`${API_BASE_URL}/api/firearm-allocations/active`, { headers, signal }, 'Failed to load active allocations'),
         fetchJsonOrThrow<any>(`${API_BASE_URL}/api/firearm-allocations/overdue`, { headers, signal }, 'Failed to load overdue allocations'),
         fetchJsonOrThrow<any>(`${API_BASE_URL}/api/trips`, { headers, signal }, 'Failed to load trips'),
@@ -82,7 +91,7 @@ export function useOpsSummary() {
         hasLoadedOnceRef.current = true
       }
     }
-  }, [])
+  }, [canApproveGuards])
 
   useEffect(() => {
     const controller = new AbortController()

@@ -97,7 +97,7 @@ const PredictiveAlertsPanel: FC<PredictiveAlertsPanelProps> = ({
         {loading && <p className="text-center font-mono text-xs text-text-secondary">Scanning signals...</p>}
 
         {!loading && error && (
-          <p role="alert" className="text-center font-mono text-xs text-red-400">
+          <p role="alert" className="text-center font-mono text-xs text-danger-text">
             {error}
           </p>
         )}

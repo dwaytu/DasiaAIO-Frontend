@@ -465,7 +465,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                       value={newAllocation.car_id}
                       onChange={(e) => setNewAllocation({ ...newAllocation, car_id: e.target.value })}
                       required
-                      className="w-full px-3 py-2 text-sm border border-border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-surface"
+                      className="soc-field"
                     >
                       <option value="">Choose a vehicle...</option>
                       {cars
@@ -484,7 +484,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                       value={newAllocation.client_id}
                       onChange={(e) => setNewAllocation({ ...newAllocation, client_id: e.target.value })}
                       required
-                      className="w-full px-3 py-2 text-sm border border-border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="soc-field"
                     />
                   </div>
                   <div>
@@ -493,7 +493,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                       type="datetime-local"
                       value={newAllocation.expected_return_date}
                       onChange={(e) => setNewAllocation({ ...newAllocation, expected_return_date: e.target.value })}
-                      className="w-full px-3 py-2 text-sm border border-border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="soc-field"
                     />
                   </div>
                   <div>
@@ -502,12 +502,12 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                       value={newAllocation.notes}
                       onChange={(e) => setNewAllocation({ ...newAllocation, notes: e.target.value })}
                       rows={3}
-                      className="w-full px-3 py-2 text-sm border border-border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="soc-field"
                     />
                   </div>
                   <button 
                     type="submit" 
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-bold py-2 md:py-3 rounded transition-colors text-sm md:text-base mt-4"
+                    className="soc-btn soc-btn-primary mt-4 w-full text-sm md:text-base"
                     disabled={loading}
                   >
                     {loading ? 'Allocating...' : 'Allocate Vehicle'}
@@ -565,7 +565,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                       value={newMaintenance.car_id}
                       onChange={(e) => setNewMaintenance({ ...newMaintenance, car_id: e.target.value })}
                       required
-                      className="w-full px-3 py-2 text-sm border border-border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-surface"
+                      className="soc-field"
                     >
                       <option value="">Choose a vehicle...</option>
                       {cars.map((car) => (
@@ -581,7 +581,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                       value={newMaintenance.maintenance_type}
                       onChange={(e) => setNewMaintenance({ ...newMaintenance, maintenance_type: e.target.value })}
                       required
-                      className="w-full px-3 py-2 text-sm border border-border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-surface"
+                      className="soc-field"
                     >
                       <option value="">Select type...</option>
                       <option value="routine_service">Routine Service</option>
@@ -598,7 +598,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                       onChange={(e) => setNewMaintenance({ ...newMaintenance, description: e.target.value })}
                       required
                       rows={3}
-                      className="w-full px-3 py-2 text-sm border border-border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="soc-field"
                     />
                   </div>
                   <div>
@@ -607,7 +607,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                       type="datetime-local"
                       value={newMaintenance.scheduled_date}
                       onChange={(e) => setNewMaintenance({ ...newMaintenance, scheduled_date: e.target.value })}
-                      className="w-full px-3 py-2 text-sm border border-border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="soc-field"
                     />
                   </div>
                   <div>
@@ -616,12 +616,12 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                       type="number"
                       value={newMaintenance.cost}
                       onChange={(e) => setNewMaintenance({ ...newMaintenance, cost: e.target.value })}
-                      className="w-full px-3 py-2 text-sm border border-border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="soc-field"
                     />
                   </div>
                   <button 
                     type="submit" 
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-bold py-2 md:py-3 rounded transition-colors text-sm md:text-base mt-4"
+                    className="soc-btn soc-btn-primary mt-4 w-full text-sm md:text-base"
                     disabled={loading}
                   >
                     {loading ? 'Scheduling...' : 'Schedule Maintenance'}

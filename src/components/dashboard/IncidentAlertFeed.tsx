@@ -61,7 +61,7 @@ const IncidentAlertFeed: FC<IncidentAlertFeedProps> = ({ alerts, nowLabel, onUpd
                     selectEvent({ id: alert.incidentId ?? alert.id, type: alert.incidentId ? 'incident' : 'alert', title: alert.title })
                   }
                 }}
-                className={`soc-animated-entry cursor-pointer rounded border p-3 transition-all duration-200 ${toneClass[alert.severity]} ${selectedEventId === (alert.incidentId ?? alert.id) ? 'ring-2 ring-cyan-400' : ''} ${isOverdue ? 'animate-pulse border-2' : ''}`}
+                className={`soc-animated-entry cursor-pointer rounded border p-3 transition-all duration-200 ${toneClass[alert.severity]} ${selectedEventId === (alert.incidentId ?? alert.id) ? 'ring-2 ring-info' : ''} ${isOverdue ? 'animate-pulse border-2' : ''}`}
                 style={{ animationDelay: `${index * 60}ms` }}
                 aria-pressed={selectedEventId === (alert.incidentId ?? alert.id)}
               >
@@ -69,7 +69,7 @@ const IncidentAlertFeed: FC<IncidentAlertFeedProps> = ({ alerts, nowLabel, onUpd
                   <div className="flex items-center gap-2">
                     <p className="text-xs font-semibold uppercase tracking-[0.16em]">Severity: {alert.severity}</p>
                     {isEscalate && (
-                      <span className="rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+                      <span className="soc-status-danger rounded px-1.5 py-0.5 text-[10px]">
                         Escalate
                       </span>
                     )}

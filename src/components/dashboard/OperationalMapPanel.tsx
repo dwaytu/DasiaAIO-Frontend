@@ -1500,7 +1500,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
               <button
                 type="submit"
                 disabled={saving}
-                className="min-h-11 rounded-md bg-info-bg px-3 py-2 text-xs font-semibold uppercase tracking-wide text-info-text"
+                className="soc-btn soc-btn-primary px-3 text-xs"
               >
                 {saving ? 'Saving...' : editingSiteId ? 'Update Site' : 'Add Site'}
               </button>
@@ -1611,7 +1611,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
                 <button
                   type="submit"
                   disabled={geofenceSaving}
-                  className="min-h-11 rounded-md bg-info-bg px-3 py-2 text-xs font-semibold uppercase tracking-wide text-info-text disabled:opacity-60"
+                  className="soc-btn soc-btn-primary px-3 text-xs"
                 >
                   {geofenceSaving ? 'Saving...' : editingGeofenceId ? 'Update Geofence' : 'Add Geofence'}
                 </button>

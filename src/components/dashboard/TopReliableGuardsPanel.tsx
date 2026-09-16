@@ -8,7 +8,7 @@ interface TopReliableGuardsPanelProps {
   lastUpdated?: string
 }
 
-const rankColors = ['bg-amber-500/20 text-amber-200', 'bg-slate-500/20 text-slate-200', 'bg-orange-500/20 text-orange-200']
+const rankColors = ['soc-status-warning', 'soc-status-neutral', 'soc-status-danger']
 
 const TopReliableGuardsPanel: FC<TopReliableGuardsPanelProps> = ({ guards, loading = false, error = '', lastUpdated }) => {
   return (
@@ -30,7 +30,7 @@ const TopReliableGuardsPanel: FC<TopReliableGuardsPanelProps> = ({ guards, loadi
         )}
 
         {!loading && error && (
-          <p role="alert" className="text-center font-mono text-xs text-red-400">
+          <p role="alert" className="text-center font-mono text-xs text-danger-text">
             {error}
           </p>
         )}

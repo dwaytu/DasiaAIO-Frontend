@@ -1,4 +1,5 @@
 import { CSSProperties, FC, useEffect, useMemo, useRef } from 'react'
+import { LogOut } from 'lucide-react'
 import SidebarBrand from './SidebarBrand'
 import { useServiceHealth } from '../hooks/useServiceHealth'
 
@@ -59,6 +60,7 @@ const Sidebar: FC<SidebarProps> = ({
 }) => {
   const asideRef = useRef<HTMLElement | null>(null)
   const navRef = useRef<HTMLElement | null>(null)
+  const previousFocusRef = useRef<HTMLElement | null>(null)
   const scrollStorageKey = 'dasi.sidebar.scrollTop'
   const { services } = useServiceHealth()
   const desktopSidebarWidth = collapsed ? 'var(--sidebar-width-collapsed)' : 'var(--sidebar-width-expanded)'
@@ -89,6 +91,26 @@ const Sidebar: FC<SidebarProps> = ({
 
     target.scrollTop = Number(savedScroll) || 0
   }, [])
+
+  useEffect(() => {
+    if (!isOpen || !onClose || window.matchMedia('(min-width: 1024px)').matches) {
+      if (!isOpen && previousFocusRef.current?.isConnected) {
+        previousFocusRef.current.focus()
+        previousFocusRef.current = null
+      }
+      return
+    }
+
+    previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    navRef.current?.querySelector<HTMLElement>('button, a')?.focus()
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose()
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, onClose])
 
   useEffect(() => {
     const el = navRef.current || asideRef.current
@@ -140,20 +162,6 @@ const Sidebar: FC<SidebarProps> = ({
         <div className="h-1 w-full soc-sidebar-accent" />
 
         <div className={`flex flex-1 flex-col overflow-hidden p-4 md:p-6 ${collapsed ? 'lg:px-2 lg:py-4' : 'lg:px-6 lg:py-6'}`}>
-          {/* Close button for mobile */}
-          {onClose && (
-            <button
-              type="button"
-              onClick={onClose}
-              className="absolute right-3 top-3 min-h-11 min-w-11 rounded p-2 text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring) lg:hidden"
-              aria-label="Close menu"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          )}
-          
           <div className={`mb-4 shrink-0 border-b border-border-subtle pb-4 ${collapsed ? 'lg:flex lg:justify-center' : ''}`}>
             <SidebarBrand
               onClick={onLogoClick}
@@ -190,6 +198,7 @@ const Sidebar: FC<SidebarProps> = ({
                         type="button"
                         title={collapsed ? label : undefined}
                         aria-label={collapsed ? label : undefined}
+                        aria-current={view === activeView ? 'page' : undefined}
                       >
                         <span className={`flex items-center gap-2 ${collapsed ? 'lg:justify-center' : ''}`}>
                           <span className="inline-flex h-5 w-5 items-center justify-center rounded-md border border-border-subtle bg-surface-elevated text-[11px] font-bold tracking-wide text-text-tertiary" aria-hidden="true">
@@ -215,9 +224,7 @@ const Sidebar: FC<SidebarProps> = ({
             title={collapsed ? 'Logout' : undefined}
             aria-label="Logout"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
+            <LogOut className="h-4 w-4" aria-hidden="true" />
             <span className={collapsed ? 'lg:hidden' : ''}>Logout</span>
           </button>
         </div>

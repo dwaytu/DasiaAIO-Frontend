@@ -311,7 +311,7 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
           />
           <button
             type="submit"
-            className="absolute right-2 top-1/2 -translate-y-1/2 rounded bg-accent px-4 py-1.5 text-xs font-semibold text-white hover:bg-accent/80"
+            className="soc-btn soc-btn-primary absolute right-2 top-1/2 -translate-y-1/2 min-h-11 px-3 py-1.5 text-xs"
           >
             Search
           </button>
@@ -488,7 +488,7 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
                               </span>
                             </span>
                             <span className="px-2 py-2">
-                              <span className={`inline-flex rounded-full px-2 py-0.5 font-semibold uppercase ${statusTone[log.result] || 'bg-zinc-500/15 text-zinc-300 ring-1 ring-zinc-500/30'}`}>
+                              <span className={`soc-status-neutral ${statusTone[log.result] || ''}`}>
                                 {log.result}
                               </span>
                             </span>
@@ -587,7 +587,7 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
                           <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase ${severityTone[severity]}`}>
                             {severity}
                           </span>
-                          <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase ${statusTone[log.result] || 'bg-zinc-500/15 text-zinc-300 ring-1 ring-zinc-500/30'}`}>
+                          <span className={`soc-status-neutral ${statusTone[log.result] || ''}`}>
                             {log.result}
                           </span>
                           <span className="text-[11px] text-text-tertiary capitalize">{log.entity_type}</span>

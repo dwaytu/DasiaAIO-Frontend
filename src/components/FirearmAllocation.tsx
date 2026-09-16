@@ -180,9 +180,9 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
   const getStatusBadgeColor = (status: string) => {
     switch (status?.toLowerCase()) {
       case 'active': return 'bg-success-bg text-success-text ring-1 ring-success-border'
-      case 'returned': return 'bg-zinc-500/15 text-zinc-400 ring-1 ring-zinc-500/30'
+      case 'returned': return 'soc-status-neutral'
       case 'pending': return 'bg-warning-bg text-warning-text ring-1 ring-warning-border'
-      default: return 'bg-zinc-500/15 text-zinc-400 ring-1 ring-zinc-500/30'
+      default: return 'soc-status-neutral'
     }
   }
 
@@ -201,7 +201,7 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
     >
         {loading ? (
           <div className="flex-1 flex items-center justify-center text-center">
-            <div className="text-indigo-600 text-lg font-medium">Loading allocations...</div>
+            <div className="text-info-text text-lg font-medium">Loading allocations...</div>
           </div>
         ) : (
           <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in">

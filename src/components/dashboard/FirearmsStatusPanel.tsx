@@ -29,24 +29,24 @@ const FirearmsStatusPanel: FC<FirearmsStatusPanelProps> = ({
 
       <div className="space-y-3 px-4 py-3" role="region" aria-live="polite">
         <div className="grid grid-cols-3 gap-2">
-          <div className="rounded-md border border-emerald-500/35 bg-emerald-500/10 px-2 py-1.5 text-center">
-            <p className="font-mono text-[11px] uppercase tracking-wide text-emerald-200">Available</p>
-            <p className="font-mono text-lg font-bold text-emerald-100">{available}</p>
+          <div className="soc-status-success w-full justify-center rounded-md px-2 py-1.5 text-center">
+            <p className="font-mono text-[11px] uppercase tracking-wide">Available</p>
+            <p className="font-mono text-lg font-bold">{available}</p>
           </div>
-          <div className="rounded-md border border-sky-500/35 bg-sky-500/10 px-2 py-1.5 text-center">
-            <p className="font-mono text-[11px] uppercase tracking-wide text-sky-200">Issued</p>
-            <p className="font-mono text-lg font-bold text-sky-100">{issued}</p>
+          <div className="soc-status-info w-full justify-center rounded-md px-2 py-1.5 text-center">
+            <p className="font-mono text-[11px] uppercase tracking-wide">Issued</p>
+            <p className="font-mono text-lg font-bold">{issued}</p>
           </div>
-          <div className="rounded-md border border-amber-500/35 bg-amber-500/10 px-2 py-1.5 text-center">
-            <p className="font-mono text-[11px] uppercase tracking-wide text-amber-200">Maint.</p>
-            <p className="font-mono text-lg font-bold text-amber-100">{maintenance}</p>
+          <div className="soc-status-warning w-full justify-center rounded-md px-2 py-1.5 text-center">
+            <p className="font-mono text-[11px] uppercase tracking-wide">Maint.</p>
+            <p className="font-mono text-lg font-bold">{maintenance}</p>
           </div>
         </div>
 
         {loading && <p className="text-center font-mono text-xs text-(--color-muted-text)">Loading firearm status...</p>}
 
         {!loading && error && (
-          <p role="alert" className="text-center font-mono text-xs text-red-400">
+          <p role="alert" className="text-center font-mono text-xs text-danger-text">
             {error}
           </p>
         )}

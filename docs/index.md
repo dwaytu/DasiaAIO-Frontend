@@ -56,7 +56,7 @@ SENTINEL is proprietary software and is distributed under an All Rights Reserved
 ## What Is Current In This Release
 
 - Shared frontend build for web, desktop, and Android wrappers
-- Guard approval workflow for self-registration
+- Guard account approval workflow for supervisor-created accounts
 - Expanded role-aware API authorization and audit logging
 - AI-assisted analytics endpoints for risk and incident workflows
 - Real-time operational map and tracking endpoints

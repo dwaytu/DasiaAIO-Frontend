@@ -16,7 +16,6 @@ Most routes require a valid access token and are guarded by role-based middlewar
 
 ### Register
 ```http
-POST /api/register
 Content-Type: application/json
 
 {

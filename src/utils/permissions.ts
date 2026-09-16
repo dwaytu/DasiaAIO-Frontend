@@ -40,7 +40,6 @@ const rolePermissions: Record<Role, Permission[]> = {
     'manage_requests',
   ],
   supervisor: [
-    'approve_guards',
     'view_analytics',
     'manage_firearms',
     'manage_allocations',

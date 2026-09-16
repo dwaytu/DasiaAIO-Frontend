@@ -198,6 +198,7 @@ interface PendingApprovalUser {
   license_expiry_date?: string
   verified: boolean
   approval_status: string
+  created_by_name?: string
   created_at: string
 }
 
@@ -335,6 +336,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   const isAdminViewer = normalizedViewerRole === 'admin'
   const isSupervisorViewer = normalizedViewerRole === 'supervisor'
   const canManageUsers = can(normalizedViewerRole, 'manage_users')
+  const canApproveGuards = normalizedViewerRole === 'admin' || normalizedViewerRole === 'superadmin'
   const canCreateGuardAccounts =
     normalizedViewerRole === 'superadmin' ||
     normalizedViewerRole === 'admin' ||
@@ -416,11 +418,11 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
     }
     fetchGuardsAndFirearms()
     if (activeSection === 'dashboard') {
-      fetchPendingApprovals()
+      if (canApproveGuards) fetchPendingApprovals()
       fetchShifts()
       fetchMissions()
     } else if (activeSection === 'approvals') {
-      fetchPendingApprovals()
+      if (canApproveGuards) fetchPendingApprovals()
     } else if (activeSection === 'schedule') {
       fetchShifts()
       fetchClientSites()
@@ -429,7 +431,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
     }
 
     return () => controller.abort()
-  }, [activeSection, canManageUsers])
+  }, [activeSection, canManageUsers, canApproveGuards])
 
   useEffect(() => {
     if (!activeView) return
@@ -677,6 +679,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   }
 
   const handleNavigate = (view: string) => {
+    if (view === 'approvals' && !canApproveGuards) return
     const route = VIEW_TO_ROUTE[view]
     if (route) {
       navigate(route)
@@ -952,7 +955,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
     try {
       setRefreshing(true)
       const tasks: Promise<any>[] = [fetchData()]
-      if (activeSection === 'dashboard' || activeSection === 'approvals') tasks.push(fetchPendingApprovals())
+      if (canApproveGuards && (activeSection === 'dashboard' || activeSection === 'approvals')) tasks.push(fetchPendingApprovals())
       if (activeSection === 'dashboard' || activeSection === 'schedule') tasks.push(fetchShifts())
       if (activeSection === 'dashboard' || activeSection === 'missions') tasks.push(fetchMissions())
       await Promise.all(tasks)
@@ -962,12 +965,23 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   }
 
   const handleApprovalAction = async (targetUserId: string, action: 'approve' | 'reject') => {
+    let reason: string | undefined
+    if (action === 'reject') {
+      const enteredReason = window.prompt('Reason for rejecting this guard account:')
+      if (enteredReason === null) return
+      reason = enteredReason.trim()
+      if (!reason) {
+        addNotification('error', 'Rejection Reason Required', 'Enter a reason before rejecting the guard account.')
+        return
+      }
+    }
+
     try {
       setProcessingApprovalId(targetUserId)
       await fetchJsonOrThrow<any>(`${API_BASE_URL}/api/users/${targetUserId}/approval`, {
         method: 'PUT',
         headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
-        body: JSON.stringify({ action }),
+        body: JSON.stringify({ action, reason }),
       }, `Failed to ${action} account`)
 
       addNotification(
@@ -1031,13 +1045,15 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                 >
                   Retry Dashboard
                 </button>
-                <button
-                  type="button"
-                  onClick={() => handleNavigate('approvals')}
-                  className="inline-flex min-h-11 items-center justify-center rounded border border-border bg-surface-elevated px-4 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
-                >
-                  Open Approvals
-                </button>
+                {canApproveGuards && (
+                  <button
+                    type="button"
+                    onClick={() => handleNavigate('approvals')}
+                    className="inline-flex min-h-11 items-center justify-center rounded border border-border bg-surface-elevated px-4 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
+                  >
+                    Open Approvals
+                  </button>
+                )}
               </div>
             </section>
           </div>
@@ -1077,7 +1093,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
             <CommandCenterDashboard
               quickActions={[
                 { label: 'Assign Shift', tone: 'indigo', onClick: () => handleNavigate('schedule') },
-                { label: 'Approve Guard', tone: 'emerald', onClick: () => handleNavigate('approvals') },
+                ...(canApproveGuards ? [{ label: 'Approve Guard', tone: 'emerald' as const, onClick: () => handleNavigate('approvals') }] : []),
                 { label: 'Allocate Firearm', tone: 'blue', onClick: () => onViewChange?.('allocation') },
                 { label: 'Assign Vehicle', tone: 'amber', onClick: () => onViewChange?.('armored-cars') },
                 { label: 'Start Trip', tone: 'indigo', onClick: () => handleNavigate('trips') },

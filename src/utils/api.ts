@@ -7,7 +7,6 @@ const TOKEN_STORAGE_KEY = 'token'
 const REFRESH_TOKEN_STORAGE_KEY = 'refreshToken'
 const PUBLIC_API_PATHS = new Set([
   '/api/login',
-  '/api/register',
   '/api/verify',
   '/api/resend-code',
   '/api/forgot-password',
@@ -15,7 +14,6 @@ const PUBLIC_API_PATHS = new Set([
   '/api/reset-password',
   '/api/refresh',
   '/api/auth/login',
-  '/api/auth/register',
   '/api/auth/verify',
   '/api/auth/resend-code',
   '/api/auth/forgot-password',

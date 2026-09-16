@@ -79,11 +79,13 @@ const CreateGuardAccountModal: FC<CreateGuardAccountModalProps> = ({
   const [emailCustomized, setEmailCustomized] = useState(false)
   const fullNameRef = useRef<HTMLInputElement>(null)
 
-  const modalDescription = useMemo(
-    () =>
-      'Use MDR roster details to create a login-ready guard account (full name, guard number, phone, and license data).',
-    [],
-  )
+  const modalDescription = useMemo(() => {
+    if (viewerRole === 'supervisor') {
+      return 'Use MDR roster details to submit a guard account for admin or superadmin approval. The account becomes available after approval.'
+    }
+
+    return 'Use MDR roster details to create an active guard account (full name, guard number, phone, and license data).'
+  }, [viewerRole])
 
   useEffect(() => {
     if (!isOpen) return
@@ -352,10 +354,12 @@ const CreateGuardAccountModal: FC<CreateGuardAccountModalProps> = ({
           </button>
           <button
             type="submit"
-            className="min-h-11 rounded border border-info-border bg-info-bg px-4 py-2 text-sm font-semibold text-info-text disabled:opacity-60"
+            className="soc-btn-primary min-h-11 disabled:opacity-60"
             disabled={submitting || !canCreate}
           >
-            {submitting ? 'Creating...' : 'Create Guard Account'}
+            {submitting
+              ? viewerRole === 'supervisor' ? 'Submitting...' : 'Creating...'
+              : viewerRole === 'supervisor' ? 'Submit for Approval' : 'Create Guard Account'}
           </button>
         </div>
       </form>

@@ -157,6 +157,7 @@ interface PendingApprovalUser {
   license_expiry_date?: string
   verified: boolean
   approval_status: string
+  created_by_name?: string
   created_at: string
 }
 
@@ -194,6 +195,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
   const normalizedViewerRole = normalizeRole(user.role)
   const isAdminViewer = normalizedViewerRole === 'admin'
   const isSupervisorViewer = normalizedViewerRole === 'supervisor'
+  const canApproveGuards = normalizedViewerRole === 'admin' || normalizedViewerRole === 'superadmin'
   const canCreateGuardAccounts =
     normalizedViewerRole === 'superadmin' ||
     normalizedViewerRole === 'admin' ||
@@ -216,13 +218,13 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
   useEffect(() => {
     if (activeSection === 'users') {
       fetchUsers()
-      fetchPendingApprovals()
+      if (canApproveGuards) fetchPendingApprovals()
     } else if (activeSection === 'approvals') {
-      fetchPendingApprovals()
+      if (canApproveGuards) fetchPendingApprovals()
     } else if (activeSection === 'schedule') {
       fetchShifts()
     }
-  }, [activeSection])
+  }, [activeSection, canApproveGuards])
 
   useEffect(() => {
     if (activeView === 'users' || activeView === 'approvals' || activeView === 'schedule') {
@@ -291,6 +293,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
   }
 
   const handleNavigate = (view: string) => {
+    if (view === 'approvals' && !canApproveGuards) return
     if (view === 'users' || view === 'approvals' || view === 'schedule') {
       setActiveSection(view as 'users' | 'approvals' | 'schedule')
       onViewChange?.(view)
@@ -300,6 +303,17 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
   }
 
   const handleApprovalAction = async (targetUserId: string, action: 'approve' | 'reject') => {
+    let reason: string | undefined
+    if (action === 'reject') {
+      const enteredReason = window.prompt('Reason for rejecting this guard account:')
+      if (enteredReason === null) return
+      reason = enteredReason.trim()
+      if (!reason) {
+        setError('A rejection reason is required.')
+        return
+      }
+    }
+
     try {
       setProcessingApprovalId(targetUserId)
       await fetchJsonOrThrow<any>(
@@ -307,7 +321,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
         {
           method: 'PUT',
           headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
-          body: JSON.stringify({ action }),
+          body: JSON.stringify({ action, reason }),
         },
         `Failed to ${action} account`,
       )
@@ -551,7 +565,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
               <CommandCenterDashboard
                 quickActions={[
                   { label: 'Assign Shift', tone: 'indigo', onClick: () => handleNavigate('schedule') },
-                  { label: 'Approve Guard', tone: 'emerald', onClick: () => handleNavigate('approvals') },
+                  ...(canApproveGuards ? [{ label: 'Approve Guard', tone: 'emerald' as const, onClick: () => handleNavigate('approvals') }] : []),
                   { label: 'Allocate Firearm', tone: 'blue', onClick: () => onViewChange?.('allocation') },
                   { label: 'Assign Vehicle', tone: 'amber', onClick: () => onViewChange?.('armored-cars') },
                   { label: 'Start Trip', tone: 'indigo', onClick: () => onViewChange?.('trips') },
@@ -1221,7 +1235,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
             viewerRole={normalizedViewerRole}
             onCreated={async () => {
               await fetchUsers()
-              await fetchPendingApprovals()
+              if (canApproveGuards) await fetchPendingApprovals()
             }}
           />
 

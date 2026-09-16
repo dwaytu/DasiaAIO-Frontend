@@ -40,11 +40,11 @@ describe('shell navigation chrome', () => {
     expect(labels).toHaveLength(17)
   })
 
-  it('returns supervisor nav with Missions', () => {
+  it('returns supervisor nav without guard approvals', () => {
     const labels = getSidebarNav('supervisor').map((item) => item.label)
 
     expect(labels).toContain('Missions')
-    expect(labels).toContain('Approvals')
+    expect(labels).not.toContain('Approvals')
     expect(labels).toContain('Requests')
     expect(labels).toContain('Calendar')
     expect(labels).toContain('Operations Map')
@@ -53,7 +53,7 @@ describe('shell navigation chrome', () => {
     expect(labels).toContain('DTR Report')
     expect(labels).toContain('Maintenance')
     expect(labels).toContain('Firearm Compliance')
-    expect(labels).toHaveLength(12)
+    expect(labels).toHaveLength(11)
   })
 
   it('fails closed for malformed roles', () => {

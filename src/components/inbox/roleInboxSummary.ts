@@ -37,8 +37,6 @@ type SwapRequest = {
   created_at: string
 }
 
-type PendingApproval = PendingApprovalRecord
-
 type Incident = {
   id: string
   title?: string
@@ -66,6 +64,8 @@ type FirearmItem = {
   updated_at?: string
   created_at?: string
 }
+
+type PendingApproval = PendingApprovalRecord
 
 function formatDateTime(iso: string): string {
   try {
@@ -198,23 +198,13 @@ async function fetchGuardSummary(userId: string): Promise<QuickInboxSummary> {
 
 async function fetchSupervisorSummary(userId: string): Promise<QuickInboxSummary> {
   const headers = getAuthHeaders({ 'Content-Type': 'application/json' })
-  const [approvals, incidents, shifts, notifications] = await Promise.all([
-    safeFetchPendingApprovals(`${API_BASE_URL}/api/users/pending-approvals`, headers),
+  const [incidents, shifts, notifications] = await Promise.all([
     safeFetch<Incident>(`${API_BASE_URL}/api/incidents`, headers, ['incidents']),
     safeFetch<Shift>(`${API_BASE_URL}/api/guard-replacement/shifts`, headers, ['shifts']),
     safeFetch<NotificationRecord>(`${API_BASE_URL}/api/users/${encodeURIComponent(userId)}/notifications`, headers, ['notifications']),
   ])
 
   const items: InboxItem[] = [
-    ...approvals.map((approval) => ({
-      id: `approval-${approval.id}`,
-      priority: 'urgent' as const,
-      category: 'approval' as const,
-      title: 'Guard Replacement Needed',
-      description: approval.guard_name ?? approval.role ?? 'Replacement requested',
-      timestamp: approval.created_at ?? approval.requested_at ?? new Date().toISOString(),
-      isRead: false,
-    })),
     ...incidents
       .filter((incident) => incident.status !== 'closed')
       .map((incident) => ({

@@ -9,7 +9,7 @@ permalink: /features/
 ## Identity and Access
 
 - Role model: `superadmin`, `admin`, `supervisor`, `guard`
-- Guard self-registration with approval gating
+- Staff-managed guard account creation with supervisor submission and admin/superadmin approval gating
 - Email verification and password reset lifecycle
 - Refresh-token rotation and revocation-aware sessions
 - Backend-enforced legal consent state on protected routes

@@ -51,7 +51,6 @@ const SUPERVISOR_NAV: NavItem[] = [
   { view: 'schedule', label: 'Schedule', group: 'Core' },
   { view: 'calendar', label: 'Calendar', group: 'Core' },
   { view: 'missions', label: 'Missions', group: 'Field' },
-  { view: 'approvals', label: 'Approvals', group: 'Operations', permission: 'approve_guards' },
   { view: 'requests', label: 'Requests', group: 'Operations', permission: 'manage_requests' },
   { view: 'allocation', label: 'Allocation', group: 'Operations', permission: 'manage_allocations' },
   { view: 'dtr', label: 'DTR Report', group: 'Operations', permission: 'view_analytics' },

@@ -139,6 +139,7 @@ function RequestsRouteWrapper() {
 }
 
 const ELEVATED_ROLES = ['superadmin', 'admin', 'supervisor']
+const APPROVAL_ROLES = ['superadmin', 'admin']
 const ALL_ROLES = ['superadmin', 'admin', 'supervisor', 'guard']
 const FEEDBACK_SUBMIT_ROLES = ['superadmin', 'admin', 'supervisor', 'guard']
 const SUPERADMIN_ONLY = ['superadmin']
@@ -164,7 +165,6 @@ export const appRoutes: RouteObject[] = [
         element: <RoleGuard roles={ELEVATED_ROLES} />,
         children: [
           { path: ROUTES.DASHBOARD, element: <LegacyPage Component={SuperadminDashboard} /> },
-          { path: ROUTES.APPROVALS, element: <LegacyPage Component={SuperadminDashboard} /> },
           { path: ROUTES.SCHEDULE, element: <LegacyPage Component={SuperadminDashboard} /> },
           { path: ROUTES.MISSIONS, element: <LegacyPage Component={SuperadminDashboard} /> },
           { path: ROUTES.TRIPS, element: <LegacyPage Component={SuperadminDashboard} /> },
@@ -172,6 +172,14 @@ export const appRoutes: RouteObject[] = [
           { path: ROUTES.OPERATIONS_MAP, element: <LegacyPage Component={SuperadminDashboard} /> },
           { path: ROUTES.MDR_IMPORT, element: <LegacyPage Component={MdrImportPage} /> },
           { path: '/mdr-import/:batchId', element: <LegacyPage Component={MdrImportPage} /> },
+        ],
+      },
+
+      // Guard account approvals are intentionally limited to admin and superadmin reviewers.
+      {
+        element: <RoleGuard roles={APPROVAL_ROLES} />,
+        children: [
+          { path: ROUTES.APPROVALS, element: <LegacyPage Component={SuperadminDashboard} /> },
         ],
       },
 

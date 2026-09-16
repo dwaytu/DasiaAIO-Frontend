@@ -4,15 +4,12 @@ import { ActionInbox, InboxItem } from './ActionInbox';
 import { WorkflowTimeline, TimelineEntry, TimelineStatus } from './WorkflowTimeline';
 import { getAuthHeaders } from '../../utils/api';
 import { fetchArrayPayload } from './inboxPayloads';
-import { parsePendingApprovalsPayload, type PendingApprovalRecord } from './pendingApprovals';
 import { fetchOperationalRequestInboxItems } from './operationalRequestInbox';
 
 export interface SupervisorInboxPanelProps {
   userId: string;
   onAction?: (type: string, id: string) => void;
 }
-
-type PendingApproval = PendingApprovalRecord;
 
 interface Incident {
   id: string;
@@ -42,7 +39,6 @@ interface Notification {
 }
 
 function toInboxItems(
-  approvals: PendingApproval[],
   incidents: Incident[],
   shifts: Shift[],
   notifications: Notification[],
@@ -51,19 +47,6 @@ function toInboxItems(
 ): InboxItem[] {
   const items: InboxItem[] = [];
   items.push(...operationalRequests);
-
-  for (const a of approvals) {
-    items.push({
-      id: `approval-${a.id}`,
-      priority: 'urgent',
-      category: 'approval',
-      title: 'Guard Replacement Needed',
-      description: a.guard_name ?? a.role ?? 'Replacement requested',
-      timestamp: a.created_at ?? a.requested_at ?? new Date().toISOString(),
-      actionLabel: 'Review',
-      onAction: onAction ? () => onAction('approval', a.id) : undefined,
-    });
-  }
 
   for (const inc of incidents) {
     if (inc.status === 'closed') continue;
@@ -158,12 +141,8 @@ export const SupervisorInboxPanel = ({
       setLoading(true);
       setAllFailed(false);
 
-      const [approvalsResult, incidentsResult, shiftsResult, notificationsResult, requestsResult] =
+      const [incidentsResult, shiftsResult, notificationsResult, requestsResult] =
         await Promise.allSettled([
-          fetch(`${API_BASE_URL}/api/users/pending-approvals`, {
-            headers,
-            signal: controller.signal,
-          }).then((r) => (r.ok ? r.json() as Promise<unknown> : Promise.reject(r.status))),
           fetchArrayPayload<Incident>(
             `${API_BASE_URL}/api/incidents`,
             headers,
@@ -187,7 +166,7 @@ export const SupervisorInboxPanel = ({
 
       if (cancelled) return;
 
-      const succeeded = [approvalsResult, incidentsResult, shiftsResult, notificationsResult, requestsResult].some(
+      const succeeded = [incidentsResult, shiftsResult, notificationsResult, requestsResult].some(
         (r) => r.status === 'fulfilled',
       );
 
@@ -196,11 +175,6 @@ export const SupervisorInboxPanel = ({
         setLoading(false);
         return;
       }
-
-      const approvals: PendingApproval[] =
-        approvalsResult.status === 'fulfilled'
-          ? parsePendingApprovalsPayload(approvalsResult.value)
-          : [];
 
       const incidentsRaw: Incident[] =
         incidentsResult.status === 'fulfilled'
@@ -219,7 +193,7 @@ export const SupervisorInboxPanel = ({
       const operationalRequests =
         requestsResult.status === 'fulfilled' ? requestsResult.value : [];
 
-      setInboxItems(toInboxItems(approvals, incidentsRaw, shifts, notifications, operationalRequests, onAction));
+      setInboxItems(toInboxItems(incidentsRaw, shifts, notifications, operationalRequests, onAction));
       setTimelineEntries(toTimelineEntries(incidentsRaw));
       setLoading(false);
     };

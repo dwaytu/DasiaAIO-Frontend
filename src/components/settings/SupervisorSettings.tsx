@@ -44,7 +44,7 @@ export const SupervisorSettings: FC<SupervisorSettingsProps> = ({ user, compact 
   return (
     <SettingsDashboard
       title="Supervisor Settings"
-      description="Tune notification flow for approvals, incident escalations, and shift oversight without changing the current RBAC model."
+      description="Tune notification flow for incident escalations and shift oversight without changing the current RBAC model."
       compact={compact}
     >
       <NotificationSettingsSection settings={notifications} onChange={setNotifications} />
@@ -62,7 +62,7 @@ export const SupervisorSettings: FC<SupervisorSettingsProps> = ({ user, compact 
             {
               key: 'approvalQueue' as const,
               title: 'Approval queue alerts',
-              description: 'Raise a visible alert when guard approvals require action.',
+              description: 'Raise a visible alert when operational actions require attention.',
             },
             {
               key: 'incidentEscalations' as const,

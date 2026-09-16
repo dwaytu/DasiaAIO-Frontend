@@ -11,6 +11,7 @@ interface AssignmentPickerProps {
   value: string
   options: AssignmentOption[]
   placeholder: string
+  emptyMessage?: string
   required?: boolean
   onChange: (value: string) => void
   tone?: 'teal' | 'indigo' | 'amber'
@@ -28,6 +29,7 @@ const AssignmentPicker: FC<AssignmentPickerProps> = ({
   value,
   options,
   placeholder,
+  emptyMessage,
   required = false,
   onChange,
   tone = 'indigo',
@@ -42,7 +44,7 @@ const AssignmentPicker: FC<AssignmentPickerProps> = ({
         required={required}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className={`w-full rounded border border-border bg-background px-3 py-2 text-text-primary focus:outline-none focus:ring-2 transition-all duration-200 ${toneRing[tone]}`}
+        className={`soc-form-control w-full ${toneRing[tone]}`}
       >
         <option value="">{placeholder}</option>
         {options.length > 0 ? (
@@ -55,6 +57,9 @@ const AssignmentPicker: FC<AssignmentPickerProps> = ({
           <option disabled>No options available</option>
         )}
       </select>
+      {options.length === 0 ? (
+        <p className="mt-1 text-xs text-warning-text">{emptyMessage || `No ${label.toLowerCase()} available for this assignment.`}</p>
+      ) : null}
     </div>
   )
 }

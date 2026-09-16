@@ -570,17 +570,12 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
 
   const fetchGuardsAndFirearms = async () => {
     try {
-      const sources: Promise<any>[] = []
-      if (canManageUsers) {
-        sources.push(
-          fetchJsonOrThrow<any>(
-            `${API_BASE_URL}/api/users`,
-            { headers: getAuthHeaders() },
-            'Failed to fetch users',
-          ),
-        )
-      }
-      sources.push(
+      const [guardsData, firearmsData, vehiclesData] = await Promise.all([
+        fetchJsonOrThrow<any>(
+          `${API_BASE_URL}/api/guards`,
+          { headers: getAuthHeaders() },
+          'Failed to fetch guards',
+        ),
         fetchJsonOrThrow<any>(
           `${API_BASE_URL}/api/firearms`,
           { headers: getAuthHeaders() },
@@ -591,25 +586,21 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
           { headers: getAuthHeaders() },
           'Failed to fetch armored cars',
         ),
-      )
+      ])
 
-      const results = await Promise.all(sources)
-
-      const usersData = canManageUsers ? results[0] : []
-      const firearmsData = canManageUsers ? results[1] : results[0]
-      const vehiclesData = canManageUsers ? results[2] : results[1]
-
-      const allUsers = Array.isArray(usersData) ? usersData : (usersData?.users || [])
-      const guards = allUsers.filter((u: User) => normalizeRole(u.role) === 'guard')
+      const guards = Array.isArray(guardsData) ? guardsData : (guardsData?.guards || [])
       setAvailableGuards(guards)
 
       const firearms = Array.isArray(firearmsData) ? firearmsData : (firearmsData?.firearms || [])
-      setAvailableFirearms(firearms.filter((f: any) => f.status === 'available'))
+      setAvailableFirearms(firearms.filter((f: any) => {
+        const expiry = f.licenseExpiryDate || f.license_expiry_date
+        return f.status === 'available' && expiry && new Date(expiry).getTime() > Date.now()
+      }))
 
       const vehicles = Array.isArray(vehiclesData)
         ? vehiclesData
         : (vehiclesData?.armored_cars || vehiclesData?.vehicles || [])
-      setAvailableVehicles(vehicles.filter((v: any) => v.status === 'available'))
+      setAvailableVehicles(vehicles.filter((v: any) => ['available', 'operational'].includes(String(v.status).toLowerCase())))
     } catch (err) {
       logError('Error fetching assignment resources:', err)
     }
@@ -645,7 +636,10 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
           ...missionFormData,
           guards_required: selectedGuards ? 1 : 0,
           firearms_required: selectedFirearms ? 1 : 0,
-          vehicles_required: selectedVehicles ? 1 : 0
+          vehicles_required: selectedVehicles ? 1 : 0,
+          guard_id: selectedGuards,
+          firearm_id: selectedFirearms,
+          vehicle_id: selectedVehicles,
         })
       }, 'Failed to assign mission')
       setMissionResponse(data)
@@ -1750,7 +1744,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                     <button
                       type="submit"
                       disabled={shiftsLoading || clientSitesLoading || availableClientSites.length === 0}
-                      className="w-full bg-primary hover:bg-primary-hover disabled:opacity-50 text-primary-text font-semibold py-3 rounded transition-colors"
+                      className="soc-btn-primary w-full min-h-12 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {shiftsLoading ? 'Creating Schedule...' : 'Create Schedule'}
                     </button>
@@ -1790,28 +1784,30 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                   </button>
                 </div>
               )}
-              <form onSubmit={handleMissionSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <form onSubmit={handleMissionSubmit} className="grid grid-cols-1 gap-5 md:grid-cols-2">
                 <div>
-                  <label className="block text-sm font-semibold text-text-primary mb-1">Mission Name</label>
+                  <label className="soc-form-label" htmlFor="mission-name">Mission Name</label>
                   <input
+                    id="mission-name"
                     type="text"
                     required
                     value={missionFormData.mission_name}
                     onChange={(e) => setMissionFormData({...missionFormData, mission_name: e.target.value})}
                     placeholder="Enter mission name"
-                    className="w-full px-3 py-2 border border-border rounded bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-(--color-focus-ring) focus:border-(--color-focus-ring)"
+                    className="soc-form-control w-full"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-text-primary mb-1">Destination</label>
+                  <label className="soc-form-label" htmlFor="mission-destination">Destination</label>
                   <input
+                    id="mission-destination"
                     type="text"
                     required
                     value={missionFormData.destination}
                     onChange={(e) => setMissionFormData({...missionFormData, destination: e.target.value})}
                     placeholder="Enter destination"
-                    className="w-full px-3 py-2 border border-border rounded bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-(--color-focus-ring) focus:border-(--color-focus-ring)"
+                    className="soc-form-control w-full"
                   />
                 </div>
 
@@ -1823,6 +1819,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                   value={selectedGuards}
                   onChange={setSelectedGuards}
                   placeholder="-- Select a guard --"
+                  emptyMessage="No approved guards are currently available."
                   options={availableGuards.map((guard) => ({ value: guard.id, label: guard.full_name || guard.username }))}
                 />
 
@@ -1834,7 +1831,11 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                   value={selectedFirearms}
                   onChange={setSelectedFirearms}
                   placeholder="-- Select a firearm --"
-                  options={availableFirearms.map((firearm) => ({ value: firearm.id, label: `${firearm.serial_number} - ${firearm.model} (${firearm.caliber})` }))}
+                  emptyMessage="No available firearms have a valid license."
+                  options={availableFirearms.map((firearm) => ({
+                    value: firearm.id,
+                    label: `${firearm.serialNumber || firearm.serial_number || 'Unknown serial'} - ${firearm.model || 'Unknown model'} (${firearm.caliber || 'Unknown caliber'})`,
+                  }))}
                 />
 
                 <AssignmentPicker
@@ -1845,48 +1846,53 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                   value={selectedVehicles}
                   onChange={setSelectedVehicles}
                   placeholder="-- Select a vehicle --"
+                  emptyMessage="No available vehicles are currently ready."
                   options={availableVehicles.map((vehicle) => ({ value: vehicle.id, label: `${vehicle.model} - ${vehicle.license_plate} (Capacity: ${vehicle.capacity_kg}kg)` }))}
                 />
 
                 <div>
-                  <label className="block text-sm font-semibold text-text-primary mb-1">Date</label>
+                  <label className="soc-form-label" htmlFor="mission-date">Date</label>
                   <input
+                    id="mission-date"
                     type="date"
                     required
                     value={missionFormData.date}
                     onChange={(e) => setMissionFormData({...missionFormData, date: e.target.value})}
-                    className="w-full px-3 py-2 border border-border rounded bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-(--color-focus-ring) focus:border-(--color-focus-ring)"
+                    className="soc-form-control w-full"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-text-primary mb-1">Start Time</label>
+                  <label className="soc-form-label" htmlFor="mission-start-time">Start Time</label>
                   <input
+                    id="mission-start-time"
                     type="time"
                     required
                     value={missionFormData.start_time}
                     onChange={(e) => setMissionFormData({...missionFormData, start_time: e.target.value})}
-                    className="w-full px-3 py-2 border border-border rounded bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-(--color-focus-ring) focus:border-(--color-focus-ring)"
+                    className="soc-form-control w-full"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-text-primary mb-1">End Time</label>
+                  <label className="soc-form-label" htmlFor="mission-end-time">End Time</label>
                   <input
+                    id="mission-end-time"
                     type="time"
                     required
                     value={missionFormData.end_time}
                     onChange={(e) => setMissionFormData({...missionFormData, end_time: e.target.value})}
-                    className="w-full px-3 py-2 border border-border rounded bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-(--color-focus-ring) focus:border-(--color-focus-ring)"
+                    className="soc-form-control w-full"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-text-primary mb-1">Priority</label>
+                  <label className="soc-form-label" htmlFor="mission-priority">Priority</label>
                   <select
+                    id="mission-priority"
                     value={missionFormData.priority}
                     onChange={(e) => setMissionFormData({...missionFormData, priority: e.target.value})}
-                    className="w-full px-3 py-2 border border-border rounded bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-(--color-focus-ring) focus:border-(--color-focus-ring)"
+                    className="soc-form-control w-full"
                   >
                     <option value="low">Low</option>
                     <option value="medium">Medium</option>
@@ -1896,13 +1902,14 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-semibold text-text-primary mb-1">Special Requirements (Optional)</label>
+                  <label className="soc-form-label" htmlFor="mission-special-requirements">Special Requirements (Optional)</label>
                   <textarea
+                    id="mission-special-requirements"
                     value={missionFormData.special_requirements}
                     onChange={(e) => setMissionFormData({...missionFormData, special_requirements: e.target.value})}
                     placeholder="Enter any special requirements"
                     rows={3}
-                    className="w-full px-3 py-2 border border-border rounded bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-(--color-focus-ring) focus:border-(--color-focus-ring)"
+                    className="soc-form-control w-full"
                   />
                 </div>
 
@@ -1910,8 +1917,9 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                   <button
                     type="submit"
                     disabled={missionsLoading}
-                    className="w-full bg-primary hover:bg-primary-hover disabled:opacity-50 text-primary-text font-semibold py-3 rounded transition-colors"
+                    className="soc-btn-primary w-full min-h-12 gap-2 disabled:cursor-not-allowed disabled:opacity-60"
                   >
+                    <Target size={18} aria-hidden="true" />
                     {missionsLoading ? 'Assigning Mission...' : 'Assign Mission'}
                   </button>
                 </div>
@@ -2051,19 +2059,19 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
               <div className="mt-5 flex gap-2">
                 <button
                   onClick={() => handleApprovalAction(selectedApproval.id, 'approve')}
-                  className="rounded bg-(--color-success) px-3 py-2 text-sm font-semibold text-white hover:opacity-90"
+                  className="soc-btn soc-btn-success"
                 >
                   Approve
                 </button>
                 <button
                   onClick={() => handleApprovalAction(selectedApproval.id, 'reject')}
-                  className="rounded bg-(--color-danger) px-3 py-2 text-sm font-semibold text-white hover:opacity-90"
+                  className="soc-btn soc-btn-danger"
                 >
                   Reject
                 </button>
                 <button
                   onClick={() => setSelectedApproval(null)}
-                  className="rounded border border-border px-3 py-2 text-sm font-semibold text-text-primary hover:bg-surface-hover"
+                  className="soc-btn soc-btn-neutral"
                 >
                   Close
                 </button>

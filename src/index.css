@@ -635,17 +635,30 @@
     box-shadow: 0 1px 0 var(--color-border);
   }
 
-  .soc-btn {
+  .soc-btn,
+  .soc-btn-primary,
+  .soc-btn-secondary,
+  .soc-btn-success,
+  .soc-btn-danger,
+  .soc-btn-neutral {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
     border-radius: var(--radius-md);
-    border: 1px solid var(--color-info-border);
-    background: color-mix(in srgb, var(--color-info) 16%, var(--color-surface));
-    color: var(--color-text-primary);
     padding: 0.55rem 0.9rem;
     font-size: 0.75rem;
     font-weight: 700;
-    text-transform: uppercase;
     letter-spacing: 0.08em;
-    transition: background-color 160ms ease, border-color 160ms ease;
+    text-transform: uppercase;
+    transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, filter 160ms ease;
+  }
+
+  .soc-btn {
+    border: 1px solid var(--color-info-border);
+    background: color-mix(in srgb, var(--color-info) 16%, var(--color-surface));
+    color: var(--color-text-primary);
   }
 
   .soc-btn:hover {
@@ -668,6 +681,32 @@
     border-color: var(--color-border-elevated);
     background: var(--color-surface-elevated);
     color: var(--color-text-secondary);
+  }
+
+  .soc-btn-success:hover,
+  .soc-btn-danger:hover,
+  .soc-btn-neutral:hover {
+    filter: brightness(1.08);
+  }
+
+  .soc-btn:focus-visible,
+  .soc-btn-primary:focus-visible,
+  .soc-btn-secondary:focus-visible,
+  .soc-btn-success:focus-visible,
+  .soc-btn-danger:focus-visible,
+  .soc-btn-neutral:focus-visible {
+    outline: 2px solid var(--color-focus-ring);
+    outline-offset: 2px;
+  }
+
+  .soc-btn:disabled,
+  .soc-btn-primary:disabled,
+  .soc-btn-secondary:disabled,
+  .soc-btn-success:disabled,
+  .soc-btn-danger:disabled,
+  .soc-btn-neutral:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
   }
 
   .soc-alert-error {
@@ -1289,6 +1328,39 @@
     isolation: isolate;
   }
 
+  .soc-form-control {
+    min-height: 2.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    color: var(--color-text-primary);
+    padding: 0.65rem 0.8rem;
+    transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+  }
+
+  .soc-form-label {
+    display: block;
+    margin-bottom: 0.35rem;
+    color: var(--color-text-primary);
+    font-size: 0.875rem;
+    font-weight: 700;
+  }
+
+  .soc-form-control::placeholder {
+    color: var(--color-text-tertiary);
+  }
+
+  .soc-form-control:focus {
+    border-color: var(--color-focus-ring);
+    outline: none;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-focus-ring) 28%, transparent);
+  }
+
+  .soc-form-control:disabled {
+    cursor: not-allowed;
+    opacity: 0.65;
+  }
+
   /* Every modal surface is fully opaque so underlying dashboards cannot reduce readability. */
   .soc-modal-surface {
     background-color: var(--color-surface-elevated) !important;
@@ -1428,10 +1500,20 @@
   .soc-btn,
   .soc-btn-primary,
   .soc-btn-secondary,
+  .soc-btn-success,
+  .soc-btn-danger,
+  .soc-btn-neutral,
   .terminal-login-btn {
     border: 1px solid ButtonBorder;
     background: ButtonFace;
     color: ButtonText;
+  }
+
+  .soc-form-control {
+    border-color: FieldText;
+    background: Field;
+    color: FieldText;
+    box-shadow: none;
   }
 
   .guard-sticky-inner {

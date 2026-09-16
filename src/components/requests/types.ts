@@ -29,6 +29,8 @@ export interface OperationalRequest {
   decisionReason?: string | null
   fulfilledBy?: string | null
   fulfilledAt?: string | null
+  archivedBy?: string | null
+  archivedAt?: string | null
   createdAt: string
   updatedAt: string
 }

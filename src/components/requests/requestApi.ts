@@ -32,6 +32,7 @@ export interface RequestFilters {
   requester?: string
   dateFrom?: string
   dateTo?: string
+  includeArchived?: boolean
 }
 
 function jsonInit(method: string, body: unknown, signal?: AbortSignal): RequestInit {
@@ -59,6 +60,7 @@ export async function listOperationalRequests(
   if (filters.requester?.trim()) params.set('requester', filters.requester.trim())
   if (filters.dateFrom) params.set('dateFrom', filters.dateFrom)
   if (filters.dateTo) params.set('dateTo', filters.dateTo)
+  if (filters.includeArchived) params.set('includeArchived', 'true')
   return fetchJsonOrThrow(
     `${API_BASE_URL}/api/operational-requests?${params.toString()}`,
     { headers: getAuthHeaders(), signal },
@@ -126,6 +128,15 @@ export async function resubmitOperationalRequest(
     `${API_BASE_URL}/api/operational-requests/${encodeURIComponent(requestId)}/resubmit`,
     jsonInit('POST', payload),
     'Unable to resubmit the request.',
+  )
+  return response.request
+}
+
+export async function archiveOperationalRequest(requestId: string): Promise<OperationalRequest> {
+  const response = await fetchJsonOrThrow<RequestResponse>(
+    `${API_BASE_URL}/api/operational-requests/${encodeURIComponent(requestId)}/archive`,
+    jsonInit('POST', {}),
+    'Unable to clear the request.',
   )
   return response.request
 }

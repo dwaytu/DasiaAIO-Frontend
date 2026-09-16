@@ -20,6 +20,7 @@ jest.mock('../utils/api', () => ({
     Authorization: 'Bearer token',
     ...extraHeaders,
   }),
+  fetchJsonOrThrow: jest.fn(async () => ({ notifications: [] })),
 }))
 
 jest.mock('../components/inbox/roleInboxSummary', () => ({

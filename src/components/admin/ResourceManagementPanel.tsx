@@ -1,5 +1,5 @@
 import { FC, FormEvent, useEffect, useMemo, useRef, useState } from 'react'
-import { Shield, Truck, MapPin, Users } from 'lucide-react'
+import { MapPin, Plus, Shield, Trash2, Truck, Users } from 'lucide-react'
 import { API_BASE_URL } from '../../config'
 import { fetchJsonOrThrow, getAuthHeaders } from '../../utils/api'
 import { logError } from '../../utils/logger'
@@ -426,9 +426,11 @@ const GuardsTab: FC<{
                           Edit
                         </button>
                       <button
+                        type="button"
                         onClick={() => onDeleteUser(g.id, g.email)}
-                        className="inline-flex items-center gap-1 rounded px-3 py-1.5 text-xs font-semibold text-danger-text bg-danger-bg ring-1 ring-danger-border hover:bg-danger-bg/80 transition-colors"
+                        className="soc-btn soc-btn-danger"
                       >
+                        <Trash2 size={15} aria-hidden="true" />
                         Remove
                       </button>
                       </div>
@@ -744,10 +746,12 @@ const FirearmsTab: FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <h2 className="soc-section-title">Firearm Inventory ({firearms.length})</h2>
         <button
+          type="button"
           onClick={() => setShowAddModal(true)}
-          className="inline-flex items-center gap-1 rounded px-4 py-2 text-sm font-semibold bg-(--color-info-bg) text-(--color-info-text) border border-(--color-info-border) hover:opacity-90 transition-opacity"
+          className="soc-btn soc-btn-primary"
         >
-          + Add Firearm
+          <Plus size={16} aria-hidden="true" />
+          Add Firearm
         </button>
       </div>
 
@@ -765,23 +769,23 @@ const FirearmsTab: FC = () => {
         <form onSubmit={addFirearm} noValidate className="space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label htmlFor="firearm-serial" className="block text-xs font-semibold text-text-secondary mb-1">Serial Number</label>
-              <input id="firearm-serial" type="text" required value={newFirearm.serialNumber} onChange={(e) => setNewFirearm({ ...newFirearm, serialNumber: e.target.value })} className="w-full px-3 py-2 text-sm border border-border rounded bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-(--color-focus-ring)" />
+              <label htmlFor="firearm-serial" className="soc-form-label">Serial Number</label>
+              <input id="firearm-serial" type="text" required value={newFirearm.serialNumber} onChange={(e) => setNewFirearm({ ...newFirearm, serialNumber: e.target.value })} className="soc-form-control w-full" />
             </div>
             <div>
-              <label htmlFor="firearm-model" className="block text-xs font-semibold text-text-secondary mb-1">Model</label>
-              <input id="firearm-model" type="text" required value={newFirearm.model} onChange={(e) => setNewFirearm({ ...newFirearm, model: e.target.value })} className="w-full px-3 py-2 text-sm border border-border rounded bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-(--color-focus-ring)" />
+              <label htmlFor="firearm-model" className="soc-form-label">Model</label>
+              <input id="firearm-model" type="text" required value={newFirearm.model} onChange={(e) => setNewFirearm({ ...newFirearm, model: e.target.value })} className="soc-form-control w-full" />
             </div>
             <div>
-              <label htmlFor="firearm-caliber" className="block text-xs font-semibold text-text-secondary mb-1">Caliber</label>
-              <input id="firearm-caliber" type="text" required value={newFirearm.caliber} onChange={(e) => setNewFirearm({ ...newFirearm, caliber: e.target.value })} className="w-full px-3 py-2 text-sm border border-border rounded bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-(--color-focus-ring)" placeholder="e.g., 9mm" />
+              <label htmlFor="firearm-caliber" className="soc-form-label">Caliber</label>
+              <input id="firearm-caliber" type="text" required value={newFirearm.caliber} onChange={(e) => setNewFirearm({ ...newFirearm, caliber: e.target.value })} className="soc-form-control w-full" placeholder="e.g., 9mm" />
             </div>
             <div className="sm:col-span-3">
-              <label htmlFor="firearm-license-expiry" className="block text-xs font-semibold text-text-secondary mb-1">License Expiration Date <span className="font-normal text-text-tertiary">(optional)</span></label>
-              <input id="firearm-license-expiry" type="date" value={newFirearm.licenseExpiryDate} onChange={(e) => setNewFirearm({ ...newFirearm, licenseExpiryDate: e.target.value })} className="w-full px-3 py-2 text-sm border border-border rounded bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-(--color-focus-ring)" />
+              <label htmlFor="firearm-license-expiry" className="soc-form-label">License Expiration Date <span className="font-normal text-text-tertiary">(required for compliance)</span></label>
+              <input id="firearm-license-expiry" type="date" value={newFirearm.licenseExpiryDate} onChange={(e) => setNewFirearm({ ...newFirearm, licenseExpiryDate: e.target.value })} className="soc-form-control w-full" />
             </div>
           </div>
-          <button type="submit" disabled={submitting} className="w-full rounded bg-(--color-info-bg) text-(--color-info-text) border border-(--color-info-border) py-2 font-semibold text-sm hover:opacity-90 disabled:opacity-50 transition-opacity">
+          <button type="submit" disabled={submitting} className="soc-btn-primary w-full disabled:cursor-not-allowed disabled:opacity-60">
             {submitting ? 'Adding...' : 'Add Firearm'}
           </button>
         </form>
@@ -821,9 +825,11 @@ const FirearmsTab: FC = () => {
                   </td>
                   <td className="px-4 py-3 text-right">
                     <button
+                      type="button"
                       onClick={() => deleteFirearm(f.id)}
-                      className="inline-flex items-center gap-1 rounded px-3 py-1.5 text-xs font-semibold text-danger-text bg-danger-bg ring-1 ring-danger-border hover:bg-danger-bg/80 transition-colors"
+                      className="soc-btn soc-btn-danger"
                     >
+                      <Trash2 size={15} aria-hidden="true" />
                       Remove
                     </button>
                   </td>
@@ -917,10 +923,12 @@ const VehiclesTab: FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <h2 className="soc-section-title">Vehicle Fleet ({cars.length})</h2>
         <button
+          type="button"
           onClick={() => setShowAddModal(true)}
-          className="inline-flex items-center gap-1 rounded px-4 py-2 text-sm font-semibold bg-(--color-info-bg) text-(--color-info-text) border border-(--color-info-border) hover:opacity-90 transition-opacity"
+          className="soc-btn soc-btn-primary"
         >
-          + Add Vehicle
+          <Plus size={16} aria-hidden="true" />
+          Add Vehicle
         </button>
       </div>
 
@@ -962,7 +970,7 @@ const VehiclesTab: FC = () => {
               <input id="vehicle-pax" type="number" required min={1} max={20} value={newCar.passengerCapacity} onChange={(e) => setNewCar({ ...newCar, passengerCapacity: parseInt(e.target.value) || 4 })} className="w-full px-3 py-2 text-sm border border-border rounded bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-(--color-focus-ring)" />
             </div>
           </div>
-          <button type="submit" disabled={submitting} className="w-full rounded bg-(--color-info-bg) text-(--color-info-text) border border-(--color-info-border) py-2 font-semibold text-sm hover:opacity-90 disabled:opacity-50 transition-opacity">
+          <button type="submit" disabled={submitting} className="soc-btn-primary w-full disabled:cursor-not-allowed disabled:opacity-60">
             {submitting ? 'Adding...' : 'Add Vehicle'}
           </button>
         </form>
@@ -1000,8 +1008,9 @@ const VehiclesTab: FC = () => {
                   </td>
                   <td className="px-4 py-3 text-right">
                     <button
+                      type="button"
                       onClick={() => deleteVehicle(car.id)}
-                      className="inline-flex items-center gap-1 rounded px-3 py-1.5 text-xs font-semibold text-danger-text bg-danger-bg ring-1 ring-danger-border hover:bg-danger-bg/80 transition-colors"
+                      className="soc-btn soc-btn-danger"
                     >
                       Remove
                     </button>
@@ -1059,10 +1068,12 @@ const ClientSitesTab: FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <h2 className="soc-section-title">Client Sites ({clientSites.length})</h2>
         <button
+          type="button"
           onClick={() => setShowAddModal(true)}
-          className="inline-flex items-center gap-1 rounded px-4 py-2 text-sm font-semibold bg-(--color-info-bg) text-(--color-info-text) border border-(--color-info-border) hover:opacity-90 transition-opacity"
+          className="soc-btn soc-btn-primary"
         >
-          + Add Site
+          <Plus size={16} aria-hidden="true" />
+          Add Site
         </button>
       </div>
 
@@ -1096,7 +1107,7 @@ const ClientSitesTab: FC = () => {
               <input id="site-address" type="text" value={newSite.address || ''} onChange={(e) => setNewSite({ ...newSite, address: e.target.value })} className="w-full px-3 py-2 text-sm border border-border rounded bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-(--color-focus-ring)" />
             </div>
           </div>
-          <button type="submit" disabled={submitting} className="w-full rounded bg-(--color-info-bg) text-(--color-info-text) border border-(--color-info-border) py-2 font-semibold text-sm hover:opacity-90 disabled:opacity-50 transition-opacity">
+          <button type="submit" disabled={submitting} className="soc-btn-primary w-full disabled:cursor-not-allowed disabled:opacity-60">
             {submitting ? 'Creating...' : 'Create Site'}
           </button>
         </form>
@@ -1123,9 +1134,11 @@ const ClientSitesTab: FC = () => {
                   <td className="px-4 py-3 text-text-secondary text-xs font-mono hidden md:table-cell">{site.latitude.toFixed(4)}, {site.longitude.toFixed(4)}</td>
                   <td className="px-4 py-3 text-right">
                     <button
+                      type="button"
                       onClick={() => handleDelete(site.id)}
-                      className="inline-flex items-center gap-1 rounded px-3 py-1.5 text-xs font-semibold text-danger-text bg-danger-bg ring-1 ring-danger-border hover:bg-danger-bg/80 transition-colors"
+                      className="soc-btn soc-btn-danger"
                     >
+                      <Trash2 size={15} aria-hidden="true" />
                       Remove
                     </button>
                   </td>

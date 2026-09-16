@@ -213,7 +213,7 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
                 <h2 className="text-2xl font-bold text-text-primary mb-4 md:mb-0">Firearm Allocations ({allocations.length})</h2>
                 <button
                   onClick={() => setShowAllocateForm(!showAllocateForm)}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded transition duration-200"
+                  className={showAllocateForm ? 'soc-btn soc-btn-danger' : 'soc-btn soc-btn-primary'}
                 >
                   {showAllocateForm ? 'Cancel' : '+ Allocate Firearm'}
                 </button>
@@ -227,7 +227,7 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
                       <select
                         value={newAllocation.guardId}
                         onChange={(e) => setNewAllocation({ ...newAllocation, guardId: e.target.value })}
-                        className="w-full px-4 py-2 border border-border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="soc-form-control w-full"
                         required
                       >
                         <option value="">Select a guard</option>
@@ -241,7 +241,7 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
                       <select
                         value={newAllocation.firearmId}
                         onChange={(e) => setNewAllocation({ ...newAllocation, firearmId: e.target.value })}
-                        className="w-full px-4 py-2 border border-border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="soc-form-control w-full"
                         required
                       >
                         <option value="">Select a firearm</option>
@@ -254,7 +254,7 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-semibold py-2 rounded transition duration-200"
+                    className="soc-btn-primary w-full disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {loading ? 'Allocating...' : 'Allocate Firearm'}
                   </button>

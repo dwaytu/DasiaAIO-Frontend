@@ -1,5 +1,6 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
 import {
+  Archive,
   Check,
   ChevronLeft,
   ChevronRight,
@@ -17,6 +18,7 @@ import type { User } from '../../context/AuthContext'
 import { normalizeRole } from '../../types/auth'
 import { sanitizeErrorMessage } from '../../utils/sanitize'
 import {
+  archiveOperationalRequest,
   createOperationalRequest,
   getOperationalRequest,
   getRequestResources,
@@ -91,6 +93,7 @@ export default function OperationalRequestsPanel({ user }: OperationalRequestsPa
   const [requesterFilter, setRequesterFilter] = useState('')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
+  const [showCleared, setShowCleared] = useState(false)
   const [loading, setLoading] = useState(true)
   const [detailLoading, setDetailLoading] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -112,14 +115,14 @@ export default function OperationalRequestsPanel({ user }: OperationalRequestsPa
   const needsResource = form.requestType === 'deposit' || form.requestType === 'return'
   const role = normalizeRole(user.role)
   const canCreateRequest = role === 'guard' || role === 'supervisor'
+  const canReviewAllRequests = role === 'admin' || role === 'superadmin'
   const ownCorrection = canCreateRequest && selected?.status === 'needs_correction' && selected.requesterId === user.id
-  const isElevated = role !== 'guard'
 
   const refresh = useCallback(() => setRefreshKey((key) => key + 1), [])
 
   useEffect(() => {
     setPage(1)
-  }, [dateFrom, dateTo, priorityFilter, requesterFilter, statusFilter, typeFilter])
+  }, [dateFrom, dateTo, priorityFilter, requesterFilter, showCleared, statusFilter, typeFilter])
 
   useEffect(() => {
     setDecisionAction(null)
@@ -139,9 +142,10 @@ export default function OperationalRequestsPanel({ user }: OperationalRequestsPa
         status: statusFilter,
         requestType: typeFilter,
         priority: priorityFilter,
-        requester: isElevated ? requesterFilter : '',
+        requester: canReviewAllRequests ? requesterFilter : '',
         dateFrom,
         dateTo,
+        includeArchived: canReviewAllRequests && showCleared,
       }, controller.signal),
       getRequestResources(controller.signal),
     ])
@@ -171,7 +175,7 @@ export default function OperationalRequestsPanel({ user }: OperationalRequestsPa
       active = false
       controller.abort()
     }
-  }, [dateFrom, dateTo, isElevated, page, priorityFilter, refreshKey, requesterFilter, selectedId, statusFilter, typeFilter])
+  }, [canReviewAllRequests, dateFrom, dateTo, page, priorityFilter, refreshKey, requesterFilter, selectedId, showCleared, statusFilter, typeFilter])
 
   useEffect(() => {
     if (!selectedId) return
@@ -285,6 +289,25 @@ export default function OperationalRequestsPanel({ user }: OperationalRequestsPa
       refresh()
     } catch (submitError) {
       setError(errorText(submitError))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const clearSelectedRequest = async () => {
+    if (!selected || !canReviewAllRequests) return
+    if (!window.confirm('Clear this completed request from the active request list? Its audit history will be retained.')) return
+    setBusy(true)
+    setError('')
+    setNotice('')
+    try {
+      await archiveOperationalRequest(selected.id)
+      setSelectedId(null)
+      setEvents([])
+      setNotice('Request cleared from the active list. Its audit history was retained.')
+      refresh()
+    } catch (archiveError) {
+      setError(errorText(archiveError))
     } finally {
       setBusy(false)
     }
@@ -416,10 +439,16 @@ export default function OperationalRequestsPanel({ user }: OperationalRequestsPa
             <option value="urgent">Urgent</option>
           </select>
         </label>
-        {isElevated ? (
+        {canReviewAllRequests ? (
           <label className="text-xs font-semibold uppercase text-text-tertiary">
             Requester
             <input value={requesterFilter} onChange={(event) => setRequesterFilter(event.target.value)} placeholder="Name, username, or email" className="ml-2 min-h-11 rounded border border-border bg-background px-3 text-sm normal-case text-text-primary" />
+          </label>
+        ) : null}
+        {canReviewAllRequests ? (
+          <label className="inline-flex min-h-11 items-center gap-2 text-xs font-semibold uppercase text-text-tertiary">
+            <input type="checkbox" checked={showCleared} onChange={(event) => setShowCleared(event.target.checked)} className="h-4 w-4 rounded border-border bg-background text-primary focus:ring-focus" />
+            Show cleared
           </label>
         ) : null}
         <label className="text-xs font-semibold uppercase text-text-tertiary">
@@ -487,6 +516,7 @@ export default function OperationalRequestsPanel({ user }: OperationalRequestsPa
                   <span className={`rounded border px-2 py-1 text-xs font-semibold ${STATUS_TONE[selected.status]}`}>{REQUEST_STATUS_LABELS[selected.status]}</span>
                 </div>
                 <p className="mt-1 text-xs text-text-tertiary">Requested by {selected.requesterName}</p>
+                {selected.archivedAt ? <p className="mt-2 text-xs font-semibold text-warning-text">Cleared from active requests on {new Date(selected.archivedAt).toLocaleString()}</p> : null}
               </div>
               <dl className="grid gap-3 text-sm">
                 <div><dt className="text-xs font-semibold uppercase text-text-tertiary">Reason</dt><dd className="mt-1 whitespace-pre-wrap text-text-primary">{selected.reason}</dd></div>
@@ -516,6 +546,13 @@ export default function OperationalRequestsPanel({ user }: OperationalRequestsPa
                     </button>
                   ))}
                 </div>
+              ) : null}
+
+              {canReviewAllRequests && !selected.archivedAt && ['approved', 'rejected', 'completed', 'cancelled'].includes(selected.status) ? (
+                <button type="button" disabled={busy} onClick={() => void clearSelectedRequest()} className="soc-btn soc-btn-neutral min-h-11 w-full">
+                  <Archive className="h-4 w-4" aria-hidden="true" />
+                  Clear Request
+                </button>
               ) : null}
 
               {decisionAction ? (

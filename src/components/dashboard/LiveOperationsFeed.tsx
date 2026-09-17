@@ -1,4 +1,5 @@
 import { FC } from 'react'
+import { Check, CheckCircle2, X } from 'lucide-react'
 import { useOperationalEvent } from '../../context/OperationalEventContext'
 
 export type FeedCategory = 'guard' | 'vehicle' | 'mission' | 'equipment' | 'system'
@@ -121,10 +122,11 @@ const LiveOperationsFeed: FC<LiveOperationsFeedProps> = ({ items, onDismiss, onU
                           e.stopPropagation()
                           onDismiss(item.id)
                         }}
-                        className="inline-flex h-5 w-5 items-center justify-center rounded border border-border-subtle bg-surface text-text-tertiary transition-colors hover:border-border hover:text-text-primary"
+                        className="soc-btn soc-btn-neutral soc-btn-icon min-h-11 min-w-11 shrink-0 p-0"
                         aria-label={`Dismiss ${item.description}`}
+                        title="Dismiss event"
                       >
-                        x
+                        <X className="h-4 w-4" aria-hidden="true" />
                       </button>
                     )}
                   </div>
@@ -139,9 +141,10 @@ const LiveOperationsFeed: FC<LiveOperationsFeedProps> = ({ items, onDismiss, onU
                         e.stopPropagation()
                         void onUpdateIncidentStatus(incidentId, 'investigating')
                       }}
-                      className="inline-flex items-center gap-1 rounded border border-info-border bg-info-bg px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-info-text transition-colors hover:brightness-110"
+                      className="soc-btn soc-btn-neutral min-h-11 px-3 text-[10px]"
                       aria-label={`Acknowledge ${item.description}`}
                     >
+                      <Check className="h-4 w-4" aria-hidden="true" />
                       Acknowledge
                     </button>
                     <button
@@ -150,9 +153,10 @@ const LiveOperationsFeed: FC<LiveOperationsFeedProps> = ({ items, onDismiss, onU
                         e.stopPropagation()
                         void onUpdateIncidentStatus(incidentId, 'resolved')
                       }}
-                      className="inline-flex items-center gap-1 rounded border border-success-border bg-success-bg px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-success-text transition-colors hover:brightness-110"
+                      className="soc-btn soc-btn-success min-h-11 px-3 text-[10px]"
                       aria-label={`Resolve ${item.description}`}
                     >
+                      <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
                       Resolve
                     </button>
                   </div>

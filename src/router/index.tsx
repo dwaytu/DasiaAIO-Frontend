@@ -1,4 +1,4 @@
-import { lazy, Suspense, type ComponentType } from 'react'
+import { lazy, startTransition, Suspense, type ComponentType } from 'react'
 import { createBrowserRouter, Navigate, useNavigate, useLocation, type RouteObject } from 'react-router'
 import { useAuth } from '../hooks/useAuth'
 import { getAuthToken, getRefreshToken } from '../utils/api'
@@ -17,6 +17,7 @@ const DtrReport = lazy(() => import('../components/DtrReport'))
 const MeritScoreDashboard = lazy(() => import('../components/MeritScoreDashboard'))
 const FirearmInventory = lazy(() => import('../components/FirearmInventory'))
 const FirearmComplianceReport = lazy(() => import('../components/FirearmComplianceReport'))
+const GuardLicenseComplianceReport = lazy(() => import('../components/GuardLicenseComplianceReport'))
 const FirearmAllocation = lazy(() => import('../components/FirearmAllocation'))
 const GuardFirearmPermits = lazy(() => import('../components/GuardFirearmPermits'))
 const FirearmMaintenance = lazy(() => import('../components/FirearmMaintenance'))
@@ -53,7 +54,7 @@ function useLegacyProps() {
   const activeView = location.pathname.replace(/^\//, '') || 'dashboard'
   const onViewChange = (view: string) => {
     const route = VIEW_TO_ROUTE[view] || `/${view}`
-    navigate(route)
+    startTransition(() => { void navigate(route) })
   }
   return { user, onLogout: logout, onViewChange, activeView }
 }
@@ -224,6 +225,7 @@ export const appRoutes: RouteObject[] = [
           { path: ROUTES.MERIT, element: <LegacyPage Component={MeritScoreDashboard} /> },
           { path: ROUTES.FIREARMS, element: <LegacyPage Component={FirearmInventory} /> },
           { path: ROUTES.FIREARM_COMPLIANCE, element: <LegacyPage Component={FirearmComplianceReport} /> },
+          { path: ROUTES.GUARD_COMPLIANCE, element: <LegacyPage Component={GuardLicenseComplianceReport} /> },
           { path: ROUTES.ALLOCATION, element: <LegacyPage Component={FirearmAllocation} /> },
           { path: ROUTES.MAINTENANCE, element: <LegacyPage Component={FirearmMaintenance} /> },
           { path: ROUTES.ARMORED_CARS, element: <LegacyPage Component={ArmoredCarDashboard} /> },

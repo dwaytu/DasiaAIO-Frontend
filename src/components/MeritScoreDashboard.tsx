@@ -8,6 +8,7 @@ import type { User } from '../context/AuthContext'
 import { getSidebarNav } from '../config/navigation'
 import { logError } from '../utils/logger'
 import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
+import { can } from '../utils/permissions'
 
 interface Props {
   user: User
@@ -50,6 +51,7 @@ interface Evaluation {
   rating: number
   comment: string
   evaluatorName: string
+  evaluatorRole?: string
   createdAt: string
 }
 
@@ -79,7 +81,7 @@ const RatingTrendChart: FC<{ evaluations: Evaluation[] }> = ({ evaluations }) =>
 
   return (
     <section className="command-panel p-5 md:p-6">
-      <h3 className="mb-3 text-lg font-bold text-text-primary">Client Rating Trend</h3>
+      <h3 className="mb-3 text-lg font-bold text-text-primary">Guard Evaluation Trend</h3>
       <svg
         viewBox={`0 0 ${W} ${H}`}
         className="w-full h-20"
@@ -137,6 +139,7 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
   })
 
   const currentView = activeView || 'merit'
+  const canEvaluate = can(user.role, 'manage_evaluations')
 
   useEffect(() => {
     const controller = new AbortController()
@@ -293,7 +296,7 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
             <section className="soc-surface mb-6 p-4 md:p-5">
               <p className="text-xs font-bold uppercase tracking-[0.2em] text-text-tertiary">Merit Intelligence</p>
               <h1 className="text-2xl font-black uppercase tracking-wide text-text-primary">Guard Merit and Evaluation Center</h1>
-              <p className="mt-1 text-sm text-text-secondary">Review rankings, inspect score drivers, and submit structured client evaluations.</p>
+              <p className="mt-1 text-sm text-text-secondary">Review rankings, inspect score drivers, and record guard evaluations.</p>
             </section>
 
             {error && (
@@ -342,7 +345,7 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
                     </div>
 
                     <div className="bento-card status-bar-warning">
-                      <p className="text-sm opacity-90">Client Rating</p>
+                      <p className="text-sm opacity-90">Evaluator Rating</p>
                       <p className="text-3xl font-bold text-text-primary">{(selectedGuard.clientRating / 20).toFixed(1)}/5 ★</p>
                     </div>
                   </div>
@@ -377,13 +380,17 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
                 {/* Evaluations Section */}
                 <section className="command-panel p-6 md:p-8">
                   <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-2xl font-bold text-text-primary">Client Evaluations</h3>
-                    <button
-                      onClick={() => setShowEvaluationForm(!showEvaluationForm)}
-                      className="soc-btn"
-                    >
-                      {showEvaluationForm ? 'Cancel' : '+ Add Evaluation'}
-                    </button>
+                    <h3 className="text-2xl font-bold text-text-primary">Supervisor and Admin Evaluations</h3>
+                    {canEvaluate ? (
+                      <button
+                        onClick={() => setShowEvaluationForm(!showEvaluationForm)}
+                        className="soc-btn"
+                      >
+                        {showEvaluationForm ? 'Cancel' : '+ Add Evaluation'}
+                      </button>
+                    ) : (
+                      <span className="text-sm text-text-tertiary">Read-only evaluation history</span>
+                    )}
                   </div>
 
                   {evaluationStatus ? (
@@ -392,10 +399,10 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
                     </div>
                   ) : null}
 
-                  {showEvaluationForm && (
+                  {showEvaluationForm && canEvaluate && (
                     <div className="mb-6 p-6 command-panel">
                       <div className="space-y-4">
-                        <p className="text-sm text-text-secondary">Evaluator identity is recorded from the signed-in account.</p>
+                        <p className="text-sm text-text-secondary">Your supervisor or administrator identity is recorded with this evaluation.</p>
 
                         <div>
                           <label className="block text-sm font-semibold text-text-primary mb-2">Rating (1-5 stars)</label>
@@ -442,7 +449,10 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
                           <div className="flex items-start justify-between">
                             <div>
                               <p className="font-semibold text-text-primary">{evaluation.evaluatorName}</p>
-                                <p className="text-sm text-text-secondary">{new Date(evaluation.createdAt).toLocaleDateString()}</p>
+                              <p className="text-xs uppercase tracking-wide text-text-tertiary">
+                                {evaluation.evaluatorRole || 'authorized evaluator'}
+                              </p>
+                              <p className="text-sm text-text-secondary">{new Date(evaluation.createdAt).toLocaleDateString()}</p>
                             </div>
                             <span className="text-lg font-bold text-warning">{'★'.repeat(Math.ceil(evaluation.rating))}</span>
                           </div>
@@ -481,7 +491,7 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
                             Punctuality
                           </th>
                           <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">
-                            Client Rating
+                            Evaluator Rating
                           </th>
                           <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">
                             Action
@@ -535,7 +545,7 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
                     </table>
                   </div>
                 ) : (
-                  <EmptyState icon={Award} title="No merit scores recorded" subtitle="Merit scores will appear after evaluations are submitted" />
+                  <EmptyState icon={Award} title="No eligible guards available" subtitle="Approved active guards will appear here so supervisors and administrators can submit evaluations" />
                 )}
               </section>
             )}

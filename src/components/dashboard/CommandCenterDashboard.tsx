@@ -7,17 +7,18 @@ import OperationalSummaryStrip from './OperationalSummaryStrip'
 
 import LiveOperationsFeed, { LiveFeedItem } from './LiveOperationsFeed'
 import IncidentAlertFeed from './IncidentAlertFeed'
+import SosAlertDialog from './SosAlertDialog'
 import PredictiveAlertsPanel from './PredictiveAlertsPanel'
 import GuardAbsencePredictionPanel from './GuardAbsencePredictionPanel'
 import ReplacementSuggestionPanel from './ReplacementSuggestionPanel'
 import VehicleMaintenancePredictionPanel from './VehicleMaintenancePredictionPanel'
 import IncidentSeverityMonitoringPanel from './IncidentSeverityMonitoringPanel'
 import TodaysShiftOperations from './TodaysShiftOperations'
+import GuardDeploymentOverview from './GuardDeploymentOverview'
 import FirearmsStatusPanel from './FirearmsStatusPanel'
 import SystemStatusBanner from './SystemStatusBanner'
 import SectionHeader from './ui/SectionHeader'
 import StatusBadge from './ui/StatusBadge'
-import LiveFreshnessPill from './ui/LiveFreshnessPill'
 import MetricStatCard from './ui/MetricStatCard'
 import { DashboardLoadingState } from './ui/DashboardLoadingState'
 import { formatCompactNumber, formatRatioLabel } from '../../utils/numberFormat'
@@ -59,8 +60,8 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
   const replacementSuggestionsState = useReplacementSuggestions()
   const vehicleMaintenancePredictionState = useVehicleMaintenancePrediction()
   const [clock, setClock] = useState(() => new Date())
-  const [lastRefreshAt, setLastRefreshAt] = useState<number>(() => Date.now())
   const [dismissedFeedIds, setDismissedFeedIds] = useState<Set<string>>(new Set())
+  const [dismissedSosIds, setDismissedSosIds] = useState<Set<string>>(new Set())
 
   const summary = summaryState.summary
   const alerts = useMemo(() => getOpsAlerts(summary), [summary])
@@ -102,9 +103,6 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
         }
       }
 
-      if (!isCancelled) {
-        setLastRefreshAt(Date.now())
-      }
     }
 
     const refresher = window.setInterval(() => {
@@ -117,16 +115,25 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
     }
   }, [summaryState.refresh, shiftsState.refresh, assetsState.refresh, incidentsState.refresh, predictiveAlertsState.refresh, guardAbsencePredictionState.refresh, replacementSuggestionsState.refresh, vehicleMaintenancePredictionState.refresh])
 
+  const serviceStatuses = [
+    serviceState.services.database,
+    serviceState.services.apiGateway,
+    serviceState.services.monitoringNodes,
+    serviceState.services.vehicleTelemetry,
+    serviceState.services.authenticationService,
+  ]
+  const onlineServices = serviceStatuses.filter((status) => status === 'online').length
+  const totalServices = serviceStatuses.length
   const systemStatus = alerts.some((alert) => alert.severity === 'critical')
     ? 'Critical'
-    : alerts.some((alert) => alert.severity === 'warning')
+    : alerts.some((alert) => alert.severity === 'warning') || onlineServices < totalServices
       ? 'Warning'
       : 'Operational'
   const systemHealthState = systemStatus.toLowerCase() as 'operational' | 'warning' | 'critical'
   const activeIncidents = incidentsState.activeCount > 0
     ? incidentsState.activeCount
     : alerts.filter((alert) => alert.severity === 'critical' || alert.severity === 'warning').length
-  const guardsCapacity = Math.max(summary.activeGuardsOnDuty + summary.guardsAbsentToday, 1)
+  const guardsCapacity = summary.totalApprovedGuards
   const threatLevel = alerts.length >= 3 || summary.guardsAbsentToday > 0
     ? 'High'
     : alerts.length > 0 || summary.pendingGuardApprovals > 0
@@ -134,9 +141,6 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
       : 'Low'
   const systemTone = systemStatus === 'Critical' ? 'danger' : systemStatus === 'Warning' ? 'warning' : 'success'
   const threatTone = threatLevel === 'High' ? 'danger' : threatLevel === 'Medium' ? 'warning' : 'info'
-  const onlineServices = Object.values(serviceState.services).filter((status) => status === 'online').length
-  const totalServices = Object.keys(serviceState.services).length
-
   const formatTime = (value: Date | string) =>
     new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 
@@ -146,10 +150,26 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
   const displayReplacementSuggestions = replacementSuggestionsState.suggestions
   const displayVehiclePredictions = vehicleMaintenancePredictionState.predictions
 
+  const sosIncident = useMemo(
+    () => displayIncidents
+      .filter((incident) => incident.status !== 'resolved' && incident.title.toLowerCase().includes('sos emergency'))
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .find((incident) => !dismissedSosIds.has(incident.id)) || null,
+    [dismissedSosIds, displayIncidents],
+  )
+
   const handleDismissFeedItem = useCallback((itemId: string) => {
     setDismissedFeedIds((previous) => {
       const next = new Set(previous)
       next.add(itemId)
+      return next
+    })
+  }, [])
+
+  const handleDismissSos = useCallback((incidentId: string) => {
+    setDismissedSosIds((previous) => {
+      const next = new Set(previous)
+      next.add(incidentId)
       return next
     })
   }, [])
@@ -271,14 +291,21 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
   return (
     <OperationalEventProvider>
       <main className="space-y-4" aria-label="Security operations command center overview">
-      <SystemStatusBanner
-        status={systemHealthState}
-        guardsActive={summary.activeGuardsOnDuty}
-        guardsCapacity={guardsCapacity}
-        activeIncidents={activeIncidents}
-        firearmsCheckedOut={summary.firearmsCurrentlyIssued}
-        vehiclesDeployed={summary.activeArmoredCarTrips}
-      />
+        {sosIncident ? (
+          <SosAlertDialog
+            incident={sosIncident}
+            onUpdateStatus={handleIncidentStatusUpdate}
+            onDismiss={() => handleDismissSos(sosIncident.id)}
+          />
+        ) : null}
+        <SystemStatusBanner
+          status={systemHealthState}
+          guardsActive={summary.activeGuardsOnDuty}
+          guardsCapacity={guardsCapacity}
+          activeIncidents={activeIncidents}
+          firearmsCheckedOut={summary.firearmsCurrentlyIssued}
+          vehiclesDeployed={summary.activeArmoredCarTrips}
+        />
 
       <section className="animate-section-enter soc-surface p-4 md:p-5" aria-labelledby="command-center-title">
         <SectionHeader
@@ -286,7 +313,6 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
           subtitle="Unified tactical view for incidents, deployments, and operational risk activity."
           actions={
             <div className="flex items-center gap-2">
-              <LiveFreshnessPill updatedAt={lastRefreshAt} label="SOC stream" />
               <StatusBadge label={`System ${systemStatus}`} tone={systemTone === 'danger' ? 'danger' : systemTone === 'warning' ? 'warning' : 'success'} />
               <StatusBadge label={`Threat ${threatLevel}`} tone={threatTone === 'danger' ? 'danger' : threatTone === 'warning' ? 'warning' : 'success'} />
             </div>
@@ -387,6 +413,9 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
         subtitle="Shift execution and staffing resilience with attendance risk support"
         icon={<TimerReset className="h-4 w-4" aria-hidden="true" />}
       >
+        <div className="mb-6">
+          <GuardDeploymentOverview shifts={displayShifts} />
+        </div>
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
           <TodaysShiftOperations
             shifts={displayShifts}

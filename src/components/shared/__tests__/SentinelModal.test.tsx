@@ -5,11 +5,13 @@ import SentinelModal from '../SentinelModal'
 
 function ModalHarness() {
   const [open, setOpen] = useState(false)
+  const [value, setValue] = useState('')
 
   return (
     <>
       <button type="button" onClick={() => setOpen(true)}>Open modal</button>
       <SentinelModal open={open} onClose={() => setOpen(false)} title="Review item" subtitle="Check the request before continuing.">
+        <input aria-label="A/C number" value={value} onChange={(event) => setValue(event.target.value)} />
         <button type="button">Confirm action</button>
       </SentinelModal>
     </>
@@ -28,6 +30,9 @@ describe('SentinelModal', () => {
     expect(closeButton).toHaveFocus()
 
     await user.tab()
+    expect(screen.getByRole('textbox', { name: 'A/C number' })).toHaveFocus()
+
+    await user.tab()
     expect(screen.getByRole('button', { name: 'Confirm action' })).toHaveFocus()
 
     await user.tab()
@@ -35,5 +40,19 @@ describe('SentinelModal', () => {
 
     fireEvent.click(closeButton)
     expect(trigger).toHaveFocus()
+  })
+
+  it('keeps focus in a controlled input when the modal content rerenders', async () => {
+    const user = userEvent.setup()
+    render(<ModalHarness />)
+
+    await user.click(screen.getByRole('button', { name: 'Open modal' }))
+    const input = screen.getByRole('textbox', { name: 'A/C number' })
+
+    await user.click(input)
+    await user.type(input, '123')
+
+    expect(input).toHaveValue('123')
+    expect(input).toHaveFocus()
   })
 })

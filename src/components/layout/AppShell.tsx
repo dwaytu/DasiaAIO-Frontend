@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { startTransition, useEffect, useRef, useState } from 'react'
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router'
 import { LayoutDashboard, ClipboardCheck, Calendar, Bell, MoreHorizontal, X } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
@@ -11,12 +11,14 @@ import { getMobileBottomNavViews, getSidebarNav } from '../../config/navigation'
 import { getLocationConsentStatus } from '../../utils/location'
 import { VIEW_TO_ROUTE } from '../../router/routes'
 import ToastContainer from '../shared/ToastContainer'
+import RequiredPasswordChangeModal from '../auth/RequiredPasswordChangeModal'
 
 export default function AppShell() {
   usePresenceHeartbeat()
 
   const {
     user,
+    logout,
     isLoggedIn,
     isLoading,
     hasAcceptedToa,
@@ -26,6 +28,7 @@ export default function AppShell() {
     declineToa,
     setToaChecked,
     setToaError,
+    updateUser,
   } = useAuth()
 
   const {
@@ -52,6 +55,9 @@ export default function AppShell() {
 
   const navigate = useNavigate()
   const location = useLocation()
+  const navigateWithoutFallback = (to: string) => {
+    startTransition(() => { void navigate(to) })
+  }
   const activeView = location.pathname.replace(/^\//, '') || 'dashboard'
 
   // Local checkbox state for the ToA location consent check (UI-only, not persisted yet)
@@ -142,6 +148,7 @@ export default function AppShell() {
     'audit',
     'calendar',
     'operations-map',
+    'guard-compliance',
     'profile',
     'settings',
     'mdr-import',
@@ -193,6 +200,14 @@ export default function AppShell() {
       className={`h-[100dvh] w-full overflow-hidden bg-background ${showAppShellMobileNav ? 'pb-24 md:pb-0' : 'pb-4 md:pb-0'}`}
     >
       <Outlet />
+
+      {user?.mustChangePassword === true && hasAcceptedToa ? (
+        <RequiredPasswordChangeModal
+          userId={user.id}
+          onComplete={() => updateUser({ mustChangePassword: false })}
+          onLogout={logout}
+        />
+      ) : null}
 
       {/* ── Connectivity banner ──────────────────────────────────────────── */}
       {showConnectivityBanner && !hasBlockingOverlay ? (
@@ -540,7 +555,7 @@ export default function AppShell() {
                       <li key={item.view}>
                         <button
                           type="button"
-                          onClick={() => { navigate(itemRoute); setMoreDrawerOpen(false) }}
+                          onClick={() => { navigateWithoutFallback(itemRoute); setMoreDrawerOpen(false) }}
                           className="soc-btn-neutral min-h-11 w-full px-2 py-2 text-xs"
                         >
                           {item.label}
@@ -567,7 +582,7 @@ export default function AppShell() {
                   <li key={tab.key}>
                     <button
                       type="button"
-                      onClick={() => navigate(tabRoute)}
+                      onClick={() => navigateWithoutFallback(tabRoute)}
                       aria-current={isActive ? 'page' : undefined}
                       className={`flex min-h-11 w-full flex-col items-center justify-center gap-0.5 rounded-md py-1 text-[10px] font-semibold transition-colors ${
                         isActive ? 'text-[var(--color-info)]' : 'text-text-secondary'

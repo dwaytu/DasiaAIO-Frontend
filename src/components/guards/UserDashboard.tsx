@@ -156,6 +156,27 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
 
   const [profileModalOpen, setProfileModalOpen] = useState<boolean>(false)
   const profileTriggerRef = useRef<HTMLButtonElement | null>(null)
+  const guardStickyRegionRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    const stickyRegion = guardStickyRegionRef.current
+    if (!stickyRegion || typeof ResizeObserver === 'undefined') return
+
+    const root = document.documentElement
+    const updateStickyRegionHeight = () => {
+      const height = Math.ceil(stickyRegion.getBoundingClientRect().height)
+      if (height > 0) root.style.setProperty('--guard-sticky-region-height', `${height}px`)
+    }
+
+    const observer = new ResizeObserver(updateStickyRegionHeight)
+    observer.observe(stickyRegion)
+    updateStickyRegionHeight()
+
+    return () => {
+      observer.disconnect()
+      root.style.removeProperty('--guard-sticky-region-height')
+    }
+  }, [])
 
   useEffect(() => {
     setActiveSection(resolveSectionFromView(activeView))
@@ -338,11 +359,48 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
     setIsSyncing(false)
   }, [getAuthHeaders, user?.id])
 
+  const refreshAttendance = useCallback(async (signal?: AbortSignal) => {
+    if (!user?.id) return
+
+    try {
+      const data = await fetchJsonOrThrow<any>(
+        `${API_BASE_URL}/api/attendance/${user.id}`,
+        { headers: getAuthHeaders(), signal },
+        'Unable to refresh attendance records',
+      )
+      const attendanceRows: AttendanceRecord[] = Array.isArray(data?.attendance) ? data.attendance : []
+      const derivedState = deriveCheckedInAttendance(attendanceRows)
+      setAttendance(attendanceRows)
+      setCheckInStatus(derivedState.checkInStatus)
+      setCheckInTimes(derivedState.checkInTimes)
+    } catch (error) {
+      if (signal?.aborted) return
+      logError('Unable to refresh attendance after background tracking:', error)
+    }
+  }, [getAuthHeaders, user?.id])
+
   useEffect(() => {
     const controller = new AbortController()
     void refreshData(true, controller.signal)
     return () => { controller.abort() }
   }, [refreshData])
+
+  useEffect(() => {
+    let activeController: AbortController | null = null
+    const pollAttendance = () => {
+      activeController?.abort()
+      activeController = new AbortController()
+      void refreshAttendance(activeController.signal)
+    }
+
+    pollAttendance()
+    const intervalId = window.setInterval(pollAttendance, 20000)
+
+    return () => {
+      window.clearInterval(intervalId)
+      activeController?.abort()
+    }
+  }, [refreshAttendance])
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
@@ -617,8 +675,8 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
   const currentShiftCheckedIn = currentShift ? checkInStatus[currentShift.id] === 'checked_in' : false
   const isTrackingActiveWithoutSchedule = !currentShift && locationHeartbeatStatus === 'active'
   const trackingExecutionNote = runtimePlatform === 'capacitor'
-    ? 'Android tracking uses a visible foreground service so updates can continue while SENTINEL is in the background. Location permission, consent, network access, and device power settings still apply.'
-    : 'Keep this dashboard tab open to continue sending location updates.'
+    ? 'Automatic check-in records when you enter your assigned site geofence up to 1 hour before the shift starts. Android tracking uses a visible foreground service; permission, consent, network access, and device power settings still apply.'
+    : 'Automatic check-in records when you enter your assigned site geofence up to 1 hour before the shift starts. Keep this dashboard tab open to continue sending location updates.'
   const trackingLastUpdateLabel = lastKnownLocation
     ? new Date(lastKnownLocation.recordedAt).toLocaleString()
     : 'Waiting for first location heartbeat'
@@ -740,7 +798,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
       <main
         id="maincontent"
         tabIndex={-1}
-        className="guard-sticky-main mx-auto h-[calc(100dvh-var(--guard-main-reserved-height))] w-full max-w-5xl overflow-y-auto px-4 pt-4"
+        className="guard-sticky-main mx-auto h-[calc(100dvh-var(--guard-main-reserved-height)-var(--guard-sticky-region-height))] w-full max-w-5xl overflow-y-auto px-4 pt-4"
       >
         <section className="guard-section-frame" aria-label="Guard mission workspace">
           {!isNetworkOnline ? (
@@ -881,7 +939,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
             <div className="guard-section-frame">
               <SectionHeader title="Mission" />
 
-              {dutyStatus === 'Off Duty' ? <OffDutyPanel scheduleItems={scheduleItems} /> : null}
+              {dutyStatus === 'Off Duty' ? <OffDutyPanel guardId={user.id} scheduleItems={scheduleItems} /> : null}
 
               <>
               {/* Zone 1: StatusHero */}
@@ -1082,7 +1140,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
         </section>
       </main>
 
-      <div className="guard-sticky-region" data-testid="guard-sticky-region">
+      <div ref={guardStickyRegionRef} className="guard-sticky-region" data-testid="guard-sticky-region">
         <EmergencyContactsBar />
         <section className="guard-sticky-inner" aria-label="Guard primary navigation">
           <nav aria-label="Guard primary navigation">
@@ -1153,11 +1211,11 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
               <li>Confirm assignment details before arrival at your post.</li>
               <li>Check in immediately once on-site and keep location tracking active.</li>
               <li>Report incidents with clear title, location, and priority level.</li>
-              <li>Escalate critical threats to Operations Desk without delay.</li>
+              <li>Escalate critical threats to the Security Officer without delay.</li>
               <li>Check out only after formal handoff or shift completion.</li>
             </ul>
             <div className="mt-4 rounded border border-border-subtle bg-surface-elevated p-3 text-sm text-text-secondary">
-              {EMERGENCY_CONTACTS.filter((c) => c.role === 'operations' || c.role === 'supervisor').map((c, i) => (
+              {EMERGENCY_CONTACTS.map((c, i) => (
                 <span key={c.role}>
                   {i > 0 && <br />}
                   {c.label}: <a href={phoneToTelHref(c.phone)} className="underline">{c.phone}</a>

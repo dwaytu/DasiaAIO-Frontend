@@ -6,6 +6,7 @@ import { useAuth } from './useAuth'
 
 export interface OpsSummary {
   activeGuardsOnDuty: number
+  totalApprovedGuards: number | null
   guardsAbsentToday: number
   pendingGuardApprovals: number
   firearmsCurrentlyIssued: number
@@ -21,6 +22,7 @@ export function useOpsSummary() {
   const canApproveGuards = viewerRole === 'admin' || viewerRole === 'superadmin'
   const [summary, setSummary] = useState<OpsSummary>({
     activeGuardsOnDuty: 0,
+    totalApprovedGuards: null,
     guardsAbsentToday: 0,
     pendingGuardApprovals: 0,
     firearmsCurrentlyIssued: 0,
@@ -45,9 +47,10 @@ export function useOpsSummary() {
         ? fetchJsonOrThrow<any>(`${API_BASE_URL}/api/users/pending-approvals`, { headers, signal }, 'Failed to load approvals')
         : Promise.resolve({ users: [] })
 
-      const [shiftsResult, approvalsResult, allocationsResult, overdueResult, tripsResult, vehiclesResult, permitsResult] = await Promise.allSettled([
+      const [shiftsResult, approvalsResult, guardsResult, allocationsResult, overdueResult, tripsResult, vehiclesResult, permitsResult] = await Promise.allSettled([
         fetchJsonOrThrow<any>(`${API_BASE_URL}/api/guard-replacement/shifts`, { headers, signal }, 'Failed to load shifts'),
         approvalsRequest,
+        fetchJsonOrThrow<any>(`${API_BASE_URL}/api/guards`, { headers, signal }, 'Failed to load approved guards'),
         fetchJsonOrThrow<any>(`${API_BASE_URL}/api/firearm-allocations/active`, { headers, signal }, 'Failed to load active allocations'),
         fetchJsonOrThrow<any>(`${API_BASE_URL}/api/firearm-allocations/overdue`, { headers, signal }, 'Failed to load overdue allocations'),
         fetchJsonOrThrow<any>(`${API_BASE_URL}/api/trips`, { headers, signal }, 'Failed to load trips'),
@@ -59,6 +62,9 @@ export function useOpsSummary() {
 
       const shifts = shiftsResult.status === 'fulfilled' ? (shiftsResult.value.shifts || shiftsResult.value || []) : []
       const approvals = approvalsResult.status === 'fulfilled' ? (approvalsResult.value.users || approvalsResult.value || []) : []
+      const guards = guardsResult.status === 'fulfilled'
+        ? (Array.isArray(guardsResult.value) ? guardsResult.value : guardsResult.value.guards || [])
+        : []
       const activeAllocations = allocationsResult.status === 'fulfilled'
         ? (allocationsResult.value.allocations || allocationsResult.value.activeAllocations || allocationsResult.value || [])
         : []
@@ -69,8 +75,9 @@ export function useOpsSummary() {
       const vehicles = vehiclesResult.status === 'fulfilled' ? (vehiclesResult.value.armored_cars || vehiclesResult.value.vehicles || vehiclesResult.value || []) : []
       const expiringPermits = permitsResult.status === 'fulfilled' ? (permitsResult.value.permits || permitsResult.value || []) : []
 
-      setSummary({
+      setSummary((previous) => ({
         activeGuardsOnDuty: shifts.filter((shift: any) => shift.status === 'in_progress').length,
+        totalApprovedGuards: guardsResult.status === 'fulfilled' ? guards.length : previous.totalApprovedGuards,
         guardsAbsentToday: shifts.filter((shift: any) => shift.status === 'absent' || shift.status === 'no_show').length,
         pendingGuardApprovals: approvals.length,
         firearmsCurrentlyIssued: activeAllocations.length,
@@ -78,7 +85,7 @@ export function useOpsSummary() {
         activeArmoredCarTrips: trips.filter((trip: any) => trip.status === 'in_progress' || trip.status === 'active').length,
         vehiclesInMaintenance: vehicles.filter((vehicle: any) => vehicle.status === 'maintenance').length,
         expiringGuardPermits: expiringPermits.length,
-      })
+      }))
 
       setError('')
       setLastUpdated(new Date().toLocaleTimeString())

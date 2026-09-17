@@ -32,12 +32,14 @@ const GuardDeploymentOverview: FC<GuardDeploymentOverviewProps> = ({ shifts }) =
       </div>
 
       <div className="mt-3 max-h-44 overflow-y-auto rounded border border-border-subtle">
-        <table className="w-full min-w-[420px]">
+        <table className="w-full min-w-[620px]">
           <thead className="thead-glass">
             <tr>
               <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.16em] text-text-tertiary">Guard</th>
               <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.16em] text-text-tertiary">Site</th>
               <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.16em] text-text-tertiary">Status</th>
+              <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.16em] text-text-tertiary">Callout</th>
+              <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.16em] text-text-tertiary">Readiness</th>
             </tr>
           </thead>
           <tbody>
@@ -46,11 +48,17 @@ const GuardDeploymentOverview: FC<GuardDeploymentOverviewProps> = ({ shifts }) =
                 <td className="px-3 py-2 text-sm font-medium text-text-primary">{shift.guard_name || shift.guard_username || 'Unknown guard'}</td>
                 <td className="px-3 py-2 text-sm text-text-primary">{shift.client_site || 'Unassigned site'}</td>
                 <td className="px-3 py-2 text-sm text-text-primary uppercase">{shift.status || 'scheduled'}</td>
+                <td className="px-3 py-2 text-sm text-text-primary">
+                  {shift.availability_available == null ? 'Not reported' : shift.availability_available ? 'Available' : 'Unavailable'}
+                </td>
+                <td className="px-3 py-2 text-sm text-text-primary">
+                  {shift.readiness_ready == null ? 'Not submitted' : shift.readiness_ready ? 'Ready' : 'Incomplete'}
+                </td>
               </tr>
             ))}
             {shifts.length === 0 && (
               <tr>
-                <td className="px-3 py-4 text-sm text-text-secondary" colSpan={3}>No deployment records available.</td>
+                <td className="px-3 py-4 text-sm text-text-secondary" colSpan={5}>No deployment records available.</td>
               </tr>
             )}
           </tbody>

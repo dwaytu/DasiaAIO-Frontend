@@ -105,9 +105,13 @@ test.describe('Authenticated Workflows', () => {
       return
     }
 
-    const emptyIncidentState = page.getByText(/no active incidents|monitoring remains stable/i).first()
-    const incidentPanelSurface = page.getByText(/incident intelligence|live operations|incident/i).first()
-    await expect(emptyIncidentState.or(incidentPanelSurface)).toBeVisible({ timeout: 10_000 })
+    const emptyIncidentState = page.locator('p').filter({ hasText: /no active incidents|monitoring remains stable/i }).first()
+    if (await emptyIncidentState.isVisible().catch(() => false)) {
+      return
+    }
+
+    const incidentPanelSurface = page.locator('h1, h2, h3').filter({ hasText: /incident intelligence|live operations/i }).first()
+    await expect(incidentPanelSurface).toBeVisible({ timeout: 10_000 })
   })
 
   test('logout returns to login page', async () => {

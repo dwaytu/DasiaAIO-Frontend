@@ -15,8 +15,6 @@ interface ArmoredCar {
   vin: string
   model: string
   manufacturer: string
-  capacity_kg: number
-  passenger_capacity?: number
   status: string
   registration_expiry?: string
   insurance_expiry?: string
@@ -53,16 +51,29 @@ interface CarMaintenance {
   updated_at: string
 }
 
-// interface DriverAssignment {
-//   id: string
-//   car_id: string
-//   guard_id: string
-//   assignment_date: string
-//   end_date?: string
-//   status: string
-//   created_at: string
-//   updated_at: string
-// }
+interface GuardOption {
+  id: string
+  full_name: string
+}
+
+interface ClientSiteOption {
+  id: string
+  name: string
+  address?: string | null
+  isActive?: boolean
+}
+
+interface DriverAssignment {
+  id: string
+  car_id: string
+  vehicle_number: string
+  guard_id: string
+  guard_name?: string
+  guard_number?: number
+  assignment_date: string
+  end_date?: string
+  status: string
+}
 
 interface Trip {
   id: string
@@ -93,11 +104,16 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
   const [allocations, setAllocations] = useState<CarAllocation[]>([])
   const [maintenance, setMaintenance] = useState<CarMaintenance[]>([])
   const [trips, setTrips] = useState<Trip[]>([])
+  const [guards, setGuards] = useState<GuardOption[]>([])
+  const [clientSites, setClientSites] = useState<ClientSiteOption[]>([])
+  const [driverAssignments, setDriverAssignments] = useState<DriverAssignment[]>([])
   const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<string>('')
   const [success, setSuccess] = useState<string>('')
   const [readWarning, setReadWarning] = useState<string>('')
   const [writeBlockReason, setWriteBlockReason] = useState<string>('')
+  const [selectedDriverByCar, setSelectedDriverByCar] = useState<Record<string, string>>({})
+  const [driverActionCarId, setDriverActionCarId] = useState<string>('')
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false)
 
   // Form states
@@ -160,6 +176,106 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
     // Fetch other data in parallel (non-blocking)
     fetchAllocations()
     fetchTrips()
+    fetchGuards()
+    fetchClientSites()
+    fetchDriverAssignments()
+  }
+
+  const fetchGuards = async () => {
+    try {
+      const data = await fetchJsonOrThrow<GuardOption[]>(
+        `${API_BASE_URL}/api/guards`,
+        { headers: getAuthHeaders() },
+        'Failed to fetch guards',
+      )
+      setGuards(data)
+    } catch (err) {
+      logError('Failed to fetch guards:', err)
+    }
+  }
+
+  const fetchDriverAssignments = async () => {
+    try {
+      const data = await fetchJsonOrThrow<DriverAssignment[]>(
+        `${API_BASE_URL}/api/driver-assignments`,
+        { headers: getAuthHeaders() },
+        'Failed to fetch vehicle drivers',
+      )
+      setDriverAssignments(data)
+    } catch (err) {
+      logError('Failed to fetch vehicle drivers:', err)
+    }
+  }
+
+  const fetchClientSites = async () => {
+    try {
+      const data = await fetchJsonOrThrow<{ sites?: ClientSiteOption[] }>(
+        `${API_BASE_URL}/api/tracking/client-sites`,
+        { headers: getAuthHeaders() },
+        'Failed to fetch client sites',
+      )
+      const sites = Array.isArray(data.sites) ? data.sites : []
+      setClientSites(sites.filter((site) => site.isActive !== false))
+    } catch (err) {
+      logError('Failed to fetch client sites:', err)
+      setClientSites([])
+    }
+  }
+
+  const assignDriver = async (carId: string) => {
+    const guardId = selectedDriverByCar[carId]
+    if (!guardId) {
+      setError('Choose a guard before assigning a driver.')
+      return
+    }
+
+    setDriverActionCarId(carId)
+    setError('')
+    setWriteBlockReason('')
+    try {
+      await fetchJsonOrThrow<{ message: string }>(
+        `${API_BASE_URL}/api/driver-assignment/assign`,
+        {
+          method: 'POST',
+          headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ carId, guardId }),
+        },
+        'Failed to assign driver',
+      )
+      setSuccess('Driver assigned. The guard location will appear as the vehicle on the map.')
+      setSelectedDriverByCar((previous) => ({ ...previous, [carId]: '' }))
+      await fetchDriverAssignments()
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to assign driver'
+      setWriteBlockReason(message)
+      setError(message)
+    } finally {
+      setDriverActionCarId('')
+    }
+  }
+
+  const unassignDriver = async (assignment: DriverAssignment) => {
+    setDriverActionCarId(assignment.car_id)
+    setError('')
+    setWriteBlockReason('')
+    try {
+      await fetchJsonOrThrow<{ message: string }>(
+        `${API_BASE_URL}/api/driver-assignment/${assignment.id}/unassign`,
+        {
+          method: 'POST',
+          headers: getAuthHeaders(),
+        },
+        'Failed to unassign driver',
+      )
+      setSuccess('Driver unassigned. The guard will appear as a guard again on the map.')
+      await fetchDriverAssignments()
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to unassign driver'
+      setWriteBlockReason(message)
+      setError(message)
+    } finally {
+      setDriverActionCarId('')
+    }
   }
 
   const fetchAllocations = async () => {
@@ -425,9 +541,8 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                     <table className="w-full min-w-[600px]">
                       <thead className="thead-glass">
                         <tr>
-                          <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-text-primary border-b-2 border-border text-xs md:text-sm uppercase tracking-wider">License Plate</th>
-                          <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-text-primary border-b-2 border-border text-xs md:text-sm uppercase tracking-wider hidden sm:table-cell">Model</th>
-                          <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-text-primary border-b-2 border-border text-xs md:text-sm uppercase tracking-wider hidden md:table-cell">Capacity</th>
+                          <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-text-primary border-b-2 border-border text-xs md:text-sm uppercase tracking-wider">A/C number</th>
+                          <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-text-primary border-b-2 border-border text-xs md:text-sm uppercase tracking-wider">Driver</th>
                           <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-text-primary border-b-2 border-border text-xs md:text-sm uppercase tracking-wider">Status</th>
                         </tr>
                       </thead>
@@ -435,8 +550,55 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                         {cars.map((car) => (
                           <tr key={car.id} className="border-b border-border hover:bg-surface-hover">
                             <td className="px-2 md:px-4 py-2 md:py-3 text-text-primary text-xs md:text-sm">{car.license_plate}</td>
-                            <td className="px-2 md:px-4 py-2 md:py-3 text-text-primary text-xs md:text-sm hidden sm:table-cell">{car.model}</td>
-                            <td className="px-2 md:px-4 py-2 md:py-3 text-text-primary text-xs md:text-sm hidden md:table-cell">{car.capacity_kg} kg</td>
+                            <td className="px-2 md:px-4 py-2 md:py-3 text-text-primary text-xs md:text-sm">
+                              {(() => {
+                                const assignment = driverAssignments.find((item) => item.car_id === car.id)
+                                const isSaving = driverActionCarId === car.id
+
+                                if (assignment) {
+                                  return (
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <span>{assignment.guard_name || 'Assigned guard'}</span>
+                                      <button
+                                        type="button"
+                                        className="rounded border border-danger-border px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-danger-text hover:bg-danger-bg disabled:opacity-60"
+                                        onClick={() => unassignDriver(assignment)}
+                                        disabled={isSaving}
+                                      >
+                                        {isSaving ? 'Saving...' : 'Unassign'}
+                                      </button>
+                                    </div>
+                                  )
+                                }
+
+                                return (
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <select
+                                      aria-label={`Choose driver for ${car.license_plate}`}
+                                      value={selectedDriverByCar[car.id] || ''}
+                                      onChange={(event) => setSelectedDriverByCar((previous) => ({ ...previous, [car.id]: event.target.value }))}
+                                      className="soc-field min-w-44 py-1 text-xs"
+                                      disabled={isSaving}
+                                    >
+                                      <option value="">Choose guard...</option>
+                                      {guards.map((guard) => (
+                                        <option key={guard.id} value={guard.id}>
+                                          {guard.full_name}
+                                        </option>
+                                      ))}
+                                    </select>
+                                    <button
+                                      type="button"
+                                      className="soc-btn soc-btn-secondary px-2 py-1 text-[10px]"
+                                      onClick={() => assignDriver(car.id)}
+                                      disabled={isSaving || !selectedDriverByCar[car.id]}
+                                    >
+                                      {isSaving ? 'Saving...' : 'Assign'}
+                                    </button>
+                                  </div>
+                                )
+                              })()}
+                            </td>
                             <td className="px-2 md:px-4 py-2 md:py-3">
                               <span className={`inline-block px-2 md:px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(car.status)}`}>
                                 {car.status}
@@ -478,14 +640,29 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs md:text-sm font-semibold text-text-primary mb-1 md:mb-2">Client</label>
-                    <input
-                      type="text"
+                    <label htmlFor="allocation-client-site" className="block text-xs md:text-sm font-semibold text-text-primary mb-1 md:mb-2">Client Site</label>
+                    <select
+                      id="allocation-client-site"
                       value={newAllocation.client_id}
                       onChange={(e) => setNewAllocation({ ...newAllocation, client_id: e.target.value })}
                       required
                       className="soc-field"
-                    />
+                      disabled={clientSites.length === 0}
+                    >
+                      <option value="">
+                        {clientSites.length === 0 ? 'No active client sites available' : 'Choose a client site...'}
+                      </option>
+                      {clientSites.map((site) => (
+                        <option key={site.id} value={site.name}>
+                          {site.address ? `${site.name} - ${site.address}` : site.name}
+                        </option>
+                      ))}
+                    </select>
+                    {clientSites.length === 0 && (
+                      <p className="mt-1 text-xs text-text-tertiary">
+                        Add an active client site in Operations Map before allocating a vehicle.
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-xs md:text-sm font-semibold text-text-primary mb-1 md:mb-2">Expected Return Date</label>
@@ -526,7 +703,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                       <thead className="thead-glass">
                         <tr>
                           <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-text-primary border-b-2 border-border text-xs md:text-sm uppercase tracking-wider">Vehicle</th>
-                          <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-text-primary border-b-2 border-border text-xs md:text-sm uppercase tracking-wider hidden sm:table-cell">Client</th>
+                          <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-text-primary border-b-2 border-border text-xs md:text-sm uppercase tracking-wider hidden sm:table-cell">Client Site</th>
                           <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-text-primary border-b-2 border-border text-xs md:text-sm uppercase tracking-wider hidden md:table-cell">Alloc. Date</th>
                           <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-text-primary border-b-2 border-border text-xs md:text-sm uppercase tracking-wider">Status</th>
                         </tr>

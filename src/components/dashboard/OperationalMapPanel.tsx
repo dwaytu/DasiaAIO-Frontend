@@ -1,8 +1,9 @@
 import { FC, FormEvent, Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import L from 'leaflet'
+import { MapPin, Pencil, Plus, Trash2 } from 'lucide-react'
 import { Circle, CircleMarker, MapContainer, Marker, Polygon, Polyline, Popup, TileLayer, useMap, useMapEvents } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
-import { type ActiveGuard, type ClientSiteInput, type GeofenceZoneInput, type MapTrackingPoint, useOperationalMapData } from '../../hooks/useOperationalMapData'
+import { type ActiveGuard, type ClientSiteInput, type ClientSiteSetupInput, type GeofenceZoneInput, type MapTrackingPoint, useOperationalMapData } from '../../hooks/useOperationalMapData'
 import { getPersonRecencyMinutes, getTrackingAccuracyMode, getVehicleRecencyMinutes } from '../../utils/trackingPolicy'
 import { useTheme } from '../../context/ThemeProvider'
 import { useOperationalEvent } from '../../context/OperationalEventContext'
@@ -10,13 +11,12 @@ import { getOperationalMapTileUrl } from './mapTileUrls'
 import {
   hasCurrentUserTrackingPosition,
   isCurrentUserTrackingPoint,
-  shouldShowClientSiteDraftMarker,
   type MapPickMode,
 } from './operationalMapTruthfulness'
 
 interface OperationalMapPanelProps {
-  activeTrips: number
-  activeGuards: number
+  recentVehicleReports: number
+  recentGuardReports: number
 }
 
 interface SelectedGuardEventMatch {
@@ -72,13 +72,11 @@ const INITIAL_FORM: ClientSiteInput = {
   isActive: true,
 }
 
-const INITIAL_GEOFENCE_FORM: GeofenceZoneInput & { siteId: string; radiusKmText: string } = {
-  siteId: '',
-  zoneType: 'radius',
-  radiusKm: 1,
-  radiusKmText: '1',
-  isActive: true,
-}
+const CHECK_IN_AREA_OPTIONS = [
+  { value: 0.1, label: '100 meters' },
+  { value: 0.25, label: '250 meters' },
+  { value: 0.5, label: '500 meters' },
+]
 
 interface MapClickPickerProps {
   enabled: boolean
@@ -128,6 +126,44 @@ const MapZoomTracker: FC<MapZoomTrackerProps> = ({ onZoomChange }) => {
       onZoomChange(event.target.getZoom())
     },
   })
+
+  return null
+}
+
+const MapResizeObserver: FC = () => {
+  const map = useMap()
+
+  useEffect(() => {
+    const mapContainer = map.getContainer()
+    const resizeTargets = [mapContainer, mapContainer.parentElement].filter(
+      (element): element is HTMLElement => element !== null,
+    )
+    let frameId: number | null = null
+
+    const invalidateMapSize = () => {
+      if (frameId !== null) window.cancelAnimationFrame(frameId)
+      frameId = window.requestAnimationFrame(() => {
+        map.invalidateSize({ animate: false })
+        frameId = null
+      })
+    }
+
+    invalidateMapSize()
+    const observer = typeof ResizeObserver === 'undefined' || resizeTargets.length === 0
+      ? null
+      : new ResizeObserver(invalidateMapSize)
+
+    resizeTargets.forEach((element) => observer?.observe(element))
+    window.addEventListener('resize', invalidateMapSize)
+    const settleTimers = [100, 240, 400].map((delay) => window.setTimeout(invalidateMapSize, delay))
+
+    return () => {
+      if (frameId !== null) window.cancelAnimationFrame(frameId)
+      settleTimers.forEach((timerId) => window.clearTimeout(timerId))
+      observer?.disconnect()
+      window.removeEventListener('resize', invalidateMapSize)
+    }
+  }, [map])
 
   return null
 }
@@ -185,6 +221,14 @@ const currentUserPin = L.divIcon({
   iconAnchor: [8, 8],
 })
 
+const clientSiteDraftPin = L.divIcon({
+  className: 'client-site-draft-pin',
+  html: '<span style="display:block;width:28px;height:28px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:#facc15;border:2px solid #111827;box-shadow:0 1px 5px rgba(0,0,0,0.5)"><span style="display:block;width:9px;height:9px;margin:7px auto 0;border-radius:9999px;background:#111827"></span></span>',
+  iconSize: [28, 36],
+  iconAnchor: [14, 32],
+  popupAnchor: [0, -30],
+})
+
 function resolvePointAgeSeconds(point: Pick<MapTrackingPoint, 'ageSeconds' | 'recordedAt'>): number {
   if (typeof point.ageSeconds === 'number' && Number.isFinite(point.ageSeconds)) {
     return Math.max(0, Math.round(point.ageSeconds))
@@ -236,7 +280,7 @@ function movementTone(entityType: string, heartbeatState: HeartbeatState) {
   return { color: '#dc2626', fillColor: '#dc2626', ring: 'status-light-danger' }
 }
 
-const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, activeGuards }) => {
+const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ recentVehicleReports, recentGuardReports }) => {
   const { theme } = useTheme()
   const { selectedEvent, clearSelection } = useOperationalEvent()
   const {
@@ -247,12 +291,11 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
     loading,
     error,
     lastUpdated,
-    createClientSite,
+    createClientSiteWithGeofence,
     updateClientSite,
     deleteClientSite,
     createGeofenceZone,
     updateGeofenceZone,
-    deleteGeofenceZone,
     fetchGuardPath,
     fetchActiveGuards,
     isElevatedUser,
@@ -261,6 +304,8 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
 
   const [siteForm, setSiteForm] = useState<ClientSiteInput>(INITIAL_FORM)
   const [editingSiteId, setEditingSiteId] = useState<string>('')
+  const [siteCheckInRadiusKm, setSiteCheckInRadiusKm] = useState<number>(0.25)
+  const [locationSelected, setLocationSelected] = useState<boolean>(false)
   const [mapPickMode, setMapPickMode] = useState<MapPickMode>('idle')
   const [mapZoom, setMapZoom] = useState<number>(12)
   const [focusCenter, setFocusCenter] = useState<[number, number] | null>(null)
@@ -282,13 +327,13 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
   })
   const [saving, setSaving] = useState<boolean>(false)
   const [formError, setFormError] = useState<string>('')
-  const [geofenceForm, setGeofenceForm] = useState(INITIAL_GEOFENCE_FORM)
-  const [editingGeofenceId, setEditingGeofenceId] = useState<string>('')
-  const [geofenceSaving, setGeofenceSaving] = useState<boolean>(false)
-  const [geofenceError, setGeofenceError] = useState<string>('')
+  const [siteActionMessage, setSiteActionMessage] = useState<string>('')
+  const [deletingSiteId, setDeletingSiteId] = useState<string>('')
   const [dismissedDegradedError, setDismissedDegradedError] = useState<string>('')
 
   const selectedEventPanelRef = useRef<HTMLElement | null>(null)
+  const siteManagerRef = useRef<HTMLDivElement | null>(null)
+  const siteNameInputRef = useRef<HTMLInputElement | null>(null)
   const trackingMode = getTrackingAccuracyMode()
   const personRecencyMinutes = getPersonRecencyMinutes(trackingMode)
   const vehicleRecencyMinutes = getVehicleRecencyMinutes(trackingMode)
@@ -303,6 +348,21 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
       return ''
     }
   }, [])
+
+  const checkInAreaOptions = useMemo(() => {
+    if (CHECK_IN_AREA_OPTIONS.some((option) => option.value === siteCheckInRadiusKm)) {
+      return CHECK_IN_AREA_OPTIONS
+    }
+
+    if (siteCheckInRadiusKm > 0) {
+      return [
+        { value: siteCheckInRadiusKm, label: `Current: ${Math.round(siteCheckInRadiusKm * 1000)} meters` },
+        ...CHECK_IN_AREA_OPTIONS,
+      ]
+    }
+
+    return CHECK_IN_AREA_OPTIONS
+  }, [siteCheckInRadiusKm])
 
   const guardMetadataById = useMemo(() => {
     const metadata = new Map<string, ActiveGuard>()
@@ -365,10 +425,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
     )
   }, [pointTelemetry, currentUserId])
 
-  const showClientSiteDraftMarker = useMemo(
-    () => shouldShowClientSiteDraftMarker(isElevatedUser, mapPickMode),
-    [isElevatedUser, mapPickMode],
-  )
+  const showClientSiteDraftMarker = isElevatedUser && locationSelected
 
   const currentUserPosition = useMemo<[number, number] | null>(() => {
     if (!currentUserEntry) return null
@@ -386,13 +443,6 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
     }
     return grouped
   }, [geofenceZones])
-
-  useEffect(() => {
-    if (!isElevatedUser) return
-    if (geofenceForm.siteId) return
-    if (!clientSites[0]?.id) return
-    setGeofenceForm((prev) => ({ ...prev, siteId: clientSites[0].id }))
-  }, [clientSites, geofenceForm.siteId, isElevatedUser])
 
   const mapCenter = useMemo<[number, number]>(() => {
     if (focusCenter) return focusCenter
@@ -748,26 +798,57 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setFormError('')
+    setSiteActionMessage('')
 
     if (!siteForm.name.trim()) {
       setFormError('Site name is required.')
+      siteNameInputRef.current?.focus()
       return
     }
 
-    if (Number.isNaN(siteForm.latitude) || Number.isNaN(siteForm.longitude)) {
-      setFormError('Latitude and longitude must be valid numbers.')
+    if (!Number.isFinite(siteForm.latitude) || !Number.isFinite(siteForm.longitude)) {
+      setFormError('Choose the site location on the map before saving.')
+      siteManagerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
       return
+    }
+
+    if (!editingSiteId && !locationSelected) {
+      setFormError('Choose the site location on the map before saving.')
+      siteManagerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      return
+    }
+
+    const checkInArea: GeofenceZoneInput = {
+      zoneType: 'radius',
+      radiusKm: siteCheckInRadiusKm,
+      isActive: true,
     }
 
     try {
       setSaving(true)
       if (editingSiteId) {
         await updateClientSite(editingSiteId, siteForm)
+        const existingRadiusZone = geofenceZones.find(
+          (zone) => zone.siteId === editingSiteId && zone.zoneType === 'radius',
+        )
+        if (existingRadiusZone) {
+          await updateGeofenceZone(existingRadiusZone.id, checkInArea)
+        } else {
+          await createGeofenceZone(editingSiteId, checkInArea)
+        }
       } else {
-        await createClientSite(siteForm)
+        const setupInput: ClientSiteSetupInput = {
+          ...siteForm,
+          geofenceRadiusKm: siteCheckInRadiusKm,
+        }
+        await createClientSiteWithGeofence(setupInput)
       }
       setSiteForm(INITIAL_FORM)
       setEditingSiteId('')
+      setLocationSelected(false)
+      setSiteCheckInRadiusKm(0.25)
+      setMapPickMode('idle')
+      setSiteActionMessage(editingSiteId ? 'Client site updated.' : 'Client site and check-in area added.')
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to save site')
     } finally {
@@ -786,101 +867,38 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
       longitude: site.longitude,
       isActive: site.isActive,
     })
+    const radiusZone = geofenceZones.find(
+      (zone) => zone.siteId === site.id && zone.zoneType === 'radius',
+    )
+    setSiteCheckInRadiusKm(radiusZone?.radiusKm ?? 0.25)
+    setLocationSelected(true)
     setEditingSiteId(site.id)
     setFormError('')
+    setSiteActionMessage('')
+    requestAnimationFrame(() => {
+      siteManagerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      siteNameInputRef.current?.focus()
+    })
   }
 
   const handleDelete = async (siteId: string) => {
     if (!window.confirm('Delete this client location?')) return
     setFormError('')
+    setSiteActionMessage('')
+    setDeletingSiteId(siteId)
     try {
       await deleteClientSite(siteId)
+      setSiteActionMessage('Client site deleted.')
       if (editingSiteId === siteId) {
         setEditingSiteId('')
         setSiteForm(INITIAL_FORM)
+        setLocationSelected(false)
+        setSiteCheckInRadiusKm(0.25)
       }
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to delete site')
-    }
-  }
-
-  const handleGeofenceSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    setGeofenceError('')
-
-    if (!geofenceForm.siteId) {
-      setGeofenceError('Select a client site for this geofence.')
-      return
-    }
-
-    if (geofenceForm.zoneType !== 'radius') {
-      setGeofenceError('Only radius geofences are currently configurable in this panel.')
-      return
-    }
-
-    const radiusKm = Number(geofenceForm.radiusKmText)
-    if (!Number.isFinite(radiusKm) || radiusKm <= 0 || radiusKm > 50) {
-      setGeofenceError('Radius must be a number greater than 0 and not more than 50 km.')
-      return
-    }
-
-    const payload: GeofenceZoneInput = {
-      zoneType: 'radius',
-      radiusKm,
-      isActive: geofenceForm.isActive ?? true,
-    }
-
-    try {
-      setGeofenceSaving(true)
-      if (editingGeofenceId) {
-        await updateGeofenceZone(editingGeofenceId, payload)
-      } else {
-        await createGeofenceZone(geofenceForm.siteId, payload)
-      }
-
-      setEditingGeofenceId('')
-      setGeofenceForm((prev) => ({
-        ...INITIAL_GEOFENCE_FORM,
-        siteId: prev.siteId || clientSites[0]?.id || '',
-      }))
-    } catch (err) {
-      setGeofenceError(err instanceof Error ? err.message : 'Failed to save geofence zone')
     } finally {
-      setGeofenceSaving(false)
-    }
-  }
-
-  const handleEditGeofence = (zoneId: string) => {
-    const zone = geofenceZones.find((entry) => entry.id === zoneId)
-    if (!zone) return
-
-    setEditingGeofenceId(zone.id)
-    setGeofenceForm({
-      siteId: zone.siteId,
-      zoneType: zone.zoneType === 'polygon' ? 'polygon' : 'radius',
-      radiusKm: zone.radiusKm ?? 1,
-      radiusKmText: String(zone.radiusKm ?? 1),
-      isActive: zone.isActive,
-      polygonPoints: Array.isArray(zone.polygonPoints) ? zone.polygonPoints : [],
-    })
-    setGeofenceError('')
-  }
-
-  const handleDeleteGeofence = async (zoneId: string) => {
-    if (!window.confirm('Delete this geofence zone?')) return
-
-    setGeofenceError('')
-    try {
-      await deleteGeofenceZone(zoneId)
-      if (editingGeofenceId === zoneId) {
-        setEditingGeofenceId('')
-        setGeofenceForm((prev) => ({
-          ...INITIAL_GEOFENCE_FORM,
-          siteId: prev.siteId || clientSites[0]?.id || '',
-        }))
-      }
-    } catch (err) {
-      setGeofenceError(err instanceof Error ? err.message : 'Failed to delete geofence zone')
+      setDeletingSiteId('')
     }
   }
 
@@ -890,6 +908,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
       latitude: Number(latitude.toFixed(6)),
       longitude: Number(longitude.toFixed(6)),
     }))
+    setLocationSelected(true)
     setMapPickMode('idle')
     setFormError('')
   }
@@ -937,13 +956,22 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
               type="button"
               onClick={() => {
                 setEditingSiteId('')
+                setSiteForm(INITIAL_FORM)
+                setSiteCheckInRadiusKm(0.25)
+                setLocationSelected(false)
                 setMapPickMode('add')
                 setFormError('')
+                setSiteActionMessage('')
+                requestAnimationFrame(() => {
+                  siteManagerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                  siteNameInputRef.current?.focus()
+                })
               }}
-              className="min-h-11 rounded-md border border-info-border bg-info-bg px-3 py-2 text-xs font-semibold uppercase tracking-wide text-info-text"
+              className="soc-btn soc-btn-primary min-h-11 px-3 text-xs"
               aria-label="Add a new client location on the map"
             >
-              + Add Client Site
+              <Plus size={15} aria-hidden="true" />
+              Add Client Site
             </button>
           ) : null}
           {!loading && hasTrackingAccess && !canCenterOnCurrentUser ? (
@@ -1008,6 +1036,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
             currentUserPosition={currentUserPosition}
           />
           <MapZoomTracker onZoomChange={setMapZoom} />
+          <MapResizeObserver />
           <MapClickPicker enabled={isElevatedUser && mapPickMode !== 'idle'} onPick={handleMapPick} />
 
           <TileLayer
@@ -1208,23 +1237,15 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
               })}
 
           {showClientSiteDraftMarker ? (
-            <CircleMarker
-              center={[siteForm.latitude, siteForm.longitude]}
-              radius={5}
-              pathOptions={{
-                color: 'var(--color-warning)',
-                fillColor: 'var(--color-warning)',
-                fillOpacity: 0.55,
-                dashArray: '4 3',
-                weight: 2,
-              }}
+            <Marker
+              position={[siteForm.latitude, siteForm.longitude]}
+              icon={clientSiteDraftPin}
             >
               <Popup>
-                <strong>Client Site Draft (Not Live GPS)</strong>
-                <div>{siteForm.latitude.toFixed(6)}, {siteForm.longitude.toFixed(6)}</div>
-                <div>This marker is only used while placing client site coordinates.</div>
+                <strong>Selected site location</strong>
+                <div>Review this pin before adding the client site.</div>
               </Popup>
-            </CircleMarker>
+            </Marker>
           ) : null}
         </MapContainer>
 
@@ -1321,29 +1342,34 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
 
       <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-6">
         <div className="rounded-md border border-info-border bg-info-bg px-3 py-2">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">Active Trips</p>
-          <p className="text-xl font-black text-text-primary">{activeTrips}</p>
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">Vehicles Reporting</p>
+          <p className="text-xl font-black text-text-primary">{recentVehicleReports}</p>
+          <p className="text-[11px] text-text-tertiary">Reports within the current tracking window</p>
         </div>
         <div className="rounded-md border border-success-border bg-success-bg px-3 py-2">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">Deployed Guards</p>
-          <p className="text-xl font-black text-text-primary">{activeGuards}</p>
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">Guards Reporting</p>
+          <p className="text-xl font-black text-text-primary">{recentGuardReports}</p>
+          <p className="text-[11px] text-text-tertiary">Reports within the current tracking window</p>
         </div>
         <div className="rounded-md border border-warning-border bg-warning-bg px-3 py-2">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">Tracked Units</p>
-          <p className="text-xl font-black text-text-primary">{visibleTelemetry.length}</p>
-          <p className="text-[11px] text-text-tertiary">Stale and offline remain visible</p>
+          <p className="text-xl font-black text-text-primary">{pointTelemetry.length}</p>
+          <p className="text-[11px] text-text-tertiary">Latest guard and vehicle reports</p>
         </div>
         <div className="rounded-md border border-info-border bg-info-bg px-3 py-2">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">Scheduled Guards</p>
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">Scheduled Guard Tracking</p>
           <p className="text-xl font-black text-text-primary">{scheduledGuardCount}</p>
+          <p className="text-[11px] text-text-tertiary">Tracked guards with a schedule</p>
         </div>
         <div className="rounded-md border border-warning-border bg-warning-bg px-3 py-2">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">Unscheduled Guards</p>
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">Unscheduled Guard Tracking</p>
           <p className="text-xl font-black text-text-primary">{unscheduledGuardCount}</p>
+          <p className="text-[11px] text-text-tertiary">Tracked guards without a schedule</p>
         </div>
         <div className="rounded-md border border-danger-border bg-danger-bg px-3 py-2">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">Stale / Offline</p>
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">Stale / Offline Guards</p>
           <p className="text-xl font-black text-text-primary">{staleGuardCount}/{offlineGuardCount}</p>
+          <p className="text-[11px] text-text-tertiary">Stale / offline guard reports</p>
         </div>
       </div>
 
@@ -1422,114 +1448,125 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2 rounded-md border border-border-subtle bg-surface-elevated px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-text-secondary">
-        <span className="inline-flex items-center gap-1"><span className="status-light status-light-success" aria-hidden="true" /> Guard active</span>
-        <span className="inline-flex items-center gap-1"><span className="status-light status-light-warning" aria-hidden="true" /> Guard stale</span>
-        <span className="inline-flex items-center gap-1"><span className="status-light status-light-danger" aria-hidden="true" /> Guard offline</span>
-        <span className="inline-flex items-center gap-1"><span className="status-light status-light-info" aria-hidden="true" /> Vehicle</span>
-        <span className="inline-flex items-center gap-1"><span className="status-light" aria-hidden="true" style={{ backgroundColor: '#7c3aed' }} /> Clustered units</span>
-        <span className="inline-flex items-center gap-1"><span className="status-light status-light-warning" aria-hidden="true" /> Geofence zone</span>
-        {showClientSiteDraftMarker ? <span className="inline-flex items-center gap-1"><span className="status-light status-light-warning" aria-hidden="true" /> Client site draft (not live GPS)</span> : null}
-        <span className="inline-flex items-center gap-1"><span className="status-light status-light-danger" aria-hidden="true" /> Your live location</span>
-        <span className="w-full text-text-tertiary normal-case tracking-normal sm:ml-auto sm:w-auto">Dashed guard markers indicate unscheduled tracking visibility.</span>
+        <span className="inline-flex items-center gap-1"><span className="status-light status-light-success" aria-hidden="true" /> Guards</span>
+        <span className="inline-flex items-center gap-1"><span className="status-light status-light-info" aria-hidden="true" /> Vehicles</span>
+        <span className="inline-flex items-center gap-1"><span className="status-light status-light-warning" aria-hidden="true" /> Client sites / check-in areas</span>
+        <span className="inline-flex items-center gap-1"><span className="status-light status-light-danger" aria-hidden="true" /> Alerts / your location</span>
+        <span className="w-full text-text-tertiary normal-case tracking-normal">Guard colors: green active, yellow stale, red offline. Purple markers group nearby units.</span>
       </div>
 
       {isElevatedUser ? (
-        <div className="mt-4 rounded border border-border-subtle bg-surface-elevated p-3">
+        <div ref={siteManagerRef} className="mt-4 rounded border border-border-subtle bg-surface-elevated p-3">
           <h4 className="text-sm font-bold uppercase tracking-wide text-text-primary">Client Location Manager</h4>
-          <p className="mt-1 text-xs text-text-tertiary">Add, edit, or delete client locations shown on the operational map.</p>
+          <p className="mt-1 text-xs text-text-tertiary">Add a site and its automatic guard check-in area in one step.</p>
 
-          <form onSubmit={handleSubmit} className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
-            <div className="md:col-span-2 flex flex-wrap gap-2">
+          <form onSubmit={handleSubmit} className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+              <label htmlFor="client-site-name" className="mb-1 block text-xs font-semibold text-text-secondary">
+                Site name <span className="text-danger-text" aria-hidden="true">*</span>
+              </label>
+              <input
+                id="client-site-name"
+                name="clientSiteName"
+                type="text"
+                required
+                ref={siteNameInputRef}
+                value={siteForm.name}
+                onChange={(e) => setSiteForm((prev) => ({ ...prev, name: e.target.value }))}
+                placeholder="Example: Main Branch"
+                className="soc-field h-11 min-h-11 w-full"
+              />
+            </div>
+            <div>
+              <label htmlFor="client-site-address" className="mb-1 block text-xs font-semibold text-text-secondary">
+                Address or landmark
+              </label>
+              <input
+                id="client-site-address"
+                name="clientSiteAddress"
+                type="text"
+                value={siteForm.address || ''}
+                onChange={(e) => setSiteForm((prev) => ({ ...prev, address: e.target.value }))}
+                placeholder="Example: J.P. Laurel Avenue"
+                className="soc-field h-11 min-h-11 w-full"
+              />
+            </div>
+
+            <div className="md:col-span-2 rounded-md border border-border-subtle bg-background p-3">
+              <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
                 onClick={() => setMapPickMode(editingSiteId ? 'edit' : 'add')}
-                className="min-h-11 rounded-md border border-border-subtle px-3 py-2 text-xs font-semibold uppercase tracking-wide text-text-secondary"
+                className="soc-btn soc-btn-secondary min-h-11 px-3 text-xs"
               >
-                {editingSiteId ? 'Pick New Position On Map' : 'Pick Position On Map'}
+                <MapPin size={15} aria-hidden="true" />
+                {editingSiteId ? 'Change map location' : 'Choose location on map'}
               </button>
-              {mapPickMode !== 'idle' ? (
-                <span className="inline-flex items-center rounded-md bg-info-bg px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-info-text">
-                  Click anywhere on the map to place a client-site draft marker (not live GPS)
-                </span>
-              ) : null}
+              <span className={`text-xs font-semibold ${locationSelected ? 'text-success-text' : 'text-text-secondary'}`}>
+                {locationSelected ? 'Location selected' : 'Required before saving'}
+              </span>
+              </div>
+              <p className="mt-2 text-xs text-text-tertiary">
+                {mapPickMode !== 'idle' ? 'Click the exact site location on the map.' : 'Use the map to place the site pin. Coordinates are stored automatically.'}
+              </p>
             </div>
 
-            <input
-              id="client-site-name"
-              name="clientSiteName"
-              type="text"
-              value={siteForm.name}
-              onChange={(e) => setSiteForm((prev) => ({ ...prev, name: e.target.value }))}
-              placeholder="Client location name"
-              className="rounded-md border border-border-subtle bg-background px-3 py-2 text-sm text-text-primary"
-              aria-label="Client location name"
-            />
-            <input
-              id="client-site-address"
-              name="clientSiteAddress"
-              type="text"
-              value={siteForm.address || ''}
-              onChange={(e) => setSiteForm((prev) => ({ ...prev, address: e.target.value }))}
-              placeholder="Address"
-              className="rounded-md border border-border-subtle bg-background px-3 py-2 text-sm text-text-primary"
-              aria-label="Client location address"
-            />
-            <input
-              id="client-site-latitude"
-              name="clientSiteLatitude"
-              type="number"
-              value={siteForm.latitude}
-              onChange={(e) => setSiteForm((prev) => ({ ...prev, latitude: Number(e.target.value) }))}
-              placeholder="Latitude"
-              className="rounded-md border border-border-subtle bg-background px-3 py-2 text-sm text-text-primary"
-              aria-label="Client location latitude"
-              step="any"
-            />
-            <input
-              id="client-site-longitude"
-              name="clientSiteLongitude"
-              type="number"
-              value={siteForm.longitude}
-              onChange={(e) => setSiteForm((prev) => ({ ...prev, longitude: Number(e.target.value) }))}
-              placeholder="Longitude"
-              className="rounded-md border border-border-subtle bg-background px-3 py-2 text-sm text-text-primary"
-              aria-label="Client location longitude"
-              step="any"
-            />
-            <div className="md:col-span-2 flex flex-wrap gap-2">
-              <button
-                type="submit"
-                disabled={saving}
-                className="soc-btn soc-btn-primary px-3 text-xs"
-              >
-                {saving ? 'Saving...' : editingSiteId ? 'Update Site' : 'Add Site'}
-              </button>
-              {editingSiteId ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditingSiteId('')
-                    setMapPickMode('idle')
-                    setSiteForm(INITIAL_FORM)
-                    setFormError('')
-                  }}
-                  className="min-h-11 rounded-md border border-border-subtle px-3 py-2 text-xs font-semibold uppercase tracking-wide text-text-secondary"
+            <div className="md:col-span-2">
+              <label htmlFor="client-site-check-in-area" className="mb-1 block text-xs font-semibold text-text-secondary">
+                Guard check-in area
+              </label>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <select
+                  id="client-site-check-in-area"
+                  value={siteCheckInRadiusKm}
+                  onChange={(event) => setSiteCheckInRadiusKm(Number(event.target.value))}
+                  className="soc-field h-11 min-h-11 w-full flex-1"
                 >
-                  Cancel Edit
-                </button>
-              ) : null}
+                  {checkInAreaOptions.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+                <div className="flex shrink-0 gap-2">
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="soc-btn soc-btn-primary min-h-11 px-3 text-xs"
+                  >
+                    {saving ? 'Saving...' : editingSiteId ? 'Save changes' : 'Add site'}
+                  </button>
+                  {editingSiteId ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingSiteId('')
+                        setMapPickMode('idle')
+                        setSiteForm(INITIAL_FORM)
+                        setLocationSelected(false)
+                        setSiteCheckInRadiusKm(0.25)
+                        setFormError('')
+                      }}
+                      className="min-h-11 rounded-md border border-border-subtle px-3 py-2 text-xs font-semibold uppercase tracking-wide text-text-secondary"
+                    >
+                      Cancel
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+              <p className="mt-1 text-xs text-text-tertiary">A guard inside this area can be checked in automatically.</p>
             </div>
           </form>
 
-          {formError ? <p className="mt-2 text-xs text-danger-text">{formError}</p> : null}
+          {formError ? <p className="mt-2 text-xs text-danger-text" role="alert">{formError}</p> : null}
+          {siteActionMessage ? <p className="mt-2 text-xs text-success-text" role="status">{siteActionMessage}</p> : null}
 
           <div className="mt-3 overflow-x-auto">
-            <table className="w-full min-w-[520px] text-xs">
+            <table className="w-full min-w-[560px] text-xs">
               <thead>
                 <tr className="border-b border-border-subtle text-text-tertiary">
                   <th className="px-2 py-2 text-left">Site</th>
-                  <th className="px-2 py-2 text-left">Latitude</th>
-                  <th className="px-2 py-2 text-left">Longitude</th>
+                  <th className="px-2 py-2 text-left">Address</th>
+                  <th className="px-2 py-2 text-left">Check-in area</th>
+                  <th className="px-2 py-2 text-left">Status</th>
                   <th className="px-2 py-2 text-right">Actions</th>
                 </tr>
               </thead>
@@ -1537,158 +1574,45 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ activeTrips, active
                 {clientSites.map((site) => (
                   <tr key={site.id} className="border-b border-border-subtle text-text-primary">
                     <td className="px-2 py-2" title={site.address || site.name}>{site.name}</td>
-                    <td className="px-2 py-2">{site.latitude.toFixed(5)}</td>
-                    <td className="px-2 py-2">{site.longitude.toFixed(5)}</td>
+                    <td className="px-2 py-2 text-text-secondary">{site.address || 'Map location saved'}</td>
+                    <td className="px-2 py-2">
+                      {(() => {
+                        const zone = geofenceZones.find((entry) => entry.siteId === site.id && entry.zoneType === 'radius' && entry.isActive)
+                        return zone?.radiusKm ? `${Math.round(zone.radiusKm * 1000)} m` : 'Not configured'
+                      })()}
+                    </td>
+                    <td className="px-2 py-2">
+                      <span className={site.isActive ? 'text-success-text' : 'text-text-tertiary'}>
+                        {site.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
                     <td className="px-2 py-2 text-right">
                       <button
                         type="button"
                         onClick={() => handleEdit(site.id)}
-                        className="mr-2 min-h-11 rounded-md border border-border-subtle px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-text-secondary"
+                        aria-label={`Edit client site ${site.name}`}
+                        className="soc-btn soc-btn-secondary mr-2 min-h-11 px-3 text-xs"
                       >
+                        <Pencil size={14} aria-hidden="true" />
                         Edit
                       </button>
                       <button
                         type="button"
+                        disabled={deletingSiteId === site.id}
                         onClick={() => {
                           void handleDelete(site.id)
                         }}
-                        className="min-h-11 rounded-md bg-danger-bg px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-danger-text"
+                        aria-label={`Delete client site ${site.name}`}
+                        className="soc-btn soc-btn-danger min-h-11 px-3 text-xs disabled:cursor-not-allowed disabled:opacity-60"
                       >
-                        Delete
+                        <Trash2 size={14} aria-hidden="true" />
+                        {deletingSiteId === site.id ? 'Deleting...' : 'Delete'}
                       </button>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
-
-          <div className="mt-5 border-t border-border-subtle pt-4">
-            <h5 className="text-xs font-bold uppercase tracking-[0.14em] text-text-primary">Geofence Zone Manager</h5>
-            <p className="mt-1 text-xs text-text-tertiary">Create and manage geofence zones per client site for enter/exit monitoring.</p>
-
-            <form onSubmit={handleGeofenceSubmit} className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-3">
-              <select
-                value={geofenceForm.siteId}
-                onChange={(event) => setGeofenceForm((prev) => ({ ...prev, siteId: event.target.value }))}
-                className="rounded-md border border-border-subtle bg-background px-3 py-2 text-sm text-text-primary"
-                aria-label="Geofence client site"
-              >
-                <option value="">Select client site</option>
-                {clientSites.map((site) => (
-                  <option key={`zone-site-${site.id}`} value={site.id}>
-                    {site.name}
-                  </option>
-                ))}
-              </select>
-              <input
-                type="number"
-                min="0.1"
-                max="50"
-                step="0.1"
-                value={geofenceForm.radiusKmText}
-                onChange={(event) => {
-                  const value = event.target.value
-                  setGeofenceForm((prev) => ({
-                    ...prev,
-                    radiusKmText: value,
-                    radiusKm: Number(value),
-                  }))
-                }}
-                placeholder="Radius km"
-                className="rounded-md border border-border-subtle bg-background px-3 py-2 text-sm text-text-primary"
-                aria-label="Geofence radius in kilometers"
-              />
-              <label className="inline-flex min-h-11 items-center gap-2 rounded-md border border-border-subtle bg-background px-3 py-2 text-sm text-text-secondary">
-                <input
-                  type="checkbox"
-                  checked={Boolean(geofenceForm.isActive)}
-                  onChange={(event) => setGeofenceForm((prev) => ({ ...prev, isActive: event.target.checked }))}
-                />
-                Active zone
-              </label>
-              <div className="md:col-span-3 flex flex-wrap gap-2">
-                <button
-                  type="submit"
-                  disabled={geofenceSaving}
-                  className="soc-btn soc-btn-primary px-3 text-xs"
-                >
-                  {geofenceSaving ? 'Saving...' : editingGeofenceId ? 'Update Geofence' : 'Add Geofence'}
-                </button>
-                {editingGeofenceId ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditingGeofenceId('')
-                      setGeofenceError('')
-                      setGeofenceForm((prev) => ({
-                        ...INITIAL_GEOFENCE_FORM,
-                        siteId: prev.siteId || clientSites[0]?.id || '',
-                      }))
-                    }}
-                    className="min-h-11 rounded-md border border-border-subtle px-3 py-2 text-xs font-semibold uppercase tracking-wide text-text-secondary"
-                  >
-                    Cancel Edit
-                  </button>
-                ) : null}
-              </div>
-            </form>
-
-            {geofenceError ? <p className="mt-2 text-xs text-danger-text">{geofenceError}</p> : null}
-
-            <div className="mt-3 overflow-x-auto">
-              <table className="w-full min-w-[620px] text-xs">
-                <thead>
-                  <tr className="border-b border-border-subtle text-text-tertiary">
-                    <th className="px-2 py-2 text-left">Site</th>
-                    <th className="px-2 py-2 text-left">Type</th>
-                    <th className="px-2 py-2 text-left">Radius</th>
-                    <th className="px-2 py-2 text-left">Status</th>
-                    <th className="px-2 py-2 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {geofenceZones.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="px-2 py-3 text-text-tertiary">
-                        No geofence zones configured yet.
-                      </td>
-                    </tr>
-                  ) : (
-                    geofenceZones.map((zone) => (
-                      <tr key={zone.id} className="border-b border-border-subtle text-text-primary">
-                        <td className="px-2 py-2">{zone.siteName}</td>
-                        <td className="px-2 py-2 uppercase">{zone.zoneType}</td>
-                        <td className="px-2 py-2">
-                          {zone.zoneType === 'radius'
-                            ? `${Number(zone.radiusKm ?? 0).toFixed(2)} km`
-                            : `${zone.polygonPoints?.length ?? 0} points`}
-                        </td>
-                        <td className="px-2 py-2">{zone.isActive ? 'Active' : 'Inactive'}</td>
-                        <td className="px-2 py-2 text-right">
-                          <button
-                            type="button"
-                            onClick={() => handleEditGeofence(zone.id)}
-                            className="mr-2 min-h-11 rounded-md border border-border-subtle px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-text-secondary"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              void handleDeleteGeofence(zone.id)
-                            }}
-                            className="min-h-11 rounded-md bg-danger-bg px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-danger-text"
-                          >
-                            Delete
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
           </div>
         </div>
       ) : null}

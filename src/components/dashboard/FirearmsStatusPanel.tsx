@@ -29,15 +29,15 @@ const FirearmsStatusPanel: FC<FirearmsStatusPanelProps> = ({
 
       <div className="space-y-3 px-4 py-3" role="region" aria-live="polite">
         <div className="grid grid-cols-3 gap-2">
-          <div className="soc-status-success w-full justify-center rounded-md px-2 py-1.5 text-center">
+          <div className="soc-status-success flex-col items-center w-full justify-center rounded-md px-2 py-1.5 text-center">
             <p className="font-mono text-[11px] uppercase tracking-wide">Available</p>
             <p className="font-mono text-lg font-bold">{available}</p>
           </div>
-          <div className="soc-status-info w-full justify-center rounded-md px-2 py-1.5 text-center">
+          <div className="soc-status-info flex-col items-center w-full justify-center rounded-md px-2 py-1.5 text-center">
             <p className="font-mono text-[11px] uppercase tracking-wide">Issued</p>
             <p className="font-mono text-lg font-bold">{issued}</p>
           </div>
-          <div className="soc-status-warning w-full justify-center rounded-md px-2 py-1.5 text-center">
+          <div className="soc-status-warning flex-col items-center w-full justify-center rounded-md px-2 py-1.5 text-center">
             <p className="font-mono text-[11px] uppercase tracking-wide">Maint.</p>
             <p className="font-mono text-lg font-bold">{maintenance}</p>
           </div>

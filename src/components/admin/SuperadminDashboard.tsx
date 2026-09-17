@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, FC, Suspense, lazy } from 'react'
+import { startTransition, useState, useEffect, useMemo, useCallback, FC, Suspense, lazy } from 'react'
 import { useNavigate } from 'react-router'
 import EditUserModal from '../EditUserModal'
 import EditScheduleModal from '../EditScheduleModal'
@@ -14,11 +14,10 @@ import OperationalMapPanel from '../dashboard/OperationalMapPanel'
 import ResourceManagementPanel from './ResourceManagementPanel'
 import { OperationalEventProvider } from '../../context/OperationalEventContext'
 import AssignmentPicker from '../dashboard/AssignmentPicker'
-import LiveFreshnessPill from '../dashboard/ui/LiveFreshnessPill'
 import { TableLoadingState } from '../dashboard/ui/DashboardLoadingState'
 import EmptyState from '../shared/EmptyState'
 import SentinelModal from '../shared/SentinelModal'
-import { ClipboardX, CalendarX2, Target } from 'lucide-react'
+import { CalendarPlus, ClipboardX, CalendarX2, Target } from 'lucide-react'
 import Allowed from '../rbac/Allowed'
 import DeniedFallback from '../rbac/DeniedFallback'
 import OperationalShell from '../layout/OperationalShell'
@@ -29,7 +28,6 @@ import {
   getPersonRecencyMinutes,
   getTrackingAccuracyMode,
   getVehicleRecencyMinutes,
-  setTrackingAccuracyMode,
   TrackingAccuracyMode,
 } from '../../utils/trackingPolicy'
 import { logError } from '../../utils/logger'
@@ -38,6 +36,7 @@ import { AdminInboxPanel } from '../inbox/AdminInboxPanel'
 import { SuperadminInboxPanel } from '../inbox/SuperadminInboxPanel'
 import { useOperationalMapData } from '../../hooks/useOperationalMapData'
 import CreateGuardAccountModal from './CreateGuardAccountModal'
+import GuardPasswordModal from './GuardPasswordModal'
 import { localScheduleToUtc } from '../../utils/scheduleDateTime'
 import OperationalRequestsPanel from '../requests/OperationalRequestsPanel'
 
@@ -63,6 +62,7 @@ interface User {
 }
 
 const ONLINE_WINDOW_MS = 3 * 60 * 1000
+const USER_PAGE_SIZE = 10
 
 const isUserOnline = (lastSeenAt?: string) => {
   if (!lastSeenAt) return false
@@ -224,14 +224,14 @@ const SuperadminOperationsMapSection: FC<SuperadminOperationsMapSectionProps> = 
 
   const mapCounts = useMemo(() => {
     if (!hasTrackingAccess || trackingPoints.length === 0) {
-      return { activeTrips: 0, activeGuards: 0 }
+      return { recentVehicleReports: 0, recentGuardReports: 0 }
     }
 
     const personRecencyMinutes = getPersonRecencyMinutes(trackingAccuracyMode)
     const vehicleRecencyMinutes = getVehicleRecencyMinutes(trackingAccuracyMode)
     const now = Date.now()
-    const activeGuardIds = new Set<string>()
-    const activeTripIds = new Set<string>()
+    const recentGuardReportIds = new Set<string>()
+    const recentVehicleReportIds = new Set<string>()
 
     for (const point of trackingPoints) {
       const recordedAt = new Date(point.recordedAt).getTime()
@@ -244,19 +244,19 @@ const SuperadminOperationsMapSection: FC<SuperadminOperationsMapSectionProps> = 
       if (point.entityType.toLowerCase() === 'vehicle') {
         const movementStatus = point.movementStatus?.trim().toLowerCase()
         if (pointAgeMinutes <= vehicleRecencyMinutes && movementStatus !== 'offline') {
-          activeTripIds.add(pointKey)
+          recentVehicleReportIds.add(pointKey)
         }
         continue
       }
 
       if (pointAgeMinutes <= personRecencyMinutes) {
-        activeGuardIds.add(pointKey)
+        recentGuardReportIds.add(pointKey)
       }
     }
 
     return {
-      activeTrips: activeTripIds.size,
-      activeGuards: activeGuardIds.size,
+      recentVehicleReports: recentVehicleReportIds.size,
+      recentGuardReports: recentGuardReportIds.size,
     }
   }, [hasTrackingAccess, trackingAccuracyMode, trackingPoints])
 
@@ -269,7 +269,10 @@ const SuperadminOperationsMapSection: FC<SuperadminOperationsMapSectionProps> = 
       </section>
       <div className="soc-surface p-0 overflow-hidden rounded" style={{ minHeight: '600px' }}>
         <OperationalEventProvider>
-          <OperationalMapPanel activeTrips={mapCounts.activeTrips} activeGuards={mapCounts.activeGuards} />
+          <OperationalMapPanel
+            recentVehicleReports={mapCounts.recentVehicleReports}
+            recentGuardReports={mapCounts.recentGuardReports}
+          />
         </OperationalEventProvider>
       </div>
     </div>
@@ -281,6 +284,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   const [loading, setLoading] = useState<boolean>(true)
   const [, setStats] = useState<any>({})
   const [editingUser, setEditingUser] = useState<User | null>(null)
+  const [passwordResetUser, setPasswordResetUser] = useState<User | null>(null)
   const [editingShift, setEditingShift] = useState<any | null>(null)
   const [error, setError] = useState<string>('')
   const [activeSection, setActiveSection] = useState<'inbox' | 'dashboard' | 'approvals' | 'requests' | 'schedule' | 'missions' | 'analytics' | 'trips' | 'audit-log' | 'manage' | 'operations-map'>('dashboard')
@@ -305,10 +309,8 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   const [missionResponse, setMissionResponse] = useState<any>(null)
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [searchQuery, setSearchQuery] = useState<string>('')
-  const [trackingAccuracyMode, setTrackingAccuracyModeState] = useState<TrackingAccuracyMode>(getTrackingAccuracyMode())
-  const [roleFilter, setRoleFilter] = useState<'all' | 'superadmin' | 'admin' | 'supervisor' | 'guard'>('all')
-  const [statusFilter, setStatusFilter] = useState<'all' | UserDerivedStatus>('all')
-  const [filterMenuOpen, setFilterMenuOpen] = useState<boolean>(false)
+  const [trackingAccuracyMode] = useState<TrackingAccuracyMode>(getTrackingAccuracyMode())
+  const [userPage, setUserPage] = useState(1)
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([])
   const [bulkProcessing, setBulkProcessing] = useState<boolean>(false)
   const [availableGuards, setAvailableGuards] = useState<User[]>([])
@@ -322,7 +324,6 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   const [, setRefreshing] = useState<boolean>(false)
   const [clientSitesLoading, setClientSitesLoading] = useState<boolean>(false)
   const [clientSitesError, setClientSitesError] = useState<string>('')
-  const [lastUserSyncAt, setLastUserSyncAt] = useState<number>(() => Date.now())
   const [createGuardModalOpen, setCreateGuardModalOpen] = useState<boolean>(false)
   const [scheduleFormData, setScheduleFormData] = useState({
     guard_id: '',
@@ -459,13 +460,12 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
     try {
       setLoading(true)
       const data = await fetchJsonOrThrow<any>(
-        `${API_BASE_URL}/api/users`,
+        `${API_BASE_URL}/api/users?page_size=200`,
         { headers: getAuthHeaders(), signal },
         'Failed to fetch users',
       )
       const users = Array.isArray(data) ? data : (data.users || data || [])
       setUsers(users)
-      setLastUserSyncAt(Date.now())
       
       // Calculate stats
       const superadminCount = users.filter((u: User) => u.role === 'superadmin').length
@@ -497,7 +497,6 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
         'Failed to fetch shifts',
       )
       setShifts(data.shifts || [])
-      setLastUserSyncAt(Date.now())
       setError('')
     } catch (err) {
       setError('Error loading shifts: ' + (err instanceof Error ? err.message : String(err)))
@@ -561,7 +560,6 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
       )
       const pendingList = Array.isArray(data) ? data : (data.users || data || [])
       setPendingApprovals(pendingList)
-      setLastUserSyncAt(Date.now())
       setError('')
     } catch (err) {
       setError('Error loading pending approvals: ' + (err instanceof Error ? err.message : String(err)))
@@ -682,7 +680,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
     if (view === 'approvals' && !canApproveGuards) return
     const route = VIEW_TO_ROUTE[view]
     if (route) {
-      navigate(route)
+      startTransition(() => { void navigate(route) })
     } else if (onViewChange) {
       onViewChange(view)
     }
@@ -811,23 +809,14 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
     return map
   }, [roleScopedUsers, pendingApprovalIds])
 
-  const filteredUsers = roleScopedUsers
-    .filter((u) => {
-      if (roleFilter === 'all') return true
-      return normalizeRole(u.role) === roleFilter
-    })
-    .filter((u) => {
-      if (statusFilter === 'all') return true
-      return userStatusById.get(u.id) === statusFilter
-    })
-    .filter((u) => {
-      if (!searchQuery) return true
-      const normalizedQuery = searchQuery.toLowerCase()
-      const email = (u.email || '').toLowerCase()
-      const username = (u.username || '').toLowerCase()
-      const fullName = (u.full_name || '').toLowerCase()
-      return email.includes(normalizedQuery) || username.includes(normalizedQuery) || fullName.includes(normalizedQuery)
-    })
+  const filteredUsers = roleScopedUsers.filter((u) => {
+    if (!searchQuery) return true
+    const normalizedQuery = searchQuery.toLowerCase()
+    const email = (u.email || '').toLowerCase()
+    const username = (u.username || '').toLowerCase()
+    const fullName = (u.full_name || '').toLowerCase()
+    return email.includes(normalizedQuery) || username.includes(normalizedQuery) || fullName.includes(normalizedQuery)
+  })
     .sort((a, b) => {
       const roleA = normalizeRole(a.role)
       const roleB = normalizeRole(b.role)
@@ -842,6 +831,13 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
     })
 
   const totalVisibleUsers = filteredUsers.length
+  const totalUserPages = Math.max(1, Math.ceil(totalVisibleUsers / USER_PAGE_SIZE))
+  const pagedUsers = filteredUsers.slice((userPage - 1) * USER_PAGE_SIZE, userPage * USER_PAGE_SIZE)
+
+  useEffect(() => {
+    setUserPage((page) => Math.min(page, totalUserPages))
+  }, [totalUserPages])
+
   const summaryStats = useMemo(() => {
     const active = roleScopedUsers.filter(u => getUserDerivedStatus(u, pendingApprovalIds) === 'active').length
     const pending = roleScopedUsers.filter(u => getUserDerivedStatus(u, pendingApprovalIds) === 'pending').length
@@ -854,7 +850,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
     }
   }, [roleScopedUsers, pendingApprovalIds])
 
-  const selectableUserIds = filteredUsers
+  const selectableUserIds = pagedUsers
     .filter(u => canEditUserRow(u.role) && u.id !== user.id)
     .map(u => u.id)
 
@@ -872,12 +868,11 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
     setSelectedUserIds((prev) => Array.from(new Set([...prev, ...selectableUserIds])))
   }
 
+  const canResetGuardPassword = normalizeRole(user.role) === 'admin' || normalizeRole(user.role) === 'superadmin'
+
   const handleResetPasswordAction = (targetUser: User) => {
-    addNotification(
-      'warning',
-      'Reset Password Unavailable',
-      `No admin reset endpoint is configured for ${targetUser.email}. Use the standard forgot-password flow.`
-    )
+    if (!canResetGuardPassword || normalizeRole(targetUser.role) !== 'guard') return
+    setPasswordResetUser(targetUser)
   }
 
   const handleSuspendAction = (targetUser: User) => {
@@ -1119,24 +1114,6 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                       Create Guard Account
                     </button>
                   ) : null}
-                  <LiveFreshnessPill updatedAt={lastUserSyncAt} label="Roster sync" />
-                  <label className="flex items-center gap-2 rounded border border-border-subtle bg-background px-2 py-2 text-xs font-semibold text-text-secondary" htmlFor="tracking-accuracy-mode">
-                    Accuracy
-                    <select
-                      id="tracking-accuracy-mode"
-                      value={trackingAccuracyMode}
-                      onChange={(e) => {
-                        const mode = e.target.value as TrackingAccuracyMode
-                        setTrackingAccuracyModeState(mode)
-                        setTrackingAccuracyMode(mode)
-                        addNotification('info', 'Tracking Accuracy Updated', `Mode set to ${mode}. Refresh active sessions for full effect.`)
-                      }}
-                      className="rounded-md border border-border-subtle bg-surface px-2 py-1 text-xs font-semibold text-text-primary"
-                    >
-                      <option value="strict">Strict</option>
-                      <option value="balanced">Balanced</option>
-                    </select>
-                  </label>
                   <div className="relative">
                     <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-tertiary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                     <input
@@ -1144,33 +1121,13 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                       aria-label="Search users"
                       placeholder="Search users..."
                       value={searchQuery}
-                      onChange={e => setSearchQuery(e.target.value)}
+                      onChange={e => {
+                        setSearchQuery(e.target.value)
+                        setUserPage(1)
+                      }}
                       className="pl-9 pr-4 py-2 text-sm bg-background border border-border-subtle rounded text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-(--color-focus-ring) w-44"
                     />
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setFilterMenuOpen((prev) => !prev)}
-                    aria-expanded={filterMenuOpen}
-                    aria-controls="user-role-filter-menu"
-                    className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium bg-background border border-border-subtle rounded text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" /></svg>
-                    Filter: {roleFilter === 'all' ? 'All Roles' : roleFilter}
-                  </button>
-                  <label htmlFor="user-status-filter" className="sr-only">Filter by user status</label>
-                  <select
-                    id="user-status-filter"
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value as 'all' | UserDerivedStatus)}
-                    className="rounded border border-border-subtle bg-background px-3 py-2 text-sm font-medium text-text-secondary hover:text-text-primary"
-                  >
-                    <option value="all">All Statuses</option>
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                    <option value="pending">Pending</option>
-                    <option value="suspended">Suspended</option>
-                  </select>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3 border-b border-border-subtle px-5 py-4 md:grid-cols-4">
@@ -1191,35 +1148,6 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                   <div className="mt-1 text-xl font-bold text-info-text">{summaryStats.supervisors}</div>
                 </div>
               </div>
-              {filterMenuOpen ? (
-                <div id="user-role-filter-menu" className="px-5 py-3 border-b border-border-subtle">
-                  <div className="flex flex-wrap items-center gap-2" role="group" aria-label="User role filters">
-                    {([
-                      { key: 'all', label: 'All Roles' },
-                      { key: 'superadmin', label: 'Superadmins' },
-                      { key: 'admin', label: 'Admins' },
-                      { key: 'supervisor', label: 'Supervisors' },
-                      { key: 'guard', label: 'Guards' },
-                    ] as const).map((item) => (
-                      <button
-                        key={item.key}
-                        type="button"
-                        onClick={() => {
-                          setRoleFilter(item.key)
-                          setFilterMenuOpen(false)
-                        }}
-                        className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                          roleFilter === item.key
-                            ? 'bg-info-bg text-info-text ring-1 ring-info-border'
-                            : 'bg-background text-text-secondary ring-1 ring-border-subtle'
-                        }`}
-                      >
-                        {item.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
               {selectedUserIds.length > 0 ? (
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle bg-background px-5 py-3">
                   <p className="text-sm font-medium text-text-secondary">
@@ -1288,7 +1216,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border-subtle">
-                      {filteredUsers.map((u: User) => {
+                      {pagedUsers.map((u: User) => {
                         const derivedStatus = userStatusById.get(u.id) || 'inactive'
                         const rowSelected = selectedUserIds.includes(u.id)
                         const canEdit = canEditUserRow(u.role)
@@ -1358,17 +1286,19 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                                   </button>
                                 )}
-                                <button
-                                  type="button"
-                                  onClick={() => handleResetPasswordAction(u)}
-                                  title="Coming soon"
-                                  aria-label={`Reset password for ${u.full_name || u.username || u.email}`}
-                                  className="min-h-11 min-w-11 rounded p-2 text-text-tertiary opacity-50 cursor-not-allowed transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
-                                >
-                                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 11V7m0 0l-3 3m3-3l3 3M5 12a7 7 0 1114 0v5a2 2 0 01-2 2H7a2 2 0 01-2-2v-5z" />
-                                  </svg>
-                                </button>
+                                {canResetGuardPassword && normalizeRole(u.role) === 'guard' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleResetPasswordAction(u)}
+                                    title="Set temporary password"
+                                    aria-label={`Set temporary password for ${u.full_name || u.username || u.email}`}
+                                    className="min-h-11 min-w-11 rounded p-2 text-text-tertiary transition-colors hover:bg-info-bg hover:text-info-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
+                                  >
+                                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-5a2 2 0 00-2-2H6a2 2 0 00-2 2v5a2 2 0 002 2zm10-12V7a4 4 0 00-8 0v3h8z" />
+                                    </svg>
+                                  </button>
+                                )}
                                 <button
                                   type="button"
                                   onClick={() => handleSuspendAction(u)}
@@ -1405,7 +1335,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                     </tbody>
                   </table>
                   <div className="space-y-3 p-4 md:hidden">
-                    {filteredUsers.map((u: User) => {
+                    {pagedUsers.map((u: User) => {
                       const derivedStatus = userStatusById.get(u.id) || 'inactive'
                       const rowSelected = selectedUserIds.includes(u.id)
                       const pendingApproval = pendingApprovalIds.has(u.id)
@@ -1458,14 +1388,15 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                             >
                               Edit
                             </button>
-                            <button
-                              type="button"
-                              onClick={() => handleResetPasswordAction(u)}
-                              title="Coming soon"
-                              className="soc-btn soc-btn-neutral opacity-50 cursor-not-allowed"
-                            >
-                              Reset
-                            </button>
+                            {canResetGuardPassword && normalizeRole(u.role) === 'guard' && (
+                              <button
+                                type="button"
+                                onClick={() => handleResetPasswordAction(u)}
+                                className="soc-btn soc-btn-neutral"
+                              >
+                                Set password
+                              </button>
+                            )}
                             <button
                               type="button"
                               onClick={() => handleSuspendAction(u)}
@@ -1491,15 +1422,36 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                 </div>
               ) : (
                 <div className="text-center py-12">
-                  <p className="text-sm text-text-secondary">No users match the current filters.</p>
-                  <p className="mt-1 text-xs text-text-tertiary">Try adjusting your search or filter criteria.</p>
+                  <p className="text-sm text-text-secondary">No users found.</p>
+                  <p className="mt-1 text-xs text-text-tertiary">Try a different search term.</p>
                 </div>
               )}
               <div className="flex items-center justify-between px-5 py-3 border-t border-border-subtle">
-                <p className="text-xs text-text-tertiary">Showing {totalVisibleUsers} of {users.length} users</p>
-                <div className="flex gap-2">
-                  <button type="button" className="soc-btn soc-btn-neutral">Previous</button>
-                  <button type="button" className="soc-btn soc-btn-neutral">Next</button>
+                <p className="text-xs text-text-tertiary">
+                  Showing {totalVisibleUsers === 0 ? 0 : (userPage - 1) * USER_PAGE_SIZE + 1}-{Math.min(userPage * USER_PAGE_SIZE, totalVisibleUsers)} of {totalVisibleUsers} users
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setUserPage((page) => Math.max(1, page - 1))}
+                    disabled={userPage === 1}
+                    className="soc-btn soc-btn-neutral disabled:cursor-not-allowed disabled:opacity-50"
+                    aria-label="Previous user page"
+                  >
+                    Previous
+                  </button>
+                  <span className="px-2 text-xs font-semibold text-text-secondary" aria-live="polite">
+                    Page {userPage} of {totalUserPages}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setUserPage((page) => Math.min(totalUserPages, page + 1))}
+                    disabled={userPage === totalUserPages}
+                    className="soc-btn soc-btn-neutral disabled:cursor-not-allowed disabled:opacity-50"
+                    aria-label="Next user page"
+                  >
+                    Next
+                  </button>
                 </div>
               </div>
             </section>
@@ -1584,7 +1536,6 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                 </div>
               </section>
             )}
-            <OperationalRequestsPanel user={user} />
           </div>
         ) : activeSection === 'schedule' ? (
           <div className="flex-1 flex flex-col p-4 md:p-8 overflow-hidden w-full animate-fade-in">
@@ -1598,18 +1549,18 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
             ) : (
               <>
                 <section className="flex flex-col flex-1 min-h-0 w-full rounded overflow-hidden table-glass mb-4">
-                  <div className="shrink-0 px-6 py-5 border-b border-border-subtle flex justify-between items-center">
+                  <div className="shrink-0 px-6 py-5 border-b border-border-subtle flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <h2 className="text-xl font-bold text-text-primary">All Guard Schedules</h2>
                     <button
+                      type="button"
                       onClick={() => {
                         void fetchClientSites()
                         setShowAddScheduleForm(true)
                       }}
-                      className="bg-primary hover:bg-primary-hover text-primary-text px-4 py-2 rounded text-sm font-medium transition-colors flex items-center gap-2"
+                      className="soc-btn soc-btn-primary w-full shrink-0 sm:w-auto"
+                      title="Add a new guard schedule"
                     >
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                      </svg>
+                      <CalendarPlus className="h-4 w-4" aria-hidden="true" />
                       Add Schedule
                     </button>
                   </div>
@@ -1864,7 +1815,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                   onChange={setSelectedVehicles}
                   placeholder="-- Select a vehicle --"
                   emptyMessage="No available vehicles are currently ready."
-                  options={availableVehicles.map((vehicle) => ({ value: vehicle.id, label: `${vehicle.model} - ${vehicle.license_plate} (Capacity: ${vehicle.capacity_kg}kg)` }))}
+                  options={availableVehicles.map((vehicle) => ({ value: vehicle.id, label: `${vehicle.model} - ${vehicle.license_plate}` }))}
                 />
 
                 <div>
@@ -2043,6 +1994,12 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
             onSave={handleSaveUser}
           />
         )}
+
+        <GuardPasswordModal
+          user={passwordResetUser}
+          onClose={() => setPasswordResetUser(null)}
+          onSuccess={fetchData}
+        />
 
         {editingShift && (
           <EditScheduleModal

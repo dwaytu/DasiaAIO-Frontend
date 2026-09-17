@@ -150,6 +150,10 @@ export interface ClientSiteInput {
   isActive?: boolean
 }
 
+export interface ClientSiteSetupInput extends ClientSiteInput {
+  geofenceRadiusKm: number
+}
+
 export interface GuardHeartbeatInput {
   latitude: number
   longitude: number
@@ -178,6 +182,7 @@ interface UseOperationalMapDataResult {
   refresh: () => Promise<void>
   lastUpdated: string
   createClientSite: (input: ClientSiteInput) => Promise<void>
+  createClientSiteWithGeofence: (input: ClientSiteSetupInput) => Promise<void>
   updateClientSite: (siteId: string, input: ClientSiteInput) => Promise<void>
   deleteClientSite: (siteId: string) => Promise<void>
   createGeofenceZone: (siteId: string, input: GeofenceZoneInput) => Promise<void>
@@ -349,6 +354,21 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
         headers: getAuthHeaders(),
       },
       'Failed to delete client site',
+    )
+    await load()
+  }, [isElevatedUser, load])
+
+  const createClientSiteWithGeofence = useCallback(async (input: ClientSiteSetupInput) => {
+    if (!isElevatedUser) return
+
+    await fetchJsonOrThrow<any>(
+      `${API_BASE_URL}/api/tracking/client-sites/with-geofence`,
+      {
+        method: 'POST',
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(input),
+      },
+      'Failed to create client site and check-in area',
     )
     await load()
   }, [isElevatedUser, load])
@@ -618,6 +638,7 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
       refresh: load,
       lastUpdated,
       createClientSite,
+      createClientSiteWithGeofence,
       updateClientSite,
       deleteClientSite,
       createGeofenceZone,
@@ -641,6 +662,7 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
       load,
       lastUpdated,
       createClientSite,
+      createClientSiteWithGeofence,
       updateClientSite,
       deleteClientSite,
       createGeofenceZone,

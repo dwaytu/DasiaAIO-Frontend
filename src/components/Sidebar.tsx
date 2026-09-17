@@ -39,6 +39,7 @@ const navGlyphs: Record<string, string> = {
   manage: 'MG',
   'operations-map': 'OM',
   firearms: 'FA',
+  'guard-compliance': 'GC',
   allocation: 'AS',
   permits: 'PM',
   maintenance: 'MT',

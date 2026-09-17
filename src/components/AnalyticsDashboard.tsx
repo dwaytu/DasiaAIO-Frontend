@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useId, useRef, FC } from 'react'
-import { BarChart3, TrendingUp, Filter, RefreshCw } from 'lucide-react'
+import { BarChart3, TrendingUp, Filter, RefreshCw, Printer } from 'lucide-react'
 import { API_BASE_URL } from '../config'
 import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
 import { sanitizeErrorMessage } from '../utils/sanitize'
@@ -572,9 +572,14 @@ const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onVie
       onMenuClose={() => setMobileMenuOpen(false)}
       onLogoClick={() => onViewChange(homeView)}
     >
-    <div className="space-y-6">
+    <div className="analytics-print-report space-y-6">
+      <div className="hidden analytics-print-heading">
+        <p className="soc-label">SENTINEL Operational Analytics</p>
+        <h1 className="soc-page-title">Analytics Report</h1>
+        <p className="mt-1 text-sm">Period: last {dateRange} days | Generated {new Date(lastRefreshAt).toLocaleString()}</p>
+      </div>
       {/* ── Hero Zone ──────────────────────────────────── */}
-      <section className="command-panel p-5">
+      <section className="soc-dashboard-card p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="soc-label mb-1">Total Missions This Month</p>
@@ -594,6 +599,15 @@ const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onVie
           <div className="flex items-center gap-2">
             <LiveFreshnessPill updatedAt={lastRefreshAt} label="Analytics feed" />
             <StatusBadge label={`Completion ${missionCompletion.toFixed(1)}%`} tone={missionTrendTone} />
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="soc-btn soc-btn-neutral analytics-print-control"
+              aria-label="Print analytics report"
+            >
+              <Printer className="h-3.5 w-3.5" aria-hidden="true" />
+              Print
+            </button>
           </div>
         </div>
       </section>
@@ -608,7 +622,7 @@ const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onVie
           <button
             type="button"
             onClick={handleRetry}
-            className="ml-2 font-semibold underline"
+            className="analytics-print-control ml-2 font-semibold underline"
           >
             Retry now
           </button>
@@ -666,7 +680,7 @@ const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onVie
       </section>
 
       {/* ── Filter Bar ─────────────────────────────────── */}
-      <section className="flex flex-wrap items-center gap-3 rounded border border-border bg-surface-elevated px-4 py-3">
+      <section className="analytics-print-control soc-dashboard-card flex flex-wrap items-center gap-3 !px-4 !py-3">
         <Filter className="h-4 w-4 text-text-tertiary" aria-hidden="true" />
         <div className="flex items-center gap-2">
           <label htmlFor="analytics-date-range" className="text-xs font-medium text-text-secondary">Period</label>
@@ -697,7 +711,7 @@ const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onVie
           <DashboardCard title="Resource Availability">
             <AvailabilityComparison rows={resourceAvailabilityRows} />
           </DashboardCard>
-          <DashboardCard title="Client Evaluation Trend">
+          <DashboardCard title="Guard Evaluation Trend">
             {evaluationTrendData.length > 0 ? (
               <SimpleLineChart
                 data={evaluationTrendData}
@@ -707,7 +721,7 @@ const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onVie
                 suffix="/5"
               />
             ) : (
-              <p className="py-20 text-center text-sm text-text-secondary">No client evaluations for the selected period.</p>
+              <p className="py-20 text-center text-sm text-text-secondary">No guard evaluations for the selected period.</p>
             )}
           </DashboardCard>
         </div>
@@ -732,10 +746,10 @@ const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onVie
         </div>
       </section>
 
-      <section aria-label="Client evaluation analytics" className="space-y-3">
+      <section aria-label="Guard evaluation analytics" className="space-y-3">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <MetricStatCard
-            label="Average Client Rating"
+            label="Average Guard Rating"
             value={`${evaluationAnalytics.average_rating.toFixed(1)}/5`}
             hint={`Across ${evaluationAnalytics.total_evaluations} evaluation${evaluationAnalytics.total_evaluations === 1 ? '' : 's'}`}
             tone="analytics"
@@ -749,7 +763,7 @@ const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onVie
           <MetricStatCard
             label="Evaluation Records"
             value={formatCompactNumber(evaluationAnalytics.total_evaluations)}
-            hint="Verified client evaluation entries"
+            hint="Verified supervisor and administrator evaluation entries"
             tone="default"
           />
           <MetricStatCard
@@ -759,9 +773,9 @@ const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onVie
             tone="maintenance"
           />
         </div>
-        <DashboardCard title="Client Rating Distribution">
+        <DashboardCard title="Guard Evaluation Distribution">
           <SimpleBarChart data={evaluationDistributionData} height={220} barColor="var(--color-info-border)" />
-          <p className="mt-2 text-center text-xs text-text-secondary">Advisory summary based on preserved client evaluation records.</p>
+          <p className="mt-2 text-center text-xs text-text-secondary">Summary based on evaluations recorded by supervisors and administrators.</p>
         </DashboardCard>
       </section>
 

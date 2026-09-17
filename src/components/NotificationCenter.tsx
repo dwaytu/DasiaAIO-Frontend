@@ -15,10 +15,17 @@ interface NotificationProps {
 }
 
 const TYPE_STYLES: Record<Notification['type'], string> = {
-  success: 'bg-success-bg border-success-border text-success-text',
-  error: 'bg-danger-bg border-danger-border text-danger-text',
-  warning: 'bg-warning-bg border-warning-border text-warning-text',
-  info: 'bg-info-bg border-info-border text-info-text',
+  success: 'border-success-border',
+  error: 'border-danger-border',
+  warning: 'border-warning-border',
+  info: 'border-info-border',
+}
+
+const TYPE_ICON_STYLES: Record<Notification['type'], string> = {
+  success: 'bg-success-bg text-success-text',
+  error: 'bg-danger-bg text-danger-text',
+  warning: 'bg-warning-bg text-warning-text',
+  info: 'bg-info-bg text-info-text',
 }
 
 const TYPE_ICONS = {
@@ -37,23 +44,31 @@ const NotificationItem: FC<NotificationProps> = ({ notification, onDismiss }) =>
   const Icon = TYPE_ICONS[notification.type]
 
   return (
-    <div className={`${TYPE_STYLES[notification.type]} mb-3 flex max-w-md items-start justify-between rounded border-l-4 p-4 shadow-lg animate-slide-in-right`} role="status">
-      <div className="flex flex-1 items-start gap-3">
-        <Icon className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
-        <div className="flex-1">
-          <h4 className="mb-1 text-sm font-bold">{notification.title}</h4>
-          <p className="text-xs opacity-90">{notification.message}</p>
-          <p className="mt-1 text-xs opacity-70">{notification.timestamp.toLocaleTimeString()}</p>
+    <div
+      className={`pointer-events-auto relative mb-3 flex w-full items-start gap-3 overflow-hidden rounded border border-l-4 bg-surface-elevated p-4 shadow-2xl animate-slide-in-right ${TYPE_STYLES[notification.type]}`}
+      role="status"
+      aria-live="polite"
+    >
+      <div className="flex min-w-0 flex-1 items-start gap-3">
+        <span className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${TYPE_ICON_STYLES[notification.type]}`}>
+          <Icon className="h-5 w-5" aria-hidden="true" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <h4 className="mb-1 break-words text-sm font-bold text-text-primary">{notification.title}</h4>
+          <p className="break-words text-sm leading-5 text-text-secondary">{notification.message}</p>
+          <p className="mt-1 text-xs text-text-tertiary">{notification.timestamp.toLocaleTimeString()}</p>
         </div>
       </div>
       <button
         type="button"
         onClick={() => onDismiss(notification.id)}
-        className="soc-btn-neutral ml-2 min-h-11 min-w-11 p-2"
+        className="soc-btn soc-btn-neutral soc-btn-icon ml-2 min-h-11 min-w-11 shrink-0 p-0"
         aria-label={`Dismiss notification: ${notification.title}`}
+        title="Dismiss notification"
       >
         <X className="h-4 w-4" aria-hidden="true" />
       </button>
+      <span className="toast-progress pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-info" aria-hidden="true" />
     </div>
   )
 }
@@ -68,11 +83,7 @@ const NotificationCenter: FC<NotificationCenterProps> = ({ notifications, onDism
 
   return (
     <div
-      className="fixed left-4 right-4 top-4 z-[80] w-auto max-w-md md:left-auto md:top-[calc(5.5rem+env(safe-area-inset-top,0px))]"
-      style={{
-        right: 'calc(1rem + env(safe-area-inset-right, 0px))',
-        left: 'calc(1rem + env(safe-area-inset-left, 0px))',
-      }}
+      className="pointer-events-none fixed left-[calc(1rem+env(safe-area-inset-left,0px))] right-[calc(1rem+env(safe-area-inset-right,0px))] top-[calc(1rem+env(safe-area-inset-top,0px))] z-(--z-toast) w-auto md:left-auto md:right-[calc(1rem+env(safe-area-inset-right,0px))] md:top-[calc(5.5rem+env(safe-area-inset-top,0px))] md:w-[min(28rem,calc(100vw-2rem))]"
       aria-label="Notifications"
     >
       {notifications.map((notification) => (

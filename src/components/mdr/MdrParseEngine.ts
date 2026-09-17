@@ -1,6 +1,6 @@
 import * as XLSX from 'xlsx'
 
-type MdrSection = 'clients' | 'tower' | 'armored' | 'backup' | 'vault' | 'equipment' | 'pullout' | 'returned'
+type MdrSection = 'clients' | 'tower' | 'armored' | 'backup' | 'vault' | 'equipment' | 'pullout' | 'returned' | 'history'
 
 export interface MdrRowData {
   sheetName: string
@@ -70,10 +70,12 @@ const SECTION_PATTERNS: Array<{ pattern: RegExp; section: MdrSection }> = [
   { pattern: /CLIENT SITES?/i, section: 'clients' },
   { pattern: /TOWER SITES?/i, section: 'tower' },
   { pattern: /ARMORED\s+CAR/i, section: 'armored' },
-  { pattern: /BACKUP/i, section: 'backup' },
+  { pattern: /BACKUP|BCK\s*UP|BACK\s*UP/i, section: 'backup' },
   { pattern: /FIREARMS\s+ON\s+VAULT|VAULT\s+FIREARMS?/i, section: 'vault' },
-  { pattern: /EQUIPMENT|ISSUED/i, section: 'equipment' },
+  { pattern: /EQUIPMENT|ISSUED|METAL\s+DETECTOR|HAND\s*HELD\s+RADIO|CELLPHONE|CELPHONE|MOBILE\s+PHONE|ANDROID\s+PHONE|MEDICINE\s+KIT|FIRE\s+EXTINGUISHER/i, section: 'equipment' },
 ]
+
+const EQUIPMENT_PATTERN = /METAL\s+DETECTOR|HAND\s*HELD\s+RADIO|HANDHEL\s+RADIO|\bRADIO\b|\bANDROID\s+PHONE\b|\bMOBILE\s+PHONE\b|\bCELPHONE\b|\bCELLPHONE\b|\bFLASHLIGHT\b|\bUNIFORM\b|\bPPE\b|\bID\s+BADGE\b|MEDICINE\s+KIT|FIRE\s+EXTINGUISHER/i
 
 function readFileAsArrayBuffer(file: File): Promise<ArrayBuffer> {
   return new Promise((resolve, reject) => {
@@ -123,6 +125,10 @@ function squashWhitespace(value: string): string {
 function optionalText(value: unknown): string | undefined {
   const normalized = squashWhitespace(cellText(value))
   return normalized.length > 0 ? normalized : undefined
+}
+
+function normalizeSerial(value: unknown): string | undefined {
+  return optionalText(value)?.replace(/\s+/g, '').replace(/\*$/, '')
 }
 
 function parseInteger(value: unknown): number | undefined {
@@ -212,6 +218,29 @@ function normalizeDate(
     }
   }
 
+  const compactSlashMatch = slashNormalized.match(/^(\d{1,2})\/(\d{2})(\d{4})$/)
+  if (compactSlashMatch) {
+    const month = Number.parseInt(compactSlashMatch[1], 10)
+    const day = Number.parseInt(compactSlashMatch[2], 10)
+    const year = Number.parseInt(compactSlashMatch[3], 10)
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      return formatDate(year, month, day)
+    }
+  }
+
+  const malformedDayMatch = slashNormalized.match(/^(\d{1,2})\/(1\d{2})\/(\d{2,4})$/)
+  if (malformedDayMatch) {
+    const month = Number.parseInt(malformedDayMatch[1], 10)
+    const day = Number.parseInt(malformedDayMatch[2].slice(-2), 10)
+    const yearToken = Number.parseInt(malformedDayMatch[3], 10)
+    const year = yearToken < 100 ? 2000 + yearToken : yearToken
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      return formatDate(year, month, day)
+    }
+  }
+
+  if (/^\d+\/\d+[A-Za-z]+$/.test(raw)) return undefined
+
   const parsedTimestamp = Date.parse(raw)
   if (!Number.isNaN(parsedTimestamp)) {
     const parsed = new Date(parsedTimestamp)
@@ -293,6 +322,36 @@ function detectSectionMarker(value: string): MdrSection | undefined {
   return undefined
 }
 
+function findDataStart(rows: unknown[][]): number {
+  const headerIndex = rows.findIndex((row) => {
+    const text = row
+      .slice(0, 12)
+      .map((value) => squashWhitespace(cellText(value)))
+      .filter(Boolean)
+      .join(' ')
+
+    return /SECURITY\s+GUARDS/i.test(text) && /CLIENT'?S|CONTACT\s+NUMBER/i.test(text)
+  })
+
+  return headerIndex >= 0 ? headerIndex + 2 : 0
+}
+
+function isEquipmentDescriptor(value: unknown): boolean {
+  return EQUIPMENT_PATTERN.test(optionalText(value) ?? '')
+}
+
+function isLikelyFirearmDescriptor(value: unknown): boolean {
+  return /PISTOL|SHOTGUN|REVOLVER|RIFLE|CARBINE|NO\s*\/\s*FIREARM/i.test(optionalText(value) ?? '')
+}
+
+function isLikelyGuardName(value: unknown): boolean {
+  const text = optionalText(value)
+  if (!text || isEquipmentDescriptor(text)) return false
+  if (/^(?:R|SBR|NCR)\s*[-\d]|^CERT$|^\d/.test(text.toUpperCase())) return false
+
+  return /[A-Z]/i.test(text) && (text.includes(',') || text.split(' ').length >= 2)
+}
+
 function isSectionHeading(value: string): boolean {
   return SECTION_PATTERNS.some(({ pattern }) => pattern.test(value))
 }
@@ -308,8 +367,11 @@ function parseRosterSheet(
   let currentClientNumber: number | undefined
   let currentClientName: string | undefined
   let currentClientAddress: string | undefined
+  let currentVaultKind: string | undefined
 
-  for (let rowIndex = 8; rowIndex < rows.length; rowIndex += 1) {
+  const dataStartIndex = findDataStart(rows)
+
+  for (let rowIndex = dataStartIndex; rowIndex < rows.length; rowIndex += 1) {
     const row = rows[rowIndex] ?? []
     const rowNumber = rowIndex + 1
 
@@ -331,19 +393,93 @@ function parseRosterSheet(
     if (!rowSummary) continue
     if (STOP_MARKER_PATTERN.test(rowSummary)) break
 
-    const detectedSection = detectSectionMarker(colBText)
+    const detectedSection = detectSectionMarker(
+      [colAText, colBText, optionalText(row[3])].filter(Boolean).join(' '),
+    )
     if (detectedSection) {
       currentSection = detectedSection
     }
 
+    if (currentSection === 'armored') {
+      const warning = 'Armored vehicle rows were skipped. Add vehicles manually in Resource Management.'
+      if (!warningSet.has(warning)) {
+        warningSet.add(warning)
+        warnings.push(warning)
+      }
+      continue
+    }
+
+    if (currentSection === 'vault') {
+      if (/SERIAL\s+NUMBER|REMARKS/i.test(rowSummary)) continue
+
+      const vaultKind = optionalText(row[1]) ?? currentVaultKind
+      const serialNumber = optionalText(row[3])
+      const firearmMake = optionalText(row[4])
+      const faRemarks = optionalText(row[5])
+
+      if (optionalText(row[1])) currentVaultKind = optionalText(row[1])
+      if (!vaultKind && !serialNumber && !firearmMake && !faRemarks) continue
+
+      const rowData: MdrRowData = {
+        sheetName,
+        rowNumber,
+        section: 'vault',
+      }
+      if (vaultKind) rowData.firearmKind = vaultKind
+      if (serialNumber) rowData.serialNumber = serialNumber
+      if (firearmMake) rowData.firearmMake = firearmMake
+      if (faRemarks) rowData.faRemarks = faRemarks
+      parsedRows.push(rowData)
+      continue
+    }
+
+    const rowEquipment = isEquipmentDescriptor(row[7])
+    const rowSection = !optionalText(row[3]) && rowEquipment ? 'equipment' : currentSection
+
+    // Some MDR exports end with a compact equipment inventory such as
+    // [sequence, equipment type, item number, quantity]. It is not a guard row.
+    if (
+      detectedSection === 'equipment' &&
+      parseInteger(row[2]) !== undefined &&
+      parseInteger(row[3]) !== undefined
+    ) {
+      const equipmentType = optionalText(row[1])
+      if (equipmentType) {
+        parsedRows.push({
+          sheetName,
+          rowNumber,
+          section: 'equipment',
+          firearmKind: equipmentType,
+          actualAmmo: optionalText(row[3]),
+        })
+      }
+      continue
+    }
+
+    if (
+      detectedSection === 'backup' &&
+      parseInteger(row[0]) !== undefined &&
+      parseInteger(row[2]) !== undefined
+    ) {
+      continue
+    }
+
     const clientNumber = parseInteger(row[0])
-    if (clientNumber !== undefined) {
+    if (clientNumber !== undefined && rowSection !== 'equipment') {
       const descriptor = parseClientDescriptor(colBTextRaw)
       currentClientNumber = clientNumber
       currentClientName = descriptor.clientName ?? currentClientName
       if (descriptor.clientAddress !== undefined) {
         currentClientAddress = descriptor.clientAddress
       }
+    } else if (
+      clientNumber === undefined &&
+      !currentClientName &&
+      colBText &&
+      rowSection !== 'equipment' &&
+      !isSectionHeading(colBText)
+    ) {
+      currentClientName = parseClientDescriptor(colBTextRaw).clientName
     }
 
     const guardNumber = parseInteger(row[2])
@@ -358,10 +494,10 @@ function parseRosterSheet(
       warnings,
       warningSet,
     )
-    const firearmKind = optionalText(row[7])
+    const firearmKind = typeof row[7] === 'number' ? undefined : optionalText(row[7])
     const firearmMake = optionalText(row[8])
     const caliber = optionalText(row[9])
-    const serialNumber = optionalText(row[10])
+    const serialNumber = normalizeSerial(row[10])
     const firearmValidity = normalizeDate(
       row[11],
       'firearm validity',
@@ -406,7 +542,7 @@ function parseRosterSheet(
     const rowData: MdrRowData = {
       sheetName,
       rowNumber,
-      section: currentSection,
+      section: rowSection,
     }
 
     if (currentClientNumber !== undefined) rowData.clientNumber = currentClientNumber
@@ -444,7 +580,11 @@ function parseRosterSheet(
       )
     }
 
-    if ((rowData.firearmKind || rowData.firearmMake || rowData.caliber) && !rowData.serialNumber) {
+    if (
+      (rowData.firearmKind || rowData.firearmMake || rowData.caliber) &&
+      !rowData.serialNumber &&
+      !isEquipmentDescriptor(rowData.firearmKind)
+    ) {
       pushWarning(
         warnings,
         warningSet,
@@ -479,8 +619,14 @@ function parsePullOutSheet(
   let currentClientNumber: number | undefined
   let currentClientName: string | undefined
   let currentClientAddress: string | undefined
+  let currentGuardNumber: number | undefined
+  let currentGuardName: string | undefined
+  let embeddedRoster = false
+  let skipUntilRosterHeader = false
 
-  for (let rowIndex = 4; rowIndex < rows.length; rowIndex += 1) {
+  const dataStartIndex = findDataStart(rows)
+
+  for (let rowIndex = dataStartIndex; rowIndex < rows.length; rowIndex += 1) {
     const row = rows[rowIndex] ?? []
     const rowNumber = rowIndex + 1
 
@@ -496,8 +642,113 @@ function parsePullOutSheet(
     if (STOP_MARKER_PATTERN.test(rowSummary)) break
     if (isPullOutHistoricalSection(rowSummary)) break
 
-    const clientNumber = parseInteger(row[0])
-    const clientDescriptor = parseClientDescriptor(cellText(row[1]))
+    if (!embeddedRoster && /DAVAO SECURITY|DR\. GONZALES|SUBMITTED HEREWITH|^TAGUM BRANCH$/i.test(rowSummary)) {
+      continue
+    }
+
+    if (skipUntilRosterHeader) {
+      if (/SECURITY\s+GUARDS/i.test(rowSummary)) {
+        embeddedRoster = true
+        skipUntilRosterHeader = false
+        currentClientNumber = undefined
+        currentClientName = undefined
+        currentClientAddress = undefined
+      }
+      continue
+    }
+
+    if (/^MONTH\s+OF\b/i.test(rowSummary)) {
+      skipUntilRosterHeader = true
+      continue
+    }
+
+    if (/SECURITY\s+GUARDS/i.test(rowSummary)) {
+      embeddedRoster = row.some((value, index) => index <= 5 && /^No\.?$/i.test(cellText(value)))
+      currentClientNumber = undefined
+      currentClientName = undefined
+      currentClientAddress = undefined
+      continue
+    }
+
+    if (embeddedRoster) {
+      if (/LICENSE\s+NO|EXPIRY\s+DATE|SERIAL\s+NO|CALIBER/i.test(rowSummary)) continue
+
+      const embeddedShift = isLikelyGuardName(row[7]) ? 1 : 0
+      const clientNumber = parseInteger(row[3 + embeddedShift])
+      const clientDescriptor = parseClientDescriptor(cellText(row[4 + embeddedShift]))
+      if (clientNumber !== undefined) {
+        currentClientNumber = clientNumber
+        currentClientName = clientDescriptor.clientName ?? currentClientName
+        if (clientDescriptor.clientAddress !== undefined) {
+          currentClientAddress = clientDescriptor.clientAddress
+        }
+      } else if (clientDescriptor.clientName && !currentClientName) {
+        currentClientName = clientDescriptor.clientName
+      }
+
+      const guardNumber = parseInteger(row[5 + embeddedShift])
+      const guardName = optionalText(row[6 + embeddedShift])
+      const contactNumber = normalizePhone(row[7 + embeddedShift])
+      const licenseNumber = optionalText(row[8 + embeddedShift])
+      const licenseExpiry = normalizeDate(
+        row[9 + embeddedShift],
+        'license expiry',
+        sheetName,
+        rowNumber,
+        warnings,
+        warningSet,
+      )
+      const firearmKind = typeof row[10 + embeddedShift] === 'number' ? undefined : optionalText(row[10 + embeddedShift])
+      const firearmMake = optionalText(row[11 + embeddedShift])
+      const caliber = optionalText(row[12 + embeddedShift])
+      const serialNumber = normalizeSerial(row[13 + embeddedShift])
+      const firearmValidity = normalizeDate(
+        row[14 + embeddedShift],
+        'firearm validity',
+        sheetName,
+        rowNumber,
+        warnings,
+        warningSet,
+      )
+      const actualAmmo = optionalText(row[15 + embeddedShift])
+      const ammoCount = optionalText(row[16 + embeddedShift])
+
+      if (!guardNumber && !guardName && !licenseNumber && !serialNumber && !firearmKind) continue
+
+      const rowData: MdrRowData = {
+        sheetName,
+        rowNumber,
+        section: 'history',
+      }
+      if (currentClientNumber !== undefined) rowData.clientNumber = currentClientNumber
+      if (clientDescriptor.clientName) rowData.clientName = clientDescriptor.clientName
+      else if (currentClientName) rowData.clientName = currentClientName
+      if (clientDescriptor.clientAddress) rowData.clientAddress = clientDescriptor.clientAddress
+      else if (currentClientAddress) rowData.clientAddress = currentClientAddress
+      if (guardNumber !== undefined) rowData.guardNumber = guardNumber
+      if (guardName) rowData.guardName = guardName
+      if (contactNumber) rowData.contactNumber = contactNumber
+      if (licenseNumber) rowData.licenseNumber = licenseNumber
+      if (licenseExpiry) rowData.licenseExpiry = licenseExpiry
+      if (firearmKind) rowData.firearmKind = firearmKind
+      if (firearmMake) rowData.firearmMake = firearmMake
+      if (caliber) rowData.caliber = caliber
+      if (serialNumber) rowData.serialNumber = serialNumber
+      if (firearmValidity) rowData.firearmValidity = firearmValidity
+      if (actualAmmo) rowData.actualAmmo = actualAmmo
+      if (ammoCount) rowData.ammoCount = ammoCount
+      parsedRows.push(rowData)
+      continue
+    }
+
+    const usesShiftedLayout = isLikelyGuardName(row[5]) || isEquipmentDescriptor(row[9]) || isLikelyFirearmDescriptor(row[9])
+    const shiftedNoContact = usesShiftedLayout && isLikelyGuardName(row[5]) && /^[A-Z]*(?:R|SBR|NCR)\s*[-\d]/i.test(cellText(row[6]))
+    const shiftedNoStatus = usesShiftedLayout && (
+      isLikelyFirearmDescriptor(row[9]) ||
+      (isEquipmentDescriptor(row[9]) && !optionalText(row[10]))
+    )
+    const clientNumber = parseInteger(usesShiftedLayout ? row[4] : row[0])
+    const clientDescriptor = parseClientDescriptor(cellText(usesShiftedLayout ? row[3] : row[1]))
 
     if (clientNumber !== undefined) {
       currentClientNumber = clientNumber
@@ -505,39 +756,68 @@ function parsePullOutSheet(
       if (clientDescriptor.clientAddress !== undefined) {
         currentClientAddress = clientDescriptor.clientAddress
       }
+    } else if (clientDescriptor.clientName && !currentClientName) {
+      currentClientName = clientDescriptor.clientName
     }
 
-    const guardNumber = parseInteger(row[2])
-    const guardName = optionalText(row[3])
-    const contactNumber = normalizePhone(row[4])
-    const licenseNumber = optionalText(row[5])
+    const guardNumber = parseInteger(usesShiftedLayout ? row[4] : row[2])
+    const guardName = optionalText(usesShiftedLayout ? row[5] : row[3])
+    const contactNumber = shiftedNoContact ? undefined : normalizePhone(usesShiftedLayout ? row[6] : row[4])
+    const licenseNumber = optionalText(shiftedNoContact ? row[6] : usesShiftedLayout ? row[7] : row[5])
     const licenseExpiry = normalizeDate(
-      row[6],
+      shiftedNoContact ? row[7] : usesShiftedLayout ? row[8] : row[6],
       'license expiry',
       sheetName,
       rowNumber,
       warnings,
       warningSet,
     )
-    const firearmKind = optionalText(row[7])
-    const pulloutStatus = optionalText(row[8])
-    const firearmMake = optionalText(row[9])
-    const serialNumber = optionalText(row[10])
+    const shiftedEquipment = shiftedNoStatus && isEquipmentDescriptor(row[9])
+    const pulloutStatus = shiftedEquipment
+      ? undefined
+      : shiftedNoStatus
+        ? undefined
+        : optionalText(usesShiftedLayout ? row[9] : row[7])
+    const firearmKind = shiftedEquipment
+      ? optionalText(row[9])
+      : shiftedNoStatus
+        ? optionalText(row[9])
+        : optionalText(usesShiftedLayout ? row[10] : row[8])
+    const firearmMake = shiftedNoStatus
+      ? optionalText(row[10])
+      : optionalText(usesShiftedLayout ? row[11] : row[9])
+    const serialNumber = shiftedEquipment
+      ? undefined
+      : normalizeSerial(shiftedNoStatus ? row[12] : usesShiftedLayout ? row[13] : row[11])
     const firearmValidity = normalizeDate(
-      row[11],
+      shiftedNoStatus ? row[13] : usesShiftedLayout ? row[14] : row[12],
       'firearm validity',
       sheetName,
       rowNumber,
       warnings,
       warningSet,
     )
-    const actualAmmo = optionalText(row[12])
-    const ammoCount = optionalText(row[13])
-    const licRegName = optionalText(row[15])
+    const actualAmmo = optionalText(shiftedEquipment ? row[14] : shiftedNoStatus ? row[14] : usesShiftedLayout ? row[15] : row[13])
+    const ammoCount = optionalText(shiftedEquipment ? row[15] : shiftedNoStatus ? row[15] : usesShiftedLayout ? row[16] : row[14])
+    const licRegName = optionalText(usesShiftedLayout ? row[17] : row[15])
+    const rowSection: MdrSection = !guardName && isEquipmentDescriptor(firearmKind)
+      ? 'equipment'
+      : 'pullout'
+    const effectiveGuardNumber = guardNumber ?? (
+      isLikelyFirearmDescriptor(firearmKind) && currentGuardName ? currentGuardNumber : undefined
+    )
+    const effectiveGuardName = guardName ?? (
+      isLikelyFirearmDescriptor(firearmKind) && currentGuardName ? currentGuardName : undefined
+    )
+
+    if (guardName) {
+      currentGuardNumber = guardNumber
+      currentGuardName = guardName
+    }
 
     const hasMeaningfulData = Boolean(
-      guardNumber !== undefined ||
-      guardName ||
+      effectiveGuardNumber !== undefined ||
+      effectiveGuardName ||
       pulloutStatus ||
       serialNumber ||
       firearmKind ||
@@ -549,7 +829,7 @@ function parsePullOutSheet(
     const rowData: MdrRowData = {
       sheetName,
       rowNumber,
-      section: 'pullout',
+      section: rowSection,
     }
 
     if (currentClientNumber !== undefined) rowData.clientNumber = currentClientNumber
@@ -565,8 +845,8 @@ function parsePullOutSheet(
       rowData.clientAddress = currentClientAddress
     }
 
-    if (guardNumber !== undefined) rowData.guardNumber = guardNumber
-    if (guardName) rowData.guardName = guardName
+    if (effectiveGuardNumber !== undefined) rowData.guardNumber = effectiveGuardNumber
+    if (effectiveGuardName) rowData.guardName = effectiveGuardName
     if (contactNumber) rowData.contactNumber = contactNumber
     if (licenseNumber) rowData.licenseNumber = licenseNumber
     if (licenseExpiry) rowData.licenseExpiry = licenseExpiry
@@ -602,7 +882,10 @@ function parseReturnedFirearmsSheet(
   const parsedRows: MdrRowData[] = []
   let currentFirearmKind: string | undefined
 
-  for (let rowIndex = 2; rowIndex < rows.length; rowIndex += 1) {
+  const headingIndex = rows.findIndex((row) => /RETURNED\s+TO\s+GHQ/i.test(row.map((value) => cellText(value)).join(' ')))
+  const dataStartIndex = headingIndex >= 0 ? headingIndex + 1 : 0
+
+  for (let rowIndex = dataStartIndex; rowIndex < rows.length; rowIndex += 1) {
     const row = rows[rowIndex] ?? []
     const rowNumber = rowIndex + 1
 
@@ -621,9 +904,9 @@ function parseReturnedFirearmsSheet(
       continue
     }
 
-    const serialNumber = colB ?? colC
-    const firearmMake = colC ?? colD
-    const faRemarks = colD ?? colE
+    const serialNumber = normalizeSerial(colC ?? colB)
+    const firearmMake = colD ?? colE
+    const faRemarks = colE ?? colD
     const firearmKind = colA ?? currentFirearmKind
 
     if (!serialNumber && !firearmMake && !faRemarks) continue
@@ -712,7 +995,8 @@ export async function parseMdrWorkbook(file: File): Promise<MdrParseResult> {
   const warningSet = new Set<string>()
 
   const arrayBuffer = await readFileAsArrayBuffer(file)
-  const workbook = XLSX.read(arrayBuffer, { type: 'array', cellDates: true })
+  // Keep Excel date-only cells as serial numbers so timezone conversion cannot shift them by a day.
+  const workbook = XLSX.read(arrayBuffer, { type: 'array', cellDates: false })
   validateSheetDimensions(workbook)
 
   if (workbook.SheetNames.length === 0) {

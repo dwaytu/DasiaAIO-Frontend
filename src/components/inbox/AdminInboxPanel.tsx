@@ -6,6 +6,7 @@ import { getAuthHeaders } from '../../utils/api';
 import { fetchArrayPayload, fetchObjectPayload } from './inboxPayloads';
 import { parsePendingApprovalsPayload, type PendingApprovalRecord } from './pendingApprovals';
 import { fetchOperationalRequestInboxItems } from './operationalRequestInbox';
+import { getNotificationPriority } from './roleInboxSummary';
 
 interface AdminInboxPanelProps {
   userId: string;
@@ -25,6 +26,7 @@ interface FirearmItem {
 
 interface AdminNotification {
   id: string;
+  type?: string;
   title?: string;
   message?: string;
   is_read?: boolean;
@@ -129,7 +131,7 @@ function buildInboxItems(
     if (isRead) continue;
     items.push({
       id: `notif-${notif.id}`,
-      priority: 'normal',
+      priority: getNotificationPriority(notif),
       category: 'notification',
       title: notif.title ?? 'Admin Notification',
       description: notif.message ?? '',

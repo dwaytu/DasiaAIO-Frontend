@@ -2,6 +2,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
 :root {
+  color-scheme: light;
   --space-unit: 8px;
   --space-1: 0.25rem;
   --space-2: 0.5rem;
@@ -147,8 +148,8 @@
   --z-modal-profile: 108;
   --z-modal: 110;
 
-  /* Expanded emergency contacts (three mobile rows) plus the primary navigation. */
-  --guard-sticky-region-height: 17rem;
+  /* Conservative fallback; UserDashboard replaces this with the measured region height. */
+  --guard-sticky-region-height: 22rem;
   /* Header height: typically 4.25rem (header size + safe spacing) */
   --guard-main-reserved-height: 4.25rem;
   --sidebar-width-expanded: 18rem;
@@ -168,11 +169,12 @@
 
 @media (max-width: 359px) {
   :root {
-    --guard-sticky-region-height: 21rem;
+    --guard-sticky-region-height: 28rem;
   }
 }
 
 .dark {
+  color-scheme: dark;
   --color-background: #060a10;
   --color-surface: #0C1017;
   --color-surface-elevated: #111827;
@@ -791,6 +793,16 @@
     outline-offset: 1px;
   }
 
+  input.geofence-radius-input {
+    -moz-appearance: textfield;
+  }
+
+  input.geofence-radius-input::-webkit-inner-spin-button,
+  input.geofence-radius-input::-webkit-outer-spin-button {
+    margin: 0;
+    -webkit-appearance: none;
+  }
+
   textarea.soc-field {
     min-height: 6rem;
   }
@@ -1215,6 +1227,11 @@
     animation: fade-in-up 240ms ease both;
   }
 
+  .toast-progress {
+    animation: toast-progress 5s linear forwards;
+    transform-origin: left center;
+  }
+
   .soc-skeleton {
     position: relative;
     overflow: hidden;
@@ -1273,6 +1290,7 @@
   .soc-sidebar-nav-item {
     border-radius: var(--radius-sm);
     color: var(--color-text-secondary);
+    box-shadow: inset 3px 0 0 transparent;
     transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease;
   }
 
@@ -1284,9 +1302,8 @@
   .soc-sidebar-nav-item-active {
     color: var(--color-text-primary);
     background: var(--color-sidebar-active-bg);
-    border-left: 3px solid var(--color-info);
-    padding-left: 10px;
-    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    box-shadow: inset 3px 0 0 var(--color-info);
+    transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
   }
 
   .soc-sidebar-logout {
@@ -1672,6 +1689,158 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes toast-progress {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+@media print {
+  @page {
+    size: landscape;
+    margin: 12mm;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  .dtr-print-table,
+  .dtr-print-table * {
+    visibility: visible !important;
+  }
+
+  .analytics-print-report,
+  .analytics-print-report * {
+    visibility: visible !important;
+  }
+
+  .dtr-print-table-wrap {
+    overflow: visible !important;
+  }
+
+  .dtr-print-table {
+    position: absolute !important;
+    inset: 0;
+    width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    background: Canvas !important;
+    color: CanvasText !important;
+  }
+
+  .dtr-print-table th,
+  .dtr-print-table td {
+    background: Canvas !important;
+    color: CanvasText !important;
+    border-color: CanvasText !important;
+  }
+
+  .dtr-print-table th {
+    font-size: 10pt;
+  }
+
+  .dtr-print-table td {
+    font-size: 9pt;
+  }
+
+  .dtr-print-status {
+    background: Canvas !important;
+    color: CanvasText !important;
+    border-color: CanvasText !important;
+  }
+
+  .analytics-print-control {
+    display: none !important;
+  }
+
+  html:has(.analytics-print-report),
+  body:has(.analytics-print-report),
+  body:has(.analytics-print-report) > #root,
+  body:has(.analytics-print-report) > #root > div,
+  body:has(.analytics-print-report) #maincontent,
+  body:has(.analytics-print-report) .soc-scroll-area {
+    display: block !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  body:has(.analytics-print-report) #maincontent > header,
+  body:has(.analytics-print-report) aside,
+  body:has(.analytics-print-report) .soc-sidebar-width-transition {
+    display: none !important;
+  }
+
+  body:has(.analytics-print-report) > #root *:has(.analytics-print-report) {
+    display: contents !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  .analytics-print-heading {
+    display: block !important;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid CanvasText;
+    padding-bottom: 0.75rem;
+    color: CanvasText !important;
+  }
+
+  .analytics-print-report {
+    --color-background: Canvas;
+    --color-surface: Canvas;
+    --color-surface-elevated: Canvas;
+    --color-border: CanvasText;
+    --color-border-subtle: CanvasText;
+    --color-border-elevated: CanvasText;
+    --color-text-primary: CanvasText;
+    --color-text-secondary: CanvasText;
+    --color-text-tertiary: CanvasText;
+    --color-info: CanvasText;
+    --color-info-border: CanvasText;
+    --color-info-text: CanvasText;
+    --color-success: CanvasText;
+    --color-success-border: CanvasText;
+    --color-success-bg: Canvas;
+    --color-success-text: CanvasText;
+    --color-warning: CanvasText;
+    --color-warning-border: CanvasText;
+    --color-warning-bg: Canvas;
+    --color-warning-text: CanvasText;
+    --color-danger: CanvasText;
+    --color-danger-border: CanvasText;
+    --color-danger-bg: Canvas;
+    --color-danger-text: CanvasText;
+    position: static !important;
+    inset: auto;
+    width: auto !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: Canvas !important;
+    color: CanvasText !important;
+  }
+
+  .analytics-print-report .soc-dashboard-card,
+  .analytics-print-report .command-panel {
+    break-inside: avoid;
+    background: Canvas !important;
+    border-color: CanvasText !important;
+    box-shadow: none !important;
+    color: CanvasText !important;
+  }
+
+  .analytics-print-report svg {
+    max-width: 100%;
   }
 }
 

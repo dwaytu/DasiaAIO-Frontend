@@ -456,9 +456,9 @@ const PerformanceDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeV
             />
             <KpiCard
               icon={Star}
-              label="Client Rating"
+              label="Evaluator Rating"
               value={formatRating(summary.averageClientRating)}
-              detail="Average client evaluation score"
+              detail="Average supervisor and administrator evaluation score"
               tone="info"
             />
             <KpiCard
@@ -524,7 +524,7 @@ const PerformanceDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeV
                 <div className="border-b border-border-subtle px-4 py-4 md:px-6">
                   <h3 className="text-lg font-bold text-text-primary">Detailed Guard Metrics</h3>
                   <p className="text-sm text-text-secondary">
-                    Attendance, punctuality, completion, incident, client evaluation, merit, and replacement activity.
+                    Attendance, punctuality, completion, incident, guard evaluation, merit, and replacement activity.
                   </p>
                 </div>
                 <div className="overflow-auto">
@@ -537,7 +537,7 @@ const PerformanceDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeV
                         <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-text-primary">Completed</th>
                         <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-text-primary">No-shows</th>
                         <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-text-primary">Incidents</th>
-                        <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-text-primary">Client Eval</th>
+                        <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-text-primary">Guard Eval</th>
                         <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-text-primary">Merit</th>
                         <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-text-primary">Replacements</th>
                       </tr>

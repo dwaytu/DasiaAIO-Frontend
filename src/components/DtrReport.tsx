@@ -243,8 +243,8 @@ const DtrReport: FC<Props> = ({ user, onLogout, onViewChange, activeView }) => {
             {report.items.length === 0 && !error ? (
               <div className="rounded border border-border-subtle bg-surface-elevated px-4 py-10 text-center text-sm text-text-secondary">No DTR records match the selected filters.</div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[1100px] border-collapse text-left text-sm">
+              <div className="dtr-print-table-wrap overflow-x-auto">
+                <table className="dtr-print-table w-full min-w-[1100px] border-collapse text-left text-sm">
                   <thead>
                     <tr className="border-b border-border text-xs uppercase tracking-wider text-text-secondary">
                       <th className="px-3 py-3">Guard</th><th className="px-3 py-3">Site</th><th className="px-3 py-3">Scheduled</th><th className="px-3 py-3">Check in</th><th className="px-3 py-3">Check out</th><th className="px-3 py-3">Late</th><th className="px-3 py-3">Hours</th><th className="px-3 py-3">Status</th>
@@ -260,7 +260,7 @@ const DtrReport: FC<Props> = ({ user, onLogout, onViewChange, activeView }) => {
                         <td className="px-3 py-3 whitespace-nowrap">{formatDateTime(item.actualCheckOut)}</td>
                         <td className="px-3 py-3">{typeof item.lateMinutes === 'number' ? `${item.lateMinutes} min` : '-'}</td>
                         <td className="px-3 py-3">{formatHours(item.totalHours)}</td>
-                        <td className="px-3 py-3"><span className={`inline-flex rounded-full border px-2 py-1 text-xs font-semibold uppercase ${statusClass(item.status)}`}>{item.status.replace('_', ' ')}</span></td>
+                        <td className="px-3 py-3"><span className={`dtr-print-status inline-flex rounded-full border px-2 py-1 text-xs font-semibold uppercase ${statusClass(item.status)}`}>{item.status.replace('_', ' ')}</span></td>
                       </tr>
                     ))}
                   </tbody>

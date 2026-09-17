@@ -34,6 +34,11 @@ const SentinelModal = ({
   const panelRef = useRef<HTMLDivElement | null>(null)
   const closeButtonRef = useRef<HTMLButtonElement | null>(null)
   const previousActiveElementRef = useRef<HTMLElement | null>(null)
+  const onCloseRef = useRef(onClose)
+
+  useEffect(() => {
+    onCloseRef.current = onClose
+  }, [onClose])
 
   useEffect(() => {
     if (!open) return
@@ -50,7 +55,7 @@ const SentinelModal = ({
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        onClose()
+        onCloseRef.current()
         return
       }
 
@@ -83,7 +88,7 @@ const SentinelModal = ({
         previousActiveElementRef.current.focus()
       }
     }
-  }, [open, onClose])
+  }, [open])
 
   useEffect(() => {
     if (!open) return

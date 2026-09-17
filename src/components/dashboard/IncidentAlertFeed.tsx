@@ -1,4 +1,5 @@
 import { FC } from 'react'
+import { Check, CheckCircle2 } from 'lucide-react'
 import { OpsAlert } from './OpsAlertFeed'
 import { useOperationalEvent } from '../../context/OperationalEventContext'
 
@@ -38,7 +39,7 @@ const IncidentAlertFeed: FC<IncidentAlertFeedProps> = ({ alerts, nowLabel, onUpd
         )}
       </div>
 
-      <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
+      <div className="max-h-[26rem] min-h-0 space-y-2 overflow-y-auto pr-1">
         {alerts.length === 0 ? (
           <p className="rounded border border-border-subtle bg-surface-elevated p-3 text-sm text-text-secondary">No active incidents. Monitoring remains stable.</p>
         ) : (
@@ -87,9 +88,10 @@ const IncidentAlertFeed: FC<IncidentAlertFeedProps> = ({ alerts, nowLabel, onUpd
                         e.stopPropagation()
                         void onUpdateStatus(alert.incidentId!, 'investigating')
                       }}
-                      className="inline-flex items-center gap-1 rounded border border-info-border bg-info-bg px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-info-text transition-colors hover:brightness-110"
+                      className="soc-btn soc-btn-neutral min-h-11 px-3 text-[10px]"
                       aria-label={`Acknowledge ${alert.title}`}
                     >
+                      <Check className="h-4 w-4" aria-hidden="true" />
                       Acknowledge
                     </button>
                     <button
@@ -98,9 +100,10 @@ const IncidentAlertFeed: FC<IncidentAlertFeedProps> = ({ alerts, nowLabel, onUpd
                         e.stopPropagation()
                         void onUpdateStatus(alert.incidentId!, 'resolved')
                       }}
-                      className="inline-flex items-center gap-1 rounded border border-success-border bg-success-bg px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-success-text transition-colors hover:brightness-110"
+                      className="soc-btn soc-btn-success min-h-11 px-3 text-[10px]"
                       aria-label={`Resolve ${alert.title}`}
                     >
+                      <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
                       Resolve
                     </button>
                   </div>

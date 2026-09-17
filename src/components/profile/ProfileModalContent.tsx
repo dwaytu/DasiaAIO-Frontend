@@ -79,8 +79,6 @@ export const ProfileModalContent: FC<ProfileModalContentProps> = ({
     address: user.address || '',
   })
   const [saving, setSaving] = useState(false)
-  const [isAvailable, setIsAvailable] = useState<boolean>(true)
-  const [availabilityLoading, setAvailabilityLoading] = useState(false)
   const [isPushEnabled, setIsPushEnabled] = useState(false)
   const [pushLoading, setPushLoading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -97,36 +95,6 @@ export const ProfileModalContent: FC<ProfileModalContentProps> = ({
   useEffect(() => {
     setProfilePhoto(user.profilePhoto || '')
   }, [user.profilePhoto])
-
-  useEffect(() => {
-    if (user.role !== 'guard') return undefined
-
-    let cancelled = false
-
-    const fetchAvailability = async () => {
-      try {
-        const data = await fetchJsonOrThrow<{ available?: boolean }>(
-          `${API_BASE_URL}/api/guard-replacement/availability/${user.id}`,
-          { headers: getAuthHeaders() },
-          'Unable to load availability status.',
-        )
-
-        if (!cancelled) {
-          setIsAvailable(data.available ?? true)
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setMessage(getReadableRequestMessage(error, 'Unable to load availability status.'))
-        }
-      }
-    }
-
-    void fetchAvailability()
-
-    return () => {
-      cancelled = true
-    }
-  }, [user.id, user.role])
 
   useEffect(() => {
     let cancelled = false
@@ -153,30 +121,6 @@ export const ProfileModalContent: FC<ProfileModalContentProps> = ({
 
   const handlePhotoClick = () => {
     fileInputRef.current?.click()
-  }
-
-  const handleToggleAvailability = async () => {
-    setAvailabilityLoading(true)
-
-    try {
-      const nextAvailability = !isAvailable
-      await fetchJsonOrThrow(
-        `${API_BASE_URL}/api/guard-replacement/set-availability`,
-        {
-          method: 'POST',
-          headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
-          body: JSON.stringify({ guardId: user.id, available: nextAvailability }),
-        },
-        'Unable to update availability status.',
-      )
-
-      setIsAvailable(nextAvailability)
-      setMessage(nextAvailability ? 'Availability marked as active.' : 'Availability marked as unavailable.')
-    } catch (error) {
-      setMessage(getReadableRequestMessage(error, 'Unable to update availability status.'))
-    } finally {
-      setAvailabilityLoading(false)
-    }
   }
 
   const handleTogglePush = async () => {
@@ -447,42 +391,6 @@ export const ProfileModalContent: FC<ProfileModalContentProps> = ({
           </div>
         </div>
       </div>
-
-      {user.role === 'guard' ? (
-        <div className="command-panel p-4 md:p-6">
-          <h3 className="mb-1 text-xl font-bold text-text-primary md:text-2xl">Availability Status</h3>
-          <p className="mb-4 text-sm text-text-secondary">Signal to supervisors whether you are available for shift assignments or replacements.</p>
-          <div className="flex items-center justify-between gap-4 rounded border border-border bg-surface p-4">
-            <div>
-              <p className="font-semibold text-text-primary">
-                {isAvailable ? 'Available for Duty' : 'Not Available'}
-              </p>
-              <p className="text-xs text-text-secondary">
-                {isAvailable
-                  ? 'You will appear in replacement and scheduling pools.'
-                  : 'You are marked unavailable. Supervisors will not assign you.'}
-              </p>
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={isAvailable}
-              disabled={availabilityLoading}
-              onClick={() => void handleToggleAvailability()}
-              className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring) disabled:cursor-not-allowed disabled:opacity-50 ${
-                isAvailable ? 'bg-success' : 'bg-surface-elevated'
-              }`}
-              aria-label={isAvailable ? 'Mark yourself as unavailable' : 'Mark yourself as available'}
-            >
-              <span
-                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                  isAvailable ? 'translate-x-5' : 'translate-x-0'
-                }`}
-              />
-            </button>
-          </div>
-        </div>
-      ) : null}
 
       {'Notification' in window ? (
         <div className="command-panel p-4">

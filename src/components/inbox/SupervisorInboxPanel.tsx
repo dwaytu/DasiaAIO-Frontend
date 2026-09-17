@@ -5,6 +5,7 @@ import { WorkflowTimeline, TimelineEntry, TimelineStatus } from './WorkflowTimel
 import { getAuthHeaders } from '../../utils/api';
 import { fetchArrayPayload } from './inboxPayloads';
 import { fetchOperationalRequestInboxItems } from './operationalRequestInbox';
+import { getNotificationPriority } from './roleInboxSummary';
 
 export interface SupervisorInboxPanelProps {
   userId: string;
@@ -31,6 +32,7 @@ interface Shift {
 
 interface Notification {
   id: string;
+  type?: string;
   title?: string;
   message?: string;
   is_read?: boolean;
@@ -85,7 +87,7 @@ function toInboxItems(
     if (isRead) continue;
     items.push({
       id: `notification-${notif.id}`,
-      priority: 'normal',
+      priority: getNotificationPriority(notif),
       category: 'notification',
       title: notif.title ?? 'Notification',
       description: notif.message ?? '',

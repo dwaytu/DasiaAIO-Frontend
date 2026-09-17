@@ -9,11 +9,13 @@ import { getAuthHeaders } from '../../utils/api';
 import { fetchArrayPayload } from './inboxPayloads';
 import { parsePendingApprovalsPayload, type PendingApprovalRecord } from './pendingApprovals';
 import { fetchOperationalRequestInboxItems } from './operationalRequestInbox';
+import { getNotificationPriority } from './roleInboxSummary';
 
 // ─── API response types ────────────────────────────────────────────────────
 
 interface Notification {
   id: string;
+  type?: string;
   title: string;
   message: string;
   is_read: boolean;
@@ -153,7 +155,7 @@ export const SuperadminInboxPanel = ({
         if (!notif.is_read) {
           items.push({
             id: notif.id,
-            priority: 'normal',
+            priority: getNotificationPriority(notif),
             category: 'notification',
             title: notif.title,
             description: notif.message,

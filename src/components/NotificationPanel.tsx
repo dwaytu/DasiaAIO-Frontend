@@ -39,6 +39,12 @@ function isInboxCategory(value: unknown): value is InboxItem['category'] {
   return value === 'approval' || value === 'incident' || value === 'shift' || value === 'notification' || value === 'mission'
 }
 
+const PRIORITY_BADGE_CLASS: Record<InboxItem['priority'], string> = {
+  urgent: 'soc-status-danger',
+  high: 'soc-status-warning',
+  normal: 'soc-status-success',
+}
+
 function sanitizeInboxItem(item: Partial<InboxItem> | null | undefined, index: number): InboxItem | null {
   if (!item || typeof item !== 'object') {
     return null
@@ -289,7 +295,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ user, isOpen, onT
                           <p className="text-sm font-semibold text-text-primary">{item.title}</p>
                           <p className="mt-1 text-sm text-text-secondary">{item.description}</p>
                         </div>
-                        <span className="rounded-full border border-border bg-surface px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-text-tertiary">
+                        <span className={PRIORITY_BADGE_CLASS[item.priority]}>
                           {item.priority}
                         </span>
                       </div>

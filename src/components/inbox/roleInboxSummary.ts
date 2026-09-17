@@ -67,6 +67,16 @@ type FirearmItem = {
 
 type PendingApproval = PendingApprovalRecord
 
+export function getNotificationPriority(notification: Pick<NotificationRecord, 'type' | 'title' | 'message'>): InboxItem['priority'] {
+  const type = notification.type?.trim().toLowerCase()
+  const content = `${notification.title ?? ''} ${notification.message ?? ''}`.toLowerCase()
+
+  if (type === 'guard_compliance' && content.includes('expired')) return 'urgent'
+  if (type === 'guard_compliance') return 'high'
+  if (type === 'shift') return 'high'
+  return 'normal'
+}
+
 function formatDateTime(iso: string): string {
   try {
     return new Date(iso).toLocaleString(undefined, {
@@ -125,7 +135,7 @@ function mapNotificationsToItems(notifications: NotificationRecord[]): InboxItem
     .filter((notification) => !(notification.is_read ?? notification.read ?? false))
     .map((notification) => ({
       id: `notification-${notification.id}`,
-      priority: notification.type === 'shift' ? ('high' as const) : ('normal' as const),
+      priority: getNotificationPriority(notification),
       category: 'notification' as const,
       title: notification.title ?? 'Notification',
       description: notification.message ?? '',

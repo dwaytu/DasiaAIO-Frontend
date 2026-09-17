@@ -15,8 +15,10 @@ describe('shell navigation chrome', () => {
     expect(labels).not.toContain('Inbox')
     expect(labels).not.toContain('Audit')
     expect(labels).toContain('DTR Report')
+    expect(labels).toContain('Merit')
     expect(labels).toContain('Firearm Compliance')
-    expect(labels).toHaveLength(15)
+    expect(labels).toContain('Guard License Compliance')
+    expect(labels).toHaveLength(17)
   })
 
   it('returns empty sidebar for guard (uses bottom nav)', () => {
@@ -32,12 +34,15 @@ describe('shell navigation chrome', () => {
     expect(labels).toContain('Audit')
     expect(labels).toContain('Analytics')
     expect(labels).toContain('Calendar')
+    expect(labels).toContain('Allocation')
     expect(labels).toContain('Feedback')
     expect(labels).toContain('DTR Report')
+    expect(labels).toContain('Merit')
     expect(labels).toContain('Maintenance')
     expect(labels).toContain('Firearm Compliance')
+    expect(labels).toContain('Guard License Compliance')
     expect(labels).toContain('Requests')
-    expect(labels).toHaveLength(17)
+    expect(labels).toHaveLength(20)
   })
 
   it('returns supervisor nav without guard approvals', () => {
@@ -51,9 +56,11 @@ describe('shell navigation chrome', () => {
     expect(labels).toContain('Settings')
     expect(labels).not.toContain('Firearms')
     expect(labels).toContain('DTR Report')
+    expect(labels).toContain('Merit')
     expect(labels).toContain('Maintenance')
     expect(labels).toContain('Firearm Compliance')
-    expect(labels).toHaveLength(11)
+    expect(labels).toContain('Guard License Compliance')
+    expect(labels).toHaveLength(13)
   })
 
   it('removes approval from elevated mobile navigation when unavailable', () => {

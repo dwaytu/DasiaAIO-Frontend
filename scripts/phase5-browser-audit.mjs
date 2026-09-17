@@ -53,8 +53,8 @@ async function runViewport(name, viewport) {
 
     await page.goto(`${baseUrl}/analytics`, { waitUntil: 'networkidle', timeout: 20_000 })
     await assertVisible(page, page.getByText('Resource Availability', { exact: true }), `${name}: resource availability chart is missing`)
-    await assertVisible(page, page.getByText('Client Evaluation Trend', { exact: true }), `${name}: evaluation trend chart is missing`)
-    await assertVisible(page, page.getByText('Client Rating Distribution', { exact: true }), `${name}: evaluation distribution is missing`)
+    await assertVisible(page, page.getByText('Guard Evaluation Trend', { exact: true }), `${name}: evaluation trend chart is missing`)
+    await assertVisible(page, page.getByText('Guard Evaluation Distribution', { exact: true }), `${name}: evaluation distribution is missing`)
 
     const availabilityStyle = await page.locator('[aria-label^="Guards:"]').evaluate((element) => {
       const container = element.getBoundingClientRect()

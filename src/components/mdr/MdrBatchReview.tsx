@@ -1,7 +1,8 @@
 import { FC, useEffect, useMemo, useState } from 'react'
-import { CheckCircle2, Loader2 } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react'
 import { API_BASE_URL } from '../../config'
 import { fetchJsonOrThrow, getAuthHeaders, parseResponseBody } from '../../utils/api'
+import SentinelModal from '../shared/SentinelModal'
 
 interface MdrBatchReviewProps {
   batchId: string
@@ -84,19 +85,31 @@ interface CommitBlockedPayload {
   }
 }
 
-type ResolveMatchStatus = 'matched' | 'new'
+interface CommitNotice {
+  kind: 'success' | 'blocked' | 'error'
+  title: string
+  message: string
+  details?: string
+}
+
+type ResolveMatchStatus = 'matched' | 'new' | 'ignored'
 
 interface ResolveDraft {
   matchStatus: ResolveMatchStatus
   matchedGuardId: string
   matchedFirearmId: string
   matchedClientId: string
+  resolutionNote: string
 }
 
 const PAGE_SIZE = 50
 
 function toNumber(value: number | null | undefined): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : 0
+}
+
+function summaryCount(summary: Record<string, number>, camelCaseKey: string, snakeCaseKey: string): number {
+  return Number(summary[camelCaseKey] ?? summary[snakeCaseKey] ?? 0)
 }
 
 function formatDateTime(value: string): string {
@@ -124,6 +137,8 @@ function matchStatusClass(matchStatus: string): string {
       return 'bg-danger/10 text-danger'
     case 'pending':
       return 'bg-warning/10 text-warning'
+    case 'ignored':
+      return 'bg-surface text-text-secondary'
     default:
       return 'bg-surface text-text-secondary'
   }
@@ -135,6 +150,7 @@ function buildDefaultDraft(row: MdrStagingRow): ResolveDraft {
     matchedGuardId: row.matched_guard_id ?? '',
     matchedFirearmId: row.matched_firearm_id ?? '',
     matchedClientId: row.matched_client_id ?? '',
+    resolutionNote: '',
   }
 }
 
@@ -158,6 +174,7 @@ const MdrBatchReview: FC<MdrBatchReviewProps> = ({
   const [isCommitting, setIsCommitting] = useState(false)
   const [isRejecting, setIsRejecting] = useState(false)
   const [commitBlockDetail, setCommitBlockDetail] = useState<CommitBlockedPayload | null>(null)
+  const [commitNotice, setCommitNotice] = useState<CommitNotice | null>(null)
 
   const canCommit = userRole === 'superadmin'
   const canReject = userRole === 'superadmin' || userRole === 'admin'
@@ -316,6 +333,7 @@ const MdrBatchReview: FC<MdrBatchReviewProps> = ({
             matchedGuardId: draft.matchedGuardId || null,
             matchedFirearmId: draft.matchedFirearmId || null,
             matchedClientId: draft.matchedClientId || null,
+            resolutionNote: draft.resolutionNote.trim() || null,
           }),
         },
         'Unable to resolve staging row.',
@@ -338,6 +356,9 @@ const MdrBatchReview: FC<MdrBatchReviewProps> = ({
     setActionError('')
     setActionMessage('')
     setCommitBlockDetail(null)
+    if (action === 'commit') {
+      setCommitNotice(null)
+    }
 
     if (action === 'commit') {
       setIsCommitting(true)
@@ -357,28 +378,56 @@ const MdrBatchReview: FC<MdrBatchReviewProps> = ({
           const blockedPayload = body as CommitBlockedPayload
           if (response.status === 409 && blockedPayload?.status === 'blocked') {
             setCommitBlockDetail(blockedPayload)
-            setActionError(blockedPayload.message || 'Commit blocked due to unresolved rows.')
+            const unresolved = blockedPayload.unresolved
+            const details = unresolved
+              ? `Pending: ${toNumber(unresolved.pending)} | Ambiguous: ${toNumber(unresolved.ambiguous)} | Error: ${toNumber(unresolved.errors)} | Total: ${toNumber(unresolved.total)}`
+              : undefined
+            setCommitNotice({
+              kind: 'blocked',
+              title: 'Batch not committed',
+              message: 'No database changes were made. Resolve every pending, ambiguous, or error row before committing.',
+              details,
+            })
           } else {
-            setActionError(
+            const message =
               typeof body?.error === 'string'
                 ? body.error
                 : typeof body?.message === 'string'
                   ? body.message
-                  : 'Unable to commit MDR batch.',
-            )
+                  : 'Unable to commit MDR batch.'
+            setActionError(message)
+            setCommitNotice({
+              kind: 'error',
+              title: 'Batch commit failed',
+              message: 'No database changes were confirmed. Review the error and try again.',
+              details: message,
+            })
           }
           return
         }
 
         const commitResponse = body as BatchActionResponse
         if (commitResponse.summary) {
-          const blockedGuards = Number(commitResponse.summary.guard_records_blocked ?? 0)
-          const blockedFirearms = Number(commitResponse.summary.firearm_records_blocked ?? 0)
+          const blockedGuards = summaryCount(commitResponse.summary, 'guardRecordsBlocked', 'guard_records_blocked')
+          const blockedFirearms = summaryCount(commitResponse.summary, 'firearmRecordsBlocked', 'firearm_records_blocked')
+          const guardsCreated = summaryCount(commitResponse.summary, 'guardsCreated', 'guards_created')
+          const guardsUpdated = summaryCount(commitResponse.summary, 'guardsUpdated', 'guards_updated')
           setActionMessage(
             `Batch commit succeeded. Guard blocks: ${blockedGuards} | Firearm blocks: ${blockedFirearms}.`,
           )
+          setCommitNotice({
+            kind: 'success',
+            title: 'Batch committed successfully',
+            message: 'The MDR batch is now committed and its valid guard, license, firearm, and assignment data was written to the database.',
+            details: `Guards created: ${guardsCreated} | Guards updated: ${guardsUpdated} | Guard records blocked: ${blockedGuards} | Firearm records blocked: ${blockedFirearms}`,
+          })
         } else {
           setActionMessage('Batch commit succeeded.')
+          setCommitNotice({
+            kind: 'success',
+            title: 'Batch committed successfully',
+            message: 'The MDR batch is now committed and its valid data was written to the database.',
+          })
         }
         onBatchUpdated?.()
         setRefreshSeed((current) => current + 1)
@@ -398,9 +447,16 @@ const MdrBatchReview: FC<MdrBatchReviewProps> = ({
       onBatchUpdated?.()
       setRefreshSeed((current) => current + 1)
     } catch (batchError) {
-      setActionError(
-        batchError instanceof Error ? batchError.message : `Unable to ${action} MDR batch.`,
-      )
+      const message = batchError instanceof Error ? batchError.message : `Unable to ${action} MDR batch.`
+      setActionError(message)
+      if (action === 'commit') {
+        setCommitNotice({
+          kind: 'error',
+          title: 'Batch commit failed',
+          message: 'No database changes were confirmed. Check the connection and try again.',
+          details: message,
+        })
+      }
     } finally {
       if (action === 'commit') {
         setIsCommitting(false)
@@ -520,7 +576,11 @@ const MdrBatchReview: FC<MdrBatchReviewProps> = ({
               <tbody>
                 {rows.map((row) => {
                   const draft = drafts[row.id] ?? buildDefaultDraft(row)
-                  const isResolvable = row.match_status === 'ambiguous' || row.match_status === 'pending'
+                  const isResolvable =
+                    row.match_status === 'ambiguous' ||
+                    row.match_status === 'pending' ||
+                    row.match_status === 'error'
+                  const isErrorRow = row.match_status === 'error'
 
                   return (
                     <tr key={row.id} className="border-b border-border text-sm text-text-primary align-top">
@@ -534,7 +594,7 @@ const MdrBatchReview: FC<MdrBatchReviewProps> = ({
                         {Array.isArray(row.validation_errors) && row.validation_errors.length > 0 ? (
                           <ul className="mt-2 space-y-1 text-xs text-danger">
                             {row.validation_errors.map((issue, index) => (
-                              <li key={`${row.id}-issue-${index}`}>• {issue}</li>
+                              <li key={`${row.id}-issue-${index}`}>- {issue}</li>
                             ))}
                           </ul>
                         ) : null}
@@ -542,6 +602,12 @@ const MdrBatchReview: FC<MdrBatchReviewProps> = ({
                       <td className="px-3 py-3">
                         <div>{row.guard_name ?? '-'}</div>
                         <div className="text-xs text-text-secondary">{row.guard_number ?? '-'}</div>
+                        <div className="mt-2 text-xs text-text-secondary">
+                          License: {row.license_number || 'Not provided'}
+                        </div>
+                        <div className="text-xs text-text-secondary">
+                          Expiry: {row.license_expiry || 'Not provided'}
+                        </div>
                       </td>
                       <td className="px-3 py-3">
                         <div>{row.serial_number ?? '-'}</div>
@@ -568,52 +634,69 @@ const MdrBatchReview: FC<MdrBatchReviewProps> = ({
                             >
                               <option value="matched">Mark as matched</option>
                               <option value="new">Mark as new</option>
+                              {isErrorRow ? <option value="ignored">Skip this row</option> : null}
                             </select>
 
-                            <select
-                              className="w-full rounded border border-border bg-surface px-2 py-2 text-xs text-text-primary"
-                              value={draft.matchedGuardId}
-                              onChange={(event) => {
-                                updateDraft(row, { matchedGuardId: event.target.value })
-                              }}
-                            >
-                              <option value="">Guard ID (optional)</option>
-                              {guardOptions.map((option) => (
-                                <option key={option} value={option}>
-                                  {option}
-                                </option>
-                              ))}
-                            </select>
+                            {draft.matchStatus !== 'ignored' ? (
+                              <>
+                                <select
+                                  className="w-full rounded border border-border bg-surface px-2 py-2 text-xs text-text-primary"
+                                  value={draft.matchedGuardId}
+                                  onChange={(event) => {
+                                    updateDraft(row, { matchedGuardId: event.target.value })
+                                  }}
+                                >
+                                  <option value="">Guard ID (optional)</option>
+                                  {guardOptions.map((option) => (
+                                    <option key={option} value={option}>
+                                      {option}
+                                    </option>
+                                  ))}
+                                </select>
 
-                            <select
-                              className="w-full rounded border border-border bg-surface px-2 py-2 text-xs text-text-primary"
-                              value={draft.matchedFirearmId}
-                              onChange={(event) => {
-                                updateDraft(row, { matchedFirearmId: event.target.value })
-                              }}
-                            >
-                              <option value="">Firearm ID (optional)</option>
-                              {firearmOptions.map((option) => (
-                                <option key={option} value={option}>
-                                  {option}
-                                </option>
-                              ))}
-                            </select>
+                                <select
+                                  className="w-full rounded border border-border bg-surface px-2 py-2 text-xs text-text-primary"
+                                  value={draft.matchedFirearmId}
+                                  onChange={(event) => {
+                                    updateDraft(row, { matchedFirearmId: event.target.value })
+                                  }}
+                                >
+                                  <option value="">Firearm ID (optional)</option>
+                                  {firearmOptions.map((option) => (
+                                    <option key={option} value={option}>
+                                      {option}
+                                    </option>
+                                  ))}
+                                </select>
 
-                            <select
-                              className="w-full rounded border border-border bg-surface px-2 py-2 text-xs text-text-primary"
-                              value={draft.matchedClientId}
-                              onChange={(event) => {
-                                updateDraft(row, { matchedClientId: event.target.value })
-                              }}
-                            >
-                              <option value="">Client ID (optional)</option>
-                              {clientOptions.map((option) => (
-                                <option key={option} value={option}>
-                                  {option}
-                                </option>
-                              ))}
-                            </select>
+                                <select
+                                  className="w-full rounded border border-border bg-surface px-2 py-2 text-xs text-text-primary"
+                                  value={draft.matchedClientId}
+                                  onChange={(event) => {
+                                    updateDraft(row, { matchedClientId: event.target.value })
+                                  }}
+                                >
+                                  <option value="">Client ID (optional)</option>
+                                  {clientOptions.map((option) => (
+                                    <option key={option} value={option}>
+                                      {option}
+                                    </option>
+                                  ))}
+                                </select>
+                              </>
+                            ) : null}
+
+                            {isErrorRow ? (
+                              <textarea
+                                className="min-h-20 w-full rounded border border-border bg-surface px-2 py-2 text-xs text-text-primary"
+                                value={draft.resolutionNote}
+                                onChange={(event) => {
+                                  updateDraft(row, { resolutionNote: event.target.value })
+                                }}
+                                placeholder="Required: explain why this row is included or skipped"
+                                maxLength={500}
+                              />
+                            ) : null}
 
                             <button
                               type="button"
@@ -623,7 +706,11 @@ const MdrBatchReview: FC<MdrBatchReviewProps> = ({
                               }}
                               disabled={resolvingRowId === row.id}
                             >
-                              {resolvingRowId === row.id ? 'Resolving...' : 'Resolve Row'}
+                              {resolvingRowId === row.id
+                                ? 'Saving...'
+                                : isErrorRow
+                                  ? 'Apply Decision'
+                                  : 'Resolve Row'}
                             </button>
                           </div>
                         ) : (
@@ -689,6 +776,45 @@ const MdrBatchReview: FC<MdrBatchReviewProps> = ({
           </div>
         </>
       ) : null}
+
+      <SentinelModal
+        open={Boolean(commitNotice)}
+        onClose={() => setCommitNotice(null)}
+        title={commitNotice?.title ?? 'Batch result'}
+        subtitle={commitNotice?.kind === 'success' ? 'MDR import confirmation' : 'MDR import was not completed'}
+        size="sm"
+      >
+        {commitNotice ? (
+          <div className="space-y-4" role={commitNotice.kind === 'success' ? 'status' : 'alert'}>
+            <div
+              className={`flex items-start gap-3 rounded border p-4 ${
+                commitNotice.kind === 'success'
+                  ? 'border-success bg-success/10 text-success'
+                  : commitNotice.kind === 'blocked'
+                    ? 'border-warning bg-warning/10 text-warning'
+                    : 'border-danger bg-danger/10 text-danger'
+              }`}
+            >
+              {commitNotice.kind === 'success' ? (
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+              ) : (
+                <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+              )}
+              <p className="text-sm font-medium">{commitNotice.message}</p>
+            </div>
+            {commitNotice.details ? (
+              <p className="rounded border border-border bg-surface p-3 text-sm text-text-secondary">
+                {commitNotice.details}
+              </p>
+            ) : null}
+            <div className="flex justify-end">
+              <button type="button" className="soc-btn soc-btn-neutral min-h-11" onClick={() => setCommitNotice(null)}>
+                Close
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </SentinelModal>
     </section>
   )
 }

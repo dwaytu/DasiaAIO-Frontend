@@ -27,7 +27,7 @@ function escapeCsv(value: string | number): string {
 
 export function buildPerformanceCsv(guards: PerformanceCsvRow[]): string {
   const rows = [
-    ['Guard', 'Attendance Rate', 'Attended Shifts', 'Total Shifts', 'Late Check-ins', 'Completed Shifts', 'No-shows', 'Incident Reports', 'Average Client Rating', 'Evaluation Count', 'Merit Score', 'Replacement Frequency'],
+    ['Guard', 'Attendance Rate', 'Attended Shifts', 'Total Shifts', 'Late Check-ins', 'Completed Shifts', 'No-shows', 'Incident Reports', 'Average Evaluator Rating', 'Evaluation Count', 'Merit Score', 'Replacement Frequency'],
     ...guards.map((guard) => [
       guard.guardName,
       guard.attendanceRate,

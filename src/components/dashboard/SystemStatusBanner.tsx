@@ -5,7 +5,7 @@ type SystemHealthState = 'operational' | 'warning' | 'critical'
 interface SystemStatusBannerProps {
   status: SystemHealthState
   guardsActive: number
-  guardsCapacity: number
+  guardsCapacity: number | null
   activeIncidents: number
   firearmsCheckedOut: number
   vehiclesDeployed: number
@@ -88,6 +88,7 @@ const SystemStatusBanner: FC<SystemStatusBannerProps> = ({
   vehiclesDeployed,
 }) => {
   const style = STATUS_STYLE[status]
+  const guardsValue = guardsCapacity === null ? '--' : `${guardsActive}/${guardsCapacity}`
 
   return (
     <section
@@ -105,7 +106,7 @@ const SystemStatusBanner: FC<SystemStatusBannerProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <MetricItem label="Guards" value={`${guardsActive}/${guardsCapacity}`} icon={<PeopleIcon />} />
+          <MetricItem label="Guards" value={guardsValue} icon={<PeopleIcon />} />
           <MetricItem label="Incidents" value={activeIncidents} icon={<AlertIcon />} />
           <MetricItem label="Firearms Active" value={firearmsCheckedOut} icon={<FirearmIcon />} />
           <MetricItem label="Vehicles Deployed" value={vehiclesDeployed} icon={<VehicleIcon />} />

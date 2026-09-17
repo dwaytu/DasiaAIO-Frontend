@@ -12,6 +12,9 @@ interface Allocation {
   firearmId: string
   allocationDate: string
   status: string
+  guardName?: string
+  firearmSerialNumber?: string
+  firearmModel?: string
   [key: string]: any
 }
 
@@ -24,6 +27,17 @@ interface Firearm {
   id: string
   serialNumber: string
   model: string
+}
+
+const getGuardLabel = (allocation: Allocation, guards: Guard[]) => {
+  const guard = guards.find((item) => item.id === allocation.guardId)
+  return guard?.full_name || allocation.guardName || 'Unknown guard'
+}
+
+const getFirearmLabel = (allocation: Allocation, firearms: Firearm[]) => {
+  const firearm = firearms.find((item) => item.id === allocation.firearmId)
+  const inventoryLabel = [firearm?.serialNumber, firearm?.model].filter(Boolean).join(' - ')
+  return inventoryLabel || [allocation.firearmSerialNumber, allocation.firearmModel].filter(Boolean).join(' - ') || 'Unknown firearm'
 }
 
 interface Props {
@@ -266,8 +280,8 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
                   <table className="w-full border-collapse">
                     <thead className="thead-glass">
                       <tr>
-                        <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Guard ID</th>
-                        <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Firearm ID</th>
+                        <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Guard</th>
+                        <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Firearm</th>
                         <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Allocation Date</th>
                         <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Status</th>
                         <th className="px-4 py-3 text-right font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Actions</th>
@@ -276,8 +290,8 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
                     <tbody>
                       {allocations.map((a) => (
                         <tr key={a.id} className="border-b border-border hover:bg-surface-hover">
-                          <td className="px-4 py-3 text-text-primary">{a.guardId}</td>
-                          <td className="px-4 py-3 text-text-primary">{a.firearmId}</td>
+                          <td className="px-4 py-3 text-text-primary">{getGuardLabel(a, guards)}</td>
+                          <td className="px-4 py-3 text-text-primary">{getFirearmLabel(a, firearms)}</td>
                           <td className="px-4 py-3 text-text-primary">{new Date(a.allocationDate).toLocaleDateString()}</td>
                             <td className="px-4 py-3">
                               <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${getStatusBadgeColor(a.status)}`}>

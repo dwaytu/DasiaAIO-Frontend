@@ -168,7 +168,7 @@ const FeedbackDashboard: FC<FeedbackDashboardProps> = ({ user, onLogout, onViewC
       onLogoClick={() => onViewChange?.('dashboard')}
     >
       <section className="mx-auto flex w-full max-w-6xl flex-col gap-4">
-        <header className="command-panel">
+        <header className="command-panel p-4 md:p-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-3">
               <div className="rounded-full border border-border-subtle bg-surface-elevated p-2 text-text-secondary" aria-hidden="true">

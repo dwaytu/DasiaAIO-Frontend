@@ -2,12 +2,12 @@ import { FC } from 'react'
 import OperationalMapPanel from './OperationalMapPanel'
 
 interface OperationalMapProps {
-  activeTrips: number
-  activeGuards: number
+  recentVehicleReports: number
+  recentGuardReports: number
 }
 
-const OperationalMap: FC<OperationalMapProps> = ({ activeTrips, activeGuards }) => {
-  return <OperationalMapPanel activeTrips={activeTrips} activeGuards={activeGuards} />
+const OperationalMap: FC<OperationalMapProps> = ({ recentVehicleReports, recentGuardReports }) => {
+  return <OperationalMapPanel recentVehicleReports={recentVehicleReports} recentGuardReports={recentGuardReports} />
 }
 
 export default OperationalMap

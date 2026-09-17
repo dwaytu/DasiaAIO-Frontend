@@ -44,7 +44,7 @@ const PRIORITY_ORDER: Record<InboxPriority, number> = { urgent: 0, high: 1, norm
 const PRIORITY_BAR_CLASS: Record<InboxPriority, string> = {
   urgent: 'bg-danger',
   high: 'bg-warning',
-  normal: 'bg-info',
+  normal: 'bg-success',
 };
 
 const CATEGORY_ICON: Record<InboxCategory, React.ElementType> = {

@@ -51,19 +51,19 @@ const IncidentSeverityMonitoringPanel: FC<IncidentSeverityMonitoringPanelProps> 
 
       <div className="space-y-3 px-4 py-3" role="region" aria-live="polite">
         <div className="grid grid-cols-4 gap-2">
-          <div className="soc-status-danger w-full justify-center rounded-md px-2 py-1.5 text-center">
+          <div className="soc-status-danger flex-col items-center w-full justify-center rounded-md px-2 py-1.5 text-center">
             <p className="font-mono text-[11px] uppercase tracking-wide">Critical</p>
             <p className="font-mono text-base font-bold">{severitySummary.critical}</p>
           </div>
-          <div className="soc-status-danger w-full justify-center rounded-md px-2 py-1.5 text-center">
+          <div className="soc-status-danger flex-col items-center w-full justify-center rounded-md px-2 py-1.5 text-center">
             <p className="font-mono text-[11px] uppercase tracking-wide">High</p>
             <p className="font-mono text-base font-bold">{severitySummary.high}</p>
           </div>
-          <div className="soc-status-warning w-full justify-center rounded-md px-2 py-1.5 text-center">
+          <div className="soc-status-warning flex-col items-center w-full justify-center rounded-md px-2 py-1.5 text-center">
             <p className="font-mono text-[11px] uppercase tracking-wide">Medium</p>
             <p className="font-mono text-base font-bold">{severitySummary.medium}</p>
           </div>
-          <div className="soc-status-success w-full justify-center rounded-md px-2 py-1.5 text-center">
+          <div className="soc-status-success flex-col items-center w-full justify-center rounded-md px-2 py-1.5 text-center">
             <p className="font-mono text-[11px] uppercase tracking-wide">Low</p>
             <p className="font-mono text-base font-bold">{severitySummary.low}</p>
           </div>

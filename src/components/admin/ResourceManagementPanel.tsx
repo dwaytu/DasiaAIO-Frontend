@@ -1,5 +1,5 @@
 import { FC, FormEvent, useEffect, useMemo, useRef, useState } from 'react'
-import { MapPin, Pencil, Plus, Shield, Trash2, Truck, Users } from 'lucide-react'
+import { ChevronLeft, ChevronRight, KeyRound, MapPin, Pencil, Plus, Search, Shield, Trash2, Truck, Users } from 'lucide-react'
 import { API_BASE_URL } from '../../config'
 import { fetchJsonOrThrow, getAuthHeaders } from '../../utils/api'
 import { logError } from '../../utils/logger'
@@ -11,6 +11,7 @@ import LoadingSkeleton from '../shared/LoadingSkeleton'
 import SentinelModal from '../shared/SentinelModal'
 import EditUserModal from '../EditUserModal'
 import CreateGuardAccountModal from './CreateGuardAccountModal'
+import GuardPasswordModal from './GuardPasswordModal'
 
 type ManageTab = 'guards' | 'firearms' | 'vehicles' | 'clients'
 
@@ -37,8 +38,6 @@ interface ArmoredCar {
   license_plate: string
   model: string
   manufacturer: string
-  capacity_kg: number
-  passenger_capacity?: number
   status: string
 }
 
@@ -73,6 +72,8 @@ type UserCreationFormState = {
 type UserCreationField = keyof UserCreationFormState
 
 type UserCreationErrors = Partial<Record<UserCreationField, string>>
+
+const GUARD_PAGE_SIZE = 10
 
 const TAB_CONFIG: { key: ManageTab; label: string; icon: FC<{ className?: string }> }[] = [
   { key: 'guards', label: 'Guards', icon: Users },
@@ -143,7 +144,31 @@ const GuardsTab: FC<{
   const guards = users.filter(
     (u) => (u.role || '').toLowerCase() === 'guard' || (u.role || '').toLowerCase() === 'user'
   )
+  const [searchInput, setSearchInput] = useState('')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const filteredGuards = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLowerCase()
+    if (!normalizedSearch) return guards
+
+    return guards.filter((guard) => [
+      guard.full_name,
+      guard.username,
+      guard.email,
+      guard.phone_number,
+      guard.guard_number,
+      guard.license_number,
+    ].some((value) => String(value ?? '').toLowerCase().includes(normalizedSearch)))
+  }, [guards, searchTerm])
+  const pageCount = Math.max(1, Math.ceil(filteredGuards.length / GUARD_PAGE_SIZE))
+  const visibleGuards = filteredGuards.slice(
+    (currentPage - 1) * GUARD_PAGE_SIZE,
+    currentPage * GUARD_PAGE_SIZE,
+  )
+  const firstVisibleGuard = filteredGuards.length === 0 ? 0 : (currentPage - 1) * GUARD_PAGE_SIZE + 1
+  const lastVisibleGuard = Math.min(currentPage * GUARD_PAGE_SIZE, filteredGuards.length)
   const viewerRole = useMemo(() => normalizeRole(currentUser?.role), [currentUser?.role])
+  const canManageGuardPassword = viewerRole === 'admin' || viewerRole === 'superadmin'
   const creatableRoles: UserCreateRole[] = viewerRole == null ? [] : CREATABLE_ROLES_BY_VIEWER[viewerRole]
   const nonGuardCreatableRoles = useMemo<UserCreateRole[]>(
     () => creatableRoles.filter((role) => role !== 'guard'),
@@ -157,6 +182,7 @@ const GuardsTab: FC<{
   const [createError, setCreateError] = useState('')
   const [createSuccess, setCreateSuccess] = useState('')
   const [editUser, setEditUser] = useState<any>(null)
+  const [passwordUser, setPasswordUser] = useState<any>(null)
   const [newUser, setNewUser] = useState<UserCreationFormState>({
     fullName: '',
     username: '',
@@ -175,6 +201,22 @@ const GuardsTab: FC<{
       setNewUser((prev) => ({ ...prev, role: nonGuardCreatableRoles[0] }))
     }
   }, [nonGuardCreatableRoles, newUser.role])
+
+  useEffect(() => {
+    setCurrentPage((page) => Math.min(page, pageCount))
+  }, [pageCount])
+
+  const handleSearch = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setSearchTerm(searchInput)
+    setCurrentPage(1)
+  }
+
+  const clearSearch = () => {
+    setSearchInput('')
+    setSearchTerm('')
+    setCurrentPage(1)
+  }
 
   useEffect(() => {
     if (!isAddUserOpen) return
@@ -421,25 +463,60 @@ const GuardsTab: FC<{
           </div>
         )}
 
+        {guards.length > 0 && (
+          <form onSubmit={handleSearch} className="mb-4 flex flex-col gap-2 sm:flex-row" role="search">
+            <label htmlFor="guard-roster-search" className="sr-only">Search guard roster</label>
+            <input
+              id="guard-roster-search"
+              type="search"
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
+              placeholder="Search name, email, phone, or license"
+              className="soc-input min-h-11 flex-1"
+            />
+            <button type="submit" className="soc-btn soc-btn-primary min-h-11">
+              <Search size={16} aria-hidden="true" />
+              Search
+            </button>
+            {searchTerm && (
+              <button type="button" onClick={clearSearch} className="soc-btn soc-btn-neutral min-h-11">
+                Clear
+              </button>
+            )}
+          </form>
+        )}
+
         {guards.length === 0 ? (
           <EmptyState icon={Users} title="No guards registered" subtitle="Guards will appear here once approved" />
+        ) : filteredGuards.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-3 py-12 text-center">
+            <Search size={28} className="text-text-tertiary" aria-hidden="true" />
+            <div>
+              <p className="font-semibold text-text-primary">No guards match your search</p>
+              <p className="mt-1 text-sm text-text-secondary">Try a different name, email, phone number, or license.</p>
+            </div>
+            <button type="button" onClick={clearSearch} className="soc-btn soc-btn-neutral">
+              Clear search
+            </button>
+          </div>
         ) : (
-          <div className="overflow-x-auto rounded-md border border-border-subtle">
-            <table className="w-full min-w-[760px] border-collapse">
-              <caption className="sr-only">Registered guard personnel</caption>
-              <thead className="thead-glass">
-                <tr>
-                  <th scope="col" className="w-[25%] px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.14em] text-text-secondary">Name</th>
-                  <th scope="col" className="w-[34%] px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.14em] text-text-secondary">Email</th>
-                  <th scope="col" className="w-[18%] px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.14em] text-text-secondary hidden md:table-cell">Phone</th>
-                  <th scope="col" className="w-[15%] px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.14em] text-text-secondary hidden lg:table-cell">License</th>
-                  {isSuperadminViewer && (
-                    <th scope="col" className="w-[8%] px-4 py-3 text-right text-xs font-bold uppercase tracking-[0.14em] text-text-secondary">Actions</th>
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {guards.map((g) => (
+          <>
+            <div className="overflow-x-auto rounded-md border border-border-subtle">
+              <table className="w-full min-w-[760px] border-collapse">
+                <caption className="sr-only">Registered guard personnel</caption>
+                <thead className="thead-glass">
+                  <tr>
+                    <th scope="col" className="w-[25%] px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.14em] text-text-secondary">Name</th>
+                    <th scope="col" className="w-[34%] px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.14em] text-text-secondary">Email</th>
+                    <th scope="col" className="w-[18%] px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.14em] text-text-secondary hidden md:table-cell">Phone</th>
+                    <th scope="col" className="w-[15%] px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.14em] text-text-secondary hidden lg:table-cell">License</th>
+                    {(isSuperadminViewer || canManageGuardPassword) && (
+                      <th scope="col" className="w-[8%] px-4 py-3 text-right text-xs font-bold uppercase tracking-[0.14em] text-text-secondary">Actions</th>
+                    )}
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleGuards.map((g) => (
                   <tr key={g.id} className="group border-b border-border-subtle last:border-b-0 hover:bg-surface-hover">
                     <td className="px-4 py-4 align-middle">
                       <div className="flex items-center gap-3">
@@ -454,10 +531,35 @@ const GuardsTab: FC<{
                     </td>
                     <td className="px-4 py-4 align-middle text-sm text-text-secondary">{g.email}</td>
                     <td className="px-4 py-4 align-middle text-sm tabular-nums text-text-secondary hidden md:table-cell">{g.phone_number || <span className="text-text-tertiary">Not provided</span>}</td>
-                    <td className="px-4 py-4 align-middle text-sm text-text-secondary hidden lg:table-cell">{g.license_number || <span className="text-text-tertiary">Not provided</span>}</td>
-                    {isSuperadminViewer && (
+                    <td className="px-4 py-4 align-middle text-sm text-text-secondary hidden lg:table-cell">
+                      {g.license_number ? (
+                        <div>
+                          <p>{g.license_number}</p>
+                          {g.license_expiry_date && (
+                            <p className="mt-1 text-xs text-text-tertiary">
+                              Expires {new Date(g.license_expiry_date).toLocaleDateString()}
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-text-tertiary">Not provided</span>
+                      )}
+                    </td>
+                    {(isSuperadminViewer || canManageGuardPassword) && (
                       <td className="px-4 py-4 align-middle text-right">
                         <div className="flex justify-end gap-2">
+                          {canManageGuardPassword && (
+                            <button
+                              type="button"
+                              onClick={() => setPasswordUser(g)}
+                              className="soc-btn soc-btn-neutral"
+                            >
+                              <KeyRound size={15} aria-hidden="true" />
+                              Password
+                            </button>
+                          )}
+                          {isSuperadminViewer && (
+                            <>
                           <button
                             type="button"
                             onClick={() => setEditUser(g)}
@@ -474,14 +576,49 @@ const GuardsTab: FC<{
                             <Trash2 size={15} aria-hidden="true" />
                             Remove
                           </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     )}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="mt-4 flex flex-col gap-3 border-t border-border-subtle pt-4 text-sm text-text-secondary sm:flex-row sm:items-center sm:justify-between">
+              <p>
+                Showing <span className="font-semibold text-text-primary">{firstVisibleGuard}-{lastVisibleGuard}</span> of{' '}
+                <span className="font-semibold text-text-primary">{filteredGuards.length}</span> guards
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                  disabled={currentPage === 1}
+                  className="soc-btn soc-btn-neutral min-h-11"
+                  aria-label="Previous guard page"
+                >
+                  <ChevronLeft size={16} aria-hidden="true" />
+                  Previous
+                </button>
+                <span className="min-w-24 text-center font-semibold text-text-primary" aria-live="polite">
+                  Page {currentPage} of {pageCount}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((page) => Math.min(pageCount, page + 1))}
+                  disabled={currentPage === pageCount}
+                  className="soc-btn soc-btn-neutral min-h-11"
+                  aria-label="Next guard page"
+                >
+                  Next
+                  <ChevronRight size={16} aria-hidden="true" />
+                </button>
+              </div>
+            </div>
+          </>
         )}
       </div>
 
@@ -722,6 +859,12 @@ const GuardsTab: FC<{
         onClose={() => setEditUser(null)}
         onSave={handleSaveEditUser}
       />
+
+      <GuardPasswordModal
+        user={passwordUser}
+        onClose={() => setPasswordUser(null)}
+        onSuccess={onUsersChanged}
+      />
     </section>
   )
 }
@@ -795,8 +938,15 @@ const FirearmsTab: FC = () => {
 
   return (
     <section className="table-glass rounded p-4 md:p-6 space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <h2 className="soc-section-title">Firearm Inventory ({firearms.length})</h2>
+      <div className="flex flex-col gap-4 border-b border-border-subtle pb-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-text-tertiary">Armory</p>
+            <span className="soc-chip border border-info-border bg-info-bg text-info-text">{firearms.length} registered</span>
+          </div>
+          <h2 className="mt-1 text-xl font-black uppercase tracking-wide text-text-primary">Firearm inventory</h2>
+          <p className="mt-1 text-sm text-text-secondary">Registered firearms, license expiry, and current availability.</p>
+        </div>
         <button
           type="button"
           onClick={() => setShowAddModal(true)}
@@ -902,14 +1052,7 @@ const VehiclesTab: FC = () => {
   const [success, setSuccess] = useState('')
   const [showAddModal, setShowAddModal] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const [newCar, setNewCar] = useState({
-    licensePlate: '',
-    vin: '',
-    model: '',
-    manufacturer: '',
-    capacityKg: 0,
-    passengerCapacity: 4,
-  })
+  const [newCar, setNewCar] = useState({ licensePlate: '' })
 
   useEffect(() => {
     fetchCars()
@@ -943,7 +1086,7 @@ const VehiclesTab: FC = () => {
       })
       if (!response.ok) throw new Error('Failed to add vehicle')
       setSuccess('Vehicle added successfully')
-      setNewCar({ licensePlate: '', vin: '', model: '', manufacturer: '', capacityKg: 0, passengerCapacity: 4 })
+      setNewCar({ licensePlate: '' })
       setShowAddModal(false)
       await fetchCars()
     } catch (err) {
@@ -972,8 +1115,15 @@ const VehiclesTab: FC = () => {
 
   return (
     <section className="table-glass rounded p-4 md:p-6 space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <h2 className="soc-section-title">Vehicle Fleet ({cars.length})</h2>
+      <div className="flex flex-col gap-4 border-b border-border-subtle pb-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-text-tertiary">Fleet</p>
+            <span className="soc-chip border border-info-border bg-info-bg text-info-text">{cars.length} registered</span>
+          </div>
+          <h2 className="mt-1 text-xl font-black uppercase tracking-wide text-text-primary">Vehicle fleet</h2>
+          <p className="mt-1 text-sm text-text-secondary">Armored vehicles are added manually and tracked by A/C number.</p>
+        </div>
         <button
           type="button"
           onClick={() => setShowAddModal(true)}
@@ -993,34 +1143,12 @@ const VehiclesTab: FC = () => {
           if (!submitting) setShowAddModal(false)
         }}
         title="Add Vehicle"
-        subtitle="Register an armored vehicle for fleet management"
+        subtitle="Register an armored vehicle by A/C number"
       >
         <form onSubmit={addCar} noValidate className="space-y-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            <div>
-              <label htmlFor="vehicle-plate" className="block text-xs font-semibold text-text-secondary mb-1">License Plate</label>
-              <input id="vehicle-plate" type="text" required value={newCar.licensePlate} onChange={(e) => setNewCar({ ...newCar, licensePlate: e.target.value })} className="w-full px-3 py-2 text-sm border border-border rounded bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-(--color-focus-ring)" />
-            </div>
-            <div>
-              <label htmlFor="vehicle-vin" className="block text-xs font-semibold text-text-secondary mb-1">VIN</label>
-              <input id="vehicle-vin" type="text" required value={newCar.vin} onChange={(e) => setNewCar({ ...newCar, vin: e.target.value })} className="w-full px-3 py-2 text-sm border border-border rounded bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-(--color-focus-ring)" />
-            </div>
-            <div>
-              <label htmlFor="vehicle-model" className="block text-xs font-semibold text-text-secondary mb-1">Model</label>
-              <input id="vehicle-model" type="text" required value={newCar.model} onChange={(e) => setNewCar({ ...newCar, model: e.target.value })} className="w-full px-3 py-2 text-sm border border-border rounded bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-(--color-focus-ring)" />
-            </div>
-            <div>
-              <label htmlFor="vehicle-mfr" className="block text-xs font-semibold text-text-secondary mb-1">Manufacturer</label>
-              <input id="vehicle-mfr" type="text" required value={newCar.manufacturer} onChange={(e) => setNewCar({ ...newCar, manufacturer: e.target.value })} className="w-full px-3 py-2 text-sm border border-border rounded bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-(--color-focus-ring)" />
-            </div>
-            <div>
-              <label htmlFor="vehicle-cap" className="block text-xs font-semibold text-text-secondary mb-1">Capacity (kg)</label>
-              <input id="vehicle-cap" type="number" required value={newCar.capacityKg} onChange={(e) => setNewCar({ ...newCar, capacityKg: parseInt(e.target.value) || 0 })} className="w-full px-3 py-2 text-sm border border-border rounded bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-(--color-focus-ring)" />
-            </div>
-            <div>
-              <label htmlFor="vehicle-pax" className="block text-xs font-semibold text-text-secondary mb-1">Passengers</label>
-              <input id="vehicle-pax" type="number" required min={1} max={20} value={newCar.passengerCapacity} onChange={(e) => setNewCar({ ...newCar, passengerCapacity: parseInt(e.target.value) || 4 })} className="w-full px-3 py-2 text-sm border border-border rounded bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-(--color-focus-ring)" />
-            </div>
+          <div>
+            <label htmlFor="vehicle-plate" className="block text-xs font-semibold text-text-secondary mb-1">A/C number</label>
+            <input id="vehicle-plate" type="text" required autoFocus value={newCar.licensePlate} onChange={(e) => setNewCar({ licensePlate: e.target.value })} className="w-full px-3 py-2 text-sm border border-border rounded bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-(--color-focus-ring)" />
           </div>
           <button type="submit" disabled={submitting} className="soc-btn-primary w-full disabled:cursor-not-allowed disabled:opacity-60">
             {submitting ? 'Adding...' : 'Add Vehicle'}
@@ -1035,9 +1163,7 @@ const VehiclesTab: FC = () => {
           <table className="w-full border-collapse">
             <thead className="thead-glass">
               <tr>
-                <th className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Plate</th>
-                <th className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider hidden sm:table-cell">Model</th>
-                <th className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider hidden md:table-cell">Capacity</th>
+                <th className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">A/C number</th>
                 <th className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Status</th>
                 <th className="px-4 py-3 text-right font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Actions</th>
               </tr>
@@ -1046,8 +1172,6 @@ const VehiclesTab: FC = () => {
               {cars.map((car) => (
                 <tr key={car.id} className="border-b border-border hover:bg-surface-hover">
                   <td className="px-4 py-3 text-text-primary text-sm">{car.license_plate}</td>
-                  <td className="px-4 py-3 text-text-secondary text-sm hidden sm:table-cell">{car.model}</td>
-                  <td className="px-4 py-3 text-text-secondary text-sm hidden md:table-cell">{car.capacity_kg} kg</td>
                   <td className="px-4 py-3">
                     <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold ${
                       car.status === 'available' ? 'bg-success-bg text-success-text ring-1 ring-success-border' :
@@ -1117,8 +1241,15 @@ const ClientSitesTab: FC = () => {
 
   return (
     <section className="table-glass rounded p-4 md:p-6 space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <h2 className="soc-section-title">Client Sites ({clientSites.length})</h2>
+      <div className="flex flex-col gap-4 border-b border-border-subtle pb-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-text-tertiary">Locations</p>
+            <span className="soc-chip border border-info-border bg-info-bg text-info-text">{clientSites.length} registered</span>
+          </div>
+          <h2 className="mt-1 text-xl font-black uppercase tracking-wide text-text-primary">Client sites</h2>
+          <p className="mt-1 text-sm text-text-secondary">Geofenced sites used for assignments, attendance, and tracking.</p>
+        </div>
         <button
           type="button"
           onClick={() => setShowAddModal(true)}

@@ -10,9 +10,9 @@ interface SidebarBrandProps {
 }
 
 const statusClass: Record<SystemStatus, string> = {
-  operational: 'bg-success shadow-[0_0_10px_var(--color-success)]',
-  degraded: 'bg-warning shadow-[0_0_10px_var(--color-warning)]',
-  critical: 'bg-danger shadow-[0_0_10px_var(--color-danger)]',
+  operational: 'status-light-success',
+  degraded: 'status-light-warning',
+  critical: 'status-light-danger',
 }
 
 const SidebarBrand: FC<SidebarBrandProps> = ({ onClick, compact = false, status = 'operational' }) => {
@@ -20,18 +20,18 @@ const SidebarBrand: FC<SidebarBrandProps> = ({ onClick, compact = false, status 
     <button
       type="button"
       onClick={onClick}
-      className="group inline-flex min-h-11 w-full items-center gap-2.5 rounded px-1 py-1 text-left transition-colors"
+      className="group inline-flex min-h-12 w-full items-center gap-3 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-surface-elevated"
       aria-label="Go to dashboard"
-      title="SENTINEL"
+      title={`SENTINEL - System ${status}`}
     >
-      <span className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-info-border bg-info-bg text-info-text shadow-[0_0_14px_var(--color-info)]">
-        <SentinelLogo size={30} variant="IconOnly" animated className="drop-shadow-[0_0_8px_rgba(34,211,238,0.45)]" />
+      <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center text-info-text">
+        <SentinelLogo size={38} variant="IconOnly" animated className="drop-shadow-[0_0_8px_var(--color-info)]" />
       </span>
 
-      <span className={`min-w-0 items-center gap-2 ${compact ? 'inline-flex lg:hidden' : 'inline-flex'}`}>
-        <span className="truncate text-[19px] font-bold uppercase tracking-[0.12em] text-text-primary">SENTINEL</span>
+      <span className={`min-w-0 items-center gap-2.5 ${compact ? 'inline-flex lg:hidden' : 'inline-flex'}`}>
+        <span className="truncate text-xl font-bold uppercase tracking-[0.15em] text-text-primary">SENTINEL</span>
         <span
-          className={`status-light status-light-pulse h-2.5 w-2.5 rounded-full ${statusClass[status]}`}
+          className={`status-light status-light-pulse h-2.5 w-2.5 shrink-0 ${statusClass[status]}`}
           aria-label={`System ${status}`}
           title={`System ${status}`}
         />

@@ -427,7 +427,7 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
       <div className="grid gap-4 xl:grid-cols-[2fr_1fr]">
 
         {/* Left: Log Timeline */}
-        <div className="table-glass rounded p-4 flex flex-col gap-3">
+        <div className="table-glass self-start rounded p-4 flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <h3 className="soc-section-title">Realtime Timeline</h3>
             <span className="text-xs text-text-tertiary">
@@ -437,7 +437,7 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
           </div>
 
           {/* Desktop Table */}
-          <div className="hidden md:block max-h-[480px] overflow-auto">
+          <div className="hidden max-h-[32rem] overflow-auto md:block">
             <table className="w-full min-w-[820px] text-xs">
               <thead className="thead-glass sticky top-0 z-10">
                 <tr className="border-b border-border-subtle text-text-tertiary">

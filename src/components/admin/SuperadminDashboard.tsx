@@ -342,6 +342,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
     normalizedViewerRole === 'superadmin' ||
     normalizedViewerRole === 'admin' ||
     normalizedViewerRole === 'supervisor'
+  const canViewUserDirectory = canManageUsers || canCreateGuardAccounts
   const navItems = getSidebarNav(user.role)
   const navigate = useNavigate()
   const handleInboxAction = useCallback((type: string) => {
@@ -404,7 +405,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   useEffect(() => {
     const controller = new AbortController()
 
-    if (canManageUsers) {
+    if (canViewUserDirectory) {
       void fetchData(controller.signal)
     } else {
       setLoading(false)
@@ -432,7 +433,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
     }
 
     return () => controller.abort()
-  }, [activeSection, canManageUsers, canApproveGuards])
+  }, [activeSection, canViewUserDirectory, canApproveGuards])
 
   useEffect(() => {
     if (!activeView) return
@@ -842,11 +843,13 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
     const active = roleScopedUsers.filter(u => getUserDerivedStatus(u, pendingApprovalIds) === 'active').length
     const pending = roleScopedUsers.filter(u => getUserDerivedStatus(u, pendingApprovalIds) === 'pending').length
     const supervisors = roleScopedUsers.filter(u => normalizeRole(u.role) === 'supervisor').length
+    const guards = roleScopedUsers.filter(u => normalizeRole(u.role) === 'guard').length
     return {
       total: roleScopedUsers.length,
       active,
       pending,
       supervisors,
+      guards,
     }
   }, [roleScopedUsers, pendingApprovalIds])
 
@@ -906,6 +909,11 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   }
 
   const handleBulkDeleteSelected = async () => {
+    if (!canManageUsers) {
+      addNotification('info', 'Delete Not Available', 'Supervisors can edit guard records but cannot delete accounts.')
+      return
+    }
+
     const deletableUsers = filteredUsers.filter(u => selectedUserIds.includes(u.id) && canEditUserRow(u.role) && u.id !== user.id)
     if (deletableUsers.length === 0) {
       addNotification('info', 'No Deletable Users Selected', 'Select users you are allowed to remove.')
@@ -1101,8 +1109,10 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
               {/* Table header â€” static, never scrolls */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-5 border-b border-border-subtle shrink-0">
                 <div>
-                  <h2 className="soc-section-title">User Management</h2>
-                  <p className="text-xs text-text-tertiary mt-0.5">Manage system users, permissions, and security roles</p>
+                  <h2 className="soc-section-title">{isSupervisorViewer ? 'Guard Account Management' : 'User Management'}</h2>
+                  <p className="text-xs text-text-tertiary mt-0.5">
+                    {isSupervisorViewer ? 'Create and update guard accounts assigned to your operations.' : 'Manage system users, permissions, and security roles'}
+                  </p>
                 </div>
                 <div className="flex items-center gap-2">
                   {canCreateGuardAccounts ? (
@@ -1119,7 +1129,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                     <input
                       type="text"
                       aria-label="Search users"
-                      placeholder="Search users..."
+                      placeholder={isSupervisorViewer ? 'Search guards...' : 'Search users...'}
                       value={searchQuery}
                       onChange={e => {
                         setSearchQuery(e.target.value)
@@ -1132,7 +1142,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
               </div>
               <div className="grid grid-cols-2 gap-3 border-b border-border-subtle px-5 py-4 md:grid-cols-4">
                 <div className="rounded border border-border-subtle bg-background px-3 py-3">
-                  <div className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">Total Users</div>
+                  <div className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">{isSupervisorViewer ? 'Total Guards' : 'Total Users'}</div>
                   <div className="mt-1 text-xl font-bold text-text-primary">{summaryStats.total}</div>
                 </div>
                 <div className="rounded border border-border-subtle bg-background px-3 py-3">
@@ -1144,8 +1154,8 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                   <div className="mt-1 text-xl font-bold text-warning-text">{summaryStats.pending}</div>
                 </div>
                 <div className="rounded border border-border-subtle bg-background px-3 py-3">
-                  <div className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">Supervisors</div>
-                  <div className="mt-1 text-xl font-bold text-info-text">{summaryStats.supervisors}</div>
+                  <div className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">{isSupervisorViewer ? 'Guards' : 'Supervisors'}</div>
+                  <div className="mt-1 text-xl font-bold text-info-text">{isSupervisorViewer ? summaryStats.guards : summaryStats.supervisors}</div>
                 </div>
               </div>
               {selectedUserIds.length > 0 ? (
@@ -1154,14 +1164,16 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                     {selectedUserIds.length} user{selectedUserIds.length === 1 ? '' : 's'} selected
                   </p>
                   <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={handleBulkApproveSelected}
-                      disabled={bulkProcessing}
-                      className="soc-btn soc-btn-success"
-                    >
-                      Approve Selected
-                    </button>
+                    {canApproveGuards ? (
+                      <button
+                        type="button"
+                        onClick={handleBulkApproveSelected}
+                        disabled={bulkProcessing}
+                        className="soc-btn soc-btn-success"
+                      >
+                        Approve Selected
+                      </button>
+                    ) : null}
                     <button
                       type="button"
                       onClick={handleBulkSuspendSelected}
@@ -1171,14 +1183,16 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                     >
                       Suspend Selected
                     </button>
-                    <button
-                      type="button"
-                      onClick={handleBulkDeleteSelected}
-                      disabled={bulkProcessing}
-                      className="soc-btn soc-btn-danger"
-                    >
-                      Delete Selected
-                    </button>
+                    {canManageUsers ? (
+                      <button
+                        type="button"
+                        onClick={handleBulkDeleteSelected}
+                        disabled={bulkProcessing}
+                        className="soc-btn soc-btn-danger"
+                      >
+                        Delete Selected
+                      </button>
+                    ) : null}
                     <button
                       type="button"
                       onClick={() => setSelectedUserIds([])}
@@ -1220,7 +1234,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                         const derivedStatus = userStatusById.get(u.id) || 'inactive'
                         const rowSelected = selectedUserIds.includes(u.id)
                         const canEdit = canEditUserRow(u.role)
-                        const canDelete = canEditUserRow(u.role) && u.id !== user.id
+                        const canDelete = canManageUsers && canEditUserRow(u.role) && u.id !== user.id
                         const pendingApproval = pendingApprovalIds.has(u.id)
                         return (
                           <tr key={u.id} className="transition-colors hover:bg-surface-hover/50">
@@ -1339,7 +1353,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                       const derivedStatus = userStatusById.get(u.id) || 'inactive'
                       const rowSelected = selectedUserIds.includes(u.id)
                       const pendingApproval = pendingApprovalIds.has(u.id)
-                      const canDelete = canEditUserRow(u.role) && u.id !== user.id
+                      const canDelete = canManageUsers && canEditUserRow(u.role) && u.id !== user.id
 
                       return (
                         <article key={`mobile-${u.id}`} className="rounded border border-border-subtle bg-background p-4">

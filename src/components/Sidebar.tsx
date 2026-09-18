@@ -1,5 +1,31 @@
 import { CSSProperties, FC, useEffect, useMemo, useRef } from 'react'
-import { LogOut } from 'lucide-react'
+import {
+  Award,
+  BarChart3,
+  BadgeCheck,
+  CalendarClock,
+  CalendarDays,
+  CarFront,
+  ClipboardCheck,
+  FileSearch,
+  FileUp,
+  KeyRound,
+  LayoutDashboard,
+  LifeBuoy,
+  LogOut,
+  Map,
+  MapPinned,
+  MessageSquareText,
+  PackageCheck,
+  Route,
+  Settings,
+  Shield,
+  Target,
+  TrendingUp,
+  UsersRound,
+  Wrench,
+  type LucideIcon,
+} from 'lucide-react'
 import SidebarBrand from './SidebarBrand'
 import { useServiceHealth } from '../hooks/useServiceHealth'
 
@@ -21,32 +47,33 @@ interface SidebarProps {
   onToggle?: () => void
 }
 
-const navGlyphs: Record<string, string> = {
-  dashboard: 'DG',
-  overview: 'DG',
-  feedback: 'FB',
-  'feedback-dashboard': 'FD',
-  approvals: 'AP',
-  calendar: 'CL',
-  analytics: 'AN',
-  audit: 'AU',
-  'audit-log': 'AL',
-  trips: 'TR',
-  schedule: 'SC',
-  missions: 'MS',
-  performance: 'PF',
-  merit: 'MR',
-  manage: 'MG',
-  'operations-map': 'OM',
-  firearms: 'FA',
-  'guard-compliance': 'GC',
-  allocation: 'AS',
-  permits: 'PM',
-  maintenance: 'MT',
-  'armored-cars': 'AC',
-  settings: 'ST',
-  support: 'CT',
-  'mdr-import': 'MD',
+const navIcons: Record<string, LucideIcon> = {
+  dashboard: LayoutDashboard,
+  overview: LayoutDashboard,
+  feedback: MessageSquareText,
+  'feedback-dashboard': MessageSquareText,
+  approvals: ClipboardCheck,
+  calendar: CalendarDays,
+  analytics: BarChart3,
+  audit: FileSearch,
+  'audit-log': FileSearch,
+  trips: Route,
+  schedule: CalendarClock,
+  missions: Target,
+  performance: TrendingUp,
+  merit: Award,
+  manage: UsersRound,
+  'operations-map': Map,
+  firearms: Shield,
+  'firearm-compliance': BadgeCheck,
+  'guard-compliance': BadgeCheck,
+  allocation: PackageCheck,
+  permits: KeyRound,
+  maintenance: Wrench,
+  'armored-cars': CarFront,
+  settings: Settings,
+  support: LifeBuoy,
+  'mdr-import': FileUp,
 }
 
 const Sidebar: FC<SidebarProps> = ({
@@ -189,26 +216,27 @@ const Sidebar: FC<SidebarProps> = ({
                     </p>
                   )}
                   <div className="flex flex-col gap-1">
-                    {grouped[groupName].map(({ view, label }) => (
-                      <button
-                        key={view}
-                        className={`soc-sidebar-nav-item cursor-pointer select-none px-3 py-2.5 text-left text-sm font-semibold uppercase tracking-wide ${
-                          view === activeView ? 'soc-sidebar-nav-item-active' : ''
-                        } ${collapsed ? 'lg:px-2 lg:py-2' : ''}`}
-                        onClick={() => handleNavigate(view)}
-                        type="button"
-                        title={collapsed ? label : undefined}
-                        aria-label={collapsed ? label : undefined}
-                        aria-current={view === activeView ? 'page' : undefined}
-                      >
-                        <span className={`flex items-center gap-2 ${collapsed ? 'lg:justify-center' : ''}`}>
-                          <span className="inline-flex h-5 w-5 items-center justify-center rounded-md border border-border-subtle bg-surface-elevated text-[11px] font-bold tracking-wide text-text-tertiary" aria-hidden="true">
-                            {navGlyphs[view] || 'NV'}
+                    {grouped[groupName].map(({ view, label }) => {
+                      const Icon = navIcons[view] || MapPinned
+                      return (
+                        <button
+                          key={view}
+                          className={`soc-sidebar-nav-item cursor-pointer select-none px-3 py-2.5 text-left text-sm font-semibold uppercase tracking-wide ${
+                            view === activeView ? 'soc-sidebar-nav-item-active' : ''
+                          } ${collapsed ? 'lg:px-2 lg:py-2' : ''}`}
+                          onClick={() => handleNavigate(view)}
+                          type="button"
+                          title={collapsed ? label : undefined}
+                          aria-label={collapsed ? label : undefined}
+                          aria-current={view === activeView ? 'page' : undefined}
+                        >
+                          <span className={`flex items-center gap-2 ${collapsed ? 'lg:justify-center' : ''}`}>
+                            <Icon className="h-5 w-5 shrink-0 text-text-tertiary" aria-hidden="true" />
+                            <span className={collapsed ? 'lg:hidden' : ''}>{label}</span>
                           </span>
-                          <span className={collapsed ? 'lg:hidden' : ''}>{label}</span>
-                        </span>
-                      </button>
-                    ))}
+                        </button>
+                      )
+                    })}
                   </div>
                   {index < visibleGroups.length - 1 && (
                     <div className={`mt-2 border-t border-border-subtle ${collapsed ? 'lg:hidden' : ''}`} aria-hidden="true" />

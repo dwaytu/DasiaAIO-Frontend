@@ -33,7 +33,7 @@ const VehicleMaintenancePredictionPanel: FC<VehicleMaintenancePredictionPanelPro
 }) => {
   return (
     <section
-      className="command-panel rounded border border-(--color-border) bg-(--color-surface)"
+      className="command-panel flex h-[28rem] min-h-0 flex-col rounded border border-(--color-border) bg-(--color-surface) md:h-[32rem]"
       aria-label="Vehicle maintenance risk"
     >
       <div className="flex items-center justify-between border-b border-(--color-border) px-4 py-3">
@@ -44,7 +44,7 @@ const VehicleMaintenancePredictionPanel: FC<VehicleMaintenancePredictionPanelPro
         {lastUpdated && <span className="font-mono text-[11px] text-(--color-muted-text)">{lastUpdated}</span>}
       </div>
 
-      <div className="space-y-2 px-4 py-3" role="region" aria-live="polite">
+      <div className="soc-scroll-hidden min-h-0 flex-1 overflow-y-auto px-4 py-3" role="region" aria-live="polite">
         {loading && <p className="text-center font-mono text-xs text-(--color-muted-text)">Scoring vehicle maintenance risk...</p>}
 
         {!loading && error && (

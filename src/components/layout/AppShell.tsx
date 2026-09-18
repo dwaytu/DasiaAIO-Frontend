@@ -533,22 +533,22 @@ export default function AppShell() {
         <>
           {/* More overlay */}
           {moreDrawerOpen ? (
-            <div className="fixed inset-0 z-[63] md:hidden" onClick={() => setMoreDrawerOpen(false)}>
-              <div className="absolute inset-0 bg-black/40" />
+            <div className="fixed inset-0 z-(--z-overlay) md:hidden" onClick={() => setMoreDrawerOpen(false)}>
+              <div className="absolute inset-0 bg-(--color-overlay) backdrop-blur-[2px]" />
               <div
                 id="appshell-more-drawer"
                 ref={moreDrawerRef}
-                className="absolute bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] left-2 right-2 rounded border border-border bg-surface p-2 shadow-lg"
+                className="absolute bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] left-2 right-2 max-h-[min(72dvh,36rem)] overflow-y-auto rounded border border-border-elevated bg-surface-elevated p-3 shadow-lg"
                 onClick={e => e.stopPropagation()}
               >
-                <div className="flex items-center justify-between px-3 py-2 mb-1">
+                <div className="sticky top-0 z-10 mb-2 flex items-center justify-between bg-surface-elevated px-1 py-1">
                   <span className="text-xs font-semibold uppercase tracking-wider text-text-secondary">More</span>
                   <button type="button" onClick={() => setMoreDrawerOpen(false)} className="soc-btn-neutral min-h-11 min-w-11 p-2" aria-label="Close more menu">
                     <X className="h-4 w-4" aria-hidden="true" />
                     <span className="sr-only">Close menu</span>
                   </button>
                 </div>
-                <ul className="grid grid-cols-3 gap-1">
+                <ul className="grid grid-cols-2 gap-2 min-[480px]:grid-cols-3">
                   {moreNavItems.map(item => {
                     const itemRoute = VIEW_TO_ROUTE[item.view] || `/${item.view}`
                     return (
@@ -556,7 +556,7 @@ export default function AppShell() {
                         <button
                           type="button"
                           onClick={() => { navigateWithoutFallback(itemRoute); setMoreDrawerOpen(false) }}
-                          className="soc-btn-neutral min-h-11 w-full px-2 py-2 text-xs"
+                          className="soc-btn-neutral min-h-11 w-full px-3 py-2 text-xs"
                         >
                           {item.label}
                         </button>

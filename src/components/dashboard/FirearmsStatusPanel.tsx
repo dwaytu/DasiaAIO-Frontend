@@ -18,7 +18,7 @@ const FirearmsStatusPanel: FC<FirearmsStatusPanelProps> = ({
   const available = Math.max(firearms.length - issued - maintenance, 0)
 
   return (
-    <section className="command-panel rounded border border-(--color-border) bg-(--color-surface)" aria-label="Firearms status">
+    <section className="command-panel flex h-[28rem] min-h-0 flex-col rounded border border-(--color-border) bg-(--color-surface) md:h-[32rem]" aria-label="Firearms status">
       <div className="flex items-center justify-between border-b border-(--color-border) px-4 py-3">
         <div>
           <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-(--color-text)">Firearms Status</p>
@@ -27,7 +27,7 @@ const FirearmsStatusPanel: FC<FirearmsStatusPanelProps> = ({
         {lastUpdated && <span className="font-mono text-[11px] text-(--color-muted-text)">Updated {lastUpdated}</span>}
       </div>
 
-      <div className="space-y-3 px-4 py-3" role="region" aria-live="polite">
+      <div className="soc-scroll-hidden min-h-0 flex-1 overflow-y-auto px-4 py-3" role="region" aria-live="polite">
         <div className="grid grid-cols-3 gap-2">
           <div className="soc-status-success flex-col items-center w-full justify-center rounded-md px-2 py-1.5 text-center">
             <p className="font-mono text-[11px] uppercase tracking-wide">Available</p>

@@ -1,6 +1,6 @@
 import { FC, FormEvent, Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import L from 'leaflet'
-import { MapPin, Pencil, Plus, Trash2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, MapPin, Pencil, Plus, Trash2 } from 'lucide-react'
 import { Circle, CircleMarker, MapContainer, Marker, Polygon, Polyline, Popup, TileLayer, useMap, useMapEvents } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import { type ActiveGuard, type ClientSiteInput, type ClientSiteSetupInput, type GeofenceZoneInput, type MapTrackingPoint, useOperationalMapData } from '../../hooks/useOperationalMapData'
@@ -77,6 +77,8 @@ const CHECK_IN_AREA_OPTIONS = [
   { value: 0.25, label: '250 meters' },
   { value: 0.5, label: '500 meters' },
 ]
+
+const CLIENT_SITES_PAGE_SIZE = 10
 
 interface MapClickPickerProps {
   enabled: boolean
@@ -329,6 +331,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ recentVehicleReport
   const [formError, setFormError] = useState<string>('')
   const [siteActionMessage, setSiteActionMessage] = useState<string>('')
   const [deletingSiteId, setDeletingSiteId] = useState<string>('')
+  const [clientSitesPage, setClientSitesPage] = useState<number>(1)
   const [dismissedDegradedError, setDismissedDegradedError] = useState<string>('')
 
   const selectedEventPanelRef = useRef<HTMLElement | null>(null)
@@ -363,6 +366,17 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ recentVehicleReport
 
     return CHECK_IN_AREA_OPTIONS
   }, [siteCheckInRadiusKm])
+
+  const clientSitesPageCount = Math.max(1, Math.ceil(clientSites.length / CLIENT_SITES_PAGE_SIZE))
+
+  useEffect(() => {
+    setClientSitesPage((currentPage) => Math.min(currentPage, clientSitesPageCount))
+  }, [clientSitesPageCount])
+
+  const visibleClientSites = useMemo(() => {
+    const startIndex = (clientSitesPage - 1) * CLIENT_SITES_PAGE_SIZE
+    return clientSites.slice(startIndex, startIndex + CLIENT_SITES_PAGE_SIZE)
+  }, [clientSites, clientSitesPage])
 
   const guardMetadataById = useMemo(() => {
     const metadata = new Map<string, ActiveGuard>()
@@ -1571,7 +1585,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ recentVehicleReport
                 </tr>
               </thead>
               <tbody>
-                {clientSites.map((site) => (
+                {visibleClientSites.map((site) => (
                   <tr key={site.id} className="border-b border-border-subtle text-text-primary">
                     <td className="px-2 py-2" title={site.address || site.name}>{site.name}</td>
                     <td className="px-2 py-2 text-text-secondary">{site.address || 'Map location saved'}</td>
@@ -1614,6 +1628,36 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ recentVehicleReport
               </tbody>
             </table>
           </div>
+          {clientSites.length > CLIENT_SITES_PAGE_SIZE ? (
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-border-subtle pt-3">
+              <p className="text-xs text-text-tertiary">
+                Showing {((clientSitesPage - 1) * CLIENT_SITES_PAGE_SIZE) + 1}-{Math.min(clientSitesPage * CLIENT_SITES_PAGE_SIZE, clientSites.length)} of {clientSites.length} client sites
+              </p>
+              <div className="flex items-center gap-2" aria-label="Client site pages">
+                <button
+                  type="button"
+                  onClick={() => setClientSitesPage((currentPage) => Math.max(1, currentPage - 1))}
+                  disabled={clientSitesPage === 1}
+                  className="soc-btn soc-btn-secondary min-h-11 px-3 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <ChevronLeft size={14} aria-hidden="true" />
+                  Previous
+                </button>
+                <span className="min-w-20 text-center text-xs font-semibold text-text-secondary">
+                  Page {clientSitesPage} of {clientSitesPageCount}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setClientSitesPage((currentPage) => Math.min(clientSitesPageCount, currentPage + 1))}
+                  disabled={clientSitesPage === clientSitesPageCount}
+                  className="soc-btn soc-btn-secondary min-h-11 px-3 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Next
+                  <ChevronRight size={14} aria-hidden="true" />
+                </button>
+              </div>
+            </div>
+          ) : null}
         </div>
       ) : null}
     </section>

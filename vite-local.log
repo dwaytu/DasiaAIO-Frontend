@@ -1,0 +1,252 @@
+
+> guard-firearm-management@1.0.0 dev
+> vite --host 0.0.0.0
+
+
+  VITE v7.3.6  ready in 2110 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: http://192.168.1.2:5173/
+  ➜  Network: http://172.28.32.1:5173/
+  ➜  press h + enter to show help
+2:49:42 AM [vite] (client) hmr update /src/index.css
+2:49:42 AM [vite] (client) hmr update /src/index.css
+2:49:42 AM [vite] (client) hmr update /src/index.css
+2:55:11 AM [vite] (client) hmr update /src/index.css, /src/components/NotificationCenter.tsx
+2:55:11 AM [vite] (client) hmr invalidate /src/components/NotificationCenter.tsx Could not Fast Refresh ("createNotification" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+2:55:11 AM [vite] (client) hmr update /src/components/admin/SuperadminDashboard.tsx
+2:55:23 AM [vite] (client) hmr update /src/index.css
+3:03:02 AM [vite] (client) hmr update /src/index.css, /src/components/dashboard/OperationalMapPanel.tsx
+3:07:04 AM [vite] (client) hmr update /src/index.css, /src/components/dashboard/OperationalMapPanel.tsx
+3:07:04 AM [vite] (client) hmr update /src/index.css
+3:09:53 AM [vite] (client) hmr update /src/index.css, /src/components/dashboard/OperationalMapPanel.tsx
+3:15:19 AM [vite] (client) hmr update /src/index.css, /src/components/dashboard/AssignmentPicker.tsx
+3:15:31 AM [vite] (client) hmr update /src/index.css, /src/components/dashboard/OperationalMapPanel.tsx
+3:15:50 AM [vite] (client) hmr update /src/index.css, /src/components/EditScheduleModal.tsx
+3:16:03 AM [vite] (client) hmr update /src/index.css
+3:16:27 AM [vite] (client) hmr update /src/index.css, /src/components/FirearmMaintenance.tsx
+3:16:47 AM [vite] (client) hmr update /src/index.css
+3:17:07 AM [vite] (client) hmr update /src/index.css, /src/components/ArmoredCarDashboard.tsx
+3:17:33 AM [vite] (client) hmr update /src/index.css, /src/components/admin/SuperadminDashboard.tsx
+3:19:47 AM [vite] (client) hmr update /src/components/shared/SearchableSelect.tsx, /src/index.css
+3:23:38 AM [vite] (client) hmr update /src/index.css, /src/components/dashboard/AssignmentPicker.tsx
+3:23:38 AM [vite] (client) hmr update /src/index.css, /src/components/EditScheduleModal.tsx
+3:23:38 AM [vite] (client) hmr update /src/index.css, /src/components/dashboard/OperationalMapPanel.tsx
+3:24:07 AM [vite] (client) hmr update /src/index.css
+3:24:07 AM [vite] (client) hmr update /src/index.css, /src/components/FirearmMaintenance.tsx
+3:24:07 AM [vite] (client) hmr update /src/index.css
+3:24:30 AM [vite] (client) hmr update /src/index.css, /src/components/ArmoredCarDashboard.tsx
+3:24:30 AM [vite] (client) hmr update /src/index.css, /src/components/admin/SuperadminDashboard.tsx
+3:24:30 AM [vite] (client) hmr update /src/components/shared/SearchableSelect.tsx, /src/index.css
+3:24:30 AM [vite] (client) hmr update /src/index.css
+3:25:20 AM [vite] (client) hmr update /src/index.css, /src/components/admin/SuperadminDashboard.tsx
+3:36:29 AM [vite] (client) hmr update /src/index.css, /src/components/dashboard/CommandCenterDashboard.tsx
+3:42:00 AM [vite] (client) hmr update /src/index.css, /src/components/dashboard/CommandCenterDashboard.tsx
+4:11:17 AM [vite] (client) hmr update /src/index.css, /src/components/DtrReport.tsx
+4:11:17 AM [vite] (client) hmr update /src/index.css
+4:22:26 AM [vite] (client) hmr update /src/index.css, /src/components/AnalyticsDashboard.tsx
+4:22:38 AM [vite] (client) hmr update /src/index.css, /src/components/AnalyticsDashboard.tsx
+4:22:52 AM [vite] (client) hmr update /src/index.css
+4:23:50 AM [vite] (client) hmr update /src/index.css, /src/components/AnalyticsDashboard.tsx
+4:26:02 AM [vite] (client) hmr update /src/index.css
+4:29:52 AM [vite] (client) hmr update /src/index.css
+4:35:12 AM [vite] (client) hmr update /src/index.css
+4:51:28 AM [vite] (client) hmr update /src/index.css, /src/components/guards/OffDutyPanel.tsx
+4:52:37 AM [vite] (client) hmr update /src/index.css, /src/components/guards/OffDutyPanel.tsx
+4:52:44 AM [vite] (client) hmr update /src/index.css, /src/components/guards/UserDashboard.tsx
+4:53:06 AM [vite] (client) hmr update /src/index.css, /src/components/profile/ProfileModalContent.tsx
+4:53:23 AM [vite] (client) hmr update /src/index.css
+4:53:27 AM [vite] (client) hmr update /src/index.css, /src/components/dashboard/CommandCenterDashboard.tsx
+4:53:33 AM [vite] (client) hmr update /src/index.css, /src/components/dashboard/CommandCenterDashboard.tsx
+5:10:13 AM [vite] (client) hmr update /src/index.css, /src/components/guards/OffDutyPanel.tsx
+5:10:24 AM [vite] (client) hmr update /src/index.css, /src/components/guards/OffDutyPanel.tsx
+5:23:45 AM [vite] (client) hmr update /src/index.css, /src/components/guards/UserDashboard.tsx
+5:24:21 AM [vite] (client) hmr update /src/index.css, /src/components/guards/UserDashboard.tsx
+5:25:09 AM [vite] (client) hmr update /src/index.css, /src/components/guards/UserDashboard.tsx
+5:38:34 AM [vite] (client) hmr update /src/index.css, /src/components/guards/UserDashboard.tsx
+5:47:45 AM [vite] (client) hmr update /src/index.css, /src/components/guards/UserDashboard.tsx, /src/components/guards/EmergencyContactsBar.tsx
+5:48:08 AM [vite] (client) hmr update /src/index.css, /src/components/guards/UserDashboard.tsx
+5:58:57 AM [vite] (client) hmr update /src/components/mdr/MdrUploader.tsx, /src/index.css
+6:14:29 AM [vite] (client) hmr update /src/components/mdr/MdrUploader.tsx, /src/index.css
+6:14:41 AM [vite] (client) hmr update /src/components/mdr/MdrUploader.tsx, /src/index.css
+6:15:40 AM [vite] (client) hmr update /src/index.css
+6:15:52 AM [vite] (client) hmr update /src/index.css
+6:16:12 AM [vite] (client) hmr update /src/components/mdr/MdrUploader.tsx, /src/index.css
+6:18:22 AM [vite] (client) hmr update /src/components/mdr/MdrUploader.tsx, /src/index.css
+6:18:33 AM [vite] (client) hmr update /src/index.css
+6:19:20 AM [vite] (client) hmr update /src/components/mdr/MdrUploader.tsx, /src/index.css
+6:19:36 AM [vite] (client) hmr update /src/index.css
+6:20:51 AM [vite] (client) hmr update /src/components/mdr/MdrUploader.tsx, /src/index.css
+6:21:07 AM [vite] (client) hmr update /src/index.css
+6:21:44 AM [vite] (client) hmr update /src/components/mdr/MdrUploader.tsx, /src/index.css
+6:21:55 AM [vite] (client) hmr update /src/index.css
+6:22:54 AM [vite] (client) hmr update /src/components/mdr/MdrUploader.tsx, /src/index.css
+6:23:06 AM [vite] (client) hmr update /src/index.css
+6:28:53 AM [vite] (client) hmr update /src/components/mdr/MdrUploader.tsx, /src/index.css
+6:29:04 AM [vite] (client) hmr update /src/components/mdr/MdrUploader.tsx, /src/index.css
+6:29:12 AM [vite] (client) hmr update /src/components/mdr/MdrUploader.tsx, /src/index.css
+6:29:49 AM [vite] (client) hmr update /src/components/mdr/MdrUploader.tsx, /src/index.css
+6:29:54 AM [vite] (client) hmr update /src/components/mdr/MdrUploader.tsx, /src/index.css
+6:30:50 AM [vite] (client) hmr update /src/index.css
+6:33:17 AM [vite] (client) hmr update /src/index.css
+6:34:24 AM [vite] (client) hmr update /src/components/mdr/MdrUploader.tsx, /src/index.css
+6:34:59 AM [vite] (client) hmr update /src/components/mdr/MdrUploader.tsx, /src/index.css
+6:35:12 AM [vite] (client) hmr update /src/components/mdr/MdrUploader.tsx, /src/index.css
+6:38:52 AM [vite] (client) hmr update /src/index.css
+6:41:39 AM [vite] (client) hmr update /src/index.css
+6:45:20 AM [vite] (client) hmr update /src/components/mdr/MdrBatchReview.tsx, /src/index.css
+6:45:29 AM [vite] (client) hmr update /src/components/mdr/MdrBatchReview.tsx, /src/index.css
+6:45:33 AM [vite] (client) hmr update /src/components/mdr/MdrBatchReview.tsx, /src/index.css
+6:46:00 AM [vite] (client) hmr update /src/components/mdr/MdrBatchReview.tsx, /src/index.css
+6:52:39 AM [vite] (client) hmr update /src/index.css
+7:07:17 AM [vite] (client) hmr update /src/components/mdr/MdrBatchReview.tsx, /src/index.css
+7:08:57 AM [vite] (client) hmr update /src/components/mdr/MdrBatchReview.tsx, /src/index.css
+7:09:16 AM [vite] (client) hmr update /src/components/mdr/MdrBatchReview.tsx, /src/index.css
+7:22:37 AM [vite] (client) hmr update /src/index.css, /src/components/admin/ResourceManagementPanel.tsx
+7:23:04 AM [vite] (client) hmr update /src/index.css, /src/components/admin/SuperadminDashboard.tsx
+7:24:05 AM [vite] (client) hmr update /src/index.css, /src/components/layout/AppShell.tsx
+7:28:57 AM [vite] (client) hmr update /src/index.css, /src/components/layout/AppShell.tsx
+7:30:04 AM [vite] (client) hmr update /src/index.css, /src/components/admin/GuardPasswordModal.tsx
+7:30:04 AM [vite] (client) hmr update /src/index.css, /src/components/auth/RequiredPasswordChangeModal.tsx
+7:30:04 AM [vite] (client) hmr update /src/index.css, /src/components/layout/AppShell.tsx
+7:30:09 AM [vite] (client) hmr update /src/index.css, /src/components/layout/AppShell.tsx
+8:01:57 AM [vite] (client) hmr update /src/components/mdr/MdrBatchReview.tsx, /src/index.css
+8:07:18 AM [vite] (client) hmr update /src/index.css, /src/components/admin/SuperadminDashboard.tsx
+8:10:55 AM [vite] (client) hmr update /src/index.css, /src/components/admin/ResourceManagementPanel.tsx
+8:15:15 AM [vite] (client) hmr update /src/index.css, /src/components/admin/ResourceManagementPanel.tsx
+8:15:43 AM [vite] (client) hmr update /src/index.css, /src/components/admin/ResourceManagementPanel.tsx
+8:19:35 AM [vite] (client) hmr update /src/index.css, /src/components/admin/ResourceManagementPanel.tsx
+8:25:50 AM [vite] (client) hmr update /src/index.css, /src/components/admin/ResourceManagementPanel.tsx
+8:25:50 AM [vite] (client) hmr update /src/index.css, /src/components/ArmoredCarDashboard.tsx
+8:25:50 AM [vite] (client) hmr update /src/index.css, /src/components/admin/SuperadminDashboard.tsx
+8:35:34 AM [vite] (client) hmr update /src/components/mdr/MdrUploader.tsx, /src/index.css
+8:35:34 AM [vite] (client) hmr update /src/index.css, /src/components/admin/ResourceManagementPanel.tsx
+8:35:59 AM [vite] (client) hmr update /src/index.css
+8:36:28 AM [vite] (client) hmr update /src/index.css, /src/components/ArmoredCarDashboard.tsx
+8:36:28 AM [vite] (client) hmr update /src/index.css, /src/components/admin/ResourceManagementPanel.tsx
+8:45:51 AM [vite] (client) hmr update /src/index.css, /src/components/admin/ResourceManagementPanel.tsx
+8:52:09 AM [vite] (client) hmr update /src/components/shared/SentinelModal.tsx, /src/index.css
+8:52:09 AM [vite] (client) hmr update /src/index.css
+8:52:34 AM [vite] (client) hmr update /src/index.css
+8:58:08 AM [vite] (client) hmr update /src/index.css, /src/components/admin/SuperadminDashboard.tsx
+8:58:48 AM [vite] (client) hmr update /src/index.css, /src/components/admin/SuperadminDashboard.tsx
+8:59:22 AM [vite] (client) hmr update /src/index.css, /src/components/admin/SuperadminDashboard.tsx
+9:02:44 AM [vite] (client) hmr update /src/index.css, /src/components/admin/SuperadminDashboard.tsx
+9:03:00 AM [vite] (client) hmr update /src/index.css, /src/components/admin/SuperadminDashboard.tsx
+9:05:55 AM [vite] (client) hmr update /src/index.css, /src/components/dashboard/IncidentSeverityMonitoringPanel.tsx
+9:09:43 AM [vite] (client) hmr update /src/index.css, /src/components/dashboard/FirearmsStatusPanel.tsx
+7:28:58 PM [vite] (client) hmr update /src/components/mdr/MdrImportPage.tsx, /src/components/layout/OperationalShell.tsx, /src/components/layout/AppShell.tsx, /src/components/admin/SuperadminDashboard.tsx, /src/components/AnalyticsDashboard.tsx, /src/components/feedback/FeedbackDashboard.tsx, /src/components/DtrReport.tsx, /src/components/CalendarDashboard.tsx, /src/components/FirearmInventory.tsx, /src/components/FirearmComplianceReport.tsx, /src/components/FirearmMaintenance.tsx, /src/components/ArmoredCarDashboard.tsx, /src/components/AuditDashboard.tsx, /src/components/settings/SettingsView.tsx, /src/components/rbac/Allowed.tsx, /src/index.css
+7:28:58 PM [vite] (client) hmr update /src/index.css
+7:28:58 PM [vite] (client) hmr update /src/index.css, /src/components/AnalyticsDashboard.tsx
+7:28:58 PM [vite] (client) hmr update /src/index.css
+7:28:58 PM [vite] (client) hmr update /src/index.css, /src/components/AnalyticsDashboard.tsx
+7:28:58 PM [vite] (client) hmr update /src/index.css
+7:34:39 PM [vite] (client) hmr update /src/components/mdr/MdrImportPage.tsx, /src/components/layout/OperationalShell.tsx, /src/components/layout/AppShell.tsx, /src/components/admin/SuperadminDashboard.tsx, /src/components/AnalyticsDashboard.tsx, /src/components/feedback/FeedbackDashboard.tsx, /src/components/DtrReport.tsx, /src/components/CalendarDashboard.tsx, /src/components/FirearmInventory.tsx, /src/components/FirearmComplianceReport.tsx, /src/components/FirearmMaintenance.tsx, /src/components/ArmoredCarDashboard.tsx, /src/components/AuditDashboard.tsx, /src/components/settings/SettingsView.tsx, /src/components/MeritScoreDashboard.tsx, /src/index.css
+7:34:39 PM [vite] (client) hmr update /src/index.css
+7:40:03 PM [vite] (client) hmr update /src/index.css, /src/components/MeritScoreDashboard.tsx
+8:05:31 PM [vite] (client) hmr update /src/index.css, /src/components/admin/SuperadminDashboard.tsx
+8:14:28 PM [vite] (client) hmr update /src/index.css, /src/components/AnalyticsDashboard.tsx
+8:16:20 PM [vite] (client) hmr update /src/index.css, /src/components/AnalyticsDashboard.tsx
+8:20:10 PM [vite] (client) hmr update /src/components/mdr/MdrImportPage.tsx, /src/components/layout/OperationalShell.tsx, /src/components/layout/AppShell.tsx, /src/components/admin/SuperadminDashboard.tsx, /src/components/AnalyticsDashboard.tsx, /src/components/feedback/FeedbackDashboard.tsx, /src/components/DtrReport.tsx, /src/components/CalendarDashboard.tsx, /src/components/FirearmInventory.tsx, /src/components/FirearmComplianceReport.tsx, /src/components/FirearmMaintenance.tsx, /src/components/ArmoredCarDashboard.tsx, /src/components/AuditDashboard.tsx, /src/components/settings/SettingsView.tsx, /src/components/MeritScoreDashboard.tsx, /src/components/FirearmAllocation.tsx, /src/index.css
+8:20:10 PM [vite] (client) hmr update /src/index.css, /src/components/FirearmAllocation.tsx
+8:20:10 PM [vite] (client) hmr update /src/index.css
+8:22:11 PM [vite] (client) hmr update /src/index.css, /src/components/FirearmAllocation.tsx
+8:34:36 PM [vite] (client) hmr update /src/components/mdr/MdrImportPage.tsx, /src/components/layout/OperationalShell.tsx, /src/components/layout/AppShell.tsx, /src/components/admin/SuperadminDashboard.tsx, /src/components/AnalyticsDashboard.tsx, /src/components/feedback/FeedbackDashboard.tsx, /src/components/DtrReport.tsx, /src/components/CalendarDashboard.tsx, /src/components/FirearmInventory.tsx, /src/components/FirearmComplianceReport.tsx, /src/components/FirearmMaintenance.tsx, /src/components/ArmoredCarDashboard.tsx, /src/components/AuditDashboard.tsx, /src/components/settings/SettingsView.tsx, /src/components/MeritScoreDashboard.tsx, /src/components/FirearmAllocation.tsx, /src/index.css
+8:34:36 PM [vite] (client) hmr update /src/index.css, /src/router/index.tsx, /src/router/guards.tsx, /src/components/layout/AppShell.tsx, /src/components/admin/SuperadminDashboard.tsx
+8:34:36 PM [vite] (client) hmr update /src/components/Sidebar.tsx, /src/index.css
+8:34:36 PM [vite] (client) hmr update /src/index.css
+8:34:36 PM [vite] (client) hmr update /src/router/index.tsx, /src/index.css
+8:34:36 PM [vite] Internal server error: Failed to resolve import "../components/GuardLicenseComplianceReport" from "src/router/index.tsx". Does the file exist?
+  Plugin: vite:import-analysis
+  File: D:/Dwight/Capstone Main/DasiaAIO-Frontend/src/router/index.tsx:20:55
+  45 |  const FirearmComplianceReport = lazy(_c19 = () => import("../components/FirearmComplianceReport"));
+  46 |  _c20 = FirearmComplianceReport;
+  47 |  const GuardLicenseComplianceReport = lazy(_c21 = () => import("../components/GuardLicenseComplianceReport"));
+     |                                                                ^
+  48 |  _c22 = GuardLicenseComplianceReport;
+  49 |  const FirearmAllocation = lazy(_c23 = () => import("../components/FirearmAllocation"));
+      at TransformPluginContext._formatLog (file:///D:/Dwight/Capstone%20Main/DasiaAIO-Frontend/node_modules/vite/dist/node/chunks/config.js:29079:43)
+      at TransformPluginContext.error (file:///D:/Dwight/Capstone%20Main/DasiaAIO-Frontend/node_modules/vite/dist/node/chunks/config.js:29076:14)
+      at normalizeUrl (file:///D:/Dwight/Capstone%20Main/DasiaAIO-Frontend/node_modules/vite/dist/node/chunks/config.js:27199:18)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async file:///D:/Dwight/Capstone%20Main/DasiaAIO-Frontend/node_modules/vite/dist/node/chunks/config.js:27257:32
+      at async Promise.all (index 21)
+      at async TransformPluginContext.transform (file:///D:/Dwight/Capstone%20Main/DasiaAIO-Frontend/node_modules/vite/dist/node/chunks/config.js:27225:4)
+      at async EnvironmentPluginContainer.transform (file:///D:/Dwight/Capstone%20Main/DasiaAIO-Frontend/node_modules/vite/dist/node/chunks/config.js:28877:14)
+      at async loadAndTransform (file:///D:/Dwight/Capstone%20Main/DasiaAIO-Frontend/node_modules/vite/dist/node/chunks/config.js:22746:26)
+      at async viteTransformMiddleware (file:///D:/Dwight/Capstone%20Main/DasiaAIO-Frontend/node_modules/vite/dist/node/chunks/config.js:24622:20)
+8:34:36 PM [vite] Internal server error: Failed to resolve import "../components/GuardLicenseComplianceReport" from "src/router/index.tsx". Does the file exist?
+  Plugin: vite:import-analysis
+  File: D:/Dwight/Capstone Main/DasiaAIO-Frontend/src/router/index.tsx:20:55
+  45 |  const FirearmComplianceReport = lazy(_c19 = () => import("../components/FirearmComplianceReport"));
+  46 |  _c20 = FirearmComplianceReport;
+  47 |  const GuardLicenseComplianceReport = lazy(_c21 = () => import("../components/GuardLicenseComplianceReport"));
+     |                                                                ^
+  48 |  _c22 = GuardLicenseComplianceReport;
+  49 |  const FirearmAllocation = lazy(_c23 = () => import("../components/FirearmAllocation"));
+      at TransformPluginContext._formatLog (file:///D:/Dwight/Capstone%20Main/DasiaAIO-Frontend/node_modules/vite/dist/node/chunks/config.js:29079:43)
+      at TransformPluginContext.error (file:///D:/Dwight/Capstone%20Main/DasiaAIO-Frontend/node_modules/vite/dist/node/chunks/config.js:29076:14)
+      at normalizeUrl (file:///D:/Dwight/Capstone%20Main/DasiaAIO-Frontend/node_modules/vite/dist/node/chunks/config.js:27199:18)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async file:///D:/Dwight/Capstone%20Main/DasiaAIO-Frontend/node_modules/vite/dist/node/chunks/config.js:27257:32
+      at async Promise.all (index 21)
+      at async TransformPluginContext.transform (file:///D:/Dwight/Capstone%20Main/DasiaAIO-Frontend/node_modules/vite/dist/node/chunks/config.js:27225:4)
+      at async EnvironmentPluginContainer.transform (file:///D:/Dwight/Capstone%20Main/DasiaAIO-Frontend/node_modules/vite/dist/node/chunks/config.js:28877:14)
+      at async loadAndTransform (file:///D:/Dwight/Capstone%20Main/DasiaAIO-Frontend/node_modules/vite/dist/node/chunks/config.js:22746:26)
+      at async viteTransformMiddleware (file:///D:/Dwight/Capstone%20Main/DasiaAIO-Frontend/node_modules/vite/dist/node/chunks/config.js:24622:20)
+8:35:51 PM [vite] (client) hmr update /src/App.tsx
+8:35:51 PM [vite] (client) hmr update /src/index.css
+8:54:40 PM [vite] (client) hmr update /src/router/index.tsx, /src/index.css
+8:54:40 PM [vite] (client) hmr update /src/index.css, /src/components/layout/AppShell.tsx
+8:57:08 PM [vite] (client) hmr update /src/router/index.tsx, /src/index.css
+8:57:08 PM [vite] (client) hmr update /src/index.css, /src/components/layout/AppShell.tsx
+8:59:20 PM [vite] (client) hmr update /src/index.css
+9:01:50 PM [vite] (client) hmr update /src/index.css, /src/components/admin/SuperadminDashboard.tsx
+9:09:22 PM [vite] (client) hmr update /src/index.css, /src/components/dashboard/CommandCenterDashboard.tsx
+9:09:22 PM [vite] (client) hmr update /src/index.css, /src/components/dashboard/CommandCenterDashboard.tsx
+9:09:22 PM [vite] (client) hmr update /src/index.css, /src/components/dashboard/SystemStatusBanner.tsx
+9:11:52 PM [vite] (client) hmr update /src/index.css, /src/components/dashboard/CommandCenterDashboard.tsx
+9:18:11 PM [vite] (client) hmr update /src/index.css, /src/components/NotificationPanel.tsx
+9:18:11 PM [vite] (client) hmr update /src/index.css, /src/components/inbox/SupervisorInboxPanel.tsx
+9:18:11 PM [vite] (client) hmr update /src/index.css, /src/components/inbox/AdminInboxPanel.tsx
+9:18:11 PM [vite] (client) hmr update /src/index.css, /src/components/inbox/SuperadminInboxPanel.tsx
+9:25:05 PM [vite] (client) hmr update /src/index.css, /src/components/NotificationPanel.tsx
+9:25:05 PM [vite] (client) hmr update /src/index.css, /src/components/inbox/ActionInbox.tsx
+9:27:39 PM [vite] (client) hmr update /src/index.css, /src/components/NotificationPanel.tsx
+9:31:42 PM [vite] (client) hmr update /src/index.css, /src/components/feedback/FeedbackDashboard.tsx
+9:37:27 PM [vite] (client) hmr update /src/index.css, /src/components/admin/SuperadminDashboard.tsx, /src/components/admin/ResourceManagementPanel.tsx, /src/components/dashboard/OperationalMapPanel.tsx
+9:38:16 PM [vite] (client) hmr update /src/index.css, /src/components/dashboard/OperationalMapPanel.tsx
+9:38:47 PM [vite] (client) hmr update /src/index.css, /src/components/dashboard/OperationalMapPanel.tsx
+9:40:19 PM [vite] (client) hmr update /src/index.css, /src/components/dashboard/OperationalMapPanel.tsx
+9:40:40 PM [vite] (client) hmr update /src/index.css, /src/components/dashboard/OperationalMapPanel.tsx
+9:41:12 PM [vite] (client) hmr update /src/index.css, /src/components/dashboard/OperationalMapPanel.tsx
+9:42:34 PM [vite] (client) hmr update /src/index.css, /src/components/dashboard/OperationalMapPanel.tsx
+9:48:21 PM [vite] (client) hmr update /src/index.css, /src/components/dashboard/OperationalMapPanel.tsx
+9:51:25 PM [vite] (client) hmr update /src/index.css, /src/components/dashboard/OperationalMapPanel.tsx
+9:55:27 PM [vite] (client) hmr update /src/index.css, /src/components/dashboard/OperationalMapPanel.tsx
+9:57:07 PM [vite] (client) hmr update /src/index.css, /src/components/dashboard/OperationalMapPanel.tsx
+9:57:51 PM [vite] (client) hmr update /src/index.css, /src/components/dashboard/OperationalMapPanel.tsx
+10:01:50 PM [vite] (client) hmr update /src/index.css, /src/components/dashboard/OperationalMapPanel.tsx
+10:04:32 PM [vite] (client) hmr update /src/index.css, /src/components/dashboard/OperationalMapPanel.tsx
+10:04:42 PM [vite] (client) hmr update /src/index.css, /src/components/dashboard/OperationalMapPanel.tsx
+10:08:18 PM [vite] (client) hmr update /src/index.css, /src/components/dashboard/OperationalMapPanel.tsx
+10:08:18 PM [vite] (client) hmr update /src/index.css, /src/components/admin/SuperadminDashboard.tsx
+10:08:45 PM [vite] (client) hmr update /src/index.css
+10:09:47 PM [vite] (client) hmr update /src/index.css, /src/components/dashboard/OperationalMapPanel.tsx
+10:09:47 PM [vite] (client) hmr update /src/index.css, /src/components/admin/SuperadminDashboard.tsx
+10:09:47 PM [vite] (client) hmr update /src/index.css
+10:24:21 PM [vite] (client) hmr update /src/index.css, /src/components/dashboard/OperationalMapPanel.tsx
+10:35:09 PM [vite] (client) hmr update /src/index.css, /src/components/ArmoredCarDashboard.tsx
+10:42:54 PM [vite] (client) hmr update /src/index.css, /src/components/ArmoredCarDashboard.tsx
+10:48:04 PM [vite] (client) hmr update /src/index.css, /src/components/ArmoredCarDashboard.tsx
+10:53:13 PM [vite] (client) hmr update /src/index.css
+11:09:45 PM [vite] (client) hmr update /src/index.css
+11:15:16 PM [vite] (client) page reload playwright-report/index.html
+11:15:16 PM [vite] (client) page reload playwright-report/index.html
+11:15:16 PM [vite] (client) page reload playwright-report/index.html
+11:15:38 PM [vite] (client) page reload playwright-report/index.html
+11:15:58 PM [vite] (client) hmr update /src/index.css
+11:16:17 PM [vite] (client) page reload playwright-report/index.html
+11:43:08 PM [vite] (client) hmr update /src/index.css, /src/components/guards/UserDashboard.tsx
+11:43:08 PM [vite] (client) hmr update /src/index.css
+11:51:53 PM [vite] (client) page reload playwright-report/index.html

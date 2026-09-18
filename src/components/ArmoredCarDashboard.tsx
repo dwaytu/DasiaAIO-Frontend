@@ -12,6 +12,7 @@ import { getSidebarNav } from '../config/navigation'
 interface ArmoredCar {
   id: string
   license_plate: string
+  plate_number?: string | null
   vin: string
   model: string
   manufacturer: string
@@ -542,6 +543,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                       <thead className="thead-glass">
                         <tr>
                           <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-text-primary border-b-2 border-border text-xs md:text-sm uppercase tracking-wider">A/C number</th>
+                          <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-text-primary border-b-2 border-border text-xs md:text-sm uppercase tracking-wider">Plate number</th>
                           <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-text-primary border-b-2 border-border text-xs md:text-sm uppercase tracking-wider">Driver</th>
                           <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-text-primary border-b-2 border-border text-xs md:text-sm uppercase tracking-wider">Status</th>
                         </tr>
@@ -550,6 +552,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                         {cars.map((car) => (
                           <tr key={car.id} className="border-b border-border hover:bg-surface-hover">
                             <td className="px-2 md:px-4 py-2 md:py-3 text-text-primary text-xs md:text-sm">{car.license_plate}</td>
+                            <td className="px-2 md:px-4 py-2 md:py-3 text-text-primary text-xs md:text-sm">{car.plate_number || 'Not provided'}</td>
                             <td className="px-2 md:px-4 py-2 md:py-3 text-text-primary text-xs md:text-sm">
                               {(() => {
                                 const assignment = driverAssignments.find((item) => item.car_id === car.id)

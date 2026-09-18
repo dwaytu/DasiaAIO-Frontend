@@ -36,6 +36,7 @@ interface Firearm {
 interface ArmoredCar {
   id: string
   license_plate: string
+  plate_number?: string | null
   model: string
   manufacturer: string
   status: string
@@ -1052,7 +1053,7 @@ const VehiclesTab: FC = () => {
   const [success, setSuccess] = useState('')
   const [showAddModal, setShowAddModal] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const [newCar, setNewCar] = useState({ licensePlate: '' })
+  const [newCar, setNewCar] = useState({ licensePlate: '', plateNumber: '' })
 
   useEffect(() => {
     fetchCars()
@@ -1086,7 +1087,7 @@ const VehiclesTab: FC = () => {
       })
       if (!response.ok) throw new Error('Failed to add vehicle')
       setSuccess('Vehicle added successfully')
-      setNewCar({ licensePlate: '' })
+      setNewCar({ licensePlate: '', plateNumber: '' })
       setShowAddModal(false)
       await fetchCars()
     } catch (err) {
@@ -1122,7 +1123,7 @@ const VehiclesTab: FC = () => {
             <span className="soc-chip border border-info-border bg-info-bg text-info-text">{cars.length} registered</span>
           </div>
           <h2 className="mt-1 text-xl font-black uppercase tracking-wide text-text-primary">Vehicle fleet</h2>
-          <p className="mt-1 text-sm text-text-secondary">Armored vehicles are added manually and tracked by A/C number.</p>
+          <p className="mt-1 text-sm text-text-secondary">Armored vehicles are added manually with an internal A/C number and road plate number.</p>
         </div>
         <button
           type="button"
@@ -1143,12 +1144,18 @@ const VehiclesTab: FC = () => {
           if (!submitting) setShowAddModal(false)
         }}
         title="Add Vehicle"
-        subtitle="Register an armored vehicle by A/C number"
+        subtitle="Register an armored vehicle by A/C number and plate number"
       >
         <form onSubmit={addCar} noValidate className="space-y-3">
-          <div>
-            <label htmlFor="vehicle-plate" className="block text-xs font-semibold text-text-secondary mb-1">A/C number</label>
-            <input id="vehicle-plate" type="text" required autoFocus value={newCar.licensePlate} onChange={(e) => setNewCar({ licensePlate: e.target.value })} className="w-full px-3 py-2 text-sm border border-border rounded bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-(--color-focus-ring)" />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label htmlFor="vehicle-ac-number" className="block text-xs font-semibold text-text-secondary mb-1">A/C number</label>
+              <input id="vehicle-ac-number" type="text" required autoFocus value={newCar.licensePlate} onChange={(e) => setNewCar((previous) => ({ ...previous, licensePlate: e.target.value }))} className="w-full px-3 py-2 text-sm border border-border rounded bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-(--color-focus-ring)" />
+            </div>
+            <div>
+              <label htmlFor="vehicle-plate-number" className="block text-xs font-semibold text-text-secondary mb-1">Plate number</label>
+              <input id="vehicle-plate-number" type="text" required value={newCar.plateNumber} onChange={(e) => setNewCar((previous) => ({ ...previous, plateNumber: e.target.value }))} className="w-full px-3 py-2 text-sm border border-border rounded bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-(--color-focus-ring)" />
+            </div>
           </div>
           <button type="submit" disabled={submitting} className="soc-btn-primary w-full disabled:cursor-not-allowed disabled:opacity-60">
             {submitting ? 'Adding...' : 'Add Vehicle'}
@@ -1164,6 +1171,7 @@ const VehiclesTab: FC = () => {
             <thead className="thead-glass">
               <tr>
                 <th className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">A/C number</th>
+                <th className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Plate number</th>
                 <th className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Status</th>
                 <th className="px-4 py-3 text-right font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Actions</th>
               </tr>
@@ -1172,6 +1180,7 @@ const VehiclesTab: FC = () => {
               {cars.map((car) => (
                 <tr key={car.id} className="border-b border-border hover:bg-surface-hover">
                   <td className="px-4 py-3 text-text-primary text-sm">{car.license_plate}</td>
+                  <td className="px-4 py-3 text-text-primary text-sm">{car.plate_number || 'Not provided'}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold ${
                       car.status === 'available' ? 'bg-success-bg text-success-text ring-1 ring-success-border' :

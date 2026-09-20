@@ -1,9 +1,10 @@
 import { FC, useCallback, useEffect, useMemo, useState } from 'react'
 import { OperationalEventProvider } from '../../context/OperationalEventContext'
-import { ShieldAlert, Siren, TimerReset } from 'lucide-react'
+import { ClipboardCheck, ShieldAlert, Siren, TimerReset, UserRoundCheck, Wrench } from 'lucide-react'
 import SectionPanel from './SectionPanel'
 import QuickActionsPanel, { QuickActionItem } from './QuickActionsPanel'
 import OperationalSummaryStrip from './OperationalSummaryStrip'
+import AttentionQueue, { AttentionItem } from './AttentionQueue'
 
 import LiveOperationsFeed, { LiveFeedItem } from './LiveOperationsFeed'
 import IncidentAlertFeed from './IncidentAlertFeed'
@@ -36,6 +37,7 @@ import { resolveIncidentSiteName } from '../../utils/incidentSite'
 
 interface CommandCenterDashboardProps {
   quickActions: QuickActionItem[]
+  onNavigate?: (view: string) => void
 }
 
 const humanizeStatus = (status: string): string => {
@@ -49,7 +51,7 @@ const humanizeStatus = (status: string): string => {
   return map[status?.toLowerCase()] || status
 }
 
-const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions }) => {
+const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions, onNavigate }) => {
   const summaryState = useOpsSummary()
   const shiftsState = useOpsShifts()
   const assetsState = useOpsAssets()
@@ -277,6 +279,91 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
     return combined.slice(0, 25)
   }, [alerts, displayIncidents, displayShifts])
 
+  const attentionItems = useMemo<AttentionItem[]>(() => {
+    const items: AttentionItem[] = []
+    const navigateTo = (view: string) => (onNavigate ? () => onNavigate(view) : undefined)
+    const hasUrgentIncident = incidentAlerts.some((item) => item.severity === 'critical' || item.isPanic)
+
+    if (activeIncidents > 0) {
+      items.push({
+        id: 'active-incidents',
+        title: `${activeIncidents} active incident${activeIncidents === 1 ? '' : 's'}`,
+        detail: hasUrgentIncident
+          ? 'A critical or emergency incident needs review.'
+          : 'Open the incident response view and confirm the next status update.',
+        priority: hasUrgentIncident ? 'urgent' : 'high',
+        icon: Siren,
+        actionLabel: 'Review incidents',
+        onAction: navigateTo('operations-map'),
+      })
+    }
+
+    if (summary.guardsAbsentToday > 0) {
+      items.push({
+        id: 'absent-guards',
+        title: `${summary.guardsAbsentToday} guard${summary.guardsAbsentToday === 1 ? '' : 's'} absent today`,
+        detail: 'Confirm coverage and arrange a replacement for affected posts.',
+        priority: 'urgent',
+        icon: UserRoundCheck,
+        actionLabel: 'Review coverage',
+        onAction: navigateTo('schedule'),
+      })
+    }
+
+    if (summary.overdueFirearmReturns > 0) {
+      items.push({
+        id: 'overdue-firearms',
+        title: `${summary.overdueFirearmReturns} overdue firearm return${summary.overdueFirearmReturns === 1 ? '' : 's'}`,
+        detail: 'Confirm custody status and follow up with the assigned guard.',
+        priority: 'high',
+        icon: ShieldAlert,
+        actionLabel: 'Review allocation',
+        onAction: navigateTo('allocation'),
+      })
+    }
+
+    if (summary.pendingGuardApprovals > 0) {
+      items.push({
+        id: 'pending-guard-approvals',
+        title: `${summary.pendingGuardApprovals} guard approval${summary.pendingGuardApprovals === 1 ? '' : 's'} pending`,
+        detail: 'Review registration details before granting access to the system.',
+        priority: 'high',
+        icon: ClipboardCheck,
+        actionLabel: 'Review approvals',
+        onAction: navigateTo('approvals'),
+      })
+    }
+
+    if (summary.vehiclesInMaintenance > 0) {
+      items.push({
+        id: 'vehicles-maintenance',
+        title: `${summary.vehiclesInMaintenance} vehicle${summary.vehiclesInMaintenance === 1 ? '' : 's'} in maintenance`,
+        detail: 'Check fleet availability before assigning a vehicle to a mission.',
+        priority: 'normal',
+        icon: Wrench,
+        actionLabel: 'Open fleet',
+        onAction: navigateTo('armored-cars'),
+      })
+    }
+
+    if (summary.expiringGuardPermits > 0) {
+      items.push({
+        id: 'expiring-permits',
+        title: `${summary.expiringGuardPermits} firearm permit${summary.expiringGuardPermits === 1 ? '' : 's'} expiring soon`,
+        detail: 'Review compliance before the permits affect future allocations.',
+        priority: 'normal',
+        icon: ShieldAlert,
+        actionLabel: 'Review permits',
+        onAction: navigateTo('permits'),
+      })
+    }
+
+    const priorityOrder: Record<AttentionItem['priority'], number> = { urgent: 0, high: 1, normal: 2 }
+    return items
+      .sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority])
+      .slice(0, 6)
+  }, [activeIncidents, incidentAlerts, onNavigate, summary.expiringGuardPermits, summary.guardsAbsentToday, summary.overdueFirearmReturns, summary.pendingGuardApprovals, summary.vehiclesInMaintenance])
+
   if (isBootstrapping) {
     return (
       <DashboardLoadingState
@@ -290,7 +377,7 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
 
   return (
     <OperationalEventProvider>
-      <main className="space-y-4" aria-label="Security operations command center overview">
+      <section className="space-y-4" aria-label="Security operations command center overview">
         {sosIncident ? (
           <SosAlertDialog
             incident={sosIncident}
@@ -298,6 +385,11 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
             onDismiss={() => handleDismissSos(sosIncident.id)}
           />
         ) : null}
+        <AttentionQueue
+          items={attentionItems}
+          isDegraded={summaryState.degraded || Boolean(incidentsState.error)}
+        />
+
         <SystemStatusBanner
           status={systemHealthState}
           guardsActive={summary.activeGuardsOnDuty}
@@ -309,8 +401,8 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
 
       <section className="animate-section-enter soc-surface p-4 md:p-5" aria-labelledby="command-center-title">
         <SectionHeader
-          title="Security Operations Command Center"
-          subtitle="Unified tactical view for incidents, deployments, and operational risk activity."
+          title="Operational status"
+          subtitle="Current system condition, incidents, and the actions available to command staff."
           actions={
             <div className="flex items-center gap-2">
               <StatusBadge label={`System ${systemStatus}`} tone={systemTone === 'danger' ? 'danger' : systemTone === 'warning' ? 'warning' : 'success'} />
@@ -360,7 +452,11 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
           <QuickActionsPanel actions={quickActions} />
         </div>
 
-        <div className="mt-4">
+        <div className="mt-4 border-t border-border-subtle pt-4" aria-labelledby="today-operations-title">
+          <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+            <h3 id="today-operations-title" className="text-[11px] font-bold uppercase tracking-[0.16em] text-text-tertiary">Today's operations</h3>
+            <p className="text-xs text-text-secondary">Current field coverage and active work.</p>
+          </div>
           <OperationalSummaryStrip
             metrics={[
               { label: 'Active Guards', value: summary.activeGuardsOnDuty, tone: 'success', hint: staleNote },
@@ -372,45 +468,8 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
       </section>
 
       <SectionPanel
-        title="Live Operations"
-        subtitle="Streaming feed, incident escalation, and severity monitoring"
-        icon={<Siren className="h-4 w-4" aria-hidden="true" />}
-      >
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-          <LiveOperationsFeed
-            items={visibleLiveOperationsItems}
-            onDismiss={handleDismissFeedItem}
-            onUpdateIncidentStatus={handleIncidentStatusUpdate}
-          />
-          <IncidentAlertFeed
-            alerts={incidentAlerts}
-            nowLabel={clock.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-            onUpdateStatus={handleIncidentStatusUpdate}
-          />
-        </div>
-        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <IncidentSeverityMonitoringPanel
-            incidents={displayIncidents}
-            loading={incidentsState.loading}
-            error={incidentsState.error}
-            lastUpdated={incidentsState.lastUpdated || staleNote}
-          />
-          <div>
-            <PredictiveAlertsPanel
-              alerts={predictiveAlertsState.alerts}
-              loading={predictiveAlertsState.loading}
-              error={predictiveAlertsState.error}
-              lastUpdated={predictiveAlertsState.lastUpdated || staleNote}
-              title="Operational Risk Alerts"
-              subtitle="Rule-based alerts and emerging risk indicators"
-            />
-          </div>
-        </div>
-      </SectionPanel>
-
-      <SectionPanel
-        title="Operations Management"
-        subtitle="Shift execution and staffing resilience with attendance risk support"
+        title="Today's Operations"
+        subtitle="Shift execution, deployment coverage, and staffing follow-up for the current day"
         icon={<TimerReset className="h-4 w-4" aria-hidden="true" />}
       >
         <div className="mb-6">
@@ -440,6 +499,43 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
       </SectionPanel>
 
       <SectionPanel
+        title="Detailed Monitoring"
+        subtitle="Live incident feed, severity monitoring, and potential issues that may require attention"
+        icon={<Siren className="h-4 w-4" aria-hidden="true" />}
+      >
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+          <LiveOperationsFeed
+            items={visibleLiveOperationsItems}
+            onDismiss={handleDismissFeedItem}
+            onUpdateIncidentStatus={handleIncidentStatusUpdate}
+          />
+          <IncidentAlertFeed
+            alerts={incidentAlerts}
+            nowLabel={clock.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+            onUpdateStatus={handleIncidentStatusUpdate}
+          />
+        </div>
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <IncidentSeverityMonitoringPanel
+            incidents={displayIncidents}
+            loading={incidentsState.loading}
+            error={incidentsState.error}
+            lastUpdated={incidentsState.lastUpdated || staleNote}
+          />
+          <div>
+            <PredictiveAlertsPanel
+              alerts={predictiveAlertsState.alerts}
+              loading={predictiveAlertsState.loading}
+              error={predictiveAlertsState.error}
+              lastUpdated={predictiveAlertsState.lastUpdated || staleNote}
+              title="Operational Risk Alerts"
+              subtitle="Potential issues that may require attention"
+            />
+          </div>
+        </div>
+      </SectionPanel>
+
+      <SectionPanel
         title="Asset Monitoring"
         subtitle="Maintenance outlook and firearm readiness across active operations"
         icon={<ShieldAlert className="h-4 w-4" aria-hidden="true" />}
@@ -465,7 +561,7 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions 
           Command center loaded with partial data. Last service check: {serviceState.services.lastChecked}.
         </div>
       )}
-      </main>
+      </section>
     </OperationalEventProvider>
   )
 }

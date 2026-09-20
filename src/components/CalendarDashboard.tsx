@@ -1,20 +1,20 @@
 import { useState, useEffect, useMemo, useCallback, FC } from 'react'
-import { Calendar } from 'lucide-react'
+import { Calendar, CarFront, Shield, Target, Wrench } from 'lucide-react'
 import { API_BASE_URL } from '../config'
 import { parseResponseBody, getAuthHeaders } from '../utils/api'
 import OperationalShell from './layout/OperationalShell'
 import type { User } from '../context/AuthContext'
 import SecurityBentoGrid from './SecurityBentoGrid'
 import BentoGrid, { BentoCard } from './BentoGrid'
-import SectionHeader from './dashboard/ui/SectionHeader'
 import Timeline from './dashboard/ui/Timeline'
-import StatCard from './dashboard/ui/StatCard'
 import StatusBadge from './dashboard/ui/StatusBadge'
 import LiveFreshnessPill from './dashboard/ui/LiveFreshnessPill'
 import { isElevatedRole } from '../types/auth'
 import { getSidebarNav } from '../config/navigation'
 import EmptyState from './shared/EmptyState'
 import LoadingSkeleton from './shared/LoadingSkeleton'
+import OperationalPageHeader from './shared/OperationalPageHeader'
+import OperationalSummaryBand from './shared/OperationalSummaryBand'
 import { logError } from '../utils/logger'
 
 interface CalendarDashboardProps {
@@ -74,9 +74,9 @@ type CalendarEvent = ShiftEvent | TripEvent | MissionEvent | MaintenanceEvent
 
 const EVENT_COLORS: Record<string, { bg: string; border: string; text: string; dot: string; chip: string }> = {
   shift:       { bg: 'bg-(--color-info-bg)', border: 'border-(--color-info-border)', text: 'text-(--color-info-text)', dot: 'bg-(--color-info-text)', chip: 'soc-chip status-info' },
-  trip:        { bg: 'bg-(--color-warning-bg)', border: 'border-(--color-warning-border)', text: 'text-(--color-warning-text)', dot: 'bg-(--color-warning-text)', chip: 'soc-chip status-warning' },
+  trip:        { bg: 'tone-vehicle-surface', border: 'border-border', text: 'text-text-primary', dot: 'bg-(--color-info-text)', chip: 'soc-chip tone-vehicle' },
   mission:     { bg: 'bg-(--color-surface-elevated)', border: 'border-(--color-border-elevated)', text: 'text-(--color-text-primary)', dot: 'bg-(--color-text-primary)', chip: 'soc-chip status-neutral' },
-  maintenance: { bg: 'bg-(--color-danger-bg)', border: 'border-(--color-danger-border)', text: 'text-(--color-danger-text)', dot: 'bg-(--color-danger-text)', chip: 'soc-chip status-danger' },
+  maintenance: { bg: 'tone-maintenance-surface', border: 'border-border', text: 'text-text-primary', dot: 'bg-(--color-text-secondary)', chip: 'soc-chip tone-maintenance' },
 }
 
 const TYPE_LABELS: Record<string, string> = {
@@ -92,7 +92,7 @@ const EVENT_STATE_META: Record<OperationalState, { label: string; tone: 'success
   scheduled: { label: 'Scheduled', tone: 'analytics' },
   active: { label: 'In Progress', tone: 'success' },
   attention: { label: 'Needs Attention', tone: 'danger' },
-  completed: { label: 'Completed', tone: 'warning' },
+  completed: { label: 'Completed', tone: 'success' },
 }
 
 const ATTENTION_STATUS_TOKENS = ['absent', 'no_show', 'failed', 'overdue', 'cancelled', 'critical']
@@ -493,11 +493,14 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
       error={error || undefined}
     >
           <section className="soc-surface mb-6 p-4 md:p-5">
-            <SectionHeader
-              title="Operations Calendar"
-              subtitle={isAdmin ? 'View all shifts, trips, missions and maintenance windows in one timeline.' : 'Track your upcoming shifts and assignments in a single schedule view.'}
+            <OperationalPageHeader
+              eyebrow={isAdmin ? 'Operations control' : 'Field schedule'}
+              title={isAdmin ? 'Operations Calendar' : 'My Schedule Calendar'}
+              description={isAdmin ? 'View shifts, trips, missions, and maintenance windows in one operational timeline.' : 'Track upcoming shifts and assignments in a single schedule view.'}
+              icon={Calendar}
+              status={<StatusBadge label={`${selectedDateAttentionCount} need attention`} tone={selectedDateAttentionCount > 0 ? 'danger' : 'success'} />}
               actions={
-                <div className="flex flex-wrap items-center gap-2">
+                <>
                   <LiveFreshnessPill updatedAt={lastRefreshAt} label="Calendar feed" />
                   <button
                     onClick={() => {
@@ -507,14 +510,18 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
                   >
                     Refresh
                   </button>
-                </div>
+                </>
               }
             />
-            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <StatCard label="Guard Shifts" value={eventStats.shift} tone="guard" />
-              <StatCard label="Vehicle Trips" value={eventStats.trip} tone="vehicle" />
-              <StatCard label="Missions" value={eventStats.mission} tone="mission" />
-              <StatCard label="Maintenance" value={eventStats.maintenance} tone="maintenance" />
+            <div className="mt-4">
+              <OperationalSummaryBand
+                items={[
+                  { label: 'Guard shifts', value: eventStats.shift, tone: 'neutral', icon: Shield },
+                  { label: 'Vehicle trips', value: eventStats.trip, tone: 'neutral', icon: CarFront },
+                  { label: 'Missions', value: eventStats.mission, tone: 'neutral', icon: Target },
+                  { label: 'Maintenance', value: eventStats.maintenance, tone: 'neutral', icon: Wrench },
+                ]}
+              />
             </div>
           </section>
 
@@ -586,7 +593,7 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
                 <StatusBadge label="Scheduled" tone="analytics" />
                 <StatusBadge label="In Progress" tone="success" />
                 <StatusBadge label="Needs Attention" tone="danger" />
-                <StatusBadge label="Completed" tone="warning" />
+                <StatusBadge label="Completed" tone="success" />
               </div>
             </div>
           </div>
@@ -760,7 +767,11 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
                                 <div className="flex flex-wrap items-center gap-2">
                                   <StatusBadge
                                     label={ev.status}
-                                    tone={ev.status === 'completed' ? 'success' : ev.status === 'cancelled' ? 'danger' : 'warning'}
+                                    tone={operationalState === 'attention'
+                                      ? 'danger'
+                                      : operationalState === 'active' || operationalState === 'completed'
+                                        ? 'success'
+                                        : 'analytics'}
                                   />
                                   <StatusBadge label={operationalMeta.label} tone={operationalMeta.tone} />
                                 </div>
@@ -788,25 +799,6 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
 
             </BentoCard>
 
-            {/* Monthly summary — admin only */}
-            {isAdmin && (
-              <BentoCard colSpan={2}>
-                <h4 className="text-text-primary text-base font-bold mb-4">This Month Summary</h4>
-                <div className="grid grid-cols-2 gap-3">
-                  {Object.entries(TYPE_LABELS).map(([key, label]) => {
-                    const count = eventStats[key] || 0
-                    return (
-                      <StatCard
-                        key={key}
-                        label={`${label}s`}
-                        value={count}
-                        tone={key === 'shift' ? 'guard' : key === 'trip' ? 'vehicle' : key === 'mission' ? 'mission' : 'maintenance'}
-                      />
-                    )
-                  })}
-                </div>
-              </BentoCard>
-            )}
           </BentoGrid>
 
           {/* Event detail modal */}
@@ -892,4 +884,3 @@ const Row: FC<{ label: string; value: string; capitalize?: boolean }> = ({ label
 )
 
 export default CalendarDashboard
-

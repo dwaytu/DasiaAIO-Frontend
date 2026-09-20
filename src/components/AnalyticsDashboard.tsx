@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useId, useRef, FC } from 'react'
-import { BarChart3, TrendingUp, Filter, RefreshCw, Printer } from 'lucide-react'
+import { BarChart3, ClipboardCheck, Filter, Printer, ShieldCheck, Target, Truck, UsersRound } from 'lucide-react'
 import { API_BASE_URL } from '../config'
 import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
 import { sanitizeErrorMessage } from '../utils/sanitize'
@@ -10,9 +10,10 @@ import EmptyState from './shared/EmptyState'
 import DashboardCard from './dashboard/ui/DashboardCard'
 import StatusBadge from './dashboard/ui/StatusBadge'
 import LiveFreshnessPill from './dashboard/ui/LiveFreshnessPill'
-import MetricStatCard from './dashboard/ui/MetricStatCard'
 import { DashboardLoadingState } from './dashboard/ui/DashboardLoadingState'
-import { formatCompactNumber, formatRatioLabel } from '../utils/numberFormat'
+import OperationalPageHeader from './shared/OperationalPageHeader'
+import OperationalSummaryBand, { type OperationalSummaryItem } from './shared/OperationalSummaryBand'
+import { formatCompactNumber } from '../utils/numberFormat'
 import { resolveUnavailable } from '../utils/analyticsPresentation'
 
 interface AnalyticsDashboardProps {
@@ -559,6 +560,71 @@ const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onVie
     ? Math.round((analytics.mission_stats.completed_missions_this_month / analytics.mission_stats.total_missions_this_month) * 100)
     : 0
 
+  const operationalSummary: OperationalSummaryItem[] = [
+    {
+      label: 'Missions this month',
+      value: formatCompactNumber(analytics.mission_stats.total_missions_this_month),
+      detail: `${completedPercent}% completed`,
+      tone: missionTrendTone,
+      icon: ClipboardCheck,
+    },
+    {
+      label: 'Guards on duty',
+      value: formatCompactNumber(analytics.overview.active_guards),
+      detail: `${formatCompactNumber(analytics.overview.total_guards)} rostered`,
+      tone: 'success',
+      icon: UsersRound,
+    },
+    {
+      label: 'Active missions',
+      value: formatCompactNumber(analytics.overview.active_missions),
+      detail: `${formatCompactNumber(analytics.overview.completed_missions)} completed overall`,
+      tone: 'info',
+      icon: Target,
+    },
+    {
+      label: 'Firearms issued',
+      value: formatCompactNumber(analytics.overview.allocated_firearms),
+      detail: `${formatCompactNumber(analytics.overview.total_firearms)} in inventory`,
+      tone: 'warning',
+      icon: ShieldCheck,
+    },
+    {
+      label: 'Vehicles deployed',
+      value: formatCompactNumber(analytics.overview.deployed_vehicles),
+      detail: `${formatCompactNumber(analytics.overview.total_vehicles)} in fleet`,
+      tone: 'info',
+      icon: Truck,
+    },
+  ]
+
+  const evaluationSummary: OperationalSummaryItem[] = [
+    {
+      label: 'Average rating',
+      value: `${evaluationAnalytics.average_rating.toFixed(1)}/5`,
+      detail: `${formatCompactNumber(evaluationAnalytics.total_evaluations)} evaluation${evaluationAnalytics.total_evaluations === 1 ? '' : 's'}`,
+      tone: 'info',
+    },
+    {
+      label: 'Guards evaluated',
+      value: formatCompactNumber(evaluationAnalytics.guards_evaluated),
+      detail: `Last ${evaluationAnalytics.period_days} days`,
+      tone: 'success',
+    },
+    {
+      label: 'Evaluation records',
+      value: formatCompactNumber(evaluationAnalytics.total_evaluations),
+      detail: 'Supervisor and administrator entries',
+      tone: 'neutral',
+    },
+    {
+      label: 'Low ratings',
+      value: formatCompactNumber(evaluationAnalytics.low_rating_count),
+      detail: 'Below 3 out of 5',
+      tone: evaluationAnalytics.low_rating_count > 0 ? 'warning' : 'success',
+    },
+  ]
+
   return (
     <OperationalShell
       user={user}
@@ -575,42 +641,33 @@ const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onVie
     <div className="analytics-print-report space-y-6">
       <div className="hidden analytics-print-heading">
         <p className="soc-label">SENTINEL Operational Analytics</p>
-        <h1 className="soc-page-title">Analytics Report</h1>
+        <h2 className="soc-page-title">Analytics Report</h2>
         <p className="mt-1 text-sm">Period: last {dateRange} days | Generated {new Date(lastRefreshAt).toLocaleString()}</p>
       </div>
       {/* ── Hero Zone ──────────────────────────────────── */}
-      <section className="soc-dashboard-card p-5">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="soc-label mb-1">Total Missions This Month</p>
-            <div className="flex items-end gap-3">
-              <span className="text-4xl font-black leading-none text-text-primary">
-                {formatCompactNumber(analytics.mission_stats.total_missions_this_month)}
-              </span>
-              <span className="flex items-center gap-1 text-sm font-semibold text-success">
-                <TrendingUp className="h-4 w-4" aria-hidden="true" />
-                {completedPercent}% completed
-              </span>
-            </div>
-            <p className="mt-1 text-xs text-text-secondary">
-              {formatCompactNumber(analytics.mission_stats.completed_missions_this_month)} completed / {formatCompactNumber(analytics.mission_stats.pending_missions)} pending
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
+      <OperationalPageHeader
+        eyebrow="Operational intelligence"
+        title="Analytics overview"
+        description="Review mission progress, available resources, attendance, and guard feedback for the selected reporting period."
+        icon={BarChart3}
+        status={
+          <>
             <LiveFreshnessPill updatedAt={lastRefreshAt} label="Analytics feed" />
-            <StatusBadge label={`Completion ${missionCompletion.toFixed(1)}%`} tone={missionTrendTone} />
-            <button
-              type="button"
-              onClick={() => window.print()}
-              className="soc-btn soc-btn-neutral analytics-print-control"
-              aria-label="Print analytics report"
-            >
-              <Printer className="h-3.5 w-3.5" aria-hidden="true" />
-              Print
-            </button>
-          </div>
-        </div>
-      </section>
+            <StatusBadge label={`Mission completion ${missionCompletion.toFixed(1)}%`} tone={missionTrendTone} />
+          </>
+        }
+        actions={
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="soc-btn soc-btn-neutral min-h-11 analytics-print-control"
+            aria-label="Print analytics report"
+          >
+            <Printer className="h-4 w-4" aria-hidden="true" />
+            Print report
+          </button>
+        }
+      />
 
       {error && analytics && (
         <div
@@ -630,79 +687,31 @@ const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onVie
       )}
 
       {/* ── KPI Row ────────────────────────────────────── */}
-      <section aria-label="Key performance indicators">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <MetricStatCard
-            label="Guards On Duty"
-            value={formatCompactNumber(analytics.overview.active_guards)}
-            hint={`${formatCompactNumber(analytics.overview.total_guards)} total personnel`}
-            tone="guard"
-            meter={{
-              value: analytics.overview.active_guards,
-              max: analytics.overview.total_guards,
-              label: formatRatioLabel(analytics.overview.active_guards, analytics.overview.total_guards, 'on duty'),
-            }}
-          />
-          <MetricStatCard
-            label="Active Missions"
-            value={formatCompactNumber(analytics.overview.active_missions)}
-            hint={`${formatCompactNumber(analytics.overview.completed_missions)} completed`}
-            tone="mission"
-            meter={{
-              value: analytics.overview.active_missions,
-              max: analytics.overview.total_missions,
-              label: formatRatioLabel(analytics.overview.active_missions, analytics.overview.total_missions, 'active'),
-            }}
-          />
-          <MetricStatCard
-            label="Allocated Firearms"
-            value={formatCompactNumber(analytics.overview.allocated_firearms)}
-            hint={`${formatCompactNumber(analytics.overview.total_firearms)} total assets`}
-            tone="maintenance"
-            meter={{
-              value: analytics.overview.allocated_firearms,
-              max: analytics.overview.total_firearms,
-              label: formatRatioLabel(analytics.overview.allocated_firearms, analytics.overview.total_firearms, 'issued'),
-            }}
-          />
-          <MetricStatCard
-            label="Deployed Vehicles"
-            value={formatCompactNumber(analytics.overview.deployed_vehicles)}
-            hint={`${formatCompactNumber(analytics.overview.total_vehicles)} fleet total`}
-            tone="vehicle"
-            meter={{
-              value: analytics.overview.deployed_vehicles,
-              max: analytics.overview.total_vehicles,
-              label: formatRatioLabel(analytics.overview.deployed_vehicles, analytics.overview.total_vehicles, 'deployed'),
-            }}
-          />
-        </div>
-      </section>
+      <OperationalSummaryBand items={operationalSummary} />
 
       {/* ── Filter Bar ─────────────────────────────────── */}
-      <section className="analytics-print-control soc-dashboard-card flex flex-wrap items-center gap-3 !px-4 !py-3">
-        <Filter className="h-4 w-4 text-text-tertiary" aria-hidden="true" />
-        <div className="flex items-center gap-2">
-          <label htmlFor="analytics-date-range" className="text-xs font-medium text-text-secondary">Period</label>
+      <section className="analytics-print-control flex flex-col gap-3 border-y border-border-subtle py-4 sm:flex-row sm:items-end sm:justify-between" aria-label="Reporting controls">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center border border-border bg-surface-elevated text-text-secondary">
+            <Filter className="h-4 w-4" aria-hidden="true" />
+          </span>
+          <div className="min-w-0">
+            <label htmlFor="analytics-date-range" className="block text-sm font-semibold text-text-primary">Reporting period</label>
+            <p className="text-xs text-text-secondary">Choose the time range for the charts and summaries below.</p>
+          </div>
+        </div>
+        <div className="w-full sm:w-auto">
           <select
             id="analytics-date-range"
             value={dateRange}
             onChange={e => setDateRange(e.target.value)}
-            className="rounded border border-border bg-surface px-2 py-1 text-xs text-text-primary focus:outline-none focus:ring-2 focus:ring-info-border"
+            className="min-h-11 w-full rounded border border-border bg-surface px-3 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-info-border sm:w-44"
           >
             {DATE_RANGE_OPTIONS.map(opt => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
           </select>
         </div>
-        <button
-          type="button"
-          onClick={handleRetry}
-          className="ml-auto flex items-center gap-1.5 rounded border border-border bg-surface px-3 py-1 text-xs font-medium text-text-secondary hover:bg-surface-elevated focus:outline-none focus:ring-2 focus:ring-info-border"
-        >
-          <RefreshCw className="h-3 w-3" aria-hidden="true" />
-          Refresh
-        </button>
       </section>
 
       {/* ── Charts Row ─────────────────────────────────── */}
@@ -747,32 +756,7 @@ const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onVie
       </section>
 
       <section aria-label="Guard evaluation analytics" className="space-y-3">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <MetricStatCard
-            label="Average Guard Rating"
-            value={`${evaluationAnalytics.average_rating.toFixed(1)}/5`}
-            hint={`Across ${evaluationAnalytics.total_evaluations} evaluation${evaluationAnalytics.total_evaluations === 1 ? '' : 's'}`}
-            tone="analytics"
-          />
-          <MetricStatCard
-            label="Guards Evaluated"
-            value={formatCompactNumber(evaluationAnalytics.guards_evaluated)}
-            hint={`During the last ${evaluationAnalytics.period_days} days`}
-            tone="guard"
-          />
-          <MetricStatCard
-            label="Evaluation Records"
-            value={formatCompactNumber(evaluationAnalytics.total_evaluations)}
-            hint="Verified supervisor and administrator evaluation entries"
-            tone="default"
-          />
-          <MetricStatCard
-            label="Low Ratings"
-            value={formatCompactNumber(evaluationAnalytics.low_rating_count)}
-            hint="Ratings below 3 out of 5"
-            tone="maintenance"
-          />
-        </div>
+        <OperationalSummaryBand items={evaluationSummary} />
         <DashboardCard title="Guard Evaluation Distribution">
           <SimpleBarChart data={evaluationDistributionData} height={220} barColor="var(--color-info-border)" />
           <p className="mt-2 text-center text-xs text-text-secondary">Summary based on evaluations recorded by supervisors and administrators.</p>

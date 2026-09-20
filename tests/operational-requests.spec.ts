@@ -173,7 +173,7 @@ test('administrator reviews a pending request and sees its history', async ({ pa
   }])
   await page.goto('/requests')
 
-  await page.getByRole('button', { name: /Escort service request/ }).click()
+  await expect(page.getByRole('region', { name: 'Selected request details' }).getByText('Escort service request')).toBeVisible()
   await page.getByRole('button', { name: 'Approve' }).click()
   await page.getByLabel('Approve note').fill('Staffing and schedule verified.')
   await page.getByRole('button', { name: 'Confirm' }).click()

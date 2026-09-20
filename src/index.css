@@ -1291,19 +1291,19 @@
     border-radius: var(--radius-sm);
     color: var(--color-text-secondary);
     box-shadow: inset 3px 0 0 transparent;
-    transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease;
+    transition: color 160ms ease;
   }
 
-  .soc-sidebar-nav-item:hover {
+  .soc-sidebar-nav-item:not(.soc-sidebar-nav-item-active):hover {
     color: var(--color-text-primary);
     background: var(--color-panel-hover);
   }
 
-  .soc-sidebar-nav-item-active {
+  .soc-sidebar-nav-item-active,
+  .soc-sidebar-nav-item-active:hover {
     color: var(--color-text-primary);
     background: var(--color-sidebar-active-bg);
     box-shadow: inset 3px 0 0 var(--color-info);
-    transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
   }
 
   .soc-sidebar-logout {
@@ -1529,7 +1529,7 @@
 
   .guard-sticky-main {
     /* Use the defined sticky region height variable to avoid magic numbers */
-    padding-bottom: calc(var(--guard-sticky-region-height) + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(var(--guard-sticky-region-height) + 5rem + env(safe-area-inset-bottom, 0px));
   }
 
   /* Guard screens in this tranche use a single sticky bottom region only. */
@@ -1542,6 +1542,11 @@
     z-index: var(--z-guard-sticky-region);
     background: var(--color-surface);
     padding: 0 var(--space-2) calc(0.5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .guard-panic-button {
+    right: max(1rem, calc(env(safe-area-inset-right, 0px) + 0.75rem));
+    bottom: calc(var(--guard-sticky-region-height) + 0.75rem);
   }
 
   .guard-sticky-inner {
@@ -1564,6 +1569,20 @@
     display: grid;
     gap: 0.25rem;
     grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .guard-sticky-nav button {
+    min-width: 0;
+    gap: 0.125rem;
+    padding-inline: 0.125rem;
+    letter-spacing: 0;
+  }
+
+  .guard-sticky-nav button span {
+    max-width: 100%;
+    font-size: 0.5625rem;
+    line-height: 1;
+    white-space: nowrap;
   }
 
   .guard-sticky-action-row {
@@ -1622,6 +1641,19 @@
   }
 
   @media (min-width: 640px) {
+    .guard-panic-button {
+      bottom: 8rem;
+    }
+
+    .guard-sticky-nav button {
+      gap: 0.375rem;
+      padding-inline: 0.5rem;
+    }
+
+    .guard-sticky-nav button span {
+      font-size: 0.75rem;
+    }
+
     .guard-kpi-row {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }

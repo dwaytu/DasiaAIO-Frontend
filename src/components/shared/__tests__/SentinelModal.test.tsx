@@ -55,4 +55,24 @@ describe('SentinelModal', () => {
     expect(input).toHaveValue('123')
     expect(input).toHaveFocus()
   })
+
+  it('focuses the first action and keeps focus inside a non-dismissible prompt', async () => {
+    const user = userEvent.setup()
+    render(
+      <SentinelModal open onClose={jest.fn()} title="Terms of Agreement" dismissible={false}>
+        <button type="button">Decline</button>
+        <button type="button">Agree and Continue</button>
+      </SentinelModal>,
+    )
+
+    const decline = screen.getByRole('button', { name: 'Decline' })
+    expect(decline).toHaveFocus()
+    expect(screen.queryByRole('button', { name: 'Close dialog' })).not.toBeInTheDocument()
+
+    await user.tab()
+    expect(screen.getByRole('button', { name: 'Agree and Continue' })).toHaveFocus()
+
+    await user.tab()
+    expect(decline).toHaveFocus()
+  })
 })

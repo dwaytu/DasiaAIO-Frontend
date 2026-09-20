@@ -1,4 +1,5 @@
 import { FC } from 'react'
+import { BadgeCheck, CarFront, ClipboardList, Plus, Play, Shield, Square, type LucideIcon } from 'lucide-react'
 
 export interface QuickActionItem {
   label: string
@@ -34,14 +35,14 @@ const toneStyles: Record<NonNullable<QuickActionItem['tone']>, { base: string; i
   },
 }
 
-const actionIcons: Record<string, JSX.Element> = {
-  'Assign Shift': <path d="M8 7h8M8 12h8M8 17h5M5 4h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z" />,
-  'Approve Guard': <path d="M9.5 12.5l1.8 1.8 3.5-3.5M12 3l7 3v6c0 5-3.5 9-7 10-3.5-1-7-5-7-10V6l7-3z" />,
-  'Allocate Firearm': <path d="M3 12h10l3-2h5v4h-5l-3-2H3v-2zm8 0v4" />,
-  'Assign Vehicle': <path d="M3 14V8l2-3h14l2 3v6M5 14h14M7 17a2 2 0 100-4 2 2 0 000 4zm10 0a2 2 0 100-4 2 2 0 000 4z" />,
-  'Start Trip': <path d="M5 12h14M12 5l7 7-7 7" />,
-  'End Trip': <path d="M19 12H5m7 7l-7-7 7-7" />,
-  'Create Mission': <path d="M12 5v14M5 12h14" />,
+const actionIcons: Record<string, LucideIcon> = {
+  'Assign Shift': ClipboardList,
+  'Approve Guard': BadgeCheck,
+  'Allocate Firearm': Shield,
+  'Assign Vehicle': CarFront,
+  'Start Trip': Play,
+  'End Trip': Square,
+  'Create Mission': Plus,
 }
 
 const QuickActionsPanel: FC<QuickActionsPanelProps> = ({ actions }) => {
@@ -49,6 +50,7 @@ const QuickActionsPanel: FC<QuickActionsPanelProps> = ({ actions }) => {
     <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-3">
       {actions.map((action) => {
         const style = toneStyles[action.tone || 'indigo']
+        const Icon = actionIcons[action.label] || Plus
 
         return (
           <button
@@ -60,9 +62,7 @@ const QuickActionsPanel: FC<QuickActionsPanelProps> = ({ actions }) => {
             aria-label={action.label}
           >
             <span className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border transition-colors duration-200 ${style.icon}`}>
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                {actionIcons[action.label] || <path d="M12 5v14M5 12h14" />}
-              </svg>
+              <Icon className="h-4 w-4" aria-hidden="true" />
             </span>
             <span className="leading-tight">{action.label}</span>
           </button>

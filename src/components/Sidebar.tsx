@@ -1,4 +1,4 @@
-import { CSSProperties, FC, useEffect, useMemo, useRef } from 'react'
+import { CSSProperties, FC, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Award,
   BarChart3,
@@ -7,6 +7,7 @@ import {
   CalendarDays,
   CarFront,
   ClipboardCheck,
+  ChevronDown,
   FileSearch,
   FileUp,
   KeyRound,
@@ -86,9 +87,25 @@ const Sidebar: FC<SidebarProps> = ({
   onClose,
   collapsed = false,
 }) => {
+  const SIDEBAR_GROUPS_STORAGE_KEY = 'dasi.sidebar.collapsed-groups'
   const asideRef = useRef<HTMLElement | null>(null)
   const navRef = useRef<HTMLElement | null>(null)
   const previousFocusRef = useRef<HTMLElement | null>(null)
+  const previousActiveGroupRef = useRef<string | undefined>(undefined)
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(() => {
+    const defaultGroups = { Intelligence: true, Resources: true, System: true }
+
+    if (typeof window === 'undefined') {
+      return defaultGroups
+    }
+
+    try {
+      const saved = window.localStorage.getItem(SIDEBAR_GROUPS_STORAGE_KEY)
+      return saved ? { ...defaultGroups, ...JSON.parse(saved) } : defaultGroups
+    } catch {
+      return defaultGroups
+    }
+  })
   const scrollStorageKey = 'dasi.sidebar.scrollTop'
   const { services } = useServiceHealth()
   const desktopSidebarWidth = collapsed ? 'var(--sidebar-width-collapsed)' : 'var(--sidebar-width-expanded)'
@@ -166,6 +183,28 @@ const Sidebar: FC<SidebarProps> = ({
     }
   }
 
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(SIDEBAR_GROUPS_STORAGE_KEY, JSON.stringify(collapsedGroups))
+    } catch {
+      // Ignore storage failures and keep the navigation state in memory.
+    }
+  }, [collapsedGroups])
+
+  useEffect(() => {
+    const activeGroup = items.find((item) => item.view === activeView)?.group
+    const previousActiveGroup = previousActiveGroupRef.current
+    const shouldOpenActiveGroup = activeGroup != null && previousActiveGroup !== activeGroup
+
+    previousActiveGroupRef.current = activeGroup
+
+    if (!shouldOpenActiveGroup) return
+
+    setCollapsedGroups((previous) => (
+      previous[activeGroup] ? { ...previous, [activeGroup]: false } : previous
+    ))
+  }, [activeView, items])
+
   return (
     <>
       {/* Mobile overlay */}
@@ -211,11 +250,24 @@ const Sidebar: FC<SidebarProps> = ({
               return visibleGroups.map((groupName, index) => (
                 <div key={groupName || 'other'} className={`mb-3 ${collapsed ? 'lg:mb-2' : ''}`}>
                   {groupName && (
-                    <p className={`soc-sidebar-heading px-3 pb-2 pt-1 text-[11px] font-bold uppercase tracking-[0.2em] ${collapsed ? 'lg:hidden' : ''}`}>
-                      {groupName}
-                    </p>
+                    <button
+                      type="button"
+                      className={`flex min-h-11 w-full items-center justify-between px-3 py-2 text-left soc-sidebar-heading text-[11px] font-bold uppercase tracking-[0.2em] ${collapsed ? 'lg:hidden' : ''}`}
+                      onClick={() => setCollapsedGroups((previous) => ({ ...previous, [groupName]: !previous[groupName] }))}
+                      aria-expanded={collapsed ? true : !collapsedGroups[groupName]}
+                      aria-controls={`sidebar-group-${groupName.toLowerCase().replace(/\s+/g, '-')}`}
+                    >
+                      <span>{groupName}</span>
+                      <ChevronDown
+                        className={`h-3.5 w-3.5 transition-transform ${collapsedGroups[groupName] && !collapsed ? '-rotate-90' : ''}`}
+                        aria-hidden="true"
+                      />
+                    </button>
                   )}
-                  <div className="flex flex-col gap-1">
+                  <div
+                    id={groupName ? `sidebar-group-${groupName.toLowerCase().replace(/\s+/g, '-')}` : undefined}
+                    className={`flex flex-col gap-1 ${collapsedGroups[groupName] && !collapsed ? 'hidden' : ''}`}
+                  >
                     {grouped[groupName].map(({ view, label }) => {
                       const Icon = navIcons[view] || MapPinned
                       return (

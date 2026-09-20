@@ -10,6 +10,7 @@ interface SentinelModalProps {
   subtitle?: string
   children: ReactNode
   size?: SentinelModalSize
+  dismissible?: boolean
 }
 
 const SIZE_CLASS: Record<SentinelModalSize, string> = {
@@ -28,6 +29,7 @@ const SentinelModal = ({
   subtitle,
   children,
   size = 'md',
+  dismissible = true,
 }: SentinelModalProps) => {
   const titleId = useId()
   const subtitleId = useId()
@@ -43,9 +45,6 @@ const SentinelModal = ({
   useEffect(() => {
     if (!open) return
 
-    previousActiveElementRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
-    closeButtonRef.current?.focus()
-
     const getFocusableElements = () => {
       if (!panelRef.current) return []
       return Array.from(panelRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
@@ -53,8 +52,17 @@ const SentinelModal = ({
       )
     }
 
+    previousActiveElementRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    closeButtonRef.current?.focus()
+    if (document.activeElement !== closeButtonRef.current) {
+      getFocusableElements()[0]?.focus()
+    }
+    if (!panelRef.current?.contains(document.activeElement)) {
+      panelRef.current?.focus()
+    }
+
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
+      if (dismissible && event.key === 'Escape') {
         onCloseRef.current()
         return
       }
@@ -88,7 +96,7 @@ const SentinelModal = ({
         previousActiveElementRef.current.focus()
       }
     }
-  }, [open])
+  }, [dismissible, open])
 
   useEffect(() => {
     if (!open) return
@@ -106,7 +114,7 @@ const SentinelModal = ({
   }
 
   return (
-    <div className="soc-modal-backdrop" onClick={onClose}>
+    <div className="soc-modal-backdrop" onClick={dismissible ? onClose : undefined}>
       <div
         ref={panelRef}
         tabIndex={-1}
@@ -122,15 +130,17 @@ const SentinelModal = ({
             <h2 id={titleId} className="text-xl font-bold text-text-primary">{title}</h2>
             {subtitle && <p id={subtitleId} className="mt-1 text-sm text-text-secondary">{subtitle}</p>}
           </div>
-          <button
-            type="button"
-            ref={closeButtonRef}
-            className="flex min-h-11 min-w-11 items-center justify-center rounded-md text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
-            onClick={onClose}
-            aria-label="Close dialog"
-          >
-            <X className="h-5 w-5" aria-hidden="true" />
-          </button>
+          {dismissible ? (
+            <button
+              type="button"
+              ref={closeButtonRef}
+              className="flex min-h-11 min-w-11 items-center justify-center rounded-md text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
+              onClick={onClose}
+              aria-label="Close dialog"
+            >
+              <X className="h-5 w-5" aria-hidden="true" />
+            </button>
+          ) : null}
         </div>
         <div className="overflow-y-auto px-6 py-5">{children}</div>
       </div>

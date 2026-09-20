@@ -17,6 +17,8 @@ import AssignmentPicker from '../dashboard/AssignmentPicker'
 import { TableLoadingState } from '../dashboard/ui/DashboardLoadingState'
 import EmptyState from '../shared/EmptyState'
 import SentinelModal from '../shared/SentinelModal'
+import ConfirmationDialog from '../shared/ConfirmationDialog'
+import RejectApprovalDialog from '../shared/RejectApprovalDialog'
 import { CalendarPlus, ClipboardX, CalendarX2, Target } from 'lucide-react'
 import Allowed from '../rbac/Allowed'
 import DeniedFallback from '../rbac/DeniedFallback'
@@ -39,6 +41,8 @@ import CreateGuardAccountModal from './CreateGuardAccountModal'
 import GuardPasswordModal from './GuardPasswordModal'
 import { localScheduleToUtc } from '../../utils/scheduleDateTime'
 import OperationalRequestsPanel from '../requests/OperationalRequestsPanel'
+import GuardSearchSelect from '../shared/GuardSearchSelect'
+import SearchableSelect from '../shared/SearchableSelect'
 
 function isAbortError(error: unknown): boolean {
   return error instanceof Error && error.name === 'AbortError'
@@ -54,11 +58,17 @@ interface User {
   last_seen_at?: string
   full_name?: string
   phone_number?: string
+  guard_code?: string | null
   license_number?: string
   license_issued_date?: string
   license_expiry_date?: string
   address?: string
   [key: string]: any
+}
+
+interface PendingUserDeletion {
+  users: User[]
+  bulk: boolean
 }
 
 const ONLINE_WINDOW_MS = 3 * 60 * 1000
@@ -205,6 +215,7 @@ interface PendingApprovalUser {
 interface ClientSiteOption {
   id: string
   name: string
+  address?: string | null
   isActive?: boolean
 }
 
@@ -294,6 +305,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   const [missionsLoading, setMissionsLoading] = useState<boolean>(false)
   const [pendingApprovals, setPendingApprovals] = useState<PendingApprovalUser[]>([])
   const [selectedApproval, setSelectedApproval] = useState<PendingApprovalUser | null>(null)
+  const [rejectionApproval, setRejectionApproval] = useState<PendingApprovalUser | null>(null)
   const [approvalsLoading, setApprovalsLoading] = useState<boolean>(false)
   const [processingApprovalId, setProcessingApprovalId] = useState<string | null>(null)
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false)
@@ -313,6 +325,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   const [userPage, setUserPage] = useState(1)
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([])
   const [bulkProcessing, setBulkProcessing] = useState<boolean>(false)
+  const [pendingUserDeletion, setPendingUserDeletion] = useState<PendingUserDeletion | null>(null)
   const [availableGuards, setAvailableGuards] = useState<User[]>([])
   const [availableClientSites, setAvailableClientSites] = useState<ClientSiteOption[]>([])
   const [availableFirearms, setAvailableFirearms] = useState<any[]>([])
@@ -539,6 +552,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
         .map((site: any) => ({
           id: String(site.id || site.name),
           name: String(site.name),
+          address: typeof site.address === 'string' && site.address.trim().length > 0 ? site.address : null,
           isActive: site.isActive !== false,
         }))
       setAvailableClientSites(normalizedSites)
@@ -772,11 +786,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
     }
   }
 
-  const handleDeleteUser = async (userId: string, userEmail: string) => {
-    if (!window.confirm(`Are you sure you want to delete user ${userEmail}? This action cannot be undone.`)) {
-      return
-    }
-
+  const deleteUser = async (userId: string) => {
     try {
       await fetchJsonOrThrow<any>(`${API_BASE_URL}/api/user/${userId}`, {
         method: 'DELETE',
@@ -789,6 +799,14 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete user')
     }
+  }
+
+  const requestDeleteUser = (userId: string, userEmail: string) => {
+    const targetUser = users.find((candidate) => candidate.id === userId)
+    setPendingUserDeletion({
+      users: [targetUser ?? { id: userId, email: userEmail, username: userEmail, role: '' }],
+      bulk: false,
+    })
   }
 
   const rolePriority: Record<'superadmin' | 'admin' | 'supervisor' | 'guard', number> = {
@@ -908,7 +926,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
     }
   }
 
-  const handleBulkDeleteSelected = async () => {
+  const handleBulkDeleteSelected = () => {
     if (!canManageUsers) {
       addNotification('info', 'Delete Not Available', 'Supervisors can edit guard records but cannot delete accounts.')
       return
@@ -920,21 +938,29 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
       return
     }
 
-    if (!window.confirm(`Delete ${deletableUsers.length} selected user account(s)? This action cannot be undone.`)) {
+    setPendingUserDeletion({ users: deletableUsers, bulk: true })
+  }
+
+  const confirmUserDeletion = async () => {
+    if (!pendingUserDeletion) return
+
+    if (!pendingUserDeletion.bulk) {
+      const targetUser = pendingUserDeletion.users[0]
+      await deleteUser(targetUser.id)
       return
     }
 
     try {
       setBulkProcessing(true)
       await Promise.all(
-        deletableUsers.map((targetUser) =>
+        pendingUserDeletion.users.map((targetUser) =>
           fetchJsonOrThrow<any>(`${API_BASE_URL}/api/user/${targetUser.id}`, {
             method: 'DELETE',
             headers: getAuthHeaders(),
           }, `Failed to delete ${targetUser.email}`)
         )
       )
-      addNotification('success', 'Bulk Delete Complete', `${deletableUsers.length} account(s) deleted.`)
+      addNotification('success', 'Bulk Delete Complete', `${pendingUserDeletion.users.length} account(s) deleted.`)
       await fetchData()
       setSelectedUserIds([])
     } catch (err) {
@@ -967,18 +993,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
     }
   }
 
-  const handleApprovalAction = async (targetUserId: string, action: 'approve' | 'reject') => {
-    let reason: string | undefined
-    if (action === 'reject') {
-      const enteredReason = window.prompt('Reason for rejecting this guard account:')
-      if (enteredReason === null) return
-      reason = enteredReason.trim()
-      if (!reason) {
-        addNotification('error', 'Rejection Reason Required', 'Enter a reason before rejecting the guard account.')
-        return
-      }
-    }
-
+  const handleApprovalAction = async (targetUserId: string, action: 'approve' | 'reject', reason?: string): Promise<boolean> => {
     try {
       setProcessingApprovalId(targetUserId)
       await fetchJsonOrThrow<any>(`${API_BASE_URL}/api/users/${targetUserId}/approval`, {
@@ -995,13 +1010,20 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
       await fetchPendingApprovals()
       await fetchData()
       setError('')
+      return true
     } catch (err) {
-      const message = err instanceof Error ? err.message : `Failed to ${action} account`
+      const message = `Unable to ${action} this guard account. Try again.`
       setError(message)
       addNotification('error', 'Approval Action Failed', message)
+      return false
     } finally {
       setProcessingApprovalId(null)
     }
+  }
+
+  const openRejectionDialog = (approval: PendingApprovalUser) => {
+    setRejectionApproval(approval)
+    setError('')
   }
 
   return (
@@ -1094,6 +1116,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
         ) : activeSection === 'dashboard' ? (
           <div className="w-full animate-fade-in space-y-4 md:space-y-6">
             <CommandCenterDashboard
+              onNavigate={handleNavigate}
               quickActions={[
                 { label: 'Assign Shift', tone: 'indigo', onClick: () => handleNavigate('schedule') },
                 ...(canApproveGuards ? [{ label: 'Approve Guard', tone: 'emerald' as const, onClick: () => handleNavigate('approvals') }] : []),
@@ -1332,7 +1355,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                                   {canDelete && (
                                     <button
                                       type="button"
-                                      onClick={() => handleDeleteUser(u.id, u.email)}
+                                      onClick={() => requestDeleteUser(u.id, u.email)}
                                       title="Delete user"
                                       aria-label={`Delete ${u.full_name || u.username || u.email}`}
                                       className="min-h-11 min-w-11 rounded p-2 text-text-tertiary transition-colors hover:bg-danger-bg hover:text-danger-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
@@ -1422,7 +1445,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                             {canDelete ? (
                               <button
                                 type="button"
-                                onClick={() => handleDeleteUser(u.id, u.email)}
+                                onClick={() => requestDeleteUser(u.id, u.email)}
                                 className="soc-btn soc-btn-danger"
                               >
                                 Delete
@@ -1534,7 +1557,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                                   Approve
                                 </button>
                                 <button
-                                  onClick={() => handleApprovalAction(pendingUser.id, 'reject')}
+                                  onClick={() => openRejectionDialog(pendingUser)}
                                   disabled={processingApprovalId === pendingUser.id}
                                   className="soc-btn soc-btn-danger disabled:opacity-60"
                                 >
@@ -1652,36 +1675,41 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
 
                 <form onSubmit={handleScheduleSubmit} noValidate className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="md:col-span-2">
-                    <AssignmentPicker
+                    <GuardSearchSelect
                       id="schedule-guard"
                       label="Select Guard"
                       required
-                      tone="teal"
                       value={scheduleFormData.guard_id}
                       onChange={(value) => setScheduleFormData({ ...scheduleFormData, guard_id: value })}
-                      placeholder="-- Select a guard --"
-                      options={availableGuards.map((guard) => ({ value: guard.id, label: guard.full_name || guard.username }))}
+                      guards={availableGuards.map((guard) => ({
+                        id: guard.id,
+                        fullName: guard.full_name,
+                        username: guard.username,
+                        guardCode: guard.guard_code,
+                      }))}
                     />
                   </div>
 
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-semibold text-text-primary mb-1">Site/Location</label>
-                    <select
+                    <SearchableSelect
+                      id="schedule-client-site"
+                      label="Select Client Site"
                       required
                       value={scheduleFormData.client_site}
-                      onChange={(e) => setScheduleFormData({ ...scheduleFormData, client_site: e.target.value })}
+                      onChange={(value) => setScheduleFormData({ ...scheduleFormData, client_site: value })}
                       disabled={clientSitesLoading || availableClientSites.length === 0}
-                      className="w-full px-3 py-2 border border-border rounded bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-(--color-focus-ring) focus:border-(--color-focus-ring)"
-                    >
-                      <option value="">
-                        {clientSitesLoading ? 'Loading client sites...' : '-- Select a client site --'}
-                      </option>
-                      {availableClientSites.map((site) => (
-                        <option key={site.id} value={site.name}>
-                          {site.name}
-                        </option>
-                      ))}
-                    </select>
+                      options={availableClientSites.map((site) => ({
+                        id: site.id,
+                        value: site.name,
+                        label: site.name,
+                        description: site.address,
+                        searchValues: [site.name, site.address],
+                      }))}
+                      placeholder={clientSitesLoading ? 'Loading client sites...' : 'Search by site name or address...'}
+                      helperText={clientSitesLoading ? 'Loading available client sites.' : 'Search by site name or address.'}
+                      emptyMessage="No client sites are available."
+                      noResultsMessage={(query) => `No client sites match "${query}". Try searching by site name or address.`}
+                    />
                     {availableClientSites.length === 0 && !clientSitesLoading ? (
                       <p className="mt-1 text-xs text-text-tertiary">
                         No active client sites found. Add client sites in Operations Map or Resource Management first.
@@ -1991,7 +2019,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
         ) : activeSection === 'manage' ? (
           <ResourceManagementPanel
             users={users}
-            onDeleteUser={handleDeleteUser}
+            onDeleteUser={requestDeleteUser}
             onUsersChanged={fetchData}
             canManageUsers={canManageUsers}
             isSuperadminViewer={isSuperadminViewer}
@@ -1999,6 +2027,30 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
         ) : activeSection === 'operations-map' ? (
           <SuperadminOperationsMapSection trackingAccuracyMode={trackingAccuracyMode} />
         ) : null}
+
+        <RejectApprovalDialog
+          approval={rejectionApproval ? {
+            id: rejectionApproval.id,
+            fullName: rejectionApproval.full_name,
+            username: rejectionApproval.username,
+            email: rejectionApproval.email,
+          } : null}
+          submitting={processingApprovalId === rejectionApproval?.id}
+          onClose={() => setRejectionApproval(null)}
+          onSubmit={(reason) => rejectionApproval ? handleApprovalAction(rejectionApproval.id, 'reject', reason) : Promise.resolve(false)}
+        />
+
+        <ConfirmationDialog
+          open={Boolean(pendingUserDeletion)}
+          onClose={() => setPendingUserDeletion(null)}
+          onConfirm={confirmUserDeletion}
+          title={pendingUserDeletion?.bulk ? 'Delete selected accounts?' : 'Delete user account?'}
+          description={pendingUserDeletion?.bulk
+            ? `${pendingUserDeletion.users.length} selected user account${pendingUserDeletion.users.length === 1 ? '' : 's'} will be deleted. This action cannot be undone.`
+            : pendingUserDeletion ? `${pendingUserDeletion.users[0]?.email} will lose access to SENTINEL. This action cannot be undone.` : ''}
+          confirmLabel={pendingUserDeletion?.bulk ? 'Delete accounts' : 'Delete account'}
+          confirmingLabel="Deleting..."
+        />
 
         {editingUser && (
           <EditUserModal 
@@ -2052,7 +2104,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                   Approve
                 </button>
                 <button
-                  onClick={() => handleApprovalAction(selectedApproval.id, 'reject')}
+                  onClick={() => openRejectionDialog(selectedApproval)}
                   className="soc-btn soc-btn-danger"
                 >
                   Reject
@@ -2072,7 +2124,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
           isOpen={createGuardModalOpen}
           onClose={() => setCreateGuardModalOpen(false)}
           viewerRole={normalizedViewerRole}
-          onCreated={fetchData}
+          onCreated={() => fetchData()}
         />
       </OperationalShell>
     </>
@@ -2080,6 +2132,3 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
 }
 
 export default SuperadminDashboard
-
-
-

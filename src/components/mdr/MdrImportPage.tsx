@@ -131,7 +131,7 @@ const MdrImportPage: FC<MdrImportPageProps> = ({ user, onLogout, onViewChange, a
                   <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Master Data Register</p>
                   <h2 className="text-xl font-semibold text-text-primary">MDR Resource Workspace</h2>
                   <p className="max-w-2xl text-sm text-text-secondary">
-                    Import, review, export, and maintain the current guard, firearm, and vehicle records.
+                    Import a supported workbook, validate its rows, review the staged result, then commit current guard, firearm, and vehicle records.
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">

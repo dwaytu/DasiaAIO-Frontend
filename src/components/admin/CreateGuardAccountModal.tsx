@@ -8,7 +8,13 @@ interface CreateGuardAccountModalProps {
   isOpen: boolean
   onClose: () => void
   viewerRole: Role | null
-  onCreated?: () => Promise<void> | void
+  onCreated?: (created: CreatedGuardAccount) => Promise<void> | void
+}
+
+interface CreatedGuardAccount {
+  guardCode?: string | null
+  fullName: string
+  requiresApproval: boolean
 }
 
 type FormState = {
@@ -75,6 +81,7 @@ const CreateGuardAccountModal: FC<CreateGuardAccountModalProps> = ({
   const [errors, setErrors] = useState<FormErrors>({})
   const [submitError, setSubmitError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [createdGuard, setCreatedGuard] = useState<CreatedGuardAccount | null>(null)
   const [usernameCustomized, setUsernameCustomized] = useState(false)
   const [emailCustomized, setEmailCustomized] = useState(false)
   const fullNameRef = useRef<HTMLInputElement>(null)
@@ -92,6 +99,7 @@ const CreateGuardAccountModal: FC<CreateGuardAccountModalProps> = ({
     setForm(initialState())
     setErrors({})
     setSubmitError('')
+    setCreatedGuard(null)
     setUsernameCustomized(false)
     setEmailCustomized(false)
     window.setTimeout(() => fullNameRef.current?.focus(), 0)
@@ -164,7 +172,7 @@ const CreateGuardAccountModal: FC<CreateGuardAccountModalProps> = ({
 
     setSubmitting(true)
     try {
-      await fetchJsonOrThrow(
+      const created = await fetchJsonOrThrow<{ guardCode?: string | null; requiresApproval?: boolean }>(
         `${API_BASE_URL}/api/users`,
         {
           method: 'POST',
@@ -186,8 +194,13 @@ const CreateGuardAccountModal: FC<CreateGuardAccountModalProps> = ({
         'Failed to create guard account',
       )
 
-      if (onCreated) await Promise.resolve(onCreated())
-      onClose()
+      const createdGuard = {
+        guardCode: created.guardCode,
+        fullName: form.fullName.trim(),
+        requiresApproval: Boolean(created.requiresApproval),
+      }
+      setCreatedGuard(createdGuard)
+      if (onCreated) await Promise.resolve(onCreated(createdGuard))
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : 'Failed to create guard account.')
     } finally {
@@ -204,6 +217,22 @@ const CreateGuardAccountModal: FC<CreateGuardAccountModalProps> = ({
       }}
       size="lg"
     >
+      {createdGuard ? (
+        <div className="space-y-4">
+          <div className="rounded border border-success-border bg-success-bg p-4 text-sm text-success-text" role="status">
+            <p className="font-semibold">
+              {createdGuard.requiresApproval ? 'Guard account submitted for approval.' : 'Guard account created successfully.'}
+            </p>
+            <p className="mt-2 text-text-primary">Name: {createdGuard.fullName}</p>
+            <p className="mt-1 text-text-primary">Guard ID: {createdGuard.guardCode || 'Assigned by the server'}</p>
+          </div>
+          <div className="flex justify-end">
+            <button type="button" onClick={onClose} className="soc-btn soc-btn-primary min-h-11">
+              Done
+            </button>
+          </div>
+        </div>
+      ) : (
       <form className="space-y-4" onSubmit={submit}>
         <p className="text-sm text-text-secondary">{modalDescription}</p>
 
@@ -364,6 +393,7 @@ const CreateGuardAccountModal: FC<CreateGuardAccountModalProps> = ({
           </button>
         </div>
       </form>
+      )}
     </SentinelModal>
   )
 }

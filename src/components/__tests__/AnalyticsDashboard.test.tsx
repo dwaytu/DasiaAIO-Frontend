@@ -107,4 +107,22 @@ describe('AnalyticsDashboard printing', () => {
 
     await waitFor(() => expect(printSpy).toHaveBeenCalledTimes(1))
   })
+
+  it('puts reporting context, operational summary, and controls before the charts', async () => {
+    render(
+      <AnalyticsDashboard
+        user={{ id: 'admin-1', email: 'admin@example.com', username: 'admin', role: 'admin' }}
+        onLogout={jest.fn()}
+        onViewChange={jest.fn()}
+        activeView="analytics"
+      />,
+    )
+
+    expect(await screen.findByRole('heading', { name: 'Analytics overview' })).toBeInTheDocument()
+    expect(screen.getByText('Missions this month')).toBeInTheDocument()
+    expect(screen.getByText('Firearms issued')).toBeInTheDocument()
+    expect(screen.getByLabelText('Reporting period')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Print analytics report' })).toHaveClass('min-h-11')
+    expect(screen.getByText('Resource Availability')).toBeInTheDocument()
+  })
 })

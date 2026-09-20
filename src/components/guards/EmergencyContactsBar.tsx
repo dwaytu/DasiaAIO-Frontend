@@ -21,17 +21,17 @@ const EmergencyContactsBar: FC = () => {
       </button>
 
       {expanded ? (
-        <div className="mt-2 flex flex-wrap gap-2 max-[359px]:pr-20">
+        <div className="mt-2 grid grid-cols-2 gap-2">
           {EMERGENCY_CONTACTS.map((contact) => (
             <a
               key={contact.phone}
               href={phoneToTelHref(contact.phone)}
               aria-label={`Call ${contact.label} at ${contact.phone}`}
-              className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-surface px-4 py-2.5 text-sm font-medium text-text-primary max-[359px]:w-full max-[359px]:min-w-0 max-[359px]:flex-wrap"
+              className="inline-flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-md border border-border bg-surface px-2 py-2 text-center text-xs font-semibold text-text-primary"
             >
-              <Phone className="h-4 w-4 text-text-secondary" aria-hidden="true" />
-              <span className="font-semibold">{contact.label}</span>
-              <span className="text-text-secondary">{contact.phone}</span>
+              <Phone className="h-3.5 w-3.5 shrink-0 text-text-secondary" aria-hidden="true" />
+              <span className="min-w-0 leading-tight">{contact.label}</span>
+              <span className="sr-only">{contact.phone}</span>
             </a>
           ))}
         </div>

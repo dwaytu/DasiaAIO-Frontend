@@ -173,6 +173,15 @@ describe('guard dashboard redesign tranche', () => {
     expect(screen.getByText(/tracking and sync are ready for this watch/i)).toBeInTheDocument()
   })
 
+  it('keeps the current shift action authoritative while preserving compact emergency access', async () => {
+    renderGuardDashboard('mission')
+
+    expect(await screen.findByText(/use mission action above/i)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^check in$/i })).not.toBeInTheDocument()
+    expect(screen.getByText('Tracking details')).toBeInTheDocument()
+    expect(within(screen.getByRole('navigation', { name: /emergency contacts/i })).getAllByRole('link')).toHaveLength(4)
+  })
+
   it('renders resources in a summary-first hierarchy', () => {
     render(
       <GuardResourcesTab

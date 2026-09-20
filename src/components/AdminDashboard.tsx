@@ -14,6 +14,8 @@ import LiveFreshnessPill from './dashboard/ui/LiveFreshnessPill'
 import { TableLoadingState } from './dashboard/ui/DashboardLoadingState'
 import { normalizeRole } from '../types/auth'
 import CreateGuardAccountModal from './admin/CreateGuardAccountModal'
+import ConfirmationDialog from './shared/ConfirmationDialog'
+import RejectApprovalDialog from './shared/RejectApprovalDialog'
 
 interface User {
   id: string
@@ -28,6 +30,11 @@ interface User {
   license_expiry_date?: string
   address?: string
   [key: string]: any
+}
+
+interface PendingUserDeletion {
+  users: User[]
+  bulk: boolean
 }
 
 const truncateText = (value: string, maxChars: number) => {
@@ -179,6 +186,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
   const [shiftsLoading, setShiftsLoading] = useState<boolean>(false)
   const [pendingApprovals, setPendingApprovals] = useState<PendingApprovalUser[]>([])
   const [selectedApproval, setSelectedApproval] = useState<PendingApprovalUser | null>(null)
+  const [rejectionApproval, setRejectionApproval] = useState<PendingApprovalUser | null>(null)
   const [approvalsLoading, setApprovalsLoading] = useState<boolean>(false)
   const [processingApprovalId, setProcessingApprovalId] = useState<string | null>(null)
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false)
@@ -188,6 +196,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
   const [filterMenuOpen, setFilterMenuOpen] = useState<boolean>(false)
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([])
   const [bulkProcessing, setBulkProcessing] = useState<boolean>(false)
+  const [pendingUserDeletion, setPendingUserDeletion] = useState<PendingUserDeletion | null>(null)
   const [lastUserSyncAt, setLastUserSyncAt] = useState<number>(() => Date.now())
   const [createGuardModalOpen, setCreateGuardModalOpen] = useState<boolean>(false)
   const currentView = activeView || activeSection
@@ -308,18 +317,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
     onViewChange?.(view)
   }
 
-  const handleApprovalAction = async (targetUserId: string, action: 'approve' | 'reject') => {
-    let reason: string | undefined
-    if (action === 'reject') {
-      const enteredReason = window.prompt('Reason for rejecting this guard account:')
-      if (enteredReason === null) return
-      reason = enteredReason.trim()
-      if (!reason) {
-        setError('A rejection reason is required.')
-        return
-      }
-    }
-
+  const handleApprovalAction = async (targetUserId: string, action: 'approve' | 'reject', reason?: string): Promise<boolean> => {
     try {
       setProcessingApprovalId(targetUserId)
       await fetchJsonOrThrow<any>(
@@ -335,11 +333,18 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
       await fetchPendingApprovals()
       await fetchUsers()
       setError('')
+      return true
     } catch (err) {
-      setError(err instanceof Error ? err.message : `Failed to ${action} account`)
+      setError(`Unable to ${action} this guard account. Try again.`)
+      return false
     } finally {
       setProcessingApprovalId(null)
     }
+  }
+
+  const openRejectionDialog = (approval: PendingApprovalUser) => {
+    setRejectionApproval(approval)
+    setError('')
   }
 
   const handleEditUser = (user: User) => {
@@ -369,11 +374,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
     }
   }
 
-  const handleDeleteUser = async (userId: string, userEmail: string) => {
-    if (!window.confirm(`Are you sure you want to delete user ${userEmail}? This action cannot be undone.`)) {
-      return
-    }
-
+  const deleteUser = async (userId: string) => {
     try {
       await fetchJsonOrThrow<any>(
         `${API_BASE_URL}/api/user/${userId}`,
@@ -390,6 +391,14 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete user')
     }
+  }
+
+  const requestDeleteUser = (userId: string, userEmail: string) => {
+    const targetUser = users.find((candidate) => candidate.id === userId)
+    setPendingUserDeletion({
+      users: [targetUser ?? { id: userId, email: userEmail, username: userEmail, role: '' }],
+      bulk: false,
+    })
   }
 
   const rolePriority: Record<'superadmin' | 'admin' | 'supervisor' | 'guard', number> = {
@@ -498,21 +507,29 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
     }
   }
 
-  const handleBulkDeleteSelected = async () => {
+  const handleBulkDeleteSelected = () => {
     const deletableUsers = filteredUsers.filter(u => selectedUserIds.includes(u.id) && canEditUserRow(u.role) && u.id !== user.id)
     if (deletableUsers.length === 0) {
       setError('No deletable users selected.')
       return
     }
 
-    if (!window.confirm(`Delete ${deletableUsers.length} selected user account(s)? This action cannot be undone.`)) {
+    setPendingUserDeletion({ users: deletableUsers, bulk: true })
+  }
+
+  const confirmUserDeletion = async () => {
+    if (!pendingUserDeletion) return
+
+    if (!pendingUserDeletion.bulk) {
+      const targetUser = pendingUserDeletion.users[0]
+      await deleteUser(targetUser.id)
       return
     }
 
     try {
       setBulkProcessing(true)
       await Promise.all(
-        deletableUsers.map((targetUser) =>
+        pendingUserDeletion.users.map((targetUser) =>
           fetchJsonOrThrow<any>(`${API_BASE_URL}/api/user/${targetUser.id}`, {
             method: 'DELETE',
             headers: getAuthHeaders(),
@@ -569,6 +586,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
           {activeSection === 'users' && (
             <>
               <CommandCenterDashboard
+                onNavigate={handleNavigate}
                 quickActions={[
                   { label: 'Assign Shift', tone: 'indigo', onClick: () => handleNavigate('schedule') },
                   ...(canApproveGuards ? [{ label: 'Approve Guard', tone: 'emerald' as const, onClick: () => handleNavigate('approvals') }] : []),
@@ -848,7 +866,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                                       {canDelete && (
                                         <button
                                           type="button"
-                                          onClick={() => handleDeleteUser(u.id, u.email)}
+                                          onClick={() => requestDeleteUser(u.id, u.email)}
                                           title="Delete user"
                                           aria-label={`Delete ${u.full_name || u.username || u.email}`}
                                           className="min-h-11 min-w-11 rounded p-2 text-text-tertiary transition-colors hover:bg-danger-bg hover:text-danger-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
@@ -909,7 +927,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                                 <button type="button" onClick={() => handleResetPasswordAction(u)} className="soc-btn soc-btn-neutral">Reset</button>
                                 <button type="button" onClick={() => handleSuspendAction(u)} className="soc-btn soc-btn-neutral">Suspend</button>
                                 {canDelete ? (
-                                  <button type="button" onClick={() => handleDeleteUser(u.id, u.email)} className="soc-btn soc-btn-danger">Delete</button>
+                                  <button type="button" onClick={() => requestDeleteUser(u.id, u.email)} className="soc-btn soc-btn-danger">Delete</button>
                                 ) : null}
                               </div>
                             </article>
@@ -999,7 +1017,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                                     Approve
                                   </button>
                                   <button
-                                    onClick={() => handleApprovalAction(pendingUser.id, 'reject')}
+                                    onClick={() => openRejectionDialog(pendingUser)}
                                     disabled={processingApprovalId === pendingUser.id}
                                     className="soc-btn soc-btn-danger disabled:opacity-60"
                                   >
@@ -1048,7 +1066,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                                 Approve
                               </button>
                               <button
-                                onClick={() => handleApprovalAction(pendingUser.id, 'reject')}
+                                onClick={() => openRejectionDialog(pendingUser)}
                                 disabled={processingApprovalId === pendingUser.id}
                                 className="soc-btn soc-btn-danger disabled:opacity-60"
                               >
@@ -1174,6 +1192,30 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
             </>
           )}
 
+          <RejectApprovalDialog
+            approval={rejectionApproval ? {
+              id: rejectionApproval.id,
+              fullName: rejectionApproval.full_name,
+              username: rejectionApproval.username,
+              email: rejectionApproval.email,
+            } : null}
+            submitting={processingApprovalId === rejectionApproval?.id}
+            onClose={() => setRejectionApproval(null)}
+            onSubmit={(reason) => rejectionApproval ? handleApprovalAction(rejectionApproval.id, 'reject', reason) : Promise.resolve(false)}
+          />
+
+          <ConfirmationDialog
+            open={Boolean(pendingUserDeletion)}
+            onClose={() => setPendingUserDeletion(null)}
+            onConfirm={confirmUserDeletion}
+            title={pendingUserDeletion?.bulk ? 'Delete selected accounts?' : 'Delete user account?'}
+            description={pendingUserDeletion?.bulk
+              ? `${pendingUserDeletion.users.length} selected user account${pendingUserDeletion.users.length === 1 ? '' : 's'} will be deleted. This action cannot be undone.`
+              : pendingUserDeletion ? `${pendingUserDeletion.users[0]?.email} will lose access to SENTINEL. This action cannot be undone.` : ''}
+            confirmLabel={pendingUserDeletion?.bulk ? 'Delete accounts' : 'Delete account'}
+            confirmingLabel="Deleting..."
+          />
+
           {editingUser && (
             <EditUserModal
               user={editingUser}
@@ -1221,7 +1263,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                     Approve
                   </button>
                   <button
-                    onClick={() => handleApprovalAction(selectedApproval.id, 'reject')}
+                    onClick={() => openRejectionDialog(selectedApproval)}
                     className="soc-btn-danger"
                   >
                     Reject

@@ -5,6 +5,8 @@ import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
 import OperationalShell from './layout/OperationalShell'
 import EmptyState from './shared/EmptyState'
 import LoadingSkeleton from './shared/LoadingSkeleton'
+import OperationalPageHeader from './shared/OperationalPageHeader'
+import OperationalSummaryBand from './shared/OperationalSummaryBand'
 import { getSidebarNav } from '../config/navigation'
 
 interface ComplianceItem {
@@ -174,18 +176,19 @@ const GuardLicenseComplianceReport: FC<Props> = ({ user, onLogout, onViewChange,
       ) : (
         <div className="flex-1 space-y-5 overflow-y-auto p-4 md:p-8 print:p-0">
           <section className="table-glass rounded p-4 md:p-6 print:hidden">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-              <div>
-                <p className="soc-kicker">PERSONNEL GOVERNANCE</p>
-                <h2 className="text-2xl font-black uppercase tracking-wide text-text-primary">Guard License Compliance</h2>
-                <p className="mt-1 text-sm text-text-secondary">Review guard licenses and identify expired or approaching expiry records.</p>
-              </div>
-              <div className="flex flex-wrap gap-2">
+            <OperationalPageHeader
+              eyebrow="Personnel governance"
+              title="Guard License Compliance"
+              description="Review guard licenses and identify expired or approaching expiry records."
+              icon={ShieldCheck}
+              actions={
+                <>
                 <button type="button" onClick={() => window.print()} className="soc-btn inline-flex min-h-10 items-center gap-2 px-3" title="Print guard license compliance report"><Printer size={16} /> Print</button>
                 <button type="button" onClick={exportCsv} className="soc-btn inline-flex min-h-10 items-center gap-2 px-3" title="Export guard license compliance report as CSV"><Download size={16} /> CSV</button>
                 <button type="button" onClick={() => void syncNotifications()} className="soc-btn-primary inline-flex min-h-10 items-center gap-2 px-3" title="Notify supervisors and administrators"><Bell size={16} /> Sync alerts</button>
-              </div>
-            </div>
+                </>
+              }
+            />
             {notice ? <p className="mt-4 rounded border border-success-border bg-success-bg p-3 text-sm text-success-text">{notice}</p> : null}
             {error ? <p role="alert" className="mt-4 rounded border border-danger-border bg-danger-bg p-3 text-sm text-danger-text">{error}</p> : null}
             <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_auto]">
@@ -204,8 +207,10 @@ const GuardLicenseComplianceReport: FC<Props> = ({ user, onLogout, onViewChange,
             </div>
           </section>
 
-          <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5 print:hidden">
-            {summaryCards.map(([label, value]) => <div key={label} className="soc-kpi-card"><p className="soc-kpi-label">{label}</p><p className="soc-kpi-value">{value}</p></div>)}
+          <section className="print:hidden">
+            <OperationalSummaryBand
+              items={summaryCards.map(([label, value]) => ({ label: String(label), value, tone: label === 'Expired' || label === 'No license' ? 'danger' : label === 'Expiring soon' ? 'warning' : label === 'Compliant' ? 'success' : 'neutral' }))}
+            />
           </section>
 
           <section className="table-glass rounded p-4 md:p-6">

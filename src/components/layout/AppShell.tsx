@@ -12,6 +12,7 @@ import { getLocationConsentStatus } from '../../utils/location'
 import { VIEW_TO_ROUTE } from '../../router/routes'
 import ToastContainer from '../shared/ToastContainer'
 import RequiredPasswordChangeModal from '../auth/RequiredPasswordChangeModal'
+import SentinelModal from '../shared/SentinelModal'
 
 export default function AppShell() {
   usePresenceHeartbeat()
@@ -44,13 +45,8 @@ export default function AppShell() {
   const {
     hasLocationConsent,
     locationConsentChecked: locationConsentPersisted,
-    geoPermissionState,
-    geoNotice,
-    locationBannerDismissed,
     grantLocationConsent,
     denyLocationConsent,
-    dismissLocationBanner,
-    requestGeoPermission,
   } = useLocationConsent()
 
   const navigate = useNavigate()
@@ -139,7 +135,9 @@ export default function AppShell() {
     'trips',
     'performance',
     'merit',
+    'dtr',
     'firearms',
+    'firearm-compliance',
     'allocation',
     'permits',
     'maintenance',
@@ -149,13 +147,16 @@ export default function AppShell() {
     'calendar',
     'operations-map',
     'guard-compliance',
+    'manage',
     'profile',
     'settings',
     'mdr-import',
   ])
   const isOperationalShellRoute =
     operationalShellViews.has(activeView) ||
-    activeView.startsWith('mdr-import/')
+    activeView.startsWith('mdr-import/') ||
+    activeView.startsWith('firearms/') ||
+    activeView.startsWith('guards/')
   const showAppShellMobileNav = isElevatedRole && !isOperationalShellRoute
 
   const availableNavItems = normalizedRole ? getSidebarNav(normalizedRole) : []
@@ -175,12 +176,6 @@ export default function AppShell() {
   const moreNavItems = isElevatedRole
     ? availableNavItems.filter(item => !bottomTabKeys.has(item.view))
     : []
-
-  const mobileSafeBottomOffset = 'calc(5rem + env(safe-area-inset-bottom, 0px))'
-  const guardStickySafeBottomOffset = isGuardWorkspaceView
-    ? 'calc(var(--guard-sticky-region-height) + 1rem + env(safe-area-inset-bottom, 0px))'
-    : mobileSafeBottomOffset
-
 
   const handleToaAccept = async () => {
     if (!toaChecked) {
@@ -229,73 +224,17 @@ export default function AppShell() {
         </div>
       ) : null}
 
-      {/* ── Location permission banner ───────────────────────────────────── */}
-      {isLoggedIn &&
-      !isGuardWorkspaceView &&
-      hasAcceptedToa &&
-      hasLocationConsent &&
-      geoPermissionState !== 'granted' &&
-      !hasBlockingOverlay &&
-      !locationBannerDismissed ? (
-        <div
-          className={`soc-warning-banner fixed left-4 right-4 z-(--z-banner) rounded p-3 text-sm shadow-lg ${
-            isGuardWorkspaceView
-              ? 'md:left-4 md:right-auto md:w-[min(24rem,calc(100vw-2rem))]'
-              : 'md:left-auto md:right-4 md:w-[min(28rem,calc(100vw-2rem))]'
-          }`}
-          style={{ bottom: guardStickySafeBottomOffset }}
-          role="status"
-          aria-live="polite"
-        >
-          <p className="font-semibold">Location access is not active.</p>
-          <p className="mt-1">
-            {geoNotice ||
-                'Live tracking requires location permission. Tap the button below to request access.'}
-          </p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                void requestGeoPermission()
-              }}
-              className="soc-btn-primary"
-            >
-              Prompt Location Access
-            </button>
-            <button
-              type="button"
-              onClick={dismissLocationBanner}
-              className="soc-btn-neutral"
-              aria-label="Dismiss location banner for 24 hours"
-            >
-              Dismiss
-            </button>
-          </div>
-        </div>
-      ) : null}
-
       {/* ── ToA modal (full-screen blocking) ────────────────────────────── */}
       {isLoggedIn && !hasAcceptedToa ? (
-        <div
-          className="fixed inset-0 z-(--z-modal) flex items-center justify-center p-4 backdrop-blur-sm"
-          style={{ background: 'var(--color-overlay)' }}
+        <SentinelModal
+          open
+          onClose={declineToa}
+          title="Terms of Agreement"
+          subtitle="Before using SENTINEL on Web, Desktop, or Mobile, you must agree to these terms. This prompt is shown once per app install/browser profile."
+          size="lg"
+          dismissible={false}
         >
-          <section
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="toa-title"
-            aria-describedby="toa-summary"
-            className="soc-modal-panel w-full max-w-3xl rounded border border-border-elevated bg-surface p-5 shadow-modal sm:p-7"
-          >
-            <h1 id="toa-title" className="text-2xl font-bold text-text-primary">
-              Terms of Agreement
-            </h1>
-            <p id="toa-summary" className="mt-2 text-sm text-text-secondary">
-              Before using SENTINEL on Web, Desktop, or Mobile, you must agree to these terms. This
-              prompt is shown once per app install/browser profile.
-            </p>
-
-            <p className="mt-2 text-sm text-text-secondary">
+            <p className="text-sm text-text-secondary">
               Review the legal documents:{' '}
               <a
                 href="https://github.com/dwaytu/Capstone-Main/blob/main/TermsOfAgreement.md"
@@ -408,30 +347,18 @@ export default function AppShell() {
                 Agree and Continue
               </button>
             </div>
-          </section>
-        </div>
+        </SentinelModal>
       ) : null}
 
       {/* ── Location consent upgrade modal (legacy users) ────────────────── */}
       {showLocationConsentUpgrade ? (
-        <div
-          className="fixed inset-0 z-(--z-modal-profile) flex items-center justify-center p-4 backdrop-blur-sm"
-          style={{ background: 'var(--color-overlay)' }}
+        <SentinelModal
+          open
+          onClose={denyLocationConsent}
+          title="Location Tracking Consent"
+          subtitle="SENTINEL can use device location for live guard tracking and operational safety. If you decline, location heartbeat updates remain disabled."
         >
-          <section
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="location-consent-title"
-            className="soc-modal-panel w-full max-w-lg rounded border border-border-elevated bg-surface p-5 shadow-modal sm:p-6"
-          >
-            <h2 id="location-consent-title" className="text-xl font-bold text-text-primary">
-              Location Tracking Consent
-            </h2>
-            <p className="mt-2 text-sm text-text-secondary">
-              SENTINEL can use device location for live guard tracking and operational safety. If you
-              decline, location heartbeat updates remain disabled.
-            </p>
-            <div className="mt-4 flex flex-wrap justify-end gap-2">
+            <div className="flex flex-wrap justify-end gap-2">
               <button
                 type="button"
                 onClick={denyLocationConsent}
@@ -447,27 +374,18 @@ export default function AppShell() {
                 Allow tracking
               </button>
             </div>
-          </section>
-        </div>
+        </SentinelModal>
       ) : null}
 
       {/* ── What's new modal ─────────────────────────────────────────────── */}
       {whatsNewPrompt && !releasePrompt ? (
-        <div
-          className="fixed inset-0 z-(--z-modal-settings) flex items-center justify-center p-4 backdrop-blur-sm"
-          style={{ background: 'var(--color-overlay)' }}
+        <SentinelModal
+          open
+          onClose={dismissWhatsNewPrompt}
+          title={`What's New in ${whatsNewPrompt.version}`}
+          subtitle="Highlights from your current release."
         >
-          <section
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="whats-new-title"
-            className="soc-modal-panel w-full max-w-xl rounded border border-border-elevated bg-surface p-5 shadow-modal sm:p-6"
-          >
-            <h2 id="whats-new-title" className="text-xl font-bold text-text-primary">
-              What's New in {whatsNewPrompt.version}
-            </h2>
-            <p className="mt-2 text-sm text-text-secondary">Highlights from your current release.</p>
-            <p className="mt-3 whitespace-pre-line text-sm text-text-primary">
+            <p className="whitespace-pre-line text-sm text-text-primary">
               {whatsNewPrompt.notes}
             </p>
             <div className="mt-4 flex flex-wrap justify-end gap-2">
@@ -479,30 +397,19 @@ export default function AppShell() {
                 Continue
               </button>
             </div>
-          </section>
-        </div>
+        </SentinelModal>
       ) : null}
 
       {/* ── Release update modal ─────────────────────────────────────────── */}
       {releasePrompt ? (
-        <div
-          className="fixed inset-0 z-(--z-modal-inbox) flex items-center justify-center p-4 backdrop-blur-sm"
-          style={{ background: 'var(--color-overlay)' }}
+        <SentinelModal
+          open
+          onClose={dismissReleasePrompt}
+          title={releasePrompt.platform === 'tauri' ? 'New update available' : 'New release available'}
+          subtitle={releasePrompt.platform === 'tauri'
+            ? `Version ${releasePrompt.tag} is available. You are currently using ${APP_VERSION}. Download the latest update to continue with new fixes and features.`
+            : `Version ${releasePrompt.tag} is available. You are currently using ${APP_VERSION}. Open the release page to review release notes and download the latest build.`}
         >
-          <section
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="update-title"
-            className="soc-modal-panel w-full max-w-lg rounded border border-border-elevated bg-surface p-5 shadow-modal sm:p-6"
-          >
-            <h2 id="update-title" className="text-xl font-bold text-text-primary">
-              {releasePrompt.platform === 'tauri' ? 'New update available' : 'New release available'}
-            </h2>
-            <p className="mt-2 text-sm text-text-secondary">
-              {releasePrompt.platform === 'tauri'
-                ? `Version ${releasePrompt.tag} is available. You are currently using ${APP_VERSION}. Download the latest update to continue with new fixes and features.`
-                : `Version ${releasePrompt.tag} is available. You are currently using ${APP_VERSION}. Open the release page to review release notes and download the latest build.`}
-            </p>
             {releasePrompt.changelog ? (
               <p className="mt-2 text-xs text-text-secondary">{releasePrompt.changelog}</p>
             ) : null}
@@ -524,8 +431,7 @@ export default function AppShell() {
                 {releasePrompt.platform === 'tauri' ? 'Update now' : 'Open release page'}
               </button>
             </div>
-          </section>
-        </div>
+        </SentinelModal>
       ) : null}
 
       {/* ── Mobile bottom nav (elevated roles only) ──────────────────────── */}

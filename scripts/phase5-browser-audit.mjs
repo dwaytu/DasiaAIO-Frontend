@@ -52,9 +52,26 @@ async function runViewport(name, viewport) {
     await page.waitForURL((url) => !url.pathname.endsWith('/login'), { timeout: 15_000 })
 
     await page.goto(`${baseUrl}/analytics`, { waitUntil: 'networkidle', timeout: 20_000 })
+    await assertVisible(page, page.getByRole('heading', { name: 'Analytics overview' }), `${name}: analytics overview heading is missing`)
     await assertVisible(page, page.getByText('Resource Availability', { exact: true }), `${name}: resource availability chart is missing`)
     await assertVisible(page, page.getByText('Guard Evaluation Trend', { exact: true }), `${name}: evaluation trend chart is missing`)
     await assertVisible(page, page.getByText('Guard Evaluation Distribution', { exact: true }), `${name}: evaluation distribution is missing`)
+
+    const printBounds = await page.getByRole('button', { name: 'Print analytics report' }).evaluate((element) => {
+      const { left, right } = element.getBoundingClientRect()
+      return { left, right, viewportWidth: window.innerWidth }
+    })
+    if (printBounds.left < -1 || printBounds.right > printBounds.viewportWidth + 1) {
+      failures.push(`${name}: analytics print control is clipped`)
+    }
+
+    const analyticsLayout = await page.evaluate(() => ({
+      width: window.innerWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+    }))
+    if (analyticsLayout.scrollWidth > analyticsLayout.width + 1) {
+      failures.push(`${name}: analytics page has horizontal overflow ${analyticsLayout.scrollWidth}px > ${analyticsLayout.width}px`)
+    }
 
     const availabilityStyle = await page.locator('[aria-label^="Guards:"]').evaluate((element) => {
       const container = element.getBoundingClientRect()
@@ -93,8 +110,8 @@ async function runViewport(name, viewport) {
     await page.screenshot({ path: `${outputDir}/performance-${name}.png`, fullPage: true })
 
     await page.goto(`${baseUrl}/merit`, { waitUntil: 'networkidle', timeout: 20_000 })
-    await assertVisible(page, page.getByRole('heading', { name: 'Guard Merit and Evaluation Center' }), `${name}: merit center is missing`)
-    await assertVisible(page, page.getByRole('heading', { name: 'Guard Merit Score Rankings' }), `${name}: merit rankings are missing`)
+    await assertVisible(page, page.getByRole('heading', { name: 'Guard merit and evaluation' }), `${name}: merit center is missing`)
+    await assertVisible(page, page.getByRole('heading', { name: 'Guard merit score rankings' }), `${name}: merit rankings are missing`)
     if (await page.getByLabel(/Evaluator Name/i).count()) failures.push(`${name}: evaluator name can still be spoofed in the form`)
     await page.screenshot({ path: `${outputDir}/merit-${name}.png`, fullPage: true })
 

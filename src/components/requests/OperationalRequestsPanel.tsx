@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Archive,
   Check,
@@ -39,6 +39,8 @@ import {
   type RequestResource,
 } from './types'
 import { requestActions } from './requestWorkflow'
+import OperationalPageHeader from '../shared/OperationalPageHeader'
+import ConfirmationDialog from '../shared/ConfirmationDialog'
 
 interface OperationalRequestsPanelProps {
   user: User
@@ -100,6 +102,8 @@ export default function OperationalRequestsPanel({ user }: OperationalRequestsPa
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [showForm, setShowForm] = useState(false)
+  const [clearConfirmationOpen, setClearConfirmationOpen] = useState(false)
+  const showFormRef = useRef(showForm)
   const [form, setForm] = useState<CreateOperationalRequestPayload>(EMPTY_FORM)
   const [decisionAction, setDecisionAction] = useState<RequestAction | null>(null)
   const [decisionReason, setDecisionReason] = useState('')
@@ -119,6 +123,10 @@ export default function OperationalRequestsPanel({ user }: OperationalRequestsPa
   const ownCorrection = canCreateRequest && selected?.status === 'needs_correction' && selected.requesterId === user.id
 
   const refresh = useCallback(() => setRefreshKey((key) => key + 1), [])
+
+  useEffect(() => {
+    showFormRef.current = showForm
+  }, [showForm])
 
   useEffect(() => {
     setPage(1)
@@ -159,8 +167,13 @@ export default function OperationalRequestsPanel({ user }: OperationalRequestsPa
         }
         setRequests(response.items)
         setResources(availableResources)
-        if (selectedId && !response.items.some((request) => request.id === selectedId)) {
-          setSelectedId(null)
+        if (!showFormRef.current) {
+          setSelectedId((current) => {
+            if (current && response.items.some((request) => request.id === current)) return current
+            return response.items[0]?.id ?? null
+          })
+        }
+        if (response.items.length === 0) {
           setEvents([])
         }
       })
@@ -296,7 +309,6 @@ export default function OperationalRequestsPanel({ user }: OperationalRequestsPa
 
   const clearSelectedRequest = async () => {
     if (!selected || !canReviewAllRequests) return
-    if (!window.confirm('Clear this completed request from the active request list? Its audit history will be retained.')) return
     setBusy(true)
     setError('')
     setNotice('')
@@ -317,13 +329,13 @@ export default function OperationalRequestsPanel({ user }: OperationalRequestsPa
 
   return (
     <div className="space-y-4" aria-label="Operational requests workspace">
-      <header className="flex flex-wrap items-start justify-between gap-3 border-b border-border pb-4">
-        <div>
-          <p className="text-xs font-semibold uppercase text-text-tertiary">Request and Approval</p>
-          <h2 className="text-xl font-bold text-text-primary">Operational Requests</h2>
-          <p className="mt-1 text-sm text-text-secondary">Service, resource custody, and firearm registration workflows.</p>
-        </div>
-        <div className="flex gap-2">
+      <OperationalPageHeader
+        eyebrow="Request and approval"
+        title="Operational Requests"
+        description="Service, resource custody, and firearm registration workflows."
+        icon={ClipboardCheck}
+        actions={
+          <>
           <button type="button" onClick={refresh} disabled={loading} className="soc-btn soc-btn-neutral min-h-11" title="Refresh requests">
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} aria-hidden="true" />
             Refresh
@@ -343,8 +355,9 @@ export default function OperationalRequestsPanel({ user }: OperationalRequestsPa
               {showForm ? 'Close' : 'New Request'}
             </button>
           ) : null}
-        </div>
-      </header>
+          </>
+        }
+      />
 
       {error ? <div role="alert" className="rounded border border-danger-border bg-danger-bg p-3 text-sm text-danger-text">{error}</div> : null}
       {notice ? <div role="status" className="rounded border border-success-border bg-success-bg p-3 text-sm text-success-text">{notice}</div> : null}
@@ -473,7 +486,10 @@ export default function OperationalRequestsPanel({ user }: OperationalRequestsPa
           {loading ? (
             <div className="flex min-h-40 items-center justify-center gap-2 text-sm text-text-secondary" role="status"><LoaderCircle className="h-5 w-5 animate-spin" aria-hidden="true" />Loading requests</div>
           ) : requests.length === 0 ? (
-            <div className="min-h-40 p-8 text-center text-sm text-text-secondary">No requests match the selected filters.</div>
+            <div className="min-h-40 p-8 text-center">
+              <p className="text-sm font-semibold text-text-primary">No requests require review</p>
+              <p className="mt-1 text-sm text-text-secondary">New operational requests will appear here. Adjust the filters to view other requests.</p>
+            </div>
           ) : (
             <ul className="divide-y divide-border-subtle">
               {requests.map((request) => (
@@ -549,7 +565,7 @@ export default function OperationalRequestsPanel({ user }: OperationalRequestsPa
               ) : null}
 
               {canReviewAllRequests && !selected.archivedAt && ['approved', 'rejected', 'completed', 'cancelled'].includes(selected.status) ? (
-                <button type="button" disabled={busy} onClick={() => void clearSelectedRequest()} className="soc-btn soc-btn-neutral min-h-11 w-full">
+                <button type="button" disabled={busy} onClick={() => setClearConfirmationOpen(true)} className="soc-btn soc-btn-neutral min-h-11 w-full">
                   <Archive className="h-4 w-4" aria-hidden="true" />
                   Clear Request
                 </button>
@@ -586,6 +602,15 @@ export default function OperationalRequestsPanel({ user }: OperationalRequestsPa
           )}
         </section>
       </div>
+      <ConfirmationDialog
+        open={clearConfirmationOpen}
+        onClose={() => setClearConfirmationOpen(false)}
+        onConfirm={clearSelectedRequest}
+        title="Clear request from active list?"
+        description="This completed request will no longer appear in the active list. Its audit history will remain available."
+        confirmLabel="Clear request"
+        confirmingLabel="Clearing request..."
+      />
     </div>
   )
 }

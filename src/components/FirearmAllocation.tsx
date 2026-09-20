@@ -1,10 +1,13 @@
 import { useState, useEffect, FC } from 'react'
-import { CheckCircle2 } from 'lucide-react'
+import { CheckCircle2, ClipboardCheck, PackageCheck, Plus, ShieldCheck, Users, X } from 'lucide-react'
 import { API_BASE_URL } from '../config'
 import { logError } from '../utils/logger'
 import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
 import OperationalShell from './layout/OperationalShell'
 import { getSidebarNav } from '../config/navigation'
+import OperationalPageHeader from './shared/OperationalPageHeader'
+import OperationalSummaryBand from './shared/OperationalSummaryBand'
+import SentinelModal from './shared/SentinelModal'
 
 interface Allocation {
   id: string
@@ -27,6 +30,7 @@ interface Firearm {
   id: string
   serialNumber: string
   model: string
+  status?: string
 }
 
 const getGuardLabel = (allocation: Allocation, guards: Guard[]) => {
@@ -57,35 +61,43 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
   const [error, setError] = useState<string>('')
   const [success, setSuccess] = useState<string>('')
   const [returningId, setReturningId] = useState<string | null>(null)
+  const [returnCandidate, setReturnCandidate] = useState<Allocation | null>(null)
   const [newAllocation, setNewAllocation] = useState({
     guardId: '',
     firearmId: '',
   })
   const currentView = activeView || 'allocation'
+  const activeAllocations = allocations.filter((allocation) => allocation.status?.toLowerCase() === 'active').length
+  const returnedAllocations = allocations.filter((allocation) => allocation.status?.toLowerCase() === 'returned').length
+  const availableFirearms = firearms.filter((firearm) => firearm.status?.toLowerCase() === 'available').length
 
   useEffect(() => {
-    initializeData()
+    const controller = new AbortController()
+    void initializeData(controller.signal)
+
+    return () => controller.abort()
   }, [])
 
-  const initializeData = async () => {
+  const initializeData = async (signal?: AbortSignal) => {
     setLoading(true)
     try {
       await Promise.all([
-        fetchAllocations(),
-        fetchGuards(),
-        fetchFirearms()
+        fetchAllocations(signal),
+        fetchGuards(signal),
+        fetchFirearms(signal)
       ])
     } catch (err) {
       logError('Error initializing data:', err)
     } finally {
-      setLoading(false)
+      if (!signal?.aborted) setLoading(false)
     }
   }
 
-  const fetchAllocations = async () => {
+  const fetchAllocations = async (signal?: AbortSignal) => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/firearm-allocations`, {
-        headers: getAuthHeaders()
+        headers: getAuthHeaders(),
+        signal,
       })
       if (!response.ok) {
         throw new Error('Failed to fetch allocations')
@@ -94,15 +106,17 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
       setAllocations(data.allocations || [])
       setError('')
     } catch (err) {
+      if (signal?.aborted) return
       setError(err instanceof Error ? err.message : 'Failed to fetch allocations')
       logError('Error fetching allocations:', err)
     }
   }
 
-  const fetchGuards = async () => {
+  const fetchGuards = async (signal?: AbortSignal) => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/users`, {
-        headers: getAuthHeaders()
+        headers: getAuthHeaders(),
+        signal,
       })
       if (!response.ok) {
         throw new Error('Failed to fetch guards')
@@ -113,15 +127,17 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
       setGuards(guardsList.filter((u: any) => u.role === 'guard'))
       setError('')
     } catch (err) {
+      if (signal?.aborted) return
       setError(err instanceof Error ? err.message : 'Failed to fetch guards')
       logError('Error fetching guards:', err)
     }
   }
 
-  const fetchFirearms = async () => {
+  const fetchFirearms = async (signal?: AbortSignal) => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/firearms`, {
-        headers: getAuthHeaders()
+        headers: getAuthHeaders(),
+        signal,
       })
       if (!response.ok) {
         throw new Error('Failed to fetch firearms')
@@ -132,6 +148,7 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
       setFirearms(firearmsList)
       setError('')
     } catch (err) {
+      if (signal?.aborted) return
       setError(err instanceof Error ? err.message : 'Failed to fetch firearms')
       logError('Error fetching firearms:', err)
     }
@@ -165,8 +182,9 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
     }
   }
 
-  const returnFirearm = async (allocationId: string) => {
-    if (!window.confirm('Return this firearm and mark it available again?')) return
+  const confirmReturnFirearm = async () => {
+    if (!returnCandidate) return
+    const allocationId = returnCandidate.id
 
     setReturningId(allocationId)
     setError('')
@@ -184,8 +202,10 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
       setSuccess('Firearm returned successfully and is now available.')
       await fetchAllocations()
       await fetchFirearms()
+      setReturnCandidate(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to return firearm')
+      setReturnCandidate(null)
     } finally {
       setReturningId(null)
     }
@@ -219,22 +239,52 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
           </div>
         ) : (
           <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in">
-            {error && <div className="mb-4 p-4 bg-danger-bg border border-danger-border rounded text-danger-text">{error}</div>}
-            {success && <div className="mb-4 p-4 bg-success-bg border border-success-border rounded text-success-text">{success}</div>}
-            
-            <section className="table-glass rounded p-6 md:p-8 w-full mb-6">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-                <h2 className="text-2xl font-bold text-text-primary mb-4 md:mb-0">Firearm Allocations ({allocations.length})</h2>
+            <section className="soc-surface mb-5 p-4 md:p-5">
+              <OperationalPageHeader
+                eyebrow="Asset custody"
+                title="Firearm allocations"
+                description="Issue available firearms to eligible guards. Active custody means firearms currently issued; return records close when the firearm is received."
+                icon={ShieldCheck}
+                status={(
+                  <span className={`soc-chip ${activeAllocations > 0 ? 'status-info' : 'status-success'}`}>
+                    {activeAllocations > 0 ? `${activeAllocations} firearms currently issued` : 'No firearms currently issued'}
+                  </span>
+                )}
+                actions={(
                 <button
                   onClick={() => setShowAllocateForm(!showAllocateForm)}
-                  className={showAllocateForm ? 'soc-btn soc-btn-danger' : 'soc-btn soc-btn-primary'}
+                  className={showAllocateForm ? 'soc-btn soc-btn-neutral inline-flex min-h-10 items-center gap-2 px-3' : 'soc-btn-primary inline-flex min-h-10 items-center gap-2 px-3'}
                 >
-                  {showAllocateForm ? 'Cancel' : '+ Allocate Firearm'}
+                  {showAllocateForm ? <X size={16} aria-hidden="true" /> : <Plus size={16} aria-hidden="true" />}
+                  {showAllocateForm ? 'Close form' : 'Allocate firearm'}
                 </button>
-              </div>
+                )}
+              />
+
+              {error && <div role="alert" className="mt-4 p-4 bg-danger-bg border border-danger-border rounded text-danger-text">{error}</div>}
+              {success && <div role="status" className="mt-4 p-4 bg-success-bg border border-success-border rounded text-success-text">{success}</div>}
+            </section>
+
+            <div className="mb-5">
+              <OperationalSummaryBand
+                items={[
+                  { label: 'Allocation records', value: allocations.length, detail: 'History of firearm issues and returns', tone: 'neutral', icon: ClipboardCheck },
+                  { label: 'Active custody', value: activeAllocations, detail: activeAllocations > 0 ? 'Firearms currently issued' : 'No firearms currently issued', tone: activeAllocations > 0 ? 'info' : 'success', icon: ShieldCheck },
+                  { label: 'Returned', value: returnedAllocations, detail: 'Returned and available again', tone: 'success', icon: CheckCircle2 },
+                  { label: 'Eligible guards', value: guards.length, detail: `${availableFirearms} firearms available`, tone: availableFirearms > 0 ? 'success' : 'warning', icon: Users },
+                ]}
+              />
+            </div>
 
               {showAllocateForm && (
-                <form onSubmit={allocateFirearm} className="bg-surface-elevated p-6 rounded mb-6 border border-border">
+                <form onSubmit={allocateFirearm} className="soc-surface mb-5 p-4 md:p-6">
+                  <div className="mb-4 flex items-center gap-2">
+                    <Plus className="h-5 w-5 text-info-text" aria-hidden="true" />
+                    <div>
+                      <h3 className="text-lg font-bold text-text-primary">Create allocation</h3>
+                      <p className="text-sm text-text-secondary">Select one guard and one available firearm.</p>
+                    </div>
+                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
                       <label className="block text-sm font-semibold text-text-primary mb-2">Guard</label>
@@ -259,7 +309,7 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
                         required
                       >
                         <option value="">Select a firearm</option>
-                        {firearms.map((f) => (
+                        {firearms.filter((firearm) => !firearm.status || firearm.status.toLowerCase() === 'available').map((f) => (
                           <option key={f.id} value={f.id}>{f.serialNumber} - {f.model}</option>
                         ))}
                       </select>
@@ -275,6 +325,14 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
                 </form>
               )}
 
+            <section className="table-glass rounded p-4 md:p-6">
+              <div className="mb-4 flex items-center gap-3 border-b border-border-subtle pb-4">
+                <PackageCheck className="h-5 w-5 text-info-text" aria-hidden="true" />
+                <div>
+                  <h3 className="text-lg font-bold text-text-primary">Allocation register</h3>
+                  <p className="text-sm text-text-secondary">History of firearm issuance and returns: {allocations.length} custody record{allocations.length === 1 ? '' : 's'}.</p>
+                </div>
+              </div>
               {allocations.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse">
@@ -302,7 +360,7 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
                               {a.status?.toLowerCase() === 'active' ? (
                                 <button
                                   type="button"
-                                  onClick={() => void returnFirearm(a.id)}
+                                  onClick={() => setReturnCandidate(a)}
                                   disabled={returningId === a.id}
                                   className="soc-btn inline-flex min-h-10 items-center gap-2 px-3 text-xs disabled:cursor-not-allowed disabled:opacity-60"
                                   title="Return firearm"
@@ -320,14 +378,33 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
                   </table>
                 </div>
               ) : (
-                <p className="text-center text-text-secondary py-8 italic">No allocations found</p>
+                <div className="py-8 text-center">
+                  <p className="text-sm font-semibold text-text-primary">No firearm allocations recorded</p>
+                  <p className="mt-1 text-sm text-text-secondary">Use Allocate Firearm to issue an available firearm to an eligible guard.</p>
+                </div>
               )}
             </section>
           </div>
         )}
+        <SentinelModal
+          open={Boolean(returnCandidate)}
+          onClose={() => setReturnCandidate(null)}
+          title="Return firearm?"
+          subtitle={returnCandidate ? `This will mark ${getFirearmLabel(returnCandidate, firearms)} as available and close the active custody record for ${getGuardLabel(returnCandidate, guards)}. Historical issuance records will remain available.` : undefined}
+          dismissible={!returningId}
+          size="sm"
+        >
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <button type="button" onClick={() => setReturnCandidate(null)} disabled={Boolean(returningId)} className="soc-btn soc-btn-neutral min-h-11 disabled:opacity-50">
+              Cancel
+            </button>
+            <button type="button" onClick={() => void confirmReturnFirearm()} disabled={Boolean(returningId)} className="soc-btn soc-btn-danger min-h-11 disabled:opacity-50">
+              {returningId ? 'Returning firearm...' : 'Return firearm'}
+            </button>
+          </div>
+        </SentinelModal>
     </OperationalShell>
   )
 }
 
 export default FirearmAllocation
-

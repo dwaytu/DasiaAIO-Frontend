@@ -1,16 +1,12 @@
 import { useEffect, useMemo, useState, FC } from 'react'
 import {
   AlertTriangle,
-  Award,
   CalendarCheck,
   Clock,
   Download,
-  FileText,
   Printer,
-  Repeat2,
   Star,
   TrendingUp,
-  type LucideIcon,
 } from 'lucide-react'
 import { API_BASE_URL } from '../config'
 import OperationalShell from './layout/OperationalShell'
@@ -21,6 +17,8 @@ import { getSidebarNav } from '../config/navigation'
 import { logError } from '../utils/logger'
 import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
 import { buildPerformanceCsv } from '../utils/analyticsPresentation'
+import OperationalPageHeader from './shared/OperationalPageHeader'
+import OperationalSummaryBand from './shared/OperationalSummaryBand'
 
 interface Props {
   user: AppUser
@@ -112,32 +110,6 @@ function buildReportUrl(filters: DateFilters): string {
   if (filters.to) params.set('to', filters.to)
   const query = params.toString()
   return `${API_BASE_URL}/api/analytics/guard-performance-report${query ? `?${query}` : ''}`
-}
-
-const KpiCard: FC<{
-  icon: LucideIcon
-  label: string
-  value: string | number
-  detail: string
-  tone: 'info' | 'success' | 'warning' | 'danger'
-}> = ({ icon: Icon, label, value, detail, tone }) => {
-  const toneClasses = {
-    info: 'border-info-border bg-info-bg text-info-text',
-    success: 'border-success-border bg-success-bg text-success-text',
-    warning: 'border-warning-border bg-warning-bg text-warning-text',
-    danger: 'border-danger-border bg-danger-bg text-danger-text',
-  }[tone]
-
-  return (
-    <div className={`rounded border p-4 ${toneClasses}`}>
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-xs font-bold uppercase tracking-[0.16em] opacity-80">{label}</p>
-        <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
-      </div>
-      <p className="mt-3 text-3xl font-black tabular-nums">{value}</p>
-      <p className="mt-1 text-xs font-medium opacity-80">{detail}</p>
-    </div>
-  )
 }
 
 const VerticalBarChart: FC<{
@@ -326,6 +298,16 @@ const PerformanceDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeV
   const periodLabel = report.period.from || report.period.to
     ? `${report.period.from ?? 'Start'} to ${report.period.to ?? 'Present'}`
     : 'All recorded operations'
+  const attendanceTone = summary.averageAttendanceRate >= 90 ? 'success' : summary.averageAttendanceRate >= 75 ? 'warning' : 'danger'
+  const missedDutyTone = summary.totalNoShows > 0 ? 'danger' : 'success'
+  const focusMessage = summary.totalNoShows > 0
+    ? `${summary.totalNoShows} missed ${summary.totalNoShows === 1 ? 'duty needs' : 'duties need'} review.`
+    : summary.totalLateCheckIns > 0
+      ? `${summary.totalLateCheckIns} late check-in${summary.totalLateCheckIns === 1 ? '' : 's'} need follow-up.`
+      : 'No missed duties or late check-ins in this period.'
+  const focusClass = summary.totalNoShows > 0 || summary.totalLateCheckIns > 0
+    ? 'border-warning-border bg-warning-bg text-warning-text'
+    : 'border-success-border bg-success-bg text-success-text'
 
   const applyFilters = () => {
     setAppliedFilters(filters)
@@ -369,61 +351,72 @@ const PerformanceDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeV
       ) : (
         <div className="flex-1 overflow-y-auto p-4 md:p-8 w-full animate-fade-in">
           <section className="soc-surface mb-4 p-4 md:p-5">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.2em] text-text-tertiary">Performance Analytics</p>
-                <h2 className="text-2xl font-black uppercase tracking-wide text-text-primary">Guard Performance Report</h2>
-                <p className="mt-1 text-sm text-text-secondary">
-                  {periodLabel}
-                </p>
-                <p className="mt-1 text-xs text-text-tertiary">
-                  Advisory metrics derived from attendance, incident, evaluation, merit, and replacement records.
-                </p>
-              </div>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto_auto_auto]">
-                <label className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
-                  From
-                  <input
-                    type="date"
-                    value={filters.from}
-                    onChange={(event) => setFilters((current) => ({ ...current, from: event.target.value }))}
-                    className="mt-1 min-h-11 w-full rounded border border-border bg-surface px-3 py-2 text-sm text-text-primary"
-                  />
-                </label>
-                <label className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
-                  To
-                  <input
-                    type="date"
-                    value={filters.to}
-                    onChange={(event) => setFilters((current) => ({ ...current, to: event.target.value }))}
-                    className="mt-1 min-h-11 w-full rounded border border-border bg-surface px-3 py-2 text-sm text-text-primary"
-                  />
-                </label>
-                <button type="button" onClick={applyFilters} className="soc-btn min-h-11 self-end">
-                  Apply
-                </button>
-                <button type="button" onClick={clearFilters} className="soc-btn soc-btn-neutral min-h-11 self-end">
-                  Clear
-                </button>
-                <button
-                  type="button"
-                  onClick={downloadCsv}
-                  disabled={report.guards.length === 0}
-                  className="soc-btn soc-btn-neutral inline-flex min-h-11 items-center justify-center gap-2 self-end disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <Download className="h-4 w-4" aria-hidden="true" />
-                  CSV
-                </button>
-                <button
-                  type="button"
-                  onClick={() => window.print()}
-                  className="soc-btn soc-btn-neutral inline-flex min-h-11 items-center justify-center gap-2 self-end"
-                >
-                  <Printer className="h-4 w-4" aria-hidden="true" />
-                  Print
-                </button>
-              </div>
+            <OperationalPageHeader
+              eyebrow="Performance analytics"
+              title="Guard Performance Report"
+              description="Review attendance, outcomes, and evaluations, then follow up on the exceptions that need attention."
+              icon={TrendingUp}
+              status={<span className="soc-status-neutral">Period: {periodLabel}</span>}
+              actions={(
+                <>
+                  <button
+                    type="button"
+                    onClick={downloadCsv}
+                    disabled={report.guards.length === 0}
+                    className="soc-btn soc-btn-neutral inline-flex min-h-11 items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Download className="h-4 w-4" aria-hidden="true" />
+                    Export CSV
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="soc-btn soc-btn-neutral inline-flex min-h-11 items-center justify-center gap-2"
+                  >
+                    <Printer className="h-4 w-4" aria-hidden="true" />
+                    Print
+                  </button>
+                </>
+              )}
+            />
+
+            <div className={`mt-4 border-l-4 px-3 py-3 text-sm ${focusClass}`} role="status">
+              <span className="font-semibold">Review next:</span> {focusMessage}
             </div>
+
+            <form
+              className="mt-4 grid grid-cols-1 gap-3 rounded border border-border-subtle bg-surface-elevated p-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto]"
+              onSubmit={(event) => {
+                event.preventDefault()
+                applyFilters()
+              }}
+            >
+              <p className="sm:col-span-2 xl:col-span-4 text-xs font-bold uppercase tracking-[0.14em] text-text-tertiary">Reporting period</p>
+              <label className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                From
+                <input
+                  type="date"
+                  value={filters.from}
+                  onChange={(event) => setFilters((current) => ({ ...current, from: event.target.value }))}
+                  className="mt-1 min-h-11 w-full rounded border border-border bg-surface px-3 py-2 text-sm text-text-primary"
+                />
+              </label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                To
+                <input
+                  type="date"
+                  value={filters.to}
+                  onChange={(event) => setFilters((current) => ({ ...current, to: event.target.value }))}
+                  className="mt-1 min-h-11 w-full rounded border border-border bg-surface px-3 py-2 text-sm text-text-primary"
+                />
+              </label>
+              <button type="submit" className="soc-btn min-h-11 self-end">
+                Apply period
+              </button>
+              <button type="button" onClick={clearFilters} className="soc-btn soc-btn-neutral min-h-11 self-end">
+                Clear
+              </button>
+            </form>
           </section>
 
           {error ? (
@@ -432,64 +425,50 @@ const PerformanceDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeV
             </div>
           ) : null}
 
-          <section className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <KpiCard
-              icon={TrendingUp}
-              label="Attendance Rate"
-              value={formatPercent(summary.averageAttendanceRate)}
-              detail={`${summary.totalGuards} guard${summary.totalGuards === 1 ? '' : 's'} tracked`}
-              tone="success"
+          <div className="mb-4">
+            <OperationalSummaryBand
+              items={[
+                {
+                  label: 'Attendance',
+                  value: formatPercent(summary.averageAttendanceRate),
+                  detail: `${summary.totalGuards} guard${summary.totalGuards === 1 ? '' : 's'} tracked`,
+                  tone: attendanceTone,
+                  icon: TrendingUp,
+                },
+                {
+                  label: 'Missed duties',
+                  value: summary.totalNoShows,
+                  detail: 'Review each recorded absence',
+                  tone: missedDutyTone,
+                  icon: AlertTriangle,
+                },
+                {
+                  label: 'Late check-ins',
+                  value: summary.totalLateCheckIns,
+                  detail: 'Punctuality exceptions',
+                  tone: summary.totalLateCheckIns > 0 ? 'warning' : 'success',
+                  icon: Clock,
+                },
+                {
+                  label: 'Completed shifts',
+                  value: summary.totalCompletedShifts,
+                  detail: 'Completed duties',
+                  tone: 'success',
+                  icon: CalendarCheck,
+                },
+                {
+                  label: 'Evaluation rating',
+                  value: formatRating(summary.averageClientRating),
+                  detail: 'Average recorded evaluation',
+                  tone: 'info',
+                  icon: Star,
+                },
+              ]}
             />
-            <KpiCard
-              icon={Clock}
-              label="Late Check-ins"
-              value={summary.totalLateCheckIns}
-              detail="Punctuality exceptions"
-              tone={summary.totalLateCheckIns > 0 ? 'warning' : 'success'}
-            />
-            <KpiCard
-              icon={AlertTriangle}
-              label="No-shows"
-              value={summary.totalNoShows}
-              detail="Recorded and inferred absences"
-              tone={summary.totalNoShows > 0 ? 'danger' : 'success'}
-            />
-            <KpiCard
-              icon={Star}
-              label="Evaluator Rating"
-              value={formatRating(summary.averageClientRating)}
-              detail="Average supervisor and administrator evaluation score"
-              tone="info"
-            />
-            <KpiCard
-              icon={CalendarCheck}
-              label="Completed Shifts"
-              value={summary.totalCompletedShifts}
-              detail="Checked-out or completed duties"
-              tone="success"
-            />
-            <KpiCard
-              icon={FileText}
-              label="Incident Reports"
-              value={summary.totalIncidentReports}
-              detail="Reports submitted by guards"
-              tone="warning"
-            />
-            <KpiCard
-              icon={Award}
-              label="Avg Merit Score"
-              value={formatPercent(summary.averageMeritScore)}
-              detail="Current merit score average"
-              tone="info"
-            />
-            <KpiCard
-              icon={Repeat2}
-              label="Replacement Frequency"
-              value={summary.totalReplacementFrequency}
-              detail="Accepted shift swap participation"
-              tone="warning"
-            />
-          </section>
+            <p className="mt-2 text-xs text-text-secondary">
+              Detailed metrics below include incident reports, merit score, and replacement activity.
+            </p>
+          </div>
 
           {report.guards.length > 0 ? (
             <>

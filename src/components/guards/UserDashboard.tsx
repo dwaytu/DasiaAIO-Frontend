@@ -1,4 +1,5 @@
 import { FC, FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ClipboardList, LifeBuoy, MapPinned, PackageCheck, Target, type LucideIcon } from 'lucide-react'
 import { API_BASE_URL, detectRuntimePlatform } from '../../config'
 import { EMERGENCY_CONTACTS, phoneToTelHref } from '../../constants/emergencyContacts'
 import type { User as AppUser } from '../../context/AuthContext'
@@ -22,6 +23,7 @@ import SectionHeader from '../dashboard/ui/SectionHeader'
 import { GuardInboxPanel } from '../inbox/GuardInboxPanel'
 import ProfileModalContent from '../profile/ProfileModalContent'
 import HeaderGlobalActions from '../shared/HeaderGlobalActions'
+import ConfirmationDialog from '../shared/ConfirmationDialog'
 import OffDutyPanel from './OffDutyPanel'
 import PanicButton from './PanicButton'
 import { buildGuardMapLinks } from './mapLinks'
@@ -147,6 +149,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
   const [checkInTimes, setCheckInTimes] = useState<Record<string, Date>>({})
   const [elapsedTime, setElapsedTime] = useState<Record<string, string>>({})
   const [checkInSubmitting, setCheckInSubmitting] = useState<Record<string, boolean>>({})
+  const [earlyCheckoutShift, setEarlyCheckoutShift] = useState<ShiftItem | null>(null)
 
   const [dismissedTrackingNoticeKey, setDismissedTrackingNoticeKey] = useState<string | null>(null)
 
@@ -532,8 +535,14 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
     }
   }
 
-  const handleCheckOut = async (shift: ShiftItem) => {
+  const handleCheckOut = async (shift: ShiftItem, allowEarlyCheckout = false) => {
     if (!user?.id) return
+
+    const shiftEnd = new Date(shift.end_time).getTime()
+    if (!allowEarlyCheckout && Number.isFinite(shiftEnd) && Date.now() < shiftEnd) {
+      setEarlyCheckoutShift(shift)
+      return
+    }
 
     const recentAttendance = findActiveAttendanceForShift(attendance, shift.id)
 
@@ -765,13 +774,60 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
     }
   }, [dismissedTrackingNoticeKey, locationBlockingNotice])
 
-  const navItems: Array<{ key: GuardSection; label: string }> = [
-    { key: 'mission', label: 'Mission' },
-    { key: 'resources', label: 'Resources' },
-    { key: 'requests', label: 'Requests' },
-    { key: 'support', label: 'Support' },
-    { key: 'map', label: 'Map' },
+  const navItems: Array<{ key: GuardSection; label: string; icon: LucideIcon }> = [
+    { key: 'mission', label: 'Mission', icon: Target },
+    { key: 'resources', label: 'Resources', icon: PackageCheck },
+    { key: 'requests', label: 'Requests', icon: ClipboardList },
+    { key: 'support', label: 'Support', icon: LifeBuoy },
+    { key: 'map', label: 'Map', icon: MapPinned },
   ]
+
+  const handleLocationBlockingNoticeAction = () => {
+    if (!locationBlockingNotice) return
+
+    if (locationBlockingNotice.action === 'request-permission') {
+      void requestGeoPermissionFromContext()
+      return
+    }
+
+    if (locationBlockingNotice.action === 'open-profile') {
+      setProfileModalOpen(true)
+      return
+    }
+
+    if (locationBlockingNotice.action === 'grant-consent') {
+      void grantLocationConsent()
+      return
+    }
+
+    void retryLocationHeartbeat()
+  }
+
+  const locationBlockingNoticePanel = locationBlockingNotice && dismissedTrackingNoticeKey !== locationBlockingNotice.key ? (
+    <div className="rounded border border-warning-border bg-warning-bg p-3 text-warning-text" role="status" aria-live="polite">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold">{locationBlockingNotice.title}</p>
+          <p className="mt-1 text-xs">{locationBlockingNotice.message}</p>
+          <button
+            type="button"
+            onClick={handleLocationBlockingNoticeAction}
+            className="soc-btn-warning mt-2 min-h-10 px-3 py-1.5 text-xs"
+          >
+            {locationBlockingNotice.actionLabel || 'Retry Location'}
+          </button>
+        </div>
+        <button
+          type="button"
+          onClick={() => setDismissedTrackingNoticeKey(locationBlockingNotice.key)}
+          className="soc-btn-warning min-h-10 px-2 py-1 text-xs"
+          aria-label="Dismiss location sharing paused notice"
+        >
+          Dismiss
+        </button>
+      </div>
+    </div>
+  ) : null
 
   return (
     <div className="relative min-h-[100dvh] w-full overflow-hidden bg-background font-sans">
@@ -808,66 +864,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
             </div>
           ) : null}
 
-          {locationBlockingNotice && dismissedTrackingNoticeKey !== locationBlockingNotice.key ? (
-            <div className="rounded border border-warning-border bg-warning-bg p-3 text-warning-text" role="status" aria-live="polite">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold">{locationBlockingNotice.title}</p>
-                  <p className="mt-1 text-xs">{locationBlockingNotice.message}</p>
-                  {locationBlockingNotice.action === 'request-permission' ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        void requestGeoPermissionFromContext()
-                      }}
-                       className="soc-btn-warning mt-2 min-h-10 px-3 py-1.5 text-xs"
-                    >
-                      {locationBlockingNotice.actionLabel}
-                    </button>
-                  ) : null}
-                  {locationBlockingNotice.action === 'open-profile' ? (
-                    <button
-                      type="button"
-                      onClick={() => setProfileModalOpen(true)}
-                       className="soc-btn-warning mt-2 min-h-10 px-3 py-1.5 text-xs"
-                    >
-                      {locationBlockingNotice.actionLabel}
-                    </button>
-                  ) : null}
-                  {locationBlockingNotice.action === 'grant-consent' ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        void grantLocationConsent()
-                      }}
-                       className="soc-btn-warning mt-2 min-h-10 px-3 py-1.5 text-xs"
-                    >
-                      {locationBlockingNotice.actionLabel}
-                    </button>
-                  ) : null}
-                  {locationBlockingNotice.action === 'retry-location' ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        void retryLocationHeartbeat()
-                      }}
-                       className="soc-btn-warning mt-2 min-h-10 px-3 py-1.5 text-xs"
-                    >
-                      {locationBlockingNotice.actionLabel || 'Retry Location'}
-                    </button>
-                  ) : null}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setDismissedTrackingNoticeKey(locationBlockingNotice.key)}
-                   className="soc-btn-warning min-h-10 px-2 py-1 text-xs"
-                  aria-label="Dismiss location sharing paused notice"
-                >
-                  Dismiss
-                </button>
-              </div>
-            </div>
-          ) : null}
+          {activeSection !== 'mission' ? locationBlockingNoticePanel : null}
 
           {pendingCount > 0 ? (
             <div className="flex items-center gap-2 rounded border border-warning-border bg-warning-bg p-3 text-warning-text text-sm" role="status" aria-live="polite">
@@ -947,7 +944,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                 aria-label="Current duty status"
                 className={`rounded border p-5 ${dutyStatusConfig.bannerClass}`}
               >
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0 flex-1">
                     <span className={`text-2xl font-black tracking-tight ${dutyStatusConfig.textClass}`}>
                       {dutyStatusConfig.label}
@@ -964,7 +961,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                       <p className={`mt-2 text-sm ${dutyStatusConfig.textClass}`}>No shift assigned. Stand by or contact your supervisor.</p>
                     )}
                   </div>
-                  <div className="flex flex-col items-end gap-2">
+                  <div className="flex w-full flex-row items-center justify-between gap-2 sm:w-auto sm:flex-col sm:items-end">
                     {isSyncing ? (
                       <span className={`rounded-full border border-current px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider opacity-60 ${dutyStatusConfig.textClass}`}>
                         Syncing
@@ -983,46 +980,67 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                     </span>
                   </div>
                 </div>
-                {missionReadinessNote ? (
+                {missionReadinessNote && !locationBlockingNotice ? (
                   <p className={`mt-3 rounded border border-current/10 px-3 py-2 text-xs font-medium opacity-80 ${dutyStatusConfig.textClass}`}>
                     {missionReadinessNote}
                   </p>
                 ) : null}
-                <dl className="mt-3 grid grid-cols-1 gap-2 rounded border border-current/10 bg-surface/40 p-3 text-xs sm:grid-cols-2">
-                  <div>
-                    <dt className="font-semibold uppercase tracking-wide opacity-75">Last update</dt>
-                    <dd className="mt-0.5 text-sm font-semibold text-text-primary">{trackingLastUpdateLabel}</dd>
-                  </div>
-                  <div>
-                    <dt className="font-semibold uppercase tracking-wide opacity-75">Accuracy</dt>
-                    <dd className="mt-0.5 text-sm font-semibold text-text-primary">{trackingAccuracyLabel}</dd>
-                  </div>
-                  <div>
-                    <dt className="font-semibold uppercase tracking-wide opacity-75">Source</dt>
-                    <dd className="mt-0.5 text-sm font-semibold text-text-primary">{trackingSourceLabel}</dd>
-                  </div>
-                  <div>
-                    <dt className="font-semibold uppercase tracking-wide opacity-75">Schedule mode</dt>
-                    <dd className="mt-0.5 text-sm font-semibold text-text-primary">
-                      {isTrackingActiveWithoutSchedule ? 'Active without schedule' : 'Standard tracking mode'}
-                    </dd>
-                  </div>
-                </dl>
-                <p className={`mt-2 text-xs opacity-85 ${dutyStatusConfig.textClass}`}>{trackingExecutionNote}</p>
-                {geoNotice ? (
-                  <p className={`mt-1 text-xs ${dutyStatusConfig.textClass}`}>{geoNotice}</p>
-                ) : null}
+                <details className={`mt-3 rounded border border-current/10 bg-surface/40 px-3 py-2 text-xs ${dutyStatusConfig.textClass}`}>
+                  <summary className="cursor-pointer font-semibold">Tracking details</summary>
+                  <dl className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <div>
+                      <dt className="font-semibold uppercase tracking-wide opacity-75">Last update</dt>
+                      <dd className="mt-0.5 text-sm font-semibold text-text-primary">{trackingLastUpdateLabel}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-semibold uppercase tracking-wide opacity-75">Accuracy</dt>
+                      <dd className="mt-0.5 text-sm font-semibold text-text-primary">{trackingAccuracyLabel}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-semibold uppercase tracking-wide opacity-75">Source</dt>
+                      <dd className="mt-0.5 text-sm font-semibold text-text-primary">{trackingSourceLabel}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-semibold uppercase tracking-wide opacity-75">Schedule mode</dt>
+                      <dd className="mt-0.5 text-sm font-semibold text-text-primary">
+                        {isTrackingActiveWithoutSchedule ? 'Active without schedule' : 'Standard tracking mode'}
+                      </dd>
+                    </div>
+                  </dl>
+                  <p className="mt-3 opacity-85">{trackingExecutionNote}</p>
+                  {geoNotice ? <p className="mt-2">{geoNotice}</p> : null}
+                </details>
               </section>
 
-              {/* Zone 2: QuickActions */}
+              {/* Zone 2: Next action */}
               <div className="space-y-3">
+                {currentShift ? (
+                  <section className="border border-info-border bg-info-bg/20 p-4" aria-labelledby="guard-next-action-title">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="min-w-0">
+                        <p id="guard-next-action-title" className="text-xs font-bold uppercase tracking-[0.16em] text-info-text">Next action</p>
+                        <p className="mt-1 text-sm font-semibold text-text-primary">
+                          {currentShiftCheckedIn
+                            ? 'Stay on post and check out only after handoff or shift completion.'
+                            : 'Arrive at the assigned post, then check in to start this shift.'}
+                        </p>
+                      </div>
+                    </div>
+                  </section>
+                ) : (
+                  <section className="border border-border-subtle bg-surface-elevated p-4" aria-labelledby="guard-next-action-title">
+                    <p id="guard-next-action-title" className="text-xs font-bold uppercase tracking-[0.16em] text-text-tertiary">Next action</p>
+                    <p className="mt-1 text-sm font-semibold text-text-primary">No active shift. Stand by or contact your supervisor.</p>
+                  </section>
+                )}
                 {currentShift ? (
                   <button
                     type="button"
                     onClick={() => { void handlePrimaryCheckAction() }}
+                    disabled={checkInSubmitting[currentShift.id]}
                     className={`min-h-14 w-full px-4 py-3 text-base font-extrabold tracking-wide ${
                       checkInStatus[currentShift.id] === 'checked_in'
-                        ? 'soc-btn-danger'
+                        ? 'soc-btn-neutral border border-border'
                         : 'soc-btn-success'
                     }`}
                   >
@@ -1031,6 +1049,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                       : 'Check In – Start Shift'}
                   </button>
                 ) : null}
+                {locationBlockingNoticePanel}
                 <button
                   type="button"
                   onClick={() => {
@@ -1057,6 +1076,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                     <ul className="space-y-2">
                       {activeShifts.map((shift) => {
                         const checkedIn = checkInStatus[shift.id] === 'checked_in'
+                        const isCurrentShift = currentShift?.id === shift.id
                         return (
                           <li
                             key={shift.id}
@@ -1076,28 +1096,34 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                                   {checkedIn && elapsedTime[shift.id] ? ` · ${elapsedTime[shift.id]}` : ''}
                                 </p>
                               </div>
-                              <button
-                                type="button"
-                                disabled={checkInSubmitting[shift.id]}
-                                onClick={() => {
-                                  if (checkedIn) {
-                                    void handleCheckOut(shift)
-                                    return
-                                  }
-                                  void handleCheckIn(shift)
-                                }}
-                                className={`min-h-10 rounded-md px-3 py-2 text-sm font-semibold ${
-                                  checkedIn
-                                    ? 'border border-danger-border bg-danger-bg text-danger-text'
-                                    : 'border border-success-border bg-success-bg text-success-text'
-                                }`}
-                              >
-                                {checkInSubmitting[shift.id]
-                                  ? 'Processing...'
-                                  : checkedIn
-                                    ? 'Check Out'
-                                    : 'Check In'}
-                              </button>
+                              {isCurrentShift ? (
+                                <span className={`text-xs font-semibold ${checkedIn ? 'text-success-text' : 'text-text-secondary'}`}>
+                                  {checkedIn ? 'Checked in' : 'Use mission action above'}
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  disabled={checkInSubmitting[shift.id]}
+                                  onClick={() => {
+                                    if (checkedIn) {
+                                      void handleCheckOut(shift)
+                                      return
+                                    }
+                                    void handleCheckIn(shift)
+                                  }}
+                                  className={`min-h-10 rounded-md px-3 py-2 text-sm font-semibold ${
+                                    checkedIn
+                                      ? 'soc-btn-neutral border border-border text-text-secondary'
+                                      : 'border border-success-border bg-success-bg text-success-text'
+                                  }`}
+                                >
+                                  {checkInSubmitting[shift.id]
+                                    ? 'Processing...'
+                                    : checkedIn
+                                      ? 'Check Out'
+                                      : 'Check In'}
+                                </button>
+                              )}
                             </div>
                           </li>
                         )
@@ -1155,14 +1181,15 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                       type="button"
                       disabled={isDisabled}
                       onClick={() => setActiveSection(item.key)}
-                      className={`min-h-11 w-full rounded-md px-2 py-2 text-xs font-semibold transition-colors outline outline-offset-[-2px] outline-transparent ${
+                      className={`inline-flex min-h-11 min-w-0 w-full flex-col items-center justify-center gap-0.5 overflow-hidden rounded-md px-0.5 py-1.5 font-semibold transition-colors outline outline-offset-[-2px] outline-transparent sm:flex-row sm:gap-1.5 sm:px-2 sm:py-2 ${
                         isActive
                           ? 'soc-btn-primary forced-colors:text-[ButtonText] forced-colors:outline-2 forced-colors:outline-[Highlight]'
                           : 'soc-btn-neutral'
                       } ${isDisabled ? 'opacity-40' : ''}`}
                       aria-current={isActive ? 'page' : undefined}
                     >
-                      {item.label}
+                      <item.icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                      <span className="min-w-0 max-w-full text-center text-[9px] leading-tight sm:text-xs">{item.label}</span>
                     </button>
                   </li>
                 )
@@ -1297,9 +1324,18 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
           </section>
         </div>
       ) : null}
+      <ConfirmationDialog
+        open={Boolean(earlyCheckoutShift)}
+        onClose={() => setEarlyCheckoutShift(null)}
+        onConfirm={() => earlyCheckoutShift ? handleCheckOut(earlyCheckoutShift, true) : undefined}
+        title="Check out before shift ends?"
+        description={earlyCheckoutShift ? `This shift ends at ${new Date(earlyCheckoutShift.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}. Confirm only after formal handoff or authorized early release.` : ''}
+        confirmLabel="Check out early"
+        confirmingLabel="Checking out..."
+        tone="primary"
+      />
     </div>
   )
 }
 
 export default UserDashboard
-

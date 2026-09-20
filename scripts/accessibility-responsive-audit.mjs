@@ -38,6 +38,7 @@ const roles = [
 const browser = await chromium.launch({ headless: true })
 const failures = []
 let routeChecks = 0
+let rateLimitWarnings = 0
 
 function addFailure(role, viewport, route, message) {
   failures.push(`${role} ${viewport} ${route}: ${message}`)
@@ -67,7 +68,14 @@ for (const account of roles) {
       const pageErrors = []
       const consoleErrors = []
       const onPageError = (error) => pageErrors.push(error.message)
-      const onConsole = (message) => { if (message.type() === 'error') consoleErrors.push(message.text()) }
+      const onConsole = (message) => {
+        if (message.type() !== 'error') return
+        if (/\b429\b/.test(message.text())) {
+          rateLimitWarnings += 1
+          return
+        }
+        consoleErrors.push(message.text())
+      }
       page.on('pageerror', onPageError)
       page.on('console', onConsole)
 
@@ -118,6 +126,16 @@ for (const account of roles) {
           const main = document.querySelector('main')
           const stickyBottom = guardSticky ? guardSticky.getBoundingClientRect().top : 0
           const mainBottomPadding = main ? Number.parseFloat(window.getComputedStyle(main).paddingBottom) || 0 : 0
+          const visibleMainCount = [...document.querySelectorAll('main')].filter(visible).length
+          const visibleNavigationLabels = [...document.querySelectorAll('nav')]
+            .filter(visible)
+            .map((nav) => nav.getAttribute('aria-label') || nav.getAttribute('aria-labelledby') || '')
+            .filter(Boolean)
+          const duplicateNavigationLabels = [...new Set(visibleNavigationLabels)]
+            .filter((label) => visibleNavigationLabels.filter((candidate) => candidate === label).length > 1)
+          const skipLink = document.querySelector('a.skip-link[href^="#"]')
+          const skipLinkTarget = skipLink?.getAttribute('href')?.slice(1)
+          const hasWorkingSkipLink = Boolean(skipLinkTarget && document.getElementById(skipLinkTarget))
 
           return {
             scrollWidth: document.documentElement.scrollWidth,
@@ -127,6 +145,9 @@ for (const account of roles) {
             dialogsWithTransparentSurface,
             stickyBottom,
             mainBottomPadding,
+            visibleMainCount,
+            duplicateNavigationLabels,
+            hasWorkingSkipLink,
           }
         })
 
@@ -134,6 +155,9 @@ for (const account of roles) {
         if (report.unnamed.length) addFailure(account.name, viewport.name, route, `unnamed controls: ${report.unnamed.join(', ')}`)
         if (report.unlabeledFields.length) addFailure(account.name, viewport.name, route, `unlabeled fields: ${report.unlabeledFields.join(', ')}`)
         if (report.dialogsWithTransparentSurface.length) addFailure(account.name, viewport.name, route, `transparent dialogs: ${report.dialogsWithTransparentSurface.join(', ')}`)
+        if (report.visibleMainCount !== 1) addFailure(account.name, viewport.name, route, `expected one visible main landmark, found ${report.visibleMainCount}`)
+        if (report.duplicateNavigationLabels.length) addFailure(account.name, viewport.name, route, `duplicate navigation landmarks: ${report.duplicateNavigationLabels.join(', ')}`)
+        if (!report.hasWorkingSkipLink) addFailure(account.name, viewport.name, route, 'missing or broken skip-to-content link')
         if (account.name === 'guard' && report.stickyBottom > 0 && report.mainBottomPadding < 100) {
           addFailure(account.name, viewport.name, route, `guard main bottom padding is only ${report.mainBottomPadding}px`)
         }
@@ -152,5 +176,5 @@ for (const account of roles) {
 }
 
 await browser.close()
-console.log(JSON.stringify({ routeChecks, failures }, null, 2))
+console.log(JSON.stringify({ routeChecks, rateLimitWarnings, failures }, null, 2))
 if (failures.length) process.exitCode = 1

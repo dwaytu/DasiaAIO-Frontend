@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Truck } from 'lucide-react'
+import { CircleCheck, Navigation, Truck, Wrench } from 'lucide-react'
 import type { User } from '../context/AuthContext'
 import { API_BASE_URL } from '../config'
 import { fetchJsonOrThrow, parseResponseBody, getAuthHeaders } from '../utils/api'
@@ -8,6 +8,8 @@ import OperationalShell from './layout/OperationalShell'
 import EmptyState from './shared/EmptyState'
 import LoadingSkeleton from './shared/LoadingSkeleton'
 import { getSidebarNav } from '../config/navigation'
+import OperationalPageHeader from './shared/OperationalPageHeader'
+import OperationalSummaryBand from './shared/OperationalSummaryBand'
 
 interface ArmoredCar {
   id: string
@@ -478,34 +480,25 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
             </div>
           ) : null}
           <section className="soc-surface mb-6 p-4 md:p-5">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-text-tertiary">Fleet Command</p>
-            <h1 className="text-2xl font-black uppercase tracking-wide text-text-primary">Armored Fleet Operations</h1>
-            <p className="mt-1 text-sm text-text-secondary">Manage inventory, active allocations, maintenance scheduling, and convoy trip visibility.</p>
-          </section>
+            <OperationalPageHeader
+              eyebrow="Fleet command"
+              title="Armored Fleet Operations"
+              description="Check vehicle readiness first, then manage allocations, maintenance, and active trips."
+              icon={Truck}
+            />
 
-          {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-4 mb-8">
-            <div className="soc-kpi status-bar-info">
-              <div className="soc-kpi-label">Total Vehicles</div>
-              <p className="soc-kpi-value">{cars.length}</p>
+            <div className="mt-4">
+              <OperationalSummaryBand
+                items={[
+                  { label: 'Fleet total', value: cars.length, detail: 'Registered vehicles', tone: 'info', icon: Truck },
+                  { label: 'Available', value: availableCars, detail: 'Ready to allocate', tone: 'success', icon: CircleCheck },
+                  { label: 'Allocated', value: allocatedCars, detail: 'Assigned to a client site', tone: 'info', icon: Navigation },
+                  { label: 'Maintenance', value: maintenanceCars, detail: 'Unavailable for allocation', tone: maintenanceCars > 0 ? 'warning' : 'neutral', icon: Wrench },
+                  { label: 'Active trips', value: activeTrips, detail: 'Currently in transit', tone: activeTrips > 0 ? 'info' : 'neutral', icon: Navigation },
+                ]}
+              />
             </div>
-            <div className="soc-kpi status-bar-success">
-              <div className="soc-kpi-label">Available</div>
-              <p className="soc-kpi-value">{availableCars}</p>
-            </div>
-            <div className="soc-kpi status-bar-warning">
-              <div className="soc-kpi-label">Allocated</div>
-              <p className="soc-kpi-value">{allocatedCars}</p>
-            </div>
-            <div className="soc-kpi status-bar-critical">
-              <div className="soc-kpi-label">In Maintenance</div>
-              <p className="soc-kpi-value">{maintenanceCars}</p>
-            </div>
-            <div className="soc-kpi status-bar-info">
-              <div className="soc-kpi-label">Active Trips</div>
-              <p className="soc-kpi-value">{activeTrips}</p>
-            </div>
-          </div>
+          </section>
 
           {/* Tabs */}
           <div className="mb-6 flex flex-wrap gap-2 rounded border border-border-subtle bg-surface p-2">

@@ -80,7 +80,6 @@ test.describe('Shell Header Actions', () => {
     const sidebarNav = page.getByRole('navigation').first()
     await expect(sidebarNav.getByRole('button', { name: 'Dashboard', exact: true })).toBeVisible()
     await expect(sidebarNav.getByRole('button', { name: 'Inbox', exact: true })).toHaveCount(0)
-    await expect(sidebarNav.getByRole('button', { name: 'Settings', exact: true })).toBeVisible()
 
     await page.getByRole('button', { name: /open quick inbox/i }).click()
     const quickInbox = page.getByRole('dialog', { name: /quick inbox/i })

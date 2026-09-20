@@ -158,6 +158,7 @@ test.describe('Guard Dashboard UX Regression', () => {
   })
 
   test('mission-first landing and single sticky bottom region are visible', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 844 })
     const missionWorkspace = page.getByRole('region', { name: 'Guard mission workspace' })
     await expect(page.getByRole('heading', { name: 'Mission' })).toBeVisible()
     await expect(missionWorkspace.getByText(/^on post$/i)).toBeVisible()
@@ -166,13 +167,15 @@ test.describe('Guard Dashboard UX Regression', () => {
     await expect(page.getByRole('button', { name: /Report Incident/i })).toBeVisible()
 
     await expect(page.getByRole('heading', { name: 'Mission' })).toBeInViewport()
-    await page.getByRole('button', { name: /Report Incident/i }).scrollIntoViewIfNeeded()
-    await expect(page.getByRole('button', { name: /Report Incident/i })).toBeInViewport()
+    const missionAction = page.getByRole('button', { name: /Check Out.*End Shift/i })
+    await expect(missionAction).toBeInViewport()
+    await expect(missionAction).toHaveCount(1)
     await expect(page.getByRole('button', { name: /Emergency SOS/i })).toBeInViewport()
 
     await expect(page.getByTestId('guard-sticky-region')).toHaveCount(1)
     await expect(page.getByTestId('guard-sticky-region').getByRole('navigation', { name: 'Guard primary navigation' })).toHaveCount(1)
     await expect(page.getByRole('navigation', { name: 'Guard primary navigation' })).toBeVisible()
+    await expect(page.getByRole('navigation', { name: 'Emergency contacts' }).getByRole('link')).toHaveCount(4)
   })
 
   test('resources section shows summary-first hierarchy', async ({ page }) => {

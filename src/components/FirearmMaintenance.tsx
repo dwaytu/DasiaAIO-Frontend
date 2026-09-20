@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useState, type FC } from 'react'
-import { CheckCircle2, ClipboardCheck, Plus, RefreshCw, X } from 'lucide-react'
+import { CheckCircle2, ClipboardCheck, Clock3, PackageCheck, Plus, RefreshCw, Wrench, X } from 'lucide-react'
 import { API_BASE_URL } from '../config'
 import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
 import OperationalShell from './layout/OperationalShell'
 import { getSidebarNav } from '../config/navigation'
+import OperationalPageHeader from './shared/OperationalPageHeader'
+import OperationalSummaryBand from './shared/OperationalSummaryBand'
 
 interface Maintenance {
   id: string
@@ -141,6 +143,15 @@ const FirearmMaintenance: FC<Props> = ({ user, onLogout, onViewChange, activeVie
     () => firearms.filter((firearm) => firearm.status.toLowerCase() === 'available'),
     [firearms],
   )
+  const maintenanceSummary = useMemo(() => {
+    const countStatus = (status: string) => maintenances.filter((item) => item.status.toLowerCase() === status).length
+
+    return {
+      pending: countStatus('pending'),
+      inProgress: countStatus('in_progress'),
+      completed: countStatus('completed'),
+    }
+  }, [maintenances])
 
   const firearmLabel = useCallback((firearmId: string) => {
     const firearm = firearms.find((item) => item.id === firearmId)
@@ -246,14 +257,21 @@ const FirearmMaintenance: FC<Props> = ({ user, onLogout, onViewChange, activeVie
         <div className="flex-1 p-4 text-center text-text-secondary md:p-8">Loading firearm maintenance records...</div>
       ) : (
         <div className="flex-1 space-y-5 overflow-y-auto p-4 md:p-8">
-          <section className="table-glass rounded p-4 md:p-6">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <p className="soc-kicker">FIREARM GOVERNANCE</p>
-                <h2 className="text-2xl font-black uppercase tracking-wide text-text-primary">Maintenance Controls</h2>
-                <p className="mt-1 text-sm text-text-secondary">Schedule service and close completed maintenance records from one operational view.</p>
-              </div>
-              <div className="flex flex-wrap gap-2">
+          <section className="soc-surface p-4 md:p-5">
+            <OperationalPageHeader
+              eyebrow="Firearm governance"
+              title="Maintenance controls"
+              description="Schedule service and close completed maintenance records from one operational view."
+              icon={Wrench}
+              status={(
+                <span className={`soc-chip ${maintenanceSummary.pending + maintenanceSummary.inProgress > 0 ? 'status-warning' : 'status-success'}`}>
+                  {maintenanceSummary.pending + maintenanceSummary.inProgress > 0
+                    ? `${maintenanceSummary.pending + maintenanceSummary.inProgress} records need follow-up`
+                    : 'No open maintenance records'}
+                </span>
+              )}
+              actions={(
+                <>
                 <button type="button" onClick={() => void loadData()} className="soc-btn inline-flex min-h-10 items-center gap-2 px-3" title="Refresh maintenance records">
                   <RefreshCw size={16} aria-hidden="true" /> Refresh
                 </button>
@@ -261,11 +279,45 @@ const FirearmMaintenance: FC<Props> = ({ user, onLogout, onViewChange, activeVie
                   {showScheduleForm ? <X size={16} aria-hidden="true" /> : <Plus size={16} aria-hidden="true" />}
                   {showScheduleForm ? 'Close form' : 'Schedule maintenance'}
                 </button>
-              </div>
-            </div>
+                </>
+              )}
+            />
             {error ? <p role="alert" className="mt-4 rounded border border-danger-border bg-danger-bg p-3 text-sm text-danger-text">{error}</p> : null}
             {success ? <p role="status" className="mt-4 rounded border border-success-border bg-success-bg p-3 text-sm text-success-text">{success}</p> : null}
           </section>
+
+          <OperationalSummaryBand
+            items={[
+              {
+                label: 'Pending',
+                value: maintenanceSummary.pending,
+                detail: maintenanceSummary.pending > 0 ? 'Awaiting service' : 'Queue clear',
+                tone: maintenanceSummary.pending > 0 ? 'warning' : 'neutral',
+                icon: Clock3,
+              },
+              {
+                label: 'In progress',
+                value: maintenanceSummary.inProgress,
+                detail: maintenanceSummary.inProgress > 0 ? 'Service underway' : 'None active',
+                tone: maintenanceSummary.inProgress > 0 ? 'info' : 'neutral',
+                icon: Wrench,
+              },
+              {
+                label: 'Completed',
+                value: maintenanceSummary.completed,
+                detail: 'Closed records',
+                tone: 'success',
+                icon: CheckCircle2,
+              },
+              {
+                label: 'Available firearms',
+                value: availableFirearms.length,
+                detail: 'Ready for allocation',
+                tone: availableFirearms.length > 0 ? 'success' : 'danger',
+                icon: PackageCheck,
+              },
+            ]}
+          />
 
           {showScheduleForm ? (
             <section className="table-glass rounded p-4 md:p-6">

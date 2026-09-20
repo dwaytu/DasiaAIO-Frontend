@@ -200,7 +200,7 @@ const MdrUploader: FC<MdrUploaderProps> = ({ onUploadSuccess }) => {
       <header className="space-y-1">
         <h2 className="text-lg font-semibold text-text-primary">Upload MDR Workbook</h2>
         <p className="text-sm text-text-secondary">
-          Select the monthly workbook to parse, validate, and upload for staged review.
+          Select an attendance and resource workbook. SENTINEL parses and validates it before you review the staged result.
         </p>
       </header>
 
@@ -261,6 +261,7 @@ const MdrUploader: FC<MdrUploaderProps> = ({ onUploadSuccess }) => {
               <p className="text-xs text-text-secondary">
                 Month: {parsedResult.reportMonth} | Branch: {parsedResult.branch}
               </p>
+              <p className="mt-1 text-xs text-text-secondary">Upload the parsed workbook to open its row-by-row review before records are committed.</p>
             </div>
           </div>
 

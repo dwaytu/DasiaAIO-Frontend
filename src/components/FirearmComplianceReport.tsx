@@ -5,6 +5,8 @@ import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
 import OperationalShell from './layout/OperationalShell'
 import EmptyState from './shared/EmptyState'
 import LoadingSkeleton from './shared/LoadingSkeleton'
+import OperationalPageHeader from './shared/OperationalPageHeader'
+import OperationalSummaryBand, { type OperationalSummaryItem } from './shared/OperationalSummaryBand'
 import { getSidebarNav } from '../config/navigation'
 
 interface ComplianceItem {
@@ -112,13 +114,20 @@ const FirearmComplianceReport: FC<Props> = ({ user, onLogout, onViewChange, acti
   }, [appliedFilters, page, refreshKey])
 
   const totalPages = Math.max(1, Math.ceil((report?.total ?? 0) / (report?.pageSize ?? 50)))
-  const summaryCards = useMemo(() => [
-    ['Total firearms', report?.summary.totalFirearms ?? 0],
-    ['Expired', report?.summary.expired ?? 0],
-    ['Expiring soon', report?.summary.expiringSoon ?? 0],
-    ['No valid permit', report?.summary.noPermit ?? 0],
-    ['Maintenance', report?.summary.maintenance ?? 0],
-  ], [report])
+  const summaryCards = useMemo<OperationalSummaryItem[]>(() => {
+    const expired = report?.summary.expired ?? 0
+    const expiringSoon = report?.summary.expiringSoon ?? 0
+    const noPermit = report?.summary.noPermit ?? 0
+    const maintenance = report?.summary.maintenance ?? 0
+
+    return [
+      { label: 'Total firearms', value: report?.summary.totalFirearms ?? 0, tone: 'neutral' },
+      { label: 'Expired', value: expired, tone: expired > 0 ? 'danger' : 'neutral' },
+      { label: 'Expiring soon', value: expiringSoon, tone: expiringSoon > 0 ? 'warning' : 'neutral' },
+      { label: 'No valid permit', value: noPermit, tone: noPermit > 0 ? 'danger' : 'neutral' },
+      { label: 'Maintenance', value: maintenance, tone: maintenance > 0 ? 'warning' : 'neutral' },
+    ]
+  }, [report])
 
   const applyFilters = () => {
     setPage(1)
@@ -182,18 +191,19 @@ const FirearmComplianceReport: FC<Props> = ({ user, onLogout, onViewChange, acti
       ) : (
         <div className="flex-1 space-y-5 overflow-y-auto p-4 md:p-8 print:p-0">
           <section className="table-glass rounded p-4 md:p-6 print:hidden">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-              <div>
-                <p className="soc-kicker">ASSET GOVERNANCE</p>
-                <h2 className="text-2xl font-black uppercase tracking-wide text-text-primary">Firearm Compliance</h2>
-                <p className="mt-1 text-sm text-text-secondary">Inventory, custody, permits, maintenance, and expiration visibility in one report.</p>
-              </div>
-              <div className="flex flex-wrap gap-2">
+            <OperationalPageHeader
+              eyebrow="Asset governance"
+              title="Firearm Compliance"
+              description="Inventory, custody, permits, maintenance, and expiration visibility in one report."
+              icon={ShieldCheck}
+              actions={
+                <>
                 <button type="button" onClick={() => window.print()} className="soc-btn inline-flex min-h-10 items-center gap-2 px-3" title="Print compliance report"><Printer size={16} /> Print</button>
                 <button type="button" onClick={exportCsv} className="soc-btn inline-flex min-h-10 items-center gap-2 px-3" title="Export compliance report as CSV"><Download size={16} /> CSV</button>
                 <button type="button" onClick={() => void syncNotifications()} className="soc-btn-primary inline-flex min-h-10 items-center gap-2 px-3" title="Notify supervisors and administrators"><Bell size={16} /> Sync alerts</button>
-              </div>
-            </div>
+                </>
+              }
+            />
             {notice ? <p className="mt-4 rounded border border-success-border bg-success-bg p-3 text-sm text-success-text">{notice}</p> : null}
             {error ? <p role="alert" className="mt-4 rounded border border-danger-border bg-danger-bg p-3 text-sm text-danger-text">{error}</p> : null}
             <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_auto]">
@@ -212,8 +222,10 @@ const FirearmComplianceReport: FC<Props> = ({ user, onLogout, onViewChange, acti
             </div>
           </section>
 
-          <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5 print:hidden">
-            {summaryCards.map(([label, value]) => <div key={label} className="soc-kpi-card"><p className="soc-kpi-label">{label}</p><p className="soc-kpi-value">{value}</p></div>)}
+          <section className="print:hidden">
+            <OperationalSummaryBand
+              items={summaryCards}
+            />
           </section>
 
           <section className="table-glass rounded p-4 md:p-6">

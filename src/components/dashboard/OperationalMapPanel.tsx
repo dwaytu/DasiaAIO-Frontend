@@ -8,6 +8,7 @@ import { getPersonRecencyMinutes, getTrackingAccuracyMode, getVehicleRecencyMinu
 import { useTheme } from '../../context/ThemeProvider'
 import { useOperationalEvent } from '../../context/OperationalEventContext'
 import { getOperationalMapTileUrl } from './mapTileUrls'
+import ConfirmationDialog from '../shared/ConfirmationDialog'
 import {
   hasCurrentUserTrackingPosition,
   isCurrentUserTrackingPoint,
@@ -331,6 +332,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ recentVehicleReport
   const [formError, setFormError] = useState<string>('')
   const [siteActionMessage, setSiteActionMessage] = useState<string>('')
   const [deletingSiteId, setDeletingSiteId] = useState<string>('')
+  const [sitePendingDeletionId, setSitePendingDeletionId] = useState<string>('')
   const [clientSitesPage, setClientSitesPage] = useState<number>(1)
   const [dismissedDegradedError, setDismissedDegradedError] = useState<string>('')
 
@@ -896,7 +898,6 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ recentVehicleReport
   }
 
   const handleDelete = async (siteId: string) => {
-    if (!window.confirm('Delete this client location?')) return
     setFormError('')
     setSiteActionMessage('')
     setDeletingSiteId(siteId)
@@ -1613,9 +1614,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ recentVehicleReport
                       <button
                         type="button"
                         disabled={deletingSiteId === site.id}
-                        onClick={() => {
-                          void handleDelete(site.id)
-                        }}
+                        onClick={() => setSitePendingDeletionId(site.id)}
                         aria-label={`Delete client site ${site.name}`}
                         className="soc-btn soc-btn-danger min-h-11 px-3 text-xs disabled:cursor-not-allowed disabled:opacity-60"
                       >
@@ -1660,6 +1659,18 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ recentVehicleReport
           ) : null}
         </div>
       ) : null}
+      <ConfirmationDialog
+        open={Boolean(sitePendingDeletionId)}
+        onClose={() => setSitePendingDeletionId('')}
+        onConfirm={() => sitePendingDeletionId ? handleDelete(sitePendingDeletionId) : undefined}
+        title="Delete client site?"
+        description={(() => {
+          const site = clientSites.find((entry) => entry.id === sitePendingDeletionId)
+          return site ? `${site.name} will be removed from active client-site management and its check-in area will no longer be used.` : ''
+        })()}
+        confirmLabel="Delete client site"
+        confirmingLabel="Deleting client site..."
+      />
     </section>
   )
 }

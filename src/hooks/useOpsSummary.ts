@@ -33,6 +33,7 @@ export function useOpsSummary() {
   })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [degradedSources, setDegradedSources] = useState<string[]>([])
   const [lastUpdated, setLastUpdated] = useState('')
   const hasLoadedOnceRef = useRef(false)
 
@@ -75,22 +76,53 @@ export function useOpsSummary() {
       const vehicles = vehiclesResult.status === 'fulfilled' ? (vehiclesResult.value.armored_cars || vehiclesResult.value.vehicles || vehiclesResult.value || []) : []
       const expiringPermits = permitsResult.status === 'fulfilled' ? (permitsResult.value.permits || permitsResult.value || []) : []
 
+      const failedSources = [
+        shiftsResult.status === 'rejected' ? 'shift coverage' : null,
+        canApproveGuards && approvalsResult.status === 'rejected' ? 'guard approvals' : null,
+        guardsResult.status === 'rejected' ? 'approved guards' : null,
+        allocationsResult.status === 'rejected' ? 'active firearm allocations' : null,
+        overdueResult.status === 'rejected' ? 'overdue firearm returns' : null,
+        tripsResult.status === 'rejected' ? 'active armored car trips' : null,
+        vehiclesResult.status === 'rejected' ? 'fleet maintenance' : null,
+        permitsResult.status === 'rejected' ? 'expiring guard permits' : null,
+      ].filter((source): source is string => source !== null)
+
       setSummary((previous) => ({
-        activeGuardsOnDuty: shifts.filter((shift: any) => shift.status === 'in_progress').length,
+        activeGuardsOnDuty: shiftsResult.status === 'fulfilled'
+          ? shifts.filter((shift: any) => shift.status === 'in_progress').length
+          : previous.activeGuardsOnDuty,
         totalApprovedGuards: guardsResult.status === 'fulfilled' ? guards.length : previous.totalApprovedGuards,
-        guardsAbsentToday: shifts.filter((shift: any) => shift.status === 'absent' || shift.status === 'no_show').length,
-        pendingGuardApprovals: approvals.length,
-        firearmsCurrentlyIssued: activeAllocations.length,
-        overdueFirearmReturns: overdueAllocations.length,
-        activeArmoredCarTrips: trips.filter((trip: any) => trip.status === 'in_progress' || trip.status === 'active').length,
-        vehiclesInMaintenance: vehicles.filter((vehicle: any) => vehicle.status === 'maintenance').length,
-        expiringGuardPermits: expiringPermits.length,
+        guardsAbsentToday: shiftsResult.status === 'fulfilled'
+          ? shifts.filter((shift: any) => shift.status === 'absent' || shift.status === 'no_show').length
+          : previous.guardsAbsentToday,
+        pendingGuardApprovals: approvalsResult.status === 'fulfilled'
+          ? approvals.length
+          : previous.pendingGuardApprovals,
+        firearmsCurrentlyIssued: allocationsResult.status === 'fulfilled'
+          ? activeAllocations.length
+          : previous.firearmsCurrentlyIssued,
+        overdueFirearmReturns: overdueResult.status === 'fulfilled'
+          ? overdueAllocations.length
+          : previous.overdueFirearmReturns,
+        activeArmoredCarTrips: tripsResult.status === 'fulfilled'
+          ? trips.filter((trip: any) => trip.status === 'in_progress' || trip.status === 'active').length
+          : previous.activeArmoredCarTrips,
+        vehiclesInMaintenance: vehiclesResult.status === 'fulfilled'
+          ? vehicles.filter((vehicle: any) => vehicle.status === 'maintenance').length
+          : previous.vehiclesInMaintenance,
+        expiringGuardPermits: permitsResult.status === 'fulfilled'
+          ? expiringPermits.length
+          : previous.expiringGuardPermits,
       }))
 
-      setError('')
+      setDegradedSources(failedSources)
+      setError(failedSources.length > 0
+        ? `Operational summary is incomplete: ${failedSources.join(', ')}`
+        : '')
       setLastUpdated(new Date().toLocaleTimeString())
     } catch (err) {
       if (signal?.aborted) return
+      setDegradedSources(['operational summary'])
       setError(err instanceof Error ? err.message : 'Failed to load command summary')
     } finally {
       if (!signal?.aborted) {
@@ -106,5 +138,13 @@ export function useOpsSummary() {
     return () => controller.abort()
   }, [refresh])
 
-  return { summary, loading, error, lastUpdated, refresh }
+  return {
+    summary,
+    loading,
+    error,
+    degraded: degradedSources.length > 0,
+    degradedSources,
+    lastUpdated,
+    refresh,
+  }
 }

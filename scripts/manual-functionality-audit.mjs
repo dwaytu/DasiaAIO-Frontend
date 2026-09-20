@@ -201,10 +201,10 @@ async function clickSafeControls(page, role, route, state) {
   const more = page.getByRole('button', { name: 'More', exact: true }).first()
   if (await more.isVisible().catch(() => false)) {
     await more.click({ force: true })
-    const drawerClose = page.locator('#operational-more-drawer').getByRole('button', { name: 'Close menu' }).first()
-    if (await drawerClose.isVisible().catch(() => false)) await drawerClose.click({ force: true })
-    const drawer = page.locator('#operational-more-drawer')
-    if (await drawer.isVisible().catch(() => false)) {
+    const drawer = page.locator('#operational-more-drawer:visible, #appshell-more-drawer:visible')
+    const drawerClose = drawer.getByRole('button', { name: /Close (more )?menu/i }).first()
+    if (await drawerClose.count()) await drawerClose.click({ force: true })
+    if (await drawer.count()) {
       await page.locator('div.fixed.inset-0.z-\\[63\\] > div.absolute.inset-0').click({ position: { x: 5, y: 5 }, force: true }).catch(() => {})
     }
     await drawer.waitFor({ state: 'hidden', timeout: 1_000 }).catch(() => {})
@@ -260,9 +260,9 @@ async function runAccount(account, viewport, viewportName, routeList) {
     attachDiagnostics(page, loginState)
     await login(page, account, loginState)
     for (const route of routeList) await checkPage(page, account, route, viewportName)
-    const openMoreDrawer = page.locator('#operational-more-drawer')
-    if (await openMoreDrawer.isVisible().catch(() => false)) {
-      await openMoreDrawer.getByRole('button', { name: 'Close menu' }).first().evaluate((element) => element.click())
+    const openMoreDrawer = page.locator('#operational-more-drawer:visible, #appshell-more-drawer:visible')
+    if (await openMoreDrawer.count()) {
+      await openMoreDrawer.getByRole('button', { name: /Close (more )?menu/i }).first().evaluate((element) => element.click())
       await openMoreDrawer.waitFor({ state: 'hidden', timeout: 1_000 }).catch(() => {})
     }
     // Reset transient overlay state before testing the session exit control.

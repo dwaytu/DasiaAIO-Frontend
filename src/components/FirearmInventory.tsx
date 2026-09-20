@@ -1,5 +1,5 @@
 import { useState, useEffect, FC } from 'react'
-import { Shield } from 'lucide-react'
+import { Shield, Wrench, CircleCheck, RadioTower } from 'lucide-react'
 import { API_BASE_URL } from '../config'
 import { logError } from '../utils/logger'
 import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
@@ -7,6 +7,8 @@ import OperationalShell from './layout/OperationalShell'
 import EmptyState from './shared/EmptyState'
 import LoadingSkeleton from './shared/LoadingSkeleton'
 import { getSidebarNav } from '../config/navigation'
+import OperationalPageHeader from './shared/OperationalPageHeader'
+import OperationalSummaryBand from './shared/OperationalSummaryBand'
 
 interface Firearm {
   id: string
@@ -34,24 +36,30 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
   const currentView = activeView || 'firearms'
 
   useEffect(() => {
-    fetchFirearms()
+    const controller = new AbortController()
+    void fetchFirearms(controller.signal)
+    return () => controller.abort()
   }, [])
 
-  const fetchFirearms = async () => {
+  const fetchFirearms = async (signal?: AbortSignal) => {
     try {
       setLoading(true)
       const data = await fetchJsonOrThrow<any>(`${API_BASE_URL}/api/firearms`, {
-        headers: getAuthHeaders()
+        headers: getAuthHeaders(),
+        signal,
       }, 'Unable to load firearm inventory')
+      if (signal?.aborted) return
       // Backend returns array directly, not wrapped in object
       const firearmsList = Array.isArray(data) ? data : (data.firearms || [])
       setFirearms(firearmsList)
       setReadWarning('')
     } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return
+      if (signal?.aborted) return
       logError('Error fetching firearms:', err)
       setReadWarning('Firearm inventory is temporarily unavailable. Reads are degraded; write actions remain server-protected.')
     } finally {
-      setLoading(false)
+      if (!signal?.aborted) setLoading(false)
     }
   }
 
@@ -64,6 +72,10 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
       default: return 'soc-status-neutral'
     }
   }
+
+  const availableCount = firearms.filter((firearm) => firearm.status?.toLowerCase() === 'available').length
+  const deployedCount = firearms.filter((firearm) => ['deployed', 'issued', 'allocated'].includes(firearm.status?.toLowerCase())).length
+  const maintenanceCount = firearms.filter((firearm) => firearm.status?.toLowerCase() === 'maintenance').length
 
   return (
     <OperationalShell
@@ -85,27 +97,44 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
         ) : (
           <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in">
             
-            <section className="table-glass rounded p-4 md:p-8 w-full mb-6">
+            <section className="soc-surface p-4 md:p-5">
+              <OperationalPageHeader
+                eyebrow="Resource register"
+                title="Firearm Inventory"
+                description="Check current availability and equipment status before assigning or servicing a firearm."
+                icon={Shield}
+                status={<span className="soc-status-neutral">{firearms.length} registered firearm{firearms.length === 1 ? '' : 's'}</span>}
+              />
+
               {readWarning ? (
-                <div className="mb-4 rounded border border-warning-border bg-warning-bg p-3 text-sm text-warning-text">
+                <div className="mt-4 rounded border border-warning-border bg-warning-bg p-3 text-sm text-warning-text" role="status">
                   {readWarning}
                 </div>
               ) : null}
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-                <h2 className="text-2xl font-bold text-text-primary mb-4 md:mb-0">All Firearms ({firearms.length})</h2>
+
+              <div className="mt-4">
+                <OperationalSummaryBand
+                  items={[
+                    { label: 'Registered', value: firearms.length, detail: 'In this inventory', tone: 'info', icon: Shield },
+                    { label: 'Available', value: availableCount, detail: 'Ready to assign', tone: 'success', icon: CircleCheck },
+                    { label: 'Deployed', value: deployedCount, detail: 'Currently in service', tone: 'info', icon: RadioTower },
+                    { label: 'Maintenance', value: maintenanceCount, detail: 'Unavailable for assignment', tone: maintenanceCount > 0 ? 'warning' : 'neutral', icon: Wrench },
+                  ]}
+                />
               </div>
 
               {firearms.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse">
+                <div className="mt-5 overflow-x-auto" aria-label="Firearm inventory register">
+                  <table className="w-full min-w-[760px] border-collapse">
+                    <caption className="sr-only">Registered firearms and their current operational status.</caption>
                     <thead className="thead-glass">
                       <tr>
-                        <th className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Serial Number</th>
-                        <th className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Model</th>
-                        <th className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Caliber</th>
-                        <th className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">License Expiry</th>
-                        <th className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Status</th>
-                        <th className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Last Maintenance</th>
+                        <th scope="col" className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Serial Number</th>
+                        <th scope="col" className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Model</th>
+                        <th scope="col" className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Caliber</th>
+                        <th scope="col" className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">License Expiry</th>
+                        <th scope="col" className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Status</th>
+                        <th scope="col" className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Last Maintenance</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -127,7 +156,9 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
                   </table>
                 </div>
               ) : (
-                <EmptyState icon={Shield} title="No firearms registered" subtitle="Use the Management panel to register firearms" />
+                <div className="mt-5">
+                  <EmptyState icon={Shield} title="No firearms registered" subtitle="Use the Management panel to register firearms" />
+                </div>
               )}
             </section>
           </div>

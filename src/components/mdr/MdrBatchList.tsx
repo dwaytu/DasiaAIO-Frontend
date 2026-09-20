@@ -94,11 +94,7 @@ const MdrBatchList: FC<MdrBatchListProps> = ({ onSelectBatch, refreshKey = 0 }) 
         setTotal(response.total ?? 0)
       } catch (fetchError) {
         if (cancelled || abortController.signal.aborted) return
-        setError(
-          fetchError instanceof Error
-            ? fetchError.message
-            : 'Unable to load MDR batch history.',
-        )
+        setError('Unable to load MDR batch history. Check your connection and try again.')
       } finally {
         if (!cancelled) {
           setLoading(false)
@@ -141,7 +137,7 @@ const MdrBatchList: FC<MdrBatchListProps> = ({ onSelectBatch, refreshKey = 0 }) 
 
       {!loading && !error && items.length === 0 ? (
         <div className="rounded border border-border bg-surface p-6 text-center text-sm text-text-secondary">
-          No MDR import batches found.
+          No MDR import batches have been created. Upload a supported workbook to begin validation and review.
         </div>
       ) : null}
 

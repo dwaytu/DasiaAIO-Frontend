@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState, type FC, type FormEvent } from 'react'
-import { ChevronLeft, ChevronRight, Download, Filter, Printer, RefreshCw } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Download, FileText, Filter, Printer, RefreshCw } from 'lucide-react'
 import OperationalShell from './layout/OperationalShell'
 import LoadingSkeleton from './shared/LoadingSkeleton'
 import type { User } from '../context/AuthContext'
 import { API_BASE_URL } from '../config'
 import { getSidebarNav } from '../config/navigation'
 import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
+import OperationalPageHeader from './shared/OperationalPageHeader'
+import OperationalSummaryBand from './shared/OperationalSummaryBand'
 
 interface Props {
   user: User
@@ -114,6 +116,7 @@ const DtrReport: FC<Props> = ({ user, onLogout, onViewChange, activeView }) => {
   const [report, setReport] = useState<DtrResponse>({ total: 0, page: 1, pageSize: PAGE_SIZE, items: [] })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [exportNotice, setExportNotice] = useState('')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   useEffect(() => {
@@ -127,7 +130,7 @@ const DtrReport: FC<Props> = ({ user, onLogout, onViewChange, activeView }) => {
       'Failed to load DTR report',
     ).then(setReport).catch((err: unknown) => {
       if (err instanceof DOMException && err.name === 'AbortError') return
-      setError(err instanceof Error ? err.message : 'Unable to load DTR report')
+      setError('Unable to load attendance records. Check your connection and try again.')
       setReport((previous) => ({ ...previous, items: [], total: 0 }))
     }).finally(() => {
       if (!controller.signal.aborted) setLoading(false)
@@ -174,23 +177,36 @@ const DtrReport: FC<Props> = ({ user, onLogout, onViewChange, activeView }) => {
     >
       <div className="flex-1 overflow-y-auto p-4 md:p-8">
         <section className="soc-surface print:hidden mb-4 p-4 md:p-5">
-          <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-text-tertiary">Attendance Records</p>
-              <h2 className="text-2xl font-black uppercase tracking-wide text-text-primary">Daily Time Record</h2>
-              <p className="mt-1 text-sm text-text-secondary">Generated from verified schedules, attendance, and punctuality records.</p>
-            </div>
-            <div className="flex gap-2">
+          <OperationalPageHeader
+            eyebrow="Attendance records"
+            title="Daily Time Record"
+            description="Review guard attendance, check-in/check-out records, and working hours for the selected period."
+            icon={FileText}
+            status={<span className="soc-status-neutral">{rangeLabel}</span>}
+            actions={(
+              <>
               <button type="button" onClick={() => window.print()} className="soc-btn inline-flex min-h-10 items-center gap-2 px-3" title="Print DTR report">
                 <Printer className="h-4 w-4" aria-hidden="true" /> Print
               </button>
-              <button type="button" onClick={() => downloadCsv(report.items)} disabled={report.items.length === 0} className="soc-btn inline-flex min-h-10 items-center gap-2 px-3 disabled:opacity-50" title="Export current page as CSV">
-                <Download className="h-4 w-4" aria-hidden="true" /> CSV
+              <button type="button" onClick={() => { downloadCsv(report.items); setExportNotice('Current report page exported as CSV.') }} disabled={report.items.length === 0} className="soc-btn inline-flex min-h-10 items-center gap-2 px-3 disabled:opacity-50" title="Export current page as CSV">
+                <Download className="h-4 w-4" aria-hidden="true" /> Export CSV
               </button>
-            </div>
+              </>
+            )}
+          />
+
+          <div className="mt-4">
+            <OperationalSummaryBand
+              items={[
+                { label: 'Matching records', value: report.total, detail: 'Across all result pages', tone: 'info', icon: FileText },
+                { label: 'Showing now', value: report.items.length, detail: rangeLabel, tone: 'neutral', icon: Filter },
+              ]}
+            />
           </div>
 
-          <form onSubmit={submitFilters} className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-6">
+          <form onSubmit={submitFilters} className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-6">
+            <p className="md:col-span-2 xl:col-span-6 text-xs font-bold uppercase tracking-[0.14em] text-text-tertiary">Filter records</p>
+            <p className="md:col-span-2 xl:col-span-6 text-xs text-text-secondary">Leave a filter blank to include all records. Apply filters to update the displayed period.</p>
             <label className="space-y-1 text-xs font-semibold text-text-secondary">
               Guard ID
               <input value={filters.guardId} onChange={(event) => setFilters({ ...filters, guardId: event.target.value })} className="soc-input w-full" placeholder="Optional guard ID" />
@@ -240,8 +256,9 @@ const DtrReport: FC<Props> = ({ user, onLogout, onViewChange, activeView }) => {
             </div>
 
             {error && <p role="alert" className="mb-3 rounded border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger-text">{error}</p>}
+            {exportNotice && <p role="status" className="mb-3 rounded border border-success-border bg-success-bg px-3 py-2 text-sm text-success-text">{exportNotice}</p>}
             {report.items.length === 0 && !error ? (
-              <div className="rounded border border-border-subtle bg-surface-elevated px-4 py-10 text-center text-sm text-text-secondary">No DTR records match the selected filters.</div>
+              <div className="rounded border border-border-subtle bg-surface-elevated px-4 py-10 text-center text-sm text-text-secondary">No attendance records were found for the selected filters. Adjust the period, site, guard, or status and try again.</div>
             ) : (
               <div className="dtr-print-table-wrap overflow-x-auto">
                 <table className="dtr-print-table w-full min-w-[1100px] border-collapse text-left text-sm">

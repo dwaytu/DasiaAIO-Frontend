@@ -7,6 +7,7 @@ import { useOperationalMapData, ClientSiteInput } from '../../hooks/useOperation
 import { useAuth } from '../../hooks/useAuth'
 import { normalizeRole, Role } from '../../types/auth'
 import EmptyState from '../shared/EmptyState'
+import ConfirmationDialog from '../shared/ConfirmationDialog'
 import LoadingSkeleton from '../shared/LoadingSkeleton'
 import SentinelModal from '../shared/SentinelModal'
 import EditUserModal from '../EditUserModal'
@@ -157,6 +158,7 @@ const GuardsTab: FC<{
       guard.username,
       guard.email,
       guard.phone_number,
+      guard.guard_code,
       guard.guard_number,
       guard.license_number,
     ].some((value) => String(value ?? '').toLowerCase().includes(normalizedSearch)))
@@ -472,7 +474,7 @@ const GuardsTab: FC<{
               type="search"
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="Search name, email, phone, or license"
+              placeholder="Guard ID, name, email, phone, or license"
               className="soc-input min-h-11 flex-1"
             />
             <button type="submit" className="soc-btn soc-btn-primary min-h-11">
@@ -494,7 +496,7 @@ const GuardsTab: FC<{
             <Search size={28} className="text-text-tertiary" aria-hidden="true" />
             <div>
               <p className="font-semibold text-text-primary">No guards match your search</p>
-              <p className="mt-1 text-sm text-text-secondary">Try a different name, email, phone number, or license.</p>
+              <p className="mt-1 text-sm text-text-secondary">Try a Guard ID, name, email, phone number, or license.</p>
             </div>
             <button type="button" onClick={clearSearch} className="soc-btn soc-btn-neutral">
               Clear search
@@ -526,7 +528,9 @@ const GuardsTab: FC<{
                         </span>
                         <div className="min-w-0">
                           <p className="truncate font-semibold text-text-primary">{g.full_name || g.username}</p>
-                          <p className="mt-0.5 text-xs uppercase tracking-[0.12em] text-text-tertiary">Guard account</p>
+                          <p className="mt-0.5 text-xs text-text-tertiary">
+                            {g.guard_code ? `Guard ID: ${g.guard_code}` : 'Guard ID pending assignment'}
+                          </p>
                         </div>
                       </div>
                     </td>
@@ -878,6 +882,7 @@ const FirearmsTab: FC = () => {
   const [showAddModal, setShowAddModal] = useState(false)
   const [newFirearm, setNewFirearm] = useState({ serialNumber: '', model: '', caliber: '', licenseExpiryDate: '' })
   const [submitting, setSubmitting] = useState(false)
+  const [firearmPendingRemoval, setFirearmPendingRemoval] = useState<Firearm | null>(null)
 
   useEffect(() => {
     fetchFirearms()
@@ -1029,7 +1034,7 @@ const FirearmsTab: FC = () => {
                   <td className="px-4 py-3 text-right">
                     <button
                       type="button"
-                      onClick={() => deleteFirearm(f.id)}
+                      onClick={() => setFirearmPendingRemoval(f)}
                       className="soc-btn soc-btn-danger"
                     >
                       <Trash2 size={15} aria-hidden="true" />
@@ -1042,6 +1047,15 @@ const FirearmsTab: FC = () => {
           </table>
         </div>
       )}
+      <ConfirmationDialog
+        open={Boolean(firearmPendingRemoval)}
+        onClose={() => setFirearmPendingRemoval(null)}
+        onConfirm={() => firearmPendingRemoval ? deleteFirearm(firearmPendingRemoval.id) : undefined}
+        title="Remove firearm?"
+        description={firearmPendingRemoval ? `Firearm ${firearmPendingRemoval.serialNumber} will be removed from the active inventory.` : ''}
+        confirmLabel="Remove firearm"
+        confirmingLabel="Removing firearm..."
+      />
     </section>
   )
 }
@@ -1054,6 +1068,7 @@ const VehiclesTab: FC = () => {
   const [showAddModal, setShowAddModal] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [newCar, setNewCar] = useState({ licensePlate: '', plateNumber: '' })
+  const [vehiclePendingRemoval, setVehiclePendingRemoval] = useState<ArmoredCar | null>(null)
 
   useEffect(() => {
     fetchCars()
@@ -1194,7 +1209,7 @@ const VehiclesTab: FC = () => {
                   <td className="px-4 py-3 text-right">
                     <button
                       type="button"
-                      onClick={() => deleteVehicle(car.id)}
+                      onClick={() => setVehiclePendingRemoval(car)}
                       className="soc-btn soc-btn-danger"
                     >
                       Remove
@@ -1206,6 +1221,15 @@ const VehiclesTab: FC = () => {
           </table>
         </div>
       )}
+      <ConfirmationDialog
+        open={Boolean(vehiclePendingRemoval)}
+        onClose={() => setVehiclePendingRemoval(null)}
+        onConfirm={() => vehiclePendingRemoval ? deleteVehicle(vehiclePendingRemoval.id) : undefined}
+        title="Remove vehicle?"
+        description={vehiclePendingRemoval ? `Vehicle ${vehiclePendingRemoval.plate_number || vehiclePendingRemoval.license_plate} will be removed from the active fleet list.` : ''}
+        confirmLabel="Remove vehicle"
+        confirmingLabel="Removing vehicle..."
+      />
     </section>
   )
 }
@@ -1216,6 +1240,7 @@ const ClientSitesTab: FC = () => {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [sitePendingRemoval, setSitePendingRemoval] = useState<{ id: string; name: string } | null>(null)
   const [newSite, setNewSite] = useState<ClientSiteInput>({
     name: '',
     latitude: 7.4478,
@@ -1327,7 +1352,7 @@ const ClientSitesTab: FC = () => {
                   <td className="px-4 py-3 text-right">
                     <button
                       type="button"
-                      onClick={() => handleDelete(site.id)}
+                      onClick={() => setSitePendingRemoval({ id: site.id, name: site.name })}
                       className="soc-btn soc-btn-danger"
                     >
                       <Trash2 size={15} aria-hidden="true" />
@@ -1340,6 +1365,15 @@ const ClientSitesTab: FC = () => {
           </table>
         </div>
       )}
+      <ConfirmationDialog
+        open={Boolean(sitePendingRemoval)}
+        onClose={() => setSitePendingRemoval(null)}
+        onConfirm={() => sitePendingRemoval ? handleDelete(sitePendingRemoval.id) : undefined}
+        title="Remove client site?"
+        description={sitePendingRemoval ? `${sitePendingRemoval.name} will no longer be available for new site assignments or check-in-area configuration.` : ''}
+        confirmLabel="Remove client site"
+        confirmingLabel="Removing client site..."
+      />
     </section>
   )
 }

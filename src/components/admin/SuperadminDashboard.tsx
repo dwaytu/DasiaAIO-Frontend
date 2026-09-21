@@ -20,8 +20,6 @@ import SentinelModal from '../shared/SentinelModal'
 import ConfirmationDialog from '../shared/ConfirmationDialog'
 import RejectApprovalDialog from '../shared/RejectApprovalDialog'
 import { CalendarPlus, ClipboardX, CalendarX2, Target } from 'lucide-react'
-import Allowed from '../rbac/Allowed'
-import DeniedFallback from '../rbac/DeniedFallback'
 import OperationalShell from '../layout/OperationalShell'
 import { ROUTES, VIEW_TO_ROUTE } from '../../router/routes'
 import { fetchJsonOrThrow, getAuthHeaders } from '../../utils/api'
@@ -351,10 +349,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   const isSupervisorViewer = normalizedViewerRole === 'supervisor'
   const canManageUsers = can(normalizedViewerRole, 'manage_users')
   const canApproveGuards = normalizedViewerRole === 'admin' || normalizedViewerRole === 'superadmin'
-  const canCreateGuardAccounts =
-    normalizedViewerRole === 'superadmin' ||
-    normalizedViewerRole === 'admin' ||
-    normalizedViewerRole === 'supervisor'
+  const canCreateGuardAccounts = can(normalizedViewerRole, 'create_guard_accounts')
   const canViewUserDirectory = canManageUsers || canCreateGuardAccounts
   const navItems = getSidebarNav(user.role)
   const navigate = useNavigate()
@@ -367,6 +362,12 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
       navigate(ROUTES.FIREARMS)
     } else if (type === 'shift') {
       navigate(ROUTES.SCHEDULE)
+    } else if (type === 'incident-review' || type === 'operations-map') {
+      navigate(ROUTES.OPERATIONS_MAP)
+    } else if (type === 'guard-compliance') {
+      navigate(ROUTES.GUARD_COMPLIANCE)
+    } else if (type === 'firearm-compliance') {
+      navigate(ROUTES.FIREARM_COMPLIANCE)
     }
   }, [navigate])
 
@@ -1136,6 +1137,11 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                   <p className="text-xs text-text-tertiary mt-0.5">
                     {isSupervisorViewer ? 'Create and update guard accounts assigned to your operations.' : 'Manage system users, permissions, and security roles'}
                   </p>
+                  {isSupervisorViewer ? (
+                    <p className="mt-2 text-xs text-text-secondary">
+                      Limited management access: you can create and update guard accounts, but only administrators can delete accounts.
+                    </p>
+                  ) : null}
                 </div>
                 <div className="flex items-center gap-2">
                   {canCreateGuardAccounts ? (
@@ -1347,23 +1353,17 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 5.636l-12.728 12.728M8 7h8a2 2 0 012 2v6a2 2 0 01-2 2H8a2 2 0 01-2-2V9a2 2 0 012-2z" />
                                   </svg>
                                 </button>
-                                <Allowed
-                                  role={user.role}
-                                  permission="manage_users"
-                                  fallback={<DeniedFallback title="Delete blocked" reason="Your role cannot delete this account." />}
-                                >
-                                  {canDelete && (
-                                    <button
-                                      type="button"
-                                      onClick={() => requestDeleteUser(u.id, u.email)}
-                                      title="Delete user"
-                                      aria-label={`Delete ${u.full_name || u.username || u.email}`}
-                                      className="min-h-11 min-w-11 rounded p-2 text-text-tertiary transition-colors hover:bg-danger-bg hover:text-danger-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
-                                    >
-                                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                    </button>
-                                  )}
-                                </Allowed>
+                                {canDelete && (
+                                  <button
+                                    type="button"
+                                    onClick={() => requestDeleteUser(u.id, u.email)}
+                                    title="Delete user"
+                                    aria-label={`Delete ${u.full_name || u.username || u.email}`}
+                                    className="min-h-11 min-w-11 rounded p-2 text-text-tertiary transition-colors hover:bg-danger-bg hover:text-danger-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                  </button>
+                                )}
                               </div>
                             </td>
                           </tr>
@@ -2021,8 +2021,9 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
             users={users}
             onDeleteUser={requestDeleteUser}
             onUsersChanged={fetchData}
-            canManageUsers={canManageUsers}
-            isSuperadminViewer={isSuperadminViewer}
+            canManageGuardAccounts={canCreateGuardAccounts}
+            canDeleteGuardAccounts={canManageUsers}
+            isSupervisorViewer={isSupervisorViewer}
           />
         ) : activeSection === 'operations-map' ? (
           <SuperadminOperationsMapSection trackingAccuracyMode={trackingAccuracyMode} />

@@ -20,8 +20,9 @@ interface ResourceManagementPanelProps {
   users: any[]
   onDeleteUser: (id: string, email: string) => void
   onUsersChanged?: () => Promise<void> | void
-  canManageUsers: boolean
-  isSuperadminViewer: boolean
+  canManageGuardAccounts: boolean
+  canDeleteGuardAccounts: boolean
+  isSupervisorViewer: boolean
 }
 
 interface Firearm {
@@ -88,8 +89,9 @@ const ResourceManagementPanel: FC<ResourceManagementPanelProps> = ({
   users,
   onDeleteUser,
   onUsersChanged,
-  canManageUsers,
-  isSuperadminViewer,
+  canManageGuardAccounts,
+  canDeleteGuardAccounts,
+  isSupervisorViewer,
 }) => {
   const [activeTab, setActiveTab] = useState<ManageTab>('guards')
 
@@ -98,7 +100,16 @@ const ResourceManagementPanel: FC<ResourceManagementPanelProps> = ({
       <section className="soc-surface p-4 md:p-5">
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-text-tertiary">Operations</p>
         <h1 className="text-2xl font-black uppercase tracking-wide text-text-primary">Resource Management</h1>
-        <p className="mt-1 text-sm text-text-secondary">Centralized add, view, and remove for guards, firearms, vehicles, and client sites.</p>
+        <p className="mt-1 text-sm text-text-secondary">
+          {isSupervisorViewer
+            ? 'Create and manage guard accounts, firearms, vehicles, and client sites for your operations.'
+            : 'Centralized add, view, and remove for guards, firearms, vehicles, and client sites.'}
+        </p>
+        {isSupervisorViewer ? (
+          <p className="mt-3 text-xs text-text-secondary">
+            Limited management access: you can create and update guard accounts and operational resources. Account deletion is restricted to administrators.
+          </p>
+        ) : null}
       </section>
 
       <nav className="flex flex-wrap gap-2 rounded border border-border-subtle bg-surface p-2" aria-label="Resource tabs">
@@ -124,8 +135,8 @@ const ResourceManagementPanel: FC<ResourceManagementPanelProps> = ({
           users={users}
           onDeleteUser={onDeleteUser}
           onUsersChanged={onUsersChanged}
-          canManageUsers={canManageUsers}
-          isSuperadminViewer={isSuperadminViewer}
+          canManageGuardAccounts={canManageGuardAccounts}
+          canDeleteGuardAccounts={canDeleteGuardAccounts}
         />
       )}
       {activeTab === 'firearms' && <FirearmsTab />}
@@ -139,9 +150,9 @@ const GuardsTab: FC<{
   users: any[]
   onDeleteUser: (id: string, email: string) => void
   onUsersChanged?: () => Promise<void> | void
-  canManageUsers: boolean
-  isSuperadminViewer: boolean
-}> = ({ users, onDeleteUser, onUsersChanged, canManageUsers, isSuperadminViewer }) => {
+  canManageGuardAccounts: boolean
+  canDeleteGuardAccounts: boolean
+}> = ({ users, onDeleteUser, onUsersChanged, canManageGuardAccounts, canDeleteGuardAccounts }) => {
   const { user: currentUser } = useAuth()
   const guards = users.filter(
     (u) => (u.role || '').toLowerCase() === 'guard' || (u.role || '').toLowerCase() === 'user'
@@ -409,7 +420,7 @@ const GuardsTab: FC<{
     setEditUser(null)
   }
 
-  if (!canManageUsers) {
+  if (!canManageGuardAccounts) {
     return (
       <section className="table-glass rounded p-6">
         <EmptyState icon={Users} title="Insufficient permissions" subtitle="You do not have permission to manage users" />
@@ -513,7 +524,7 @@ const GuardsTab: FC<{
                     <th scope="col" className="w-[34%] px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.14em] text-text-secondary">Email</th>
                     <th scope="col" className="w-[18%] px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.14em] text-text-secondary hidden md:table-cell">Phone</th>
                     <th scope="col" className="w-[15%] px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.14em] text-text-secondary hidden lg:table-cell">License</th>
-                    {(isSuperadminViewer || canManageGuardPassword) && (
+                    {(canManageGuardAccounts || canManageGuardPassword || canDeleteGuardAccounts) && (
                       <th scope="col" className="w-[8%] px-4 py-3 text-right text-xs font-bold uppercase tracking-[0.14em] text-text-secondary">Actions</th>
                     )}
                   </tr>
@@ -550,7 +561,7 @@ const GuardsTab: FC<{
                         <span className="text-text-tertiary">Not provided</span>
                       )}
                     </td>
-                    {(isSuperadminViewer || canManageGuardPassword) && (
+                    {(canManageGuardAccounts || canManageGuardPassword || canDeleteGuardAccounts) && (
                       <td className="px-4 py-4 align-middle text-right">
                         <div className="flex justify-end gap-2">
                           {canManageGuardPassword && (
@@ -563,8 +574,7 @@ const GuardsTab: FC<{
                               Password
                             </button>
                           )}
-                          {isSuperadminViewer && (
-                            <>
+                          {canManageGuardAccounts && (
                           <button
                             type="button"
                             onClick={() => setEditUser(g)}
@@ -573,6 +583,8 @@ const GuardsTab: FC<{
                             <Pencil size={15} aria-hidden="true" />
                             Edit
                           </button>
+                          )}
+                          {canDeleteGuardAccounts && (
                           <button
                             type="button"
                             onClick={() => onDeleteUser(g.id, g.email)}
@@ -581,7 +593,6 @@ const GuardsTab: FC<{
                             <Trash2 size={15} aria-hidden="true" />
                             Remove
                           </button>
-                            </>
                           )}
                         </div>
                       </td>

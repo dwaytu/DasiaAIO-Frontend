@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ThemeProvider } from '../context/ThemeProvider'
 import { GuardSettings } from '../components/settings/GuardSettings'
@@ -6,60 +6,49 @@ import { SupervisorSettings } from '../components/settings/SupervisorSettings'
 import { AdminSettings } from '../components/settings/AdminSettings'
 import { SuperadminSettings } from '../components/settings/SuperadminSettings'
 
-const baseUser = {
-  id: 'user-1',
-  email: 'user@example.test',
-  username: 'operator',
-  fullName: 'Operator Example',
-}
+jest.mock('../utils/pushNotifications', () => ({
+  registerServiceWorker: jest.fn(),
+  requestPushPermission: jest.fn(),
+  subscribeToPush: jest.fn(),
+  unsubscribeFromPush: jest.fn(),
+}))
 
-function renderWithTheme(element: React.ReactElement) {
-  return render(<ThemeProvider>{element}</ThemeProvider>)
-}
+jest.mock('../config', () => ({ API_BASE_URL: 'http://localhost:5000' }))
 
-describe('role settings MVP', () => {
-  beforeEach(() => {
-    localStorage.clear()
-  })
+const baseUser = { id: 'user-1', email: 'user@example.test', username: 'operator', fullName: 'Operator Example' }
+const renderWithTheme = (element: React.ReactElement) => render(<ThemeProvider>{element}</ThemeProvider>)
 
-  it('persists guard notification settings under a role-scoped key', async () => {
-    const user = userEvent.setup()
+describe('account settings', () => {
+  beforeEach(() => localStorage.clear())
 
+  it('shows only controls backed by current account behavior', () => {
     renderWithTheme(<GuardSettings user={{ ...baseUser, role: 'guard' }} />)
 
-    await user.click(screen.getByRole('switch', { name: /push notifications/i }))
-    await user.click(screen.getByRole('switch', { name: /email notifications/i }))
-
-    await waitFor(() => {
-      expect(localStorage.getItem('settings.guard.notifications')).toContain('"push":true')
-    })
-    expect(localStorage.getItem('settings.guard.notifications')).toContain('"email":true')
+    expect(screen.getByRole('heading', { name: 'Notifications' })).toBeInTheDocument()
+    expect(screen.getByRole('switch', { name: 'Device push notifications' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Change Password' })).toBeInTheDocument()
+    expect(screen.getByRole('switch', { name: 'Dark mode' })).toBeInTheDocument()
+    expect(screen.queryByRole('switch', { name: /email notifications/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('switch', { name: /approval queue alerts/i })).not.toBeInTheDocument()
   })
 
-  it('keeps supervisor settings isolated from guard settings', async () => {
+  it('persists the implemented display preference and exposes switch state', async () => {
     const user = userEvent.setup()
+    renderWithTheme(<GuardSettings user={{ ...baseUser, role: 'guard' }} />)
 
-    localStorage.setItem('settings.guard.notifications', JSON.stringify({ push: true, email: false, inApp: true }))
-    renderWithTheme(<SupervisorSettings user={{ ...baseUser, role: 'supervisor' }} />)
-
-    await user.click(screen.getByRole('switch', { name: /approval queue alerts/i }))
-
-    expect(localStorage.getItem('settings.guard.notifications')).toBe(JSON.stringify({ push: true, email: false, inApp: true }))
-    await waitFor(() => {
-      expect(localStorage.getItem('settings.supervisor.supervisor')).toContain('"approvalQueue":true')
-    })
+    const darkMode = screen.getByRole('switch', { name: 'Dark mode' })
+    expect(darkMode).toHaveAttribute('aria-checked', 'true')
+    await user.click(darkMode)
+    expect(darkMode).toHaveAttribute('aria-checked', 'false')
+    expect(localStorage.getItem('sentinel-theme')).toBe('light')
   })
 
-  it('renders admin and superadmin settings stubs for future categories', () => {
-    renderWithTheme(
-      <>
-        <AdminSettings user={{ ...baseUser, role: 'admin' }} />
-        <SuperadminSettings user={{ ...baseUser, role: 'superadmin' }} />
-      </>,
-    )
+  it('keeps the real settings structure available for every role', () => {
+    renderWithTheme(<><SupervisorSettings user={{ ...baseUser, role: 'supervisor' }} /><AdminSettings user={{ ...baseUser, role: 'admin' }} /><SuperadminSettings user={{ ...baseUser, role: 'superadmin' }} /></>)
 
+    expect(screen.getByRole('heading', { name: /^supervisor settings$/i, level: 1 })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /^admin settings$/i, level: 1 })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /^superadmin settings$/i, level: 1 })).toBeInTheDocument()
-    expect(screen.getAllByText(/additional controls are planned for a later wave/i).length).toBeGreaterThan(0)
+    expect(screen.queryByText(/MVP|later wave|planned for/i)).not.toBeInTheDocument()
   })
 })

@@ -1,281 +1,133 @@
-import React, { useEffect, useState } from 'react';
-import { AlertTriangle, ClipboardCheck, Bell } from 'lucide-react';
-import { API_BASE_URL } from '../../config';
-import { ActionInbox } from './ActionInbox';
-import type { InboxItem } from './ActionInbox';
-import { WorkflowTimeline } from './WorkflowTimeline';
-import type { TimelineEntry } from './WorkflowTimeline';
-import { getAuthHeaders } from '../../utils/api';
-import { fetchArrayPayload } from './inboxPayloads';
-import { parsePendingApprovalsPayload, type PendingApprovalRecord } from './pendingApprovals';
-import { fetchOperationalRequestInboxItems } from './operationalRequestInbox';
-import { getNotificationPriority } from './roleInboxSummary';
-
-// ─── API response types ────────────────────────────────────────────────────
+import React, { useEffect, useState } from 'react'
+import { API_BASE_URL } from '../../config'
+import type { InboxItem } from './ActionInbox'
+import { fetchArrayPayload } from './inboxPayloads'
+import { NotificationTriage } from './NotificationTriage'
+import { fetchOperationalRequestInboxItems } from './operationalRequestInbox'
+import { parsePendingApprovalsPayload, type PendingApprovalRecord } from './pendingApprovals'
+import { getNotificationCategory, getNotificationPriority } from './roleInboxSummary'
+import { getAuthHeaders } from '../../utils/api'
 
 interface Notification {
-  id: string;
-  type?: string;
-  title: string;
-  message: string;
-  is_read: boolean;
-  created_at: string;
+  id: string
+  type?: string
+  title: string
+  message: string
+  is_read: boolean
+  created_at: string
 }
 
-type PendingApproval = PendingApprovalRecord;
+type PendingApproval = PendingApprovalRecord
 
 interface Incident {
-  id: string;
-  title?: string;
-  description?: string;
-  severity?: string;
-  status: string;
-  created_at: string;
+  id: string
+  title?: string
+  description?: string
+  severity?: string
+  status: string
+  created_at: string
 }
-
-// ─── Component ────────────────────────────────────────────────────────────
 
 export interface SuperadminInboxPanelProps {
-  userId: string;
-  onAction?: (type: string, id: string) => void;
+  userId: string
+  onAction?: (type: string, id: string) => void
 }
 
-const MS_PER_HOUR = 3_600_000;
-const MS_48H = 48 * MS_PER_HOUR;
+const MS_48H = 48 * 3_600_000
 
-function isThisMonth(iso: string): boolean {
-  const d = new Date(iso);
-  const now = new Date();
-  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
-}
-
-export const SuperadminInboxPanel = ({
-  userId,
-  onAction,
-}: SuperadminInboxPanelProps): React.ReactElement => {
-  const [inboxItems, setInboxItems] = useState<InboxItem[]>([]);
-  const [timelineEntries, setTimelineEntries] = useState<TimelineEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const [statsIncidents, setStatsIncidents] = useState(0);
-  const [statsPending, setStatsPending] = useState(0);
-  const [statsUnread, setStatsUnread] = useState(0);
+export const SuperadminInboxPanel = ({ userId, onAction }: SuperadminInboxPanelProps): React.ReactElement => {
+  const [inboxItems, setInboxItems] = useState<InboxItem[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    let cancelled = false;
-    const controller = new AbortController();
-    const headers = getAuthHeaders({ 'Content-Type': 'application/json' });
+    let cancelled = false
+    const controller = new AbortController()
+    const headers = getAuthHeaders({ 'Content-Type': 'application/json' })
 
-    const fetchAll = async (): Promise<void> => {
-      setLoading(true);
-
-      const [notifResult, approvalResult, incidentResult, requestsResult] = await Promise.allSettled([
-        fetchArrayPayload<Notification>(
-          `${API_BASE_URL}/api/users/${encodeURIComponent(userId)}/notifications`,
-          headers,
-          ['notifications'],
-          controller.signal,
-        ),
-        fetch(`${API_BASE_URL}/api/users/pending-approvals`, {
-          headers,
-          signal: controller.signal,
-        }).then<unknown>(
-          (r) => (r.ok ? r.json() : Promise.reject(r.status))
-        ),
-        fetchArrayPayload<Incident>(
-          `${API_BASE_URL}/api/incidents`,
-          headers,
-          ['incidents'],
-          controller.signal,
-        ),
+    const load = async () => {
+      setLoading(true)
+      const [notificationsResult, approvalsResult, incidentsResult, requestsResult] = await Promise.allSettled([
+        fetchArrayPayload<Notification>(`${API_BASE_URL}/api/users/${encodeURIComponent(userId)}/notifications`, headers, ['notifications'], controller.signal),
+        fetch(`${API_BASE_URL}/api/users/pending-approvals`, { headers, signal: controller.signal })
+          .then<unknown>((response) => response.ok ? response.json() : Promise.reject(response.status)),
+        fetchArrayPayload<Incident>(`${API_BASE_URL}/api/incidents`, headers, ['incidents'], controller.signal),
         fetchOperationalRequestInboxItems(true, controller.signal, onAction),
-      ]);
+      ])
 
-      const notifications: Notification[] =
-        notifResult.status === 'fulfilled' ? notifResult.value : [];
-      const approvals: PendingApproval[] =
-        approvalResult.status === 'fulfilled' ? parsePendingApprovalsPayload(approvalResult.value) : [];
-      const incidents: Incident[] =
-        incidentResult.status === 'fulfilled' ? incidentResult.value : [];
-      const operationalRequests =
-        requestsResult.status === 'fulfilled' ? requestsResult.value : [];
+      if (cancelled) return
 
-      // ── Stats ──────────────────────────────────────────────────────────
-      const incidentsThisMonth = incidents.filter((i) => isThisMonth(i.created_at)).length;
-      const pendingCount = approvals.length;
-      const unreadCount = notifications.filter((n) => !n.is_read).length;
+      const notifications = notificationsResult.status === 'fulfilled' ? notificationsResult.value : []
+      const approvals: PendingApproval[] = approvalsResult.status === 'fulfilled'
+        ? parsePendingApprovalsPayload(approvalsResult.value)
+        : []
+      const incidents = incidentsResult.status === 'fulfilled' ? incidentsResult.value : []
+      const requests = requestsResult.status === 'fulfilled' ? requestsResult.value : []
+      const now = Date.now()
 
-      setStatsIncidents(incidentsThisMonth);
-      setStatsPending(pendingCount);
-      setStatsUnread(unreadCount);
-
-      // ── Inbox items ────────────────────────────────────────────────────
-      const now = Date.now();
-      const items: InboxItem[] = [];
-      items.push(...operationalRequests);
-
-      for (const incident of incidents) {
-        if (incident.status !== 'closed' && incident.status !== 'resolved') {
-          items.push({
-            id: incident.id,
-            priority: 'urgent',
-            category: 'compliance',
-            title: 'Critical Incident Requires Review',
-            description: incident.description ?? incident.title ?? `Incident #${incident.id}`,
+      const items: InboxItem[] = [
+        ...requests,
+        ...incidents
+          .filter((incident) => incident.status !== 'closed' && incident.status !== 'resolved')
+          .map((incident) => ({
+            id: `incident-${incident.id}`,
+            priority: 'urgent' as const,
+            category: 'incident' as const,
+            title: incident.title ?? 'Critical Incident Requires Review',
+            description: incident.description ?? `Incident #${incident.id}`,
             timestamp: incident.created_at,
-            actionLabel: 'Review',
+            actionLabel: 'Open map',
             onAction: () => onAction?.('incident-review', incident.id),
-            statusChip: { label: incident.severity ?? 'Critical', tone: 'danger' },
-          });
-        }
-      }
+            statusChip: { label: incident.severity ?? 'Critical', tone: 'danger' as const },
+          })),
+        ...approvals.map((approval) => {
+          const timestamp = approval.requested_at ?? approval.created_at ?? new Date().toISOString()
+          const overdue = now - new Date(timestamp).getTime() >= MS_48H
+          return {
+            id: `approval-${approval.id}`,
+            priority: overdue ? 'urgent' as const : 'high' as const,
+            category: 'request' as const,
+            title: 'Pending System Approval',
+            description: approval.description ?? approval.reason ?? approval.guard_name ?? `Approval request #${approval.id}`,
+            timestamp,
+            actionLabel: 'Review approval',
+            onAction: () => onAction?.('approval', approval.id),
+            statusChip: overdue ? { label: 'Overdue', tone: 'danger' as const } : { label: 'Pending', tone: 'warning' as const },
+          }
+        }),
+        ...notifications
+          .filter((notification) => !notification.is_read)
+          .map((notification) => {
+            const category = getNotificationCategory(notification)
+            const actionType = notification.type === 'firearm_compliance' ? 'firearm-compliance' : 'guard-compliance'
+            return {
+              id: `notification-${notification.id}`,
+              notificationId: notification.id,
+              priority: getNotificationPriority(notification),
+              category,
+              title: notification.title,
+              description: notification.message,
+              timestamp: notification.created_at,
+              isRead: false,
+              actionLabel: category === 'compliance' ? 'Open compliance' : undefined,
+              onAction: category === 'compliance' ? () => onAction?.(actionType, notification.id) : undefined,
+            }
+          }),
+      ]
 
-      for (const approval of approvals) {
-        const approvalTimestamp = approval.requested_at ?? approval.created_at;
-        const approvalTime = approvalTimestamp ? new Date(approvalTimestamp).getTime() : Number.NaN;
-        const age = Number.isFinite(approvalTime) ? now - approvalTime : 0;
-        items.push({
-          id: approval.id,
-          priority: age >= MS_48H ? 'urgent' : 'high',
-          category: 'approval',
-          title: 'Pending System Approval',
-          description:
-            approval.description ??
-            approval.reason ??
-            approval.guard_name ??
-            `Approval request #${approval.id}`,
-          timestamp: approvalTimestamp ?? new Date().toISOString(),
-          actionLabel: 'Approve',
-          onAction: () => onAction?.('approval', approval.id),
-          statusChip: age >= MS_48H ? { label: 'Overdue', tone: 'danger' } : undefined,
-        });
-      }
+      const priorityOrder = { urgent: 0, high: 1, normal: 2 }
+      items.sort((left, right) => priorityOrder[left.priority] - priorityOrder[right.priority]
+        || new Date(right.timestamp).getTime() - new Date(left.timestamp).getTime())
 
-      for (const notif of notifications) {
-        if (!notif.is_read) {
-          items.push({
-            id: notif.id,
-            priority: getNotificationPriority(notif),
-            category: 'notification',
-            title: notif.title,
-            description: notif.message,
-            timestamp: notif.created_at,
-            isRead: false,
-            onAction: () => onAction?.('notification', notif.id),
-          });
-        }
-      }
+      setInboxItems(items)
+      setLoading(false)
+    }
 
-      // Sort by priority then timestamp (newest first within same priority)
-      const PRIORITY_ORDER = { urgent: 0, high: 1, normal: 2 } as const;
-      items.sort((a, b) => {
-        const diff = PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
-        if (diff !== 0) return diff;
-        return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
-      });
-
-      setInboxItems(items);
-
-      // ── Timeline entries ───────────────────────────────────────────────
-      const entries: TimelineEntry[] = incidents
-        .slice()
-        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-        .map((incident) => ({
-          id: incident.id,
-          status:
-            incident.status === 'closed' || incident.status === 'resolved'
-              ? 'resolved'
-              : 'active',
-          title: incident.title ?? `Incident #${incident.id}`,
-          timestamp: incident.created_at,
-          detail: incident.description,
-          category: 'Compliance Event',
-        }));
-
-      if (cancelled) return;
-      setTimelineEntries(entries);
-      setLoading(false);
-    };
-
-    void fetchAll();
+    void load()
     return () => {
-      cancelled = true;
-      controller.abort();
-    };
-  }, [userId, onAction]);
+      cancelled = true
+      controller.abort()
+    }
+  }, [userId, onAction])
 
-  return (
-    <div className="space-y-6">
-      <h2 className="text-text-primary font-semibold text-lg">Governance Inbox</h2>
-
-      {/* Governance Banner */}
-      <div
-        className="flex flex-wrap gap-3"
-        role="region"
-        aria-label="Governance summary statistics"
-      >
-        <StatChip
-          icon={<AlertTriangle className="w-4 h-4" aria-hidden="true" />}
-          count={statsIncidents}
-          label="Incidents this month"
-          tone="danger"
-        />
-        <StatChip
-          icon={<ClipboardCheck className="w-4 h-4" aria-hidden="true" />}
-          count={statsPending}
-          label="Pending approvals"
-          tone="warning"
-        />
-        <StatChip
-          icon={<Bell className="w-4 h-4" aria-hidden="true" />}
-          count={statsUnread}
-          label="Unread notifications"
-          tone="info"
-        />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ActionInbox
-          items={inboxItems}
-          isLoading={loading}
-          emptyMessage="No governance actions"
-        />
-        <WorkflowTimeline
-          entries={timelineEntries}
-          isLoading={loading}
-          emptyMessage="No compliance events"
-          maxVisible={10}
-        />
-      </div>
-    </div>
-  );
-};
-
-// ─── StatChip ─────────────────────────────────────────────────────────────
-
-interface StatChipProps {
-  icon: React.ReactNode;
-  count: number;
-  label: string;
-  tone: 'danger' | 'warning' | 'info';
-}
-
-const TONE_CLASSES: Record<StatChipProps['tone'], string> = {
-  danger: 'bg-danger/10 text-danger border-danger/20',
-  warning: 'bg-warning/10 text-warning border-warning/20',
-  info: 'bg-info/10 text-info border-info/20',
-};
-
-function StatChip({ icon, count, label, tone }: StatChipProps): React.ReactElement {
-  return (
-    <div
-      className={`inline-flex items-center gap-2 px-3 py-2 rounded border text-sm font-medium ${TONE_CLASSES[tone]}`}
-      role="status"
-      aria-label={`${count} ${label}`}
-    >
-      {icon}
-      <span className="font-bold tabular-nums">{count}</span>
-      <span className="text-text-secondary">{label}</span>
-    </div>
-  );
+  return <NotificationTriage items={inboxItems} isLoading={loading} emptyMessage="No notifications require attention." />
 }

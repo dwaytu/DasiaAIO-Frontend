@@ -71,10 +71,18 @@ export function getNotificationPriority(notification: Pick<NotificationRecord, '
   const type = notification.type?.trim().toLowerCase()
   const content = `${notification.title ?? ''} ${notification.message ?? ''}`.toLowerCase()
 
-  if (type === 'guard_compliance' && content.includes('expired')) return 'urgent'
-  if (type === 'guard_compliance') return 'high'
+  if ((type === 'guard_compliance' || type === 'firearm_compliance') && content.includes('expired')) return 'urgent'
+  if (type === 'guard_compliance' || type === 'firearm_compliance') return 'high'
   if (type === 'shift') return 'high'
   return 'normal'
+}
+
+export function getNotificationCategory(notification: Pick<NotificationRecord, 'type'>): InboxItem['category'] {
+  const type = notification.type?.trim().toLowerCase()
+  if (type === 'guard_compliance' || type === 'firearm_compliance') return 'compliance'
+  if (type === 'incident') return 'incident'
+  if (type === 'operational_request') return 'request'
+  return 'notification'
 }
 
 function formatDateTime(iso: string): string {
@@ -136,11 +144,12 @@ function mapNotificationsToItems(notifications: NotificationRecord[]): InboxItem
     .map((notification) => ({
       id: `notification-${notification.id}`,
       priority: getNotificationPriority(notification),
-      category: 'notification' as const,
+      category: getNotificationCategory(notification),
       title: notification.title ?? 'Notification',
       description: notification.message ?? '',
       timestamp: notification.created_at ?? notification.createdAt ?? new Date().toISOString(),
       isRead: false,
+      notificationId: notification.id,
     }))
 }
 

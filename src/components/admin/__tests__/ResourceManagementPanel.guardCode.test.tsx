@@ -2,8 +2,10 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import ResourceManagementPanel from '../ResourceManagementPanel'
 
+let viewerRole = 'superadmin'
+
 jest.mock('../../../hooks/useAuth', () => ({
-  useAuth: () => ({ user: { id: 'superadmin-1', role: 'superadmin' } }),
+  useAuth: () => ({ user: { id: 'viewer-1', role: viewerRole } }),
 }))
 
 jest.mock('../../../config', () => ({
@@ -38,13 +40,18 @@ const users = [
 ]
 
 describe('ResourceManagementPanel guard IDs', () => {
+  beforeEach(() => {
+    viewerRole = 'superadmin'
+  })
+
   it('displays an assigned Guard ID and only uses the fallback when it is unavailable', () => {
     render(
       <ResourceManagementPanel
         users={users}
         onDeleteUser={jest.fn()}
-        canManageUsers
-        isSuperadminViewer
+        canManageGuardAccounts
+        canDeleteGuardAccounts
+        isSupervisorViewer={false}
       />,
     )
 
@@ -58,8 +65,9 @@ describe('ResourceManagementPanel guard IDs', () => {
       <ResourceManagementPanel
         users={users}
         onDeleteUser={jest.fn()}
-        canManageUsers
-        isSuperadminViewer
+        canManageGuardAccounts
+        canDeleteGuardAccounts
+        isSupervisorViewer={false}
       />,
     )
 
@@ -73,5 +81,23 @@ describe('ResourceManagementPanel guard IDs', () => {
     await user.type(search, 'warren')
     await user.click(screen.getByRole('button', { name: 'Search' }))
     expect(screen.getByText('BANDIGAN, WARREN CLIFFORD')).toBeInTheDocument()
+  })
+
+  it('gives supervisors guard management without exposing account deletion', () => {
+    viewerRole = 'supervisor'
+
+    render(
+      <ResourceManagementPanel
+        users={users}
+        onDeleteUser={jest.fn()}
+        canManageGuardAccounts
+        canDeleteGuardAccounts={false}
+        isSupervisorViewer
+      />,
+    )
+
+    expect(screen.getByText(/Limited management access:/)).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: 'Edit' })).toHaveLength(users.length)
+    expect(screen.queryByRole('button', { name: 'Remove' })).not.toBeInTheDocument()
   })
 })

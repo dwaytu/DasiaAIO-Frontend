@@ -60,7 +60,8 @@ describe('shell navigation chrome', () => {
     expect(labels).toContain('Maintenance')
     expect(labels).toContain('Firearm Compliance')
     expect(labels).toContain('Guard License Compliance')
-    expect(labels).toHaveLength(13)
+    expect(labels).toContain('Management')
+    expect(labels).toHaveLength(14)
   })
 
   it('removes approval from elevated mobile navigation when unavailable', () => {

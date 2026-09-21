@@ -91,4 +91,20 @@ test.describe('Shell Header Actions', () => {
     await page.getByRole('dialog', { name: 'Profile menu' }).getByRole('button', { name: 'Settings', exact: true }).click()
     await expect(page.getByRole('heading', { name: /admin settings|superadmin settings/i }).first()).toBeVisible()
   })
+
+  test('admin full Inbox opens a selected detail view for a notification', async ({ page }) => {
+    await installSession(page, {
+      id: 'u2',
+      email: 'admin@test.com',
+      username: 'admin@test.com',
+      role: 'admin',
+      fullName: 'Test Admin',
+      legalConsentAccepted: true,
+    })
+
+    await page.goto(`${BASE_URL.replace(/\/$/, '')}/inbox`)
+    await expect(page.getByRole('heading', { name: 'Inbox', exact: true })).toBeVisible()
+    await expect(page.getByLabel('Selected notification details')).toContainText('Relief update')
+    await expect(page.getByRole('button', { name: 'Unread', exact: true })).toBeVisible()
+  })
 })

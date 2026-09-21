@@ -76,7 +76,7 @@ describe('shell header refactor regressions', () => {
       expect(screen.getByRole('dialog', { name: /quick inbox/i })).toBeInTheDocument()
     })
 
-    expect(screen.getByText(/no urgent inbox items right now/i)).toBeInTheDocument()
+    expect(screen.getByText(/no unread notifications/i)).toBeInTheDocument()
   })
 
   it('sanitizes malformed quick inbox items before rendering them', async () => {
@@ -86,7 +86,7 @@ describe('shell header refactor regressions', () => {
         {
           id: '',
           priority: 'urgent',
-          category: 'notification',
+          category: 'incident',
           title: '',
           description: '',
           timestamp: '',
@@ -94,7 +94,7 @@ describe('shell header refactor regressions', () => {
         {
           id: 'notif-1',
           priority: 'high',
-          category: 'notification',
+          category: 'incident',
           title: 'Relief update',
           description: 'Relief guard confirmed.',
           timestamp: new Date().toISOString(),

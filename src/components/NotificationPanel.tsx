@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { Bell, CheckCheck, Mail, MailOpen } from 'lucide-react'
+import { Bell, CheckCheck, MailOpen } from 'lucide-react'
 import { API_BASE_URL } from '../config'
 import type { User } from '../context/AuthContext'
 import type { InboxItem } from './inbox/ActionInbox'
 import { fetchRoleInboxSummary } from './inbox/roleInboxSummary'
 import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
+import { formatInboxTimestamp } from './inbox/inboxFormatting'
 
 interface NotificationPanelProps {
   user?: User | null
@@ -14,17 +15,25 @@ interface NotificationPanelProps {
   onViewAll?: () => void
 }
 
-interface PersistentNotification {
+interface PersistentNotificationPayload {
   id: string
   title: string
   message: string
   type?: string
+  read?: boolean
+  is_read?: boolean
+  createdAt?: string
+  created_at?: string
+}
+
+type PersistentNotification = PersistentNotificationPayload & {
   read: boolean
   createdAt: string
 }
 
 interface NotificationResponse {
-  notifications?: PersistentNotification[]
+  notifications?: PersistentNotificationPayload[]
+  unreadCount?: number
 }
 
 const FALLBACK_ITEM_TITLE = 'Inbox Update'
@@ -36,7 +45,14 @@ function isInboxPriority(value: unknown): value is InboxItem['priority'] {
 }
 
 function isInboxCategory(value: unknown): value is InboxItem['category'] {
-  return value === 'approval' || value === 'incident' || value === 'shift' || value === 'notification' || value === 'mission'
+  return value === 'approval'
+    || value === 'incident'
+    || value === 'shift'
+    || value === 'notification'
+    || value === 'mission'
+    || value === 'request'
+    || value === 'firearm'
+    || value === 'compliance'
 }
 
 const PRIORITY_BADGE_CLASS: Record<InboxItem['priority'], string> = {
@@ -74,21 +90,17 @@ function sanitizeInboxItems(items: InboxItem[]): InboxItem[] {
     .filter((item): item is InboxItem => item !== null)
 }
 
-function formatTime(timestamp: string): string {
-  const diffMs = Date.now() - new Date(timestamp).getTime()
-  const diffMins = Math.floor(diffMs / 60000)
-  if (diffMins < 1) return 'Just now'
-  if (diffMins < 60) return `${diffMins}m ago`
-  const diffHours = Math.floor(diffMins / 60)
-  if (diffHours < 24) return `${diffHours}h ago`
-  const diffDays = Math.floor(diffHours / 24)
-  if (diffDays === 1) return 'Yesterday'
-  return `${diffDays}d ago`
+function normalizePersistentNotification(notification: PersistentNotificationPayload): PersistentNotification {
+  return {
+    ...notification,
+    read: notification.read ?? notification.is_read ?? false,
+    createdAt: notification.createdAt ?? notification.created_at ?? FALLBACK_ITEM_TIMESTAMP(),
+  }
 }
 
 const NotificationPanel: React.FC<NotificationPanelProps> = ({ user, isOpen, onToggle, onClose, onViewAll }) => {
   const [items, setItems] = useState<InboxItem[]>([])
-  const [actionableCount, setActionableCount] = useState(0)
+  const [unreadCount, setUnreadCount] = useState(0)
   const [notice, setNotice] = useState('')
   const [loading, setLoading] = useState(true)
   const [panelError, setPanelError] = useState('')
@@ -106,7 +118,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ user, isOpen, onT
     const loadSummary = async () => {
       if (!resolvedUserId || !resolvedUserRole) {
         setItems([])
-        setActionableCount(0)
+        setUnreadCount(0)
         setNotice('')
         setPanelError('')
         setNotifications([])
@@ -132,18 +144,22 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ user, isOpen, onT
         if (summaryResult.status === 'fulfilled') {
           const sanitizedItems = sanitizeInboxItems(summaryResult.value.items)
           setItems(sanitizedItems)
-          setActionableCount(sanitizedItems.length)
           setNotice(typeof summaryResult.value.notice === 'string' ? summaryResult.value.notice : '')
           setPanelError(summaryResult.value.hasError ? 'Unable to load inbox data. Please check your connection and try again.' : '')
         } else {
           setItems([])
-          setActionableCount(0)
           setNotice('')
           setPanelError('Unable to load inbox data. Please check your connection and try again.')
         }
 
         if (notificationResult.status === 'fulfilled') {
-          setNotifications(notificationResult.value.notifications ?? [])
+          const nextNotifications = (notificationResult.value.notifications ?? []).map(normalizePersistentNotification)
+          setNotifications(nextNotifications)
+          setUnreadCount(
+            typeof notificationResult.value.unreadCount === 'number'
+              ? notificationResult.value.unreadCount
+              : nextNotifications.filter((notification) => !notification.read).length,
+          )
           setNotificationError('')
         } else {
           setNotificationError('Unable to load notifications.')
@@ -152,7 +168,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ user, isOpen, onT
         if (cancelled) return
 
         setItems([])
-        setActionableCount(0)
+          setUnreadCount(0)
         setNotice('')
         setPanelError('Unable to load inbox data. Please check your connection and try again.')
         if (!cancelled) setNotificationError('Unable to load notifications.')
@@ -175,8 +191,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ user, isOpen, onT
     }
   }, [refreshKey, resolvedUserId, resolvedUserRole])
 
-  const topItems = useMemo(() => items.slice(0, 4), [items])
-  const unreadNotifications = notifications.filter((notification) => !notification.read).length
+  const topItems = useMemo(() => items.filter((item) => item.category !== 'notification' && item.category !== 'compliance').slice(0, 4), [items])
 
   const setNotificationReadState = async (notificationId: string, read: boolean) => {
     setNotificationBusy(true)
@@ -188,6 +203,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ user, isOpen, onT
         `Unable to mark notification as ${read ? 'read' : 'unread'}.`,
       )
       setNotifications((current) => current.map((notification) => notification.id === notificationId ? { ...notification, read } : notification))
+      setUnreadCount((current) => Math.max(0, current + (read ? -1 : 1)))
       setRefreshKey((value) => value + 1)
     } catch (error) {
       setNotificationError(error instanceof Error ? error.message : 'Unable to update notification.')
@@ -206,6 +222,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ user, isOpen, onT
         `Unable to mark all notifications as ${read ? 'read' : 'unread'}.`,
       )
       setNotifications((current) => current.map((notification) => ({ ...notification, read })))
+      setUnreadCount(read ? 0 : notifications.length)
       setRefreshKey((value) => value + 1)
     } catch (error) {
       setNotificationError(error instanceof Error ? error.message : 'Unable to update notifications.')
@@ -220,14 +237,14 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ user, isOpen, onT
         type="button"
         onClick={onToggle}
         className="soc-notification-trigger relative min-h-11 min-w-11 rounded p-2 text-text-secondary transition-colors hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
-        aria-label={actionableCount > 0 ? `Open quick inbox (${actionableCount} items)` : 'Open quick inbox'}
+        aria-label={unreadCount > 0 ? `Open quick inbox (${unreadCount} unread notifications)` : 'Open quick inbox'}
         aria-expanded={isOpen}
         aria-controls="quick-inbox-panel"
       >
         <Bell className="h-5 w-5" aria-hidden="true" />
-        {actionableCount > 0 ? (
+        {unreadCount > 0 ? (
           <span className="absolute right-0 top-0 inline-flex translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-danger px-1.5 py-0.5 text-xs font-bold leading-none text-white">
-            {actionableCount > 99 ? '99+' : actionableCount}
+            {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         ) : null}
       </button>
@@ -236,8 +253,8 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ user, isOpen, onT
         <div id="quick-inbox-panel" className="soc-dropdown-surface absolute right-0 z-(--z-floating) mt-2 flex max-h-[min(36rem,calc(100dvh-6rem))] w-[min(26rem,calc(100vw-1rem))] flex-col rounded" role="dialog" aria-label="Quick inbox">
           <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-4">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-tertiary">Global Actions</p>
-              <h3 className="text-base font-semibold text-text-primary">Quick Inbox</h3>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-tertiary">Notifications</p>
+              <h3 className="text-base font-semibold text-text-primary">{unreadCount} unread</h3>
             </div>
             <button type="button" onClick={onClose} className="soc-btn-neutral">
               Close
@@ -258,15 +275,11 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ user, isOpen, onT
 
           <div className="border-b border-border px-4 py-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-tertiary">Notifications ({unreadNotifications} unread)</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-tertiary">Notification controls</p>
               <div className="flex flex-wrap gap-2">
-                <button type="button" disabled={notificationBusy || unreadNotifications === 0} onClick={() => void setAllNotificationsReadState(true)} className="soc-btn soc-btn-neutral min-h-9 px-2 text-xs disabled:opacity-50" title="Mark all notifications as read">
+                <button type="button" disabled={notificationBusy || unreadCount === 0} onClick={() => void setAllNotificationsReadState(true)} className="soc-btn soc-btn-neutral min-h-9 px-2 text-xs disabled:opacity-50" title="Mark all notifications as read">
                   <CheckCheck className="h-3.5 w-3.5" aria-hidden="true" />
                   Mark all as read
-                </button>
-                <button type="button" disabled={notificationBusy || unreadNotifications === notifications.length} onClick={() => void setAllNotificationsReadState(false)} className="soc-btn soc-btn-neutral min-h-9 px-2 text-xs disabled:opacity-50" title="Mark all notifications as unread">
-                  <Mail className="h-3.5 w-3.5" aria-hidden="true" />
-                  Mark all unread
                 </button>
               </div>
             </div>
@@ -279,9 +292,9 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ user, isOpen, onT
                 <div className="h-20 animate-pulse rounded bg-surface-elevated" />
                 <div className="h-20 animate-pulse rounded bg-surface-elevated" />
               </div>
-            ) : topItems.length === 0 ? (
-              <div className="p-8 text-center text-sm text-text-secondary">No urgent inbox items right now.</div>
-            ) : (
+            ) : topItems.length > 0 ? (
+              <section aria-label="Needs attention">
+                <p className="border-b border-border px-4 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-text-tertiary">Needs attention</p>
               <ul className="divide-y divide-border-subtle" role="list">
                 {topItems.map((item) => (
                   <li key={item.id}>
@@ -299,12 +312,15 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ user, isOpen, onT
                           {item.priority}
                         </span>
                       </div>
-                      <p className="mt-2 text-xs text-text-tertiary">{formatTime(item.timestamp)}</p>
+                      <p className="mt-2 text-xs text-text-tertiary">{formatInboxTimestamp(item.timestamp)}</p>
                     </button>
                   </li>
                 ))}
               </ul>
-            )}
+              </section>
+            ) : notifications.length === 0 ? (
+              <div className="p-8 text-center text-sm text-text-secondary">No unread notifications.</div>
+            ) : null}
 
             {!loading && notifications.length > 0 ? (
               <section className="border-t border-border" aria-label="Notification list">
@@ -315,7 +331,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ user, isOpen, onT
                       <div className="min-w-0 flex-1">
                         <p className={`text-sm text-text-primary ${notification.read ? '' : 'font-semibold'}`}>{notification.title}</p>
                         <p className="mt-1 text-sm text-text-secondary">{notification.message}</p>
-                        <p className="mt-1 text-xs text-text-tertiary">{formatTime(notification.createdAt)}</p>
+                        <p className="mt-1 text-xs text-text-tertiary">{formatInboxTimestamp(notification.createdAt)}</p>
                       </div>
                       <button type="button" disabled={notificationBusy} onClick={() => void setNotificationReadState(notification.id, !notification.read)} className="soc-btn soc-btn-neutral min-h-9 shrink-0 px-2 text-xs disabled:opacity-50" title={notification.read ? 'Mark notification as unread' : 'Mark notification as read'}>
                         {notification.read ? 'Unread' : 'Read'}

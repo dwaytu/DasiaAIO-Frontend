@@ -74,7 +74,7 @@ function RatingStars({ rating }: { rating: number }) {
       {STAR_VALUES.map((value) => (
         <Star
           key={value}
-          className={`h-4 w-4 ${value <= safeRating ? 'fill-warning-text text-warning-text' : 'text-text-tertiary'}`}
+          className={`h-4 w-4 ${value <= safeRating ? 'fill-(--color-warning-text) text-(--color-warning-text)' : 'text-(--color-text-tertiary)'}`}
           aria-hidden="true"
         />
       ))}

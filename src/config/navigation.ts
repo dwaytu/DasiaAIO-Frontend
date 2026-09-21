@@ -68,6 +68,7 @@ const SUPERVISOR_NAV: NavItem[] = [
   { view: 'allocation', label: 'Allocation', group: 'Operations', permission: 'manage_allocations' },
   { view: 'dtr', label: 'DTR Report', group: 'Operations', permission: 'view_analytics' },
   { view: 'merit', label: 'Merit', group: 'Operations', permission: 'manage_evaluations' },
+  { view: 'manage', label: 'Management', group: 'Operations' },
   { view: 'maintenance', label: 'Maintenance', group: 'Resources', permission: 'manage_maintenance' },
   { view: 'firearm-compliance', label: 'Firearm Compliance', group: 'Resources', permission: 'manage_firearms' },
   { view: 'guard-compliance', label: 'Guard License Compliance', group: 'Resources' },

@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { API_BASE_URL } from '../../config';
-import { ActionInbox, InboxItem } from './ActionInbox';
-import { WorkflowTimeline, TimelineEntry, TimelineStatus } from './WorkflowTimeline';
+import { InboxItem } from './ActionInbox';
 import { getAuthHeaders } from '../../utils/api';
 import { fetchArrayPayload } from './inboxPayloads';
 import { fetchOperationalRequestInboxItems } from './operationalRequestInbox';
-import { getNotificationPriority } from './roleInboxSummary';
+import { getNotificationCategory, getNotificationPriority } from './roleInboxSummary';
+import { NotificationTriage } from './NotificationTriage';
 
 export interface SupervisorInboxPanelProps {
   userId: string;
@@ -59,8 +59,8 @@ function toInboxItems(
       title: inc.title ?? inc.type ?? 'Incident',
       description: inc.location ?? 'No location specified',
       timestamp: inc.created_at ?? inc.reported_at ?? new Date().toISOString(),
-      actionLabel: 'View',
-      onAction: onAction ? () => onAction('incident', inc.id) : undefined,
+      actionLabel: 'Open map',
+      onAction: onAction ? () => onAction('operations-map', inc.id) : undefined,
     });
   }
 
@@ -77,7 +77,7 @@ function toInboxItems(
       title: 'Unassigned Shift',
       description: range,
       timestamp: shift.created_at ?? new Date().toISOString(),
-      actionLabel: 'Assign',
+      actionLabel: 'View schedule',
       onAction: onAction ? () => onAction('shift', shift.id) : undefined,
     });
   }
@@ -85,51 +85,30 @@ function toInboxItems(
   for (const notif of notifications) {
     const isRead = notif.is_read ?? notif.read ?? false;
     if (isRead) continue;
+    const category = getNotificationCategory(notif);
+    const complianceAction = notif.type === 'firearm_compliance' ? 'firearm-compliance' : 'guard-compliance';
     items.push({
       id: `notification-${notif.id}`,
       priority: getNotificationPriority(notif),
-      category: 'notification',
+      category,
       title: notif.title ?? 'Notification',
       description: notif.message ?? '',
       timestamp: notif.created_at ?? new Date().toISOString(),
       isRead: false,
+      notificationId: notif.id,
+      actionLabel: category === 'compliance' ? 'Open compliance' : undefined,
+      onAction: category === 'compliance' && onAction ? () => onAction(complianceAction, notif.id) : undefined,
     });
   }
 
   return items;
 }
 
-function incidentStatusToTimeline(status: string | undefined): TimelineStatus {
-  switch (status) {
-    case 'open':
-      return 'active';
-    case 'closed':
-      return 'resolved';
-    case 'pending':
-      return 'pending';
-    default:
-      return 'active';
-  }
-}
-
-function toTimelineEntries(incidents: Incident[]): TimelineEntry[] {
-  return incidents.slice(0, 10).map((inc) => ({
-    id: `timeline-incident-${inc.id}`,
-    status: incidentStatusToTimeline(inc.status),
-    title: inc.title ?? inc.type ?? 'Incident',
-    detail: inc.location,
-    timestamp: inc.created_at ?? inc.reported_at ?? new Date().toISOString(),
-    category: 'Incident',
-  }));
-}
-
-
 export const SupervisorInboxPanel = ({
   userId,
   onAction,
 }: SupervisorInboxPanelProps): React.ReactElement => {
   const [inboxItems, setInboxItems] = useState<InboxItem[]>([]);
-  const [timelineEntries, setTimelineEntries] = useState<TimelineEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [allFailed, setAllFailed] = useState(false);
 
@@ -196,7 +175,6 @@ export const SupervisorInboxPanel = ({
         requestsResult.status === 'fulfilled' ? requestsResult.value : [];
 
       setInboxItems(toInboxItems(incidentsRaw, shifts, notifications, operationalRequests, onAction));
-      setTimelineEntries(toTimelineEntries(incidentsRaw));
       setLoading(false);
     };
 
@@ -220,20 +198,8 @@ export const SupervisorInboxPanel = ({
   }
 
   return (
-    <div className="space-y-6" role="region" aria-label="Field Control Inbox">
-      <h2 className="text-text-primary font-semibold text-lg">Field Control Inbox</h2>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ActionInbox
-          items={inboxItems}
-          isLoading={loading}
-          emptyMessage="No pending actions"
-        />
-        <WorkflowTimeline
-          entries={timelineEntries}
-          isLoading={loading}
-          emptyMessage="No active incidents"
-        />
-      </div>
+    <div role="region" aria-label="Field Control Inbox">
+      <NotificationTriage items={inboxItems} isLoading={loading} emptyMessage="No notifications require attention." />
     </div>
   );
 };

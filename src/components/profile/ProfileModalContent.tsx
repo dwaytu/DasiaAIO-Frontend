@@ -1,15 +1,11 @@
-import { ChangeEvent, FC, useEffect, useRef, useState } from 'react'
+import { ChangeEvent, FC, useEffect, useMemo, useRef, useState } from 'react'
 import type { User } from '../../context/AuthContext'
 import { API_BASE_URL } from '../../config'
 import { fetchJsonOrThrow, getAuthHeaders } from '../../utils/api'
 import { useAuth } from '../../hooks/useAuth'
-import {
-  registerServiceWorker,
-  requestPushPermission,
-  subscribeToPush,
-  unsubscribeFromPush,
-} from '../../utils/pushNotifications'
 import { logError } from '../../utils/logger'
+import ConfirmationDialog from '../shared/ConfirmationDialog'
+import ProfilePhotoCropDialog from './ProfilePhotoCropDialog'
 
 type ProfileModalContentProps = {
   user: User
@@ -29,208 +25,161 @@ type ProfileFormState = {
   address: string
 }
 
-const HeadingTag = {
-  page: 'h1',
-  modal: 'h2',
-} as const
-
-function toDateInputValue(value?: string): string {
-  if (!value) return ''
-
-  const parsed = new Date(value)
-  if (Number.isNaN(parsed.getTime())) return ''
-  return parsed.toISOString().split('T')[0]
+type ProfileDetails = {
+  guardCode?: string
+  verified?: boolean
+  lastSeenAt?: string
+  createdAt?: string
+  updatedAt?: string
 }
 
-function getReadableRequestMessage(error: unknown, fallback: string): string {
-  if (!(error instanceof Error)) {
-    return fallback
-  }
+type ProfileResponse = Record<string, unknown>
 
-  if (/timed out/i.test(error.message)) {
-    return 'The request timed out. Try again when your connection is stable.'
-  }
+const HeadingTag = { page: 'h1', modal: 'h2' } as const
 
-  if (/offline/i.test(error.message)) {
-    return 'You appear to be offline. Reconnect and try again.'
-  }
+const toDateInputValue = (value?: string): string => {
+  if (!value) return ''
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? '' : parsed.toISOString().slice(0, 10)
+}
 
+const readValue = (source: Record<string, unknown>, camelKey: string, snakeKey: string): string | undefined => {
+  const value = source[camelKey] ?? source[snakeKey]
+  return typeof value === 'string' ? value : undefined
+}
+
+const formFromUser = (source: User): ProfileFormState => ({
+  fullName: source.fullName || source.full_name || '',
+  phoneNumber: source.phoneNumber || source.phone_number || '',
+  email: source.email || '',
+  licenseNumber: source.licenseNumber || source.license_number || '',
+  licenseIssuedDate: toDateInputValue(source.licenseIssuedDate || source.license_issued_date),
+  licenseExpiryDate: toDateInputValue(source.licenseExpiryDate || source.license_expiry_date),
+  address: source.address || '',
+})
+
+const normalizeForm = (form: ProfileFormState): ProfileFormState => ({
+  fullName: form.fullName.trim(),
+  phoneNumber: form.phoneNumber.trim(),
+  email: form.email.trim(),
+  licenseNumber: form.licenseNumber.trim(),
+  licenseIssuedDate: form.licenseIssuedDate,
+  licenseExpiryDate: form.licenseExpiryDate,
+  address: form.address.trim(),
+})
+
+const readProfileDetails = (source: Record<string, unknown>): ProfileDetails => ({
+  guardCode: readValue(source, 'guardCode', 'guard_code'),
+  verified: typeof source.verified === 'boolean' ? source.verified : undefined,
+  lastSeenAt: readValue(source, 'lastSeenAt', 'last_seen_at'),
+  createdAt: readValue(source, 'createdAt', 'created_at'),
+  updatedAt: readValue(source, 'updatedAt', 'updated_at'),
+})
+
+const formatDate = (value?: string): string => {
+  if (!value) return 'Not available'
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? 'Not available' : new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(parsed)
+}
+
+const getReadableRequestMessage = (error: unknown, fallback: string): string => {
+  if (!(error instanceof Error)) return fallback
+  if (/timed out/i.test(error.message)) return 'The request timed out. Try again when your connection is stable.'
+  if (/offline/i.test(error.message)) return 'You appear to be offline. Reconnect and try again.'
   return error.message || fallback
 }
 
-export const ProfileModalContent: FC<ProfileModalContentProps> = ({
-  user,
-  mode = 'page',
-  onBack,
-  onClose,
-  onProfilePhotoUpdate,
-}) => {
+export const ProfileModalContent: FC<ProfileModalContentProps> = ({ user, mode = 'page', onBack, onClose, onProfilePhotoUpdate }) => {
   const { updateUser } = useAuth()
-  const [profilePhoto, setProfilePhoto] = useState<string>(user.profilePhoto || '')
-  const [uploading, setUploading] = useState(false)
+  const [profilePhoto, setProfilePhoto] = useState<string>(user.profilePhoto || user.profile_photo || '')
+  const [formData, setFormData] = useState<ProfileFormState>(() => formFromUser(user))
+  const [savedFormData, setSavedFormData] = useState<ProfileFormState>(() => formFromUser(user))
+  const [details, setDetails] = useState<ProfileDetails>(() => readProfileDetails(user))
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
   const [message, setMessage] = useState('')
-  const [formData, setFormData] = useState<ProfileFormState>({
-    fullName: user.fullName || '',
-    phoneNumber: user.phoneNumber || '',
-    email: user.email || '',
-    licenseNumber: user.licenseNumber || '',
-    licenseIssuedDate: toDateInputValue(user.licenseIssuedDate),
-    licenseExpiryDate: toDateInputValue(user.licenseExpiryDate),
-    address: user.address || '',
-  })
   const [saving, setSaving] = useState(false)
-  const [isPushEnabled, setIsPushEnabled] = useState(false)
-  const [pushLoading, setPushLoading] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [removingPhoto, setRemovingPhoto] = useState(false)
+  const [removePhotoOpen, setRemovePhotoOpen] = useState(false)
+  const [photoToCrop, setPhotoToCrop] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const isErrorMessage = /failed|error|invalid|unable|offline|timed out/i.test(message)
   const TitleTag = HeadingTag[mode]
+  const isGuard = user.role === 'guard'
+  const isDirty = useMemo(() => JSON.stringify(normalizeForm(formData)) !== JSON.stringify(normalizeForm(savedFormData)), [formData, savedFormData])
+  const isErrorMessage = /failed|error|invalid|unable|offline|timed out/i.test(message)
+
+  useEffect(() => {
+    setProfilePhoto(user.profilePhoto || user.profile_photo || '')
+  }, [user.profilePhoto, user.profile_photo])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    const loadProfileDetails = async () => {
+      try {
+        const response = await fetchJsonOrThrow<ProfileResponse>(
+          `${API_BASE_URL}/api/user/${user.id}`,
+          { headers: getAuthHeaders(), signal: controller.signal },
+          'Unable to load account details.',
+        )
+        if (controller.signal.aborted) return
+        const currentDetails = readProfileDetails(response)
+        setDetails(currentDetails)
+        updateUser({
+          guardCode: currentDetails.guardCode,
+          guard_code: currentDetails.guardCode,
+          verified: currentDetails.verified,
+          lastSeenAt: currentDetails.lastSeenAt,
+          last_seen_at: currentDetails.lastSeenAt,
+          createdAt: currentDetails.createdAt,
+          created_at: currentDetails.createdAt,
+          updatedAt: currentDetails.updatedAt,
+          updated_at: currentDetails.updatedAt,
+        })
+      } catch (error) {
+        if ((error as Error)?.name !== 'AbortError') logError('Unable to load profile details:', error)
+      }
+    }
+    void loadProfileDetails()
+    return () => controller.abort()
+  }, [updateUser, user.id])
 
   useEffect(() => {
     if (!message) return undefined
-
-    const timer = window.setTimeout(() => setMessage(''), 3000)
+    const timer = window.setTimeout(() => setMessage(''), 4000)
     return () => window.clearTimeout(timer)
   }, [message])
 
   useEffect(() => {
-    setProfilePhoto(user.profilePhoto || '')
-  }, [user.profilePhoto])
+    if (!photoToCrop) return undefined
+    return () => URL.revokeObjectURL(photoToCrop)
+  }, [photoToCrop])
 
-  useEffect(() => {
-    let cancelled = false
-
-    const checkPushState = async () => {
-      if (!('serviceWorker' in navigator) || !('PushManager' in window)) return
-
-      await registerServiceWorker()
-      const registration = await navigator.serviceWorker.getRegistration('/sw.js')
-      if (!registration || cancelled) return
-
-      const subscription = await registration.pushManager.getSubscription()
-      if (!cancelled) {
-        setIsPushEnabled(subscription !== null)
-      }
-    }
-
-    void checkPushState()
-
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  const handlePhotoClick = () => {
-    fileInputRef.current?.click()
-  }
-
-  const handleTogglePush = async () => {
-    setPushLoading(true)
-
-    try {
-      if (isPushEnabled) {
-        await unsubscribeFromPush()
-        setIsPushEnabled(false)
-        setMessage('Push notifications disabled for this device.')
-      } else {
-        const granted = await requestPushPermission()
-        if (!granted) {
-          setMessage('Push permission was not granted on this device.')
-          return
-        }
-
-        const subscribed = await subscribeToPush(user.id)
-        if (!subscribed) {
-          setMessage('Unable to enable push notifications right now.')
-          return
-        }
-
-        setIsPushEnabled(true)
-        setMessage('Push notifications enabled for this device.')
-      }
-    } catch (error) {
-      setMessage(getReadableRequestMessage(error, 'Unable to update push notification status.'))
-    } finally {
-      setPushLoading(false)
-    }
-  }
-
-  const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-
-    if (!file.type.startsWith('image/')) {
-      setMessage('Please select an image file.')
-      return
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      setMessage('Image size should be less than 5MB.')
-      return
-    }
-
-    setUploading(true)
-    setMessage('')
-
-    try {
-      const base64String = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onloadend = () => resolve(reader.result as string)
-        reader.onerror = () => reject(new Error('Failed to read image file.'))
-        reader.readAsDataURL(file)
-      })
-
-      await fetchJsonOrThrow(
-        `${API_BASE_URL}/api/user/${user.id}/profile-photo`,
-        {
-          method: 'PUT',
-          headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
-          body: JSON.stringify({ profilePhoto: base64String }),
-        },
-        'Failed to upload photo.',
-      )
-
-      setProfilePhoto(base64String)
-      updateUser({ profilePhoto: base64String, profile_photo: base64String })
-      onProfilePhotoUpdate?.(base64String)
-      setMessage('Profile photo updated successfully!')
-    } catch (error) {
-      logError('Error uploading photo:', error)
-      setMessage(getReadableRequestMessage(error, 'Failed to upload photo. Please try again.'))
-    } finally {
-      setUploading(false)
-      event.target.value = ''
-    }
-  }
-
-  const handleRemovePhoto = async () => {
-    try {
-      await fetchJsonOrThrow(
-        `${API_BASE_URL}/api/user/${user.id}/profile-photo`,
-        {
-          method: 'DELETE',
-          headers: getAuthHeaders(),
-        },
-        'Failed to remove photo.',
-      )
-
-      setProfilePhoto('')
-      updateUser({ profilePhoto: '', profile_photo: '' })
-      onProfilePhotoUpdate?.('')
-      setMessage('Profile photo removed.')
-    } catch (error) {
-      setMessage(getReadableRequestMessage(error, 'Failed to remove photo.'))
-    }
+  const getInitials = () => {
+    const parts = (formData.fullName || user.username).split(' ').filter(Boolean)
+    return parts.length > 1 ? `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase() : (parts[0] || '').slice(0, 2).toUpperCase()
   }
 
   const handleInputChange = (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = event.target
     setFormData((previous) => ({ ...previous, [name]: value }))
+    setValidationErrors((previous) => ({ ...previous, [name]: '' }))
+  }
+
+  const validateProfile = (): boolean => {
+    const nextErrors: Record<string, string> = {}
+    const normalized = normalizeForm(formData)
+    if (!normalized.fullName) nextErrors.fullName = 'Enter your full name.'
+    if (!normalized.email) nextErrors.email = 'Enter an email address.'
+    else if (!/^\S+@\S+\.\S+$/.test(normalized.email)) nextErrors.email = 'Enter a valid email address, such as name@example.com.'
+    setValidationErrors(nextErrors)
+    return Object.keys(nextErrors).length === 0
   }
 
   const handleSaveProfile = async () => {
+    if (!isDirty || saving || !validateProfile()) return
+    const nextForm = normalizeForm(formData)
     setSaving(true)
     setMessage('')
-
     try {
       await fetchJsonOrThrow(
         `${API_BASE_URL}/api/user/${user.id}`,
@@ -238,334 +187,141 @@ export const ProfileModalContent: FC<ProfileModalContentProps> = ({
           method: 'PUT',
           headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
           body: JSON.stringify({
-            fullName: formData.fullName,
-            phoneNumber: formData.phoneNumber,
-            email: formData.email,
-            licenseNumber: formData.licenseNumber || undefined,
-            licenseIssuedDate: formData.licenseIssuedDate || undefined,
-            licenseExpiryDate: formData.licenseExpiryDate || undefined,
-            address: formData.address || undefined,
+            fullName: nextForm.fullName,
+            phoneNumber: nextForm.phoneNumber || undefined,
+            email: nextForm.email,
+            licenseNumber: nextForm.licenseNumber || undefined,
+            licenseIssuedDate: nextForm.licenseIssuedDate || undefined,
+            licenseExpiryDate: nextForm.licenseExpiryDate || undefined,
+            address: nextForm.address || undefined,
           }),
         },
-        'Failed to update profile.',
+        'Unable to save your profile.',
       )
-
+      setFormData(nextForm)
+      setSavedFormData(nextForm)
       updateUser({
-        fullName: formData.fullName,
-        full_name: formData.fullName,
-        phoneNumber: formData.phoneNumber,
-        phone_number: formData.phoneNumber,
-        email: formData.email,
-        licenseNumber: formData.licenseNumber || undefined,
-        license_number: formData.licenseNumber || undefined,
-        licenseIssuedDate: formData.licenseIssuedDate || undefined,
-        license_issued_date: formData.licenseIssuedDate || undefined,
-        licenseExpiryDate: formData.licenseExpiryDate || undefined,
-        license_expiry_date: formData.licenseExpiryDate || undefined,
-        address: formData.address || undefined,
+        fullName: nextForm.fullName, full_name: nextForm.fullName,
+        phoneNumber: nextForm.phoneNumber || undefined, phone_number: nextForm.phoneNumber || undefined,
+        email: nextForm.email,
+        licenseNumber: nextForm.licenseNumber || undefined, license_number: nextForm.licenseNumber || undefined,
+        licenseIssuedDate: nextForm.licenseIssuedDate || undefined, license_issued_date: nextForm.licenseIssuedDate || undefined,
+        licenseExpiryDate: nextForm.licenseExpiryDate || undefined, license_expiry_date: nextForm.licenseExpiryDate || undefined,
+        address: nextForm.address || undefined,
       })
-
-      setMessage('Profile updated successfully!')
+      setMessage('Profile updated successfully.')
     } catch (error) {
-      logError('Error updating profile:', error)
-      setMessage(getReadableRequestMessage(error, 'Failed to update profile. Please try again.'))
+      logError('Unable to save profile:', error)
+      setMessage(getReadableRequestMessage(error, 'Unable to save your profile. Check the highlighted fields and try again.'))
     } finally {
       setSaving(false)
     }
   }
 
-  const getInitials = () => {
-    const name = formData.fullName || user.fullName || user.username
-    const nameParts = name.split(' ').filter(Boolean)
-    if (nameParts.length >= 2) {
-      return `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}`.toUpperCase()
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setMessage('Choose a JPG, PNG, or WebP image.')
+      event.target.value = ''
+      return
     }
-
-    return name.substring(0, 2).toUpperCase()
+    if (file.size > 5 * 1024 * 1024) {
+      setMessage('Choose an image smaller than 5 MB.')
+      event.target.value = ''
+      return
+    }
+    setMessage('')
+    setPhotoToCrop(URL.createObjectURL(file))
+    event.target.value = ''
   }
+
+  const uploadProfilePhoto = async (profilePhotoData: string) => {
+    if (uploading) return
+    setUploading(true)
+    setMessage('')
+    try {
+      await fetchJsonOrThrow(`${API_BASE_URL}/api/user/${user.id}/profile-photo`, {
+        method: 'PUT', headers: getAuthHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify({ profilePhoto: profilePhotoData }),
+      }, 'Unable to upload photo.')
+      setProfilePhoto(profilePhotoData)
+      updateUser({ profilePhoto: profilePhotoData, profile_photo: profilePhotoData })
+      onProfilePhotoUpdate?.(profilePhotoData)
+      setMessage('Profile photo updated successfully.')
+    } catch (error) {
+      logError('Unable to upload profile photo:', error)
+      const readableMessage = getReadableRequestMessage(error, 'Unable to upload photo. Try again.')
+      setMessage(readableMessage)
+      throw new Error(readableMessage)
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const removePhoto = async () => {
+    setRemovingPhoto(true)
+    try {
+      await fetchJsonOrThrow(`${API_BASE_URL}/api/user/${user.id}/profile-photo`, { method: 'DELETE', headers: getAuthHeaders() }, 'Unable to remove photo.')
+      setProfilePhoto('')
+      updateUser({ profilePhoto: '', profile_photo: '' })
+      onProfilePhotoUpdate?.('')
+      setMessage('Profile photo removed.')
+    } catch (error) {
+      setMessage(getReadableRequestMessage(error, 'Unable to remove photo. Try again.'))
+    } finally {
+      setRemovingPhoto(false)
+    }
+  }
+
+  const metadata = [
+    ['Username', user.username],
+    ['Role', user.role.charAt(0).toUpperCase() + user.role.slice(1)],
+    ['Account status', details.verified === true ? 'Verified' : details.verified === false ? 'Verification required' : 'Not available'],
+    ...(isGuard && details.guardCode ? [['Guard ID', details.guardCode]] : []),
+  ]
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <section className="soc-surface p-4 md:p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-text-tertiary">Profile Control</p>
-            <TitleTag className="mt-1 text-2xl font-bold text-text-primary md:text-3xl">
-              Account Settings
-            </TitleTag>
-            <p className="mt-2 text-sm text-text-secondary">
-              Manage identity details, contact data, and profile media used across operational dashboards.
-            </p>
-          </div>
-          {mode === 'modal' ? (
-            <div className="flex flex-wrap gap-2">
-              {onBack ? (
-                <button
-                  type="button"
-                  onClick={onBack}
-                  className="min-h-11 rounded border border-border bg-surface px-3 py-2 text-sm font-semibold text-text-primary hover:bg-surface-hover"
-                  aria-label="Back to mission shell"
-                >
-                  Back to Mission Shell
-                </button>
-              ) : null}
-              {onClose ? (
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="min-h-11 rounded border border-border bg-surface px-3 py-2 text-sm font-semibold text-text-primary hover:bg-surface-hover"
-                  aria-label="Close profile"
-                >
-                  Close
-                </button>
-              ) : null}
-            </div>
-          ) : null}
+          <div><p className="text-xs font-bold uppercase tracking-[0.2em] text-text-tertiary">Account</p><TitleTag className="mt-1 text-2xl font-bold text-text-primary md:text-3xl">Profile</TitleTag><p className="mt-2 text-sm leading-6 text-text-secondary">Review your identity, contact details, and role-relevant credentials.</p></div>
+          {mode === 'modal' ? <div className="flex flex-wrap gap-2">{onBack ? <button type="button" onClick={onBack} className="soc-btn soc-btn-neutral min-h-11">Back to Mission Shell</button> : null}{onClose ? <button type="button" onClick={onClose} aria-label="Close profile" className="soc-btn soc-btn-neutral min-h-11">Close</button> : null}</div> : null}
         </div>
       </section>
 
-      {message ? (
-        <div className={`rounded p-4 ${isErrorMessage ? 'soc-alert-error' : 'soc-alert-success'}`}>
-          {message}
+      {message ? <div className={`rounded p-4 text-sm ${isErrorMessage ? 'soc-alert-error' : 'soc-alert-success'}`} role={isErrorMessage ? 'alert' : 'status'}>{message}</div> : null}
+
+      <section className="command-panel p-4 md:p-6" aria-labelledby="profile-photo-title">
+        <h2 id="profile-photo-title" className="text-xl font-bold text-text-primary md:text-2xl">Profile Photo</h2>
+        <div className="mt-4 flex flex-col items-center gap-6 md:flex-row">
+          <div className="relative group"><div className="flex h-32 w-32 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-cyan-500 to-blue-700 text-4xl font-bold text-white shadow-lg">{profilePhoto ? <img src={profilePhoto} alt="Profile" className="h-full w-full object-cover" /> : <span>{getInitials()}</span>}</div><button type="button" className="absolute inset-0 flex items-center justify-center rounded-full bg-black/45 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100" onClick={() => fileInputRef.current?.click()} aria-label={profilePhoto ? 'Change profile photo' : 'Upload profile photo'}><span className="text-sm font-semibold text-white">{profilePhoto ? 'Change' : 'Upload'}</span></button></div>
+          <div className="flex-1 text-center md:text-left"><h3 className="text-lg font-semibold text-text-primary">{profilePhoto ? 'Change photo' : 'Upload photo'}</h3><p className="mt-2 text-sm leading-6 text-text-secondary">JPG, PNG, or WebP. Maximum file size: 5 MB. You can position the photo before saving.</p><input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFileChange} className="sr-only" /><div className="mt-4 flex flex-col gap-3 sm:flex-row"><button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading} className="soc-btn min-h-11">{uploading ? 'Saving Photo...' : profilePhoto ? 'Change Photo' : 'Upload Photo'}</button>{profilePhoto ? <button type="button" onClick={() => setRemovePhotoOpen(true)} disabled={removingPhoto} className="soc-btn-danger min-h-11 disabled:cursor-not-allowed disabled:opacity-50">Remove Photo</button> : null}</div></div>
         </div>
-      ) : null}
+      </section>
 
-      <div className="command-panel p-4 md:p-6">
-        <h3 className="mb-4 text-xl font-bold text-text-primary md:text-2xl">Profile Photo</h3>
-
-        <div className="flex flex-col items-center gap-6 md:flex-row">
-          <div className="relative group">
-            <div className="flex h-32 w-32 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-cyan-500 to-blue-700 text-4xl font-bold text-white shadow-lg">
-              {profilePhoto ? (
-                <img src={profilePhoto} alt="Profile" className="h-full w-full object-cover" />
-              ) : (
-                <span>{getInitials()}</span>
-              )}
-            </div>
-
-            <button
-              type="button"
-              className="absolute inset-0 flex cursor-pointer items-center justify-center rounded-full bg-black/45 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
-              onClick={handlePhotoClick}
-              aria-label="Change profile photo"
-            >
-              <svg className="h-8 w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-            </button>
-          </div>
-
-          <div className="flex-1 text-center md:text-left">
-            <h4 className="mb-2 text-lg font-semibold text-text-primary">Upload New Photo</h4>
-            <p className="mb-4 text-sm text-text-secondary">JPG, PNG or GIF. Max size 5MB.</p>
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={(event) => void handleFileChange(event)}
-              className="hidden"
-            />
-
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <button
-                type="button"
-                onClick={handlePhotoClick}
-                disabled={uploading}
-                className="soc-btn min-h-11"
-              >
-                {uploading ? 'Uploading...' : 'Choose Photo'}
-              </button>
-
-              {profilePhoto ? (
-                <button
-                  type="button"
-                  onClick={() => void handleRemovePhoto()}
-                  className="min-h-11 rounded border border-danger-border bg-surface px-6 py-2.5 font-semibold text-danger-text transition-colors hover:bg-danger-bg"
-                >
-                  Remove Photo
-                </button>
-              ) : null}
-            </div>
-          </div>
+      <section className="command-panel p-4 md:p-6" aria-labelledby="personal-information-title">
+        <h2 id="personal-information-title" className="text-xl font-bold text-text-primary md:text-2xl">Personal Information</h2>
+        <p className="mt-2 text-sm leading-6 text-text-secondary">Keep your contact information current so operations staff can reach you when needed.</p>
+        <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-2">
+          {([
+            ['fullName', 'Full Name', 'Enter your full name', 'text', true],
+            ['email', 'Email', 'name@example.com', 'email', true],
+            ['phoneNumber', 'Phone Number', '+63-###-###-####', 'tel', false],
+          ] as const).map(([name, label, placeholder, type, required]) => <div key={name}><label htmlFor={`profile-${name}`} className="soc-form-label">{label}{required ? <> <span aria-hidden="true">*</span></> : null}</label><input id={`profile-${name}`} type={type} name={name} value={formData[name]} onChange={handleInputChange} className="soc-form-control w-full" placeholder={placeholder} aria-required={required} aria-invalid={Boolean(validationErrors[name])} aria-describedby={validationErrors[name] ? `profile-${name}-error` : undefined} />{validationErrors[name] ? <p id={`profile-${name}-error`} className="mt-1 text-sm text-danger-text" role="alert">{validationErrors[name]}</p> : null}</div>)}
+          <div className="md:col-span-2"><label htmlFor="profile-address" className="soc-form-label">Address</label><textarea id="profile-address" name="address" value={formData.address} onChange={handleInputChange} rows={3} className="soc-form-control w-full" placeholder="Enter your complete address" /></div>
         </div>
-      </div>
+      </section>
 
-      {'Notification' in window ? (
-        <div className="command-panel p-4">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-semibold text-text-primary">Push Notifications</p>
-              <p className="text-xs text-text-secondary">
-                {isPushEnabled
-                  ? 'You will receive alerts for geofence exits, incidents, and shift changes.'
-                  : 'Enable to receive real-time alerts on this device.'}
-              </p>
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={isPushEnabled}
-              disabled={pushLoading}
-              onClick={() => void handleTogglePush()}
-              className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring) disabled:cursor-not-allowed disabled:opacity-50 ${
-                isPushEnabled ? 'bg-info' : 'bg-surface-elevated'
-              }`}
-              aria-label={isPushEnabled ? 'Disable push notifications' : 'Enable push notifications'}
-            >
-              <span
-                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                  isPushEnabled ? 'translate-x-5' : 'translate-x-0'
-                }`}
-              />
-            </button>
-          </div>
-        </div>
-      ) : null}
+      {isGuard ? <section className="command-panel p-4 md:p-6" aria-labelledby="credentials-title"><h2 id="credentials-title" className="text-xl font-bold text-text-primary md:text-2xl">License and Credentials</h2><p className="mt-2 text-sm leading-6 text-text-secondary">Keep your guard license details current for compliance review.</p><div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-3"><div><label htmlFor="profile-license-number" className="soc-form-label">License Number</label><input id="profile-license-number" type="text" name="licenseNumber" value={formData.licenseNumber} onChange={handleInputChange} className="soc-form-control w-full" placeholder="Enter license number" /></div><div><label htmlFor="profile-license-issued-date" className="soc-form-label">Issued Date</label><input id="profile-license-issued-date" type="date" name="licenseIssuedDate" value={formData.licenseIssuedDate} onChange={handleInputChange} className="soc-form-control w-full" /></div><div><label htmlFor="profile-license-expiry-date" className="soc-form-label">Expiry Date</label><input id="profile-license-expiry-date" type="date" name="licenseExpiryDate" value={formData.licenseExpiryDate} onChange={handleInputChange} className="soc-form-control w-full" /></div></div></section> : null}
 
-      <div className="command-panel p-4 md:p-6">
-        <h3 className="mb-4 text-xl font-bold text-text-primary md:text-2xl">Account Information</h3>
+      <section className="command-panel p-4 md:p-6" aria-labelledby="account-information-title"><h2 id="account-information-title" className="text-xl font-bold text-text-primary md:text-2xl">Account Information</h2><dl className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">{metadata.map(([label, value]) => <div key={label} className="rounded border border-border bg-surface p-4"><dt className="text-xs font-semibold uppercase tracking-[0.12em] text-text-tertiary">{label}</dt><dd className="mt-1 break-words font-semibold text-text-primary">{value}</dd></div>)}</dl></section>
 
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          <div>
-            <label htmlFor="profile-full-name" className="mb-2 block text-sm font-semibold text-text-primary">Full Name</label>
-            <input
-              id="profile-full-name"
-              type="text"
-              name="fullName"
-              value={formData.fullName}
-              onChange={handleInputChange}
-              className="soc-field"
-              placeholder="Enter your full name"
-            />
-          </div>
+      <section className="command-panel p-4 md:p-6" aria-labelledby="account-activity-title"><h2 id="account-activity-title" className="text-xl font-bold text-text-primary md:text-2xl">Account Activity</h2><p className="mt-2 text-sm leading-6 text-text-secondary">Recent account metadata recorded by SENTINEL.</p><dl className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3"><div className="rounded border border-border bg-surface p-4"><dt className="text-xs font-semibold uppercase tracking-[0.12em] text-text-tertiary">Recent activity</dt><dd className="mt-1 text-sm font-semibold text-text-primary">{formatDate(details.lastSeenAt)}</dd></div><div className="rounded border border-border bg-surface p-4"><dt className="text-xs font-semibold uppercase tracking-[0.12em] text-text-tertiary">Account created</dt><dd className="mt-1 text-sm font-semibold text-text-primary">{formatDate(details.createdAt)}</dd></div><div className="rounded border border-border bg-surface p-4"><dt className="text-xs font-semibold uppercase tracking-[0.12em] text-text-tertiary">Profile updated</dt><dd className="mt-1 text-sm font-semibold text-text-primary">{formatDate(details.updatedAt)}</dd></div></dl></section>
 
-          <div>
-            <label htmlFor="profile-email" className="mb-2 block text-sm font-semibold text-text-primary">Email</label>
-            <input
-              id="profile-email"
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleInputChange}
-              className="soc-field"
-              placeholder="Enter your email"
-            />
-          </div>
+      <div className="flex justify-end"><button type="button" onClick={() => void handleSaveProfile()} disabled={!isDirty || saving} className="soc-btn min-h-11 disabled:cursor-not-allowed disabled:opacity-50">{saving ? 'Saving...' : 'Save Profile'}</button></div>
 
-          <div>
-            <label htmlFor="profile-phone-number" className="mb-2 block text-sm font-semibold text-text-primary">Phone Number</label>
-            <input
-              id="profile-phone-number"
-              type="text"
-              name="phoneNumber"
-              value={formData.phoneNumber}
-              onChange={handleInputChange}
-              className="soc-field"
-              placeholder="+63-###-###-####"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="profile-username" className="mb-2 block text-sm font-semibold text-text-primary">Username</label>
-            <input
-              id="profile-username"
-              type="text"
-              value={user.username}
-              disabled
-              className="w-full rounded border border-border bg-surface-elevated px-4 py-2.5 text-text-tertiary"
-            />
-          </div>
-
-          {user.role !== 'admin' ? (
-            <>
-              <div>
-                <label htmlFor="profile-license-number" className="mb-2 block text-sm font-semibold text-text-primary">License Number</label>
-                <input
-                  id="profile-license-number"
-                  type="text"
-                  name="licenseNumber"
-                  value={formData.licenseNumber}
-                  onChange={handleInputChange}
-                  className="soc-field"
-                  placeholder="Enter license number"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="profile-license-issued-date" className="mb-2 block text-sm font-semibold text-text-primary">License Issued Date</label>
-                <input
-                  id="profile-license-issued-date"
-                  type="date"
-                  name="licenseIssuedDate"
-                  value={formData.licenseIssuedDate}
-                  onChange={handleInputChange}
-                  className="soc-field"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="profile-license-expiry-date" className="mb-2 block text-sm font-semibold text-text-primary">License Expiry Date</label>
-                <input
-                  id="profile-license-expiry-date"
-                  type="date"
-                  name="licenseExpiryDate"
-                  value={formData.licenseExpiryDate}
-                  onChange={handleInputChange}
-                  className="soc-field"
-                />
-              </div>
-
-              <div className="md:col-span-2">
-                <label htmlFor="profile-address" className="mb-2 block text-sm font-semibold text-text-primary">Full Address</label>
-                <textarea
-                  id="profile-address"
-                  name="address"
-                  value={formData.address}
-                  onChange={handleInputChange}
-                  rows={2}
-                  className="soc-field"
-                  placeholder="Enter complete address"
-                />
-              </div>
-            </>
-          ) : null}
-
-          <div>
-            <label htmlFor="profile-role" className="mb-2 block text-sm font-semibold text-text-primary">Role</label>
-            <input
-              id="profile-role"
-              type="text"
-              value={user.role.toUpperCase()}
-              disabled
-              className="w-full rounded border border-border bg-surface-elevated px-4 py-2.5 text-text-tertiary"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="profile-user-id" className="mb-2 block text-sm font-semibold text-text-primary">User ID</label>
-            <input
-              id="profile-user-id"
-              type="text"
-              value={user.id}
-              disabled
-              className="w-full rounded border border-border bg-surface-elevated px-4 py-2.5 text-sm text-text-tertiary"
-            />
-          </div>
-        </div>
-
-        <div className="mt-8 flex justify-end">
-          <button
-            type="button"
-            onClick={() => void handleSaveProfile()}
-            disabled={saving}
-            className="soc-btn"
-          >
-            {saving ? 'Saving...' : 'Save Profile'}
-          </button>
-        </div>
-      </div>
+      <ConfirmationDialog open={removePhotoOpen} onClose={() => setRemovePhotoOpen(false)} onConfirm={removePhoto} title="Remove profile photo?" description="Your profile will show your initials until you upload another photo." confirmLabel="Remove Photo" confirmingLabel="Removing..." tone="danger" />
+      <ProfilePhotoCropDialog open={Boolean(photoToCrop)} imageSource={photoToCrop} onClose={() => setPhotoToCrop(null)} onConfirm={uploadProfilePhoto} />
     </div>
   )
 }

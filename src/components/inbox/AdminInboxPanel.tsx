@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { API_BASE_URL } from '../../config';
-import { ActionInbox, InboxItem } from './ActionInbox';
-import { WorkflowTimeline, TimelineEntry } from './WorkflowTimeline';
+import { type InboxItem } from './ActionInbox';
 import { getAuthHeaders } from '../../utils/api';
 import { fetchArrayPayload, fetchObjectPayload } from './inboxPayloads';
 import { parsePendingApprovalsPayload, type PendingApprovalRecord } from './pendingApprovals';
 import { fetchOperationalRequestInboxItems } from './operationalRequestInbox';
-import { getNotificationPriority } from './roleInboxSummary';
+import { getNotificationCategory, getNotificationPriority } from './roleInboxSummary';
+import { NotificationTriage } from './NotificationTriage';
 
 interface AdminInboxPanelProps {
   userId: string;
@@ -91,7 +91,7 @@ function buildInboxItems(
     items.push({
       id: `approval-${approval.id}`,
       priority: 'urgent',
-      category: 'approval',
+      category: 'request',
       title: 'Pending Guard Approval',
       description: approval.guard_name
         ? `${approval.guard_name} — ${approval.reason ?? 'Replacement requested'}`
@@ -132,36 +132,26 @@ function buildInboxItems(
     items.push({
       id: `notif-${notif.id}`,
       priority: getNotificationPriority(notif),
-      category: 'notification',
+      category: getNotificationCategory(notif),
       title: notif.title ?? 'Admin Notification',
       description: notif.message ?? '',
       timestamp: notif.created_at ?? notif.timestamp ?? new Date().toISOString(),
-      actionLabel: 'Dismiss',
-      onAction: () => onAction?.('notification', notif.id),
+      actionLabel: notif.type === 'guard_compliance' || notif.type === 'firearm_compliance' ? 'Open compliance' : undefined,
+      onAction: notif.type === 'guard_compliance'
+        ? () => onAction?.('guard-compliance', notif.id)
+        : notif.type === 'firearm_compliance'
+          ? () => onAction?.('firearm-compliance', notif.id)
+          : undefined,
       isRead: false,
+      notificationId: notif.id,
     });
   }
 
   return items;
 }
 
-function buildTimelineEntries(notifications: AdminNotification[]): TimelineEntry[] {
-  return notifications.map((notif) => {
-    const isRead = notif.is_read ?? notif.read ?? false;
-    return {
-      id: `timeline-notif-${notif.id}`,
-      status: isRead ? 'resolved' : 'active',
-      title: notif.title ?? 'Admin Notification',
-      detail: notif.message,
-      timestamp: notif.created_at ?? notif.timestamp ?? new Date().toISOString(),
-      category: 'Admin Notification',
-    };
-  });
-}
-
 export const AdminInboxPanel = ({ userId, onAction }: AdminInboxPanelProps): React.ReactElement => {
   const [inboxItems, setInboxItems] = useState<InboxItem[]>([]);
-  const [timelineEntries, setTimelineEntries] = useState<TimelineEntry[]>([]);
   const [metrics, setMetrics] = useState<OperationalMetrics | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -222,7 +212,6 @@ export const AdminInboxPanel = ({ userId, onAction }: AdminInboxPanelProps): Rea
         requestsResult.status === 'fulfilled' ? requestsResult.value : [];
 
       setInboxItems(buildInboxItems(approvals, firearms, notifications, operationalRequests, onAction));
-      setTimelineEntries(buildTimelineEntries(notifications));
       setMetrics(metricsData);
       setLoading(false);
     }
@@ -234,46 +223,20 @@ export const AdminInboxPanel = ({ userId, onAction }: AdminInboxPanelProps): Rea
     };
   }, [userId, onAction]);
 
-  const pendingCount = inboxItems.filter((i) => i.category === 'approval').length;
+  const pendingCount = inboxItems.filter((i) => i.category === 'request').length;
   const activeGuards = metrics?.active_guards;
   const totalIncidents = metrics?.total_incidents;
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-text-primary font-semibold text-lg">Operations Inbox</h2>
-
-      {metrics !== null && (
-        <div className="flex gap-3 flex-wrap" role="status" aria-label="Operational metrics summary">
-          {activeGuards !== undefined && (
-            <span className="px-3 py-1 rounded-full text-sm font-medium bg-tone-guard-surface text-text-primary border border-border">
-              {activeGuards} Active Guard{activeGuards !== 1 ? 's' : ''}
-            </span>
-          )}
-          {pendingCount > 0 && (
-            <span className="px-3 py-1 rounded-full text-sm font-medium bg-warning/10 text-warning border border-warning/30">
-              {pendingCount} Pending Approval{pendingCount !== 1 ? 's' : ''}
-            </span>
-          )}
-          {totalIncidents !== undefined && (
-            <span className="px-3 py-1 rounded-full text-sm font-medium bg-surface-elevated text-text-secondary border border-border">
-              {totalIncidents} Incident{totalIncidents !== 1 ? 's' : ''}
-            </span>
-          )}
+    <div className="space-y-4">
+      {metrics !== null ? (
+        <div className="flex flex-wrap gap-3 text-sm text-text-secondary" role="status" aria-label="Operational metrics summary">
+          {activeGuards !== undefined ? <span>{activeGuards} active guards</span> : null}
+          {pendingCount > 0 ? <span>{pendingCount} pending approvals</span> : null}
+          {totalIncidents !== undefined ? <span>{totalIncidents} incidents</span> : null}
         </div>
-      )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ActionInbox
-          items={inboxItems}
-          isLoading={loading}
-          emptyMessage="No pending actions"
-        />
-        <WorkflowTimeline
-          entries={timelineEntries}
-          isLoading={loading}
-          emptyMessage="No recent activity"
-        />
-      </div>
+      ) : null}
+      <NotificationTriage items={inboxItems} isLoading={loading} emptyMessage="No notifications require attention." />
     </div>
   );
 };

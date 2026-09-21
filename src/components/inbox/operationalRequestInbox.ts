@@ -14,7 +14,7 @@ export async function fetchOperationalRequestInboxItems(
     .map((request) => ({
       id: `operational-request-${request.id}`,
       priority: request.priority,
-      category: 'approval',
+      category: 'request',
       title: request.status === 'pending' ? 'Operational Request Pending' : 'Request Awaiting Fulfillment',
       description: `${REQUEST_TYPE_LABELS[request.requestType]}: ${request.subject} · ${request.requesterName}`,
       timestamp: request.updatedAt,

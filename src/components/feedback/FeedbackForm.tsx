@@ -29,6 +29,7 @@ function getRatingLabel(value: number): string {
 const FeedbackForm: FC<FeedbackFormProps> = ({ user, onLogout, onViewChange, activeView }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [rating, setRating] = useState(0)
+  const [previewRating, setPreviewRating] = useState(0)
   const [comments, setComments] = useState('')
   const [statusLoading, setStatusLoading] = useState(true)
   const [statusError, setStatusError] = useState('')
@@ -48,6 +49,7 @@ const FeedbackForm: FC<FeedbackFormProps> = ({ user, onLogout, onViewChange, act
   }, [user.role])
 
   const remainingCharacters = MAX_COMMENTS_LENGTH - comments.length
+  const displayedRating = previewRating || rating
 
   const checkSubmissionStatus = useCallback(async (signal: AbortSignal) => {
     setStatusLoading(true)
@@ -152,7 +154,7 @@ const FeedbackForm: FC<FeedbackFormProps> = ({ user, onLogout, onViewChange, act
       : 'Your account already submitted feedback. Thank you for helping improve SENTINEL.'
 
     return (
-      <section className="command-panel max-w-3xl" aria-live="polite">
+      <section className="command-panel max-w-3xl p-4 md:p-5" aria-live="polite">
         <div className="flex items-start gap-3">
           <div className="mt-0.5 rounded-full border border-success-border bg-success-bg p-2 text-success-text" aria-hidden="true">
             <CheckCircle2 className="h-5 w-5" />
@@ -185,7 +187,7 @@ const FeedbackForm: FC<FeedbackFormProps> = ({ user, onLogout, onViewChange, act
       onLogoClick={() => onViewChange?.(homeView)}
     >
       <section className="mx-auto flex w-full max-w-3xl flex-col gap-4">
-        <header className="command-panel">
+        <header className="command-panel p-4 md:p-5">
           <div className="flex items-start gap-3">
             <div className="rounded-full border border-border-subtle bg-surface-elevated p-2 text-text-secondary" aria-hidden="true">
               <MessageSquareText className="h-5 w-5" />
@@ -200,7 +202,7 @@ const FeedbackForm: FC<FeedbackFormProps> = ({ user, onLogout, onViewChange, act
         </header>
 
         {statusLoading ? (
-          <section className="command-panel" aria-live="polite">
+          <section className="command-panel p-4 md:p-5" aria-live="polite">
             <div className="flex items-center gap-2 text-sm text-text-secondary">
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
               Checking whether feedback was already submitted...
@@ -217,9 +219,9 @@ const FeedbackForm: FC<FeedbackFormProps> = ({ user, onLogout, onViewChange, act
         {hasSubmitted ? (
           renderSubmittedState()
         ) : !statusLoading ? (
-          <section className="command-panel">
+          <section className="command-panel p-4 md:p-5">
             <form className="space-y-5" onSubmit={handleSubmit} noValidate>
-              <fieldset className="space-y-3">
+              <fieldset className="space-y-4">
                 <legend id="feedback-rating-label" className="text-sm font-semibold text-text-primary">
                   Rating
                 </legend>
@@ -228,13 +230,18 @@ const FeedbackForm: FC<FeedbackFormProps> = ({ user, onLogout, onViewChange, act
                 </p>
 
                 <div
-                  className="flex flex-wrap gap-2"
+                  className="flex flex-wrap items-center gap-2"
                   role="radiogroup"
                   aria-labelledby="feedback-rating-label"
                   aria-describedby="feedback-rating-help"
                 >
                   {STAR_VALUES.map((value) => (
-                    <label key={value} className="cursor-pointer">
+                    <label
+                      key={value}
+                      className="cursor-pointer"
+                      onMouseEnter={() => setPreviewRating(value)}
+                      onMouseLeave={() => setPreviewRating(0)}
+                    >
                       <input
                         type="radio"
                         name="feedback-rating"
@@ -245,23 +252,26 @@ const FeedbackForm: FC<FeedbackFormProps> = ({ user, onLogout, onViewChange, act
                           setFormError('')
                         }}
                         className="peer sr-only"
-                        aria-label={getRatingLabel(value)}
+                        aria-label={`Rate ${value} out of 5`}
                       />
                       <span
                         className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded border transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-focus peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-surface ${
-                          value <= rating
-                            ? 'border-warning-border bg-warning-bg text-warning-text'
-                            : 'border-border-subtle bg-surface-elevated text-text-tertiary'
+                          value <= displayedRating
+                            ? 'border-(--color-warning-border) bg-(--color-warning-bg) text-(--color-warning-text)'
+                            : 'border-(--color-border-subtle) bg-(--color-surface-elevated) text-(--color-text-tertiary)'
                         }`}
                       >
-                        <Star className={`h-5 w-5 ${value <= rating ? 'fill-current' : ''}`} aria-hidden="true" />
+                        <Star className={`h-5 w-5 ${value <= displayedRating ? 'fill-current' : ''}`} aria-hidden="true" />
                       </span>
                     </label>
                   ))}
+                  <span className="ml-1 min-w-8 text-sm font-semibold tabular-nums text-text-primary" aria-live="polite">
+                    {rating > 0 ? `${rating}/5` : '—/5'}
+                  </span>
                 </div>
 
                 <p className="text-xs text-text-secondary" aria-live="polite">
-                  {rating > 0 ? `Selected: ${getRatingLabel(rating)}.` : 'No rating selected yet.'}
+                  {rating > 0 ? `Selected: ${getRatingLabel(rating)} (${rating}/5).` : 'No rating selected yet.'}
                 </p>
               </fieldset>
 

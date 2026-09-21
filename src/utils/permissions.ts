@@ -2,6 +2,7 @@ import { Role, normalizeRole } from '../types/auth'
 
 export type Permission =
   | 'manage_users'
+  | 'create_guard_accounts'
   | 'view_audit_logs'
   | 'approve_guards'
   | 'view_analytics'
@@ -17,6 +18,7 @@ export type Permission =
 const rolePermissions: Record<Role, Permission[]> = {
   superadmin: [
     'manage_users',
+    'create_guard_accounts',
     'view_audit_logs',
     'approve_guards',
     'view_analytics',
@@ -31,6 +33,7 @@ const rolePermissions: Record<Role, Permission[]> = {
   ],
   admin: [
     'manage_users',
+    'create_guard_accounts',
     'approve_guards',
     'view_analytics',
     'manage_firearms',
@@ -43,6 +46,7 @@ const rolePermissions: Record<Role, Permission[]> = {
     'manage_requests',
   ],
   supervisor: [
+    'create_guard_accounts',
     'view_analytics',
     'manage_firearms',
     'manage_allocations',

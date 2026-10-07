@@ -51,6 +51,72 @@ const inferSeverity = (log: { result: string; action_key: string }): 'high' | 'm
   return 'low'
 }
 
+const actionSummary: Record<string, string> = {
+  ADMIN_OPERATIONAL_REVIEW: 'Administrator reviewed an operational request',
+  AUTH_LOGIN_ATTEMPT: 'Sign-in attempt recorded',
+  AUTH_LOGOUT: 'User signed out',
+  AUTH_TOKEN_REFRESH: 'Session refreshed',
+  SUPERVISOR_SHIFT_REVIEW: 'Supervisor reviewed an attendance or replacement record',
+  SHIFT_REPLACEMENT_ACCEPTED: 'Shift replacement accepted',
+  SHIFT_SCHEDULE_CREATED: 'Shift schedule created',
+  'mdr.batch.commit': 'Attendance import completed',
+}
+
+const resourceSummary: Record<string, string> = {
+  attendance: 'attendance record',
+  auth: 'authentication activity',
+  authorization: 'access request',
+  mdr_import_batch: 'attendance import',
+  operational_request: 'operational request',
+  shift: 'shift schedule',
+  tracking_consent: 'location-tracking consent',
+}
+
+const sentenceCase = (value: string) => {
+  const normalized = value
+    .replace(/^\/api\//i, '')
+    .replace(/[._/-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase()
+
+  return normalized ? `${normalized.charAt(0).toUpperCase()}${normalized.slice(1)}` : 'System activity'
+}
+
+const formatAuditAction = (action: string, resourceType: string) => {
+  if (actionSummary[action]) return actionSummary[action]
+  if (action.startsWith('AUTHZ_DENIED')) return 'Access request was denied'
+
+  const requestMatch = action.match(/^(GET|POST|PUT|PATCH|DELETE)\s+(.+)$/i)
+  if (requestMatch) {
+    const verb = requestMatch[1].toUpperCase()
+    const target = sentenceCase(requestMatch[2])
+    const verbLabel: Record<string, string> = {
+      DELETE: 'Removed',
+      GET: 'Viewed',
+      PATCH: 'Updated',
+      POST: 'Created',
+      PUT: 'Updated',
+    }
+    return `${verbLabel[verb] ?? 'Processed'} ${target}`
+  }
+
+  const readableResource = resourceSummary[resourceType] ?? sentenceCase(resourceType)
+  return `${sentenceCase(action)} for ${readableResource}`
+}
+
+const normalizeStoryDetail = (value?: string) => {
+  const trimmed = value?.trim()
+  if (!trimmed) return ''
+  return /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`
+}
+
+const formatOutcome = (status: string) => {
+  if (status.toLowerCase() === 'success') return 'Completed successfully.'
+  if (status.toLowerCase() === 'failed') return 'The action did not complete.'
+  return `Status: ${sentenceCase(status)}.`
+}
+
 export default function AuditDashboard({ user, onLogout, onViewChange, activeView }: AuditDashboardProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [filters, setFilters] = useState<AuditLogFilters>({ ...DEFAULT_FILTERS })
@@ -186,9 +252,9 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
 
   const operationalStory = useMemo(() => {
     return timeline.slice(0, 8).map((entry, index) => {
-      const resource = entry.resourceId ? `${entry.resourceType} ${entry.resourceId}` : entry.resourceType
-      const reason = entry.reason ? ` ${entry.reason}` : ''
-      return `${index + 1}. ${formatDateTime(entry.timestamp)} - ${entry.actionType} on ${resource} (${entry.status}).${reason}`
+      const summary = formatAuditAction(entry.actionType, entry.resourceType)
+      const detail = normalizeStoryDetail(entry.reason) || formatOutcome(entry.status)
+      return `${index + 1}. ${formatDateTime(entry.timestamp)} - ${summary}. ${detail}`
     })
   }, [timeline])
 
@@ -305,7 +371,7 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
             type="search"
             value={searchDraft}
             onChange={(event) => setSearchDraft(event.target.value)}
-            placeholder="Search actions, resources, actors, IPs..."
+            placeholder="Search actions, actors, IPs..."
             className="w-full rounded border border-border-subtle bg-surface pl-12 pr-4 py-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent focus:ring-1 focus:ring-accent"
             aria-label="Search audit logs"
           />
@@ -438,13 +504,12 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
 
           {/* Desktop Table */}
           <div className="hidden max-h-[32rem] overflow-auto md:block">
-            <table className="w-full min-w-[820px] text-xs">
+            <table className="w-full min-w-[680px] text-xs">
               <thead className="thead-glass sticky top-0 z-10">
                 <tr className="border-b border-border-subtle text-text-tertiary">
                   <th className="px-2 py-2 text-left" scope="col">Timestamp</th>
                   <th className="px-2 py-2 text-left" scope="col">Actor</th>
                   <th className="px-2 py-2 text-left" scope="col">Action</th>
-                  <th className="px-2 py-2 text-left" scope="col">Resource</th>
                   <th className="px-2 py-2 text-left" scope="col">Severity</th>
                   <th className="px-2 py-2 text-left" scope="col">Status</th>
                 </tr>
@@ -452,7 +517,7 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
               <tbody>
                 {logs.length === 0 && !loading ? (
                   <tr>
-                    <td colSpan={6}>
+                    <td colSpan={5}>
                       <EmptyState icon={FileSearch} title="No audit entries found" subtitle="Audit trail will build as system events occur" />
                     </td>
                   </tr>
@@ -462,10 +527,10 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
                     const severity = inferSeverity(log)
                     return (
                       <tr key={log.id} className="group" role="row">
-                        <td colSpan={6} className="p-0">
+                        <td colSpan={5} className="p-0">
                           <button
                             type="button"
-                            className="grid w-full grid-cols-[1fr_1fr_1fr_1fr_0.7fr_0.7fr] border-b border-border-subtle/70 text-left hover:bg-surface-hover/40 cursor-pointer"
+                            className="grid w-full grid-cols-[1fr_1fr_1fr_0.7fr_0.7fr] border-b border-border-subtle/70 text-left hover:bg-surface-hover/40 cursor-pointer"
                             onClick={() => setExpandedRowId(isExpanded ? null : log.id)}
                             aria-expanded={isExpanded}
                             aria-controls={`audit-detail-${log.id}`}
@@ -477,10 +542,6 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
                             </span>
                             <span className="px-2 py-2 text-text-primary">
                               <span className="rounded border border-border-subtle bg-background px-2 py-0.5 font-mono">{log.action_key}</span>
-                            </span>
-                            <span className="px-2 py-2 text-text-primary">
-                              <span className="capitalize">{log.entity_type}</span>
-                              <span className="block text-text-tertiary">{log.entity_id || '—'}</span>
                             </span>
                             <span className="px-2 py-2">
                               <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase ${severityTone[severity]}`}>
@@ -590,7 +651,6 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
                           <span className={`soc-status-neutral ${statusTone[log.result] || ''}`}>
                             {log.result}
                           </span>
-                          <span className="text-[11px] text-text-tertiary capitalize">{log.entity_type}</span>
                         </div>
                       </div>
                       {isExpanded

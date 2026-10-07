@@ -166,6 +166,7 @@ function isAbortError(error: unknown): boolean {
 
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December']
 const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
+const CALENDAR_SHIFT_PAGE_SIZE = 200
 
 const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewChange, activeView: _activeView }) => {
   const isAdmin = isElevatedRole(user.role)
@@ -185,16 +186,34 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
 
   const fetchShifts = useCallback(async (signal?: AbortSignal): Promise<ShiftEvent[]> => {
     try {
-      const url = isAdmin
+      const endpoint = isAdmin
         ? `${API_BASE_URL}/api/guard-replacement/shifts`
         : `${API_BASE_URL}/api/guard-replacement/guard/${user.id}/shifts`
-      const res = await fetch(url, {
-        headers: getAuthHeaders(),
-        signal,
-      })
-      if (!res.ok) return []
-      const data = await parseResponseBody(res)
-      const shifts: any[] = data.shifts || (Array.isArray(data) ? data : [])
+
+      const shifts: any[] = []
+      let page = 1
+      let total = 0
+
+      do {
+        const query = new URLSearchParams({
+          page: String(page),
+          pageSize: String(CALENDAR_SHIFT_PAGE_SIZE),
+        })
+        const res = await fetch(`${endpoint}?${query.toString()}`, {
+          headers: getAuthHeaders(),
+          signal,
+        })
+        if (!res.ok) return []
+
+        const data = await parseResponseBody(res)
+        const pageShifts: any[] = data.shifts || (Array.isArray(data) ? data : [])
+        shifts.push(...pageShifts)
+        total = typeof data.total === 'number' ? data.total : pageShifts.length
+
+        if (pageShifts.length === 0) break
+        page += 1
+      } while (shifts.length < total)
+
       return shifts.flatMap((s: any): ShiftEvent[] => {
         const startTime = typeof s.start_time === 'string' ? s.start_time : ''
         const date = safeIsoToDateKey(startTime)

@@ -54,6 +54,7 @@ interface User {
   username: string
   role: string
   last_seen_at?: string
+  last_activity_at?: string
   full_name?: string
   phone_number?: string
   guard_code?: string | null
@@ -86,13 +87,13 @@ const truncateText = (value: string, maxChars: number) => {
 
 type UserDerivedStatus = 'active' | 'inactive' | 'pending' | 'suspended'
 
-const getRelativeLastLogin = (lastSeenAt?: string) => {
-  if (!lastSeenAt) return 'Never'
-  const ts = new Date(lastSeenAt).getTime()
+const getRelativeLastActivity = (lastActivityAt?: string) => {
+  if (!lastActivityAt) return 'No activity recorded'
+  const ts = new Date(lastActivityAt).getTime()
   if (Number.isNaN(ts)) return 'Unknown'
 
   const diffMs = Date.now() - ts
-  if (diffMs < 0) return 'Just now'
+  if (diffMs < 0) return new Date(ts).toLocaleDateString()
   const minuteMs = 60 * 1000
   const hourMs = 60 * minuteMs
   const dayMs = 24 * hourMs
@@ -105,10 +106,11 @@ const getRelativeLastLogin = (lastSeenAt?: string) => {
   return new Date(ts).toLocaleDateString()
 }
 
-const getPreciseLastSeen = (lastSeenAt?: string) => {
-  if (!lastSeenAt) return 'No signal'
-  const ts = new Date(lastSeenAt).getTime()
+const getActivityDetail = (lastActivityAt?: string) => {
+  if (!lastActivityAt) return 'No recorded activity'
+  const ts = new Date(lastActivityAt).getTime()
   if (Number.isNaN(ts)) return 'Unknown'
+  if (Date.now() - ts < 0) return 'Recorded activity'
 
   const diffMs = Math.max(Date.now() - ts, 0)
   if (diffMs < 60 * 1000) return `${Math.round(diffMs / 1000)}s ago`
@@ -1254,7 +1256,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                         <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Username</th>
                         <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Role</th>
                         <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Status</th>
-                        <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Last Login</th>
+                        <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Last Activity</th>
                         <th className="px-3 py-2.5 text-right text-xs font-semibold uppercase tracking-wider text-text-tertiary">Actions</th>
                       </tr>
                     </thead>
@@ -1299,8 +1301,8 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                             </td>
                             <td className="px-3 py-2.5 text-xs text-text-secondary">
                               <div className="flex flex-col gap-0.5">
-                                <span>{getRelativeLastLogin(u.last_seen_at)}</span>
-                                <span className="text-[11px] text-text-tertiary">Signal {getPreciseLastSeen(u.last_seen_at)}</span>
+                                <span>{getRelativeLastActivity(u.last_activity_at ?? u.last_seen_at)}</span>
+                                <span className="text-[11px] text-text-tertiary">{getActivityDetail(u.last_activity_at ?? u.last_seen_at)}</span>
                               </div>
                             </td>
                             <td className="px-3 py-2.5">
@@ -1403,9 +1405,9 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                               <div className="mt-1"><RoleBadge roleRaw={u.role} /></div>
                             </div>
                             <div>
-                              <p className="text-text-tertiary">Last Login</p>
-                              <p className="mt-1 font-medium text-text-secondary">{getRelativeLastLogin(u.last_seen_at)}</p>
-                              <p className="mt-1 text-[11px] text-text-tertiary">Signal {getPreciseLastSeen(u.last_seen_at)}</p>
+                              <p className="text-text-tertiary">Last Activity</p>
+                              <p className="mt-1 font-medium text-text-secondary">{getRelativeLastActivity(u.last_activity_at ?? u.last_seen_at)}</p>
+                              <p className="mt-1 text-[11px] text-text-tertiary">{getActivityDetail(u.last_activity_at ?? u.last_seen_at)}</p>
                             </div>
                           </div>
                           <div className="mt-3 flex flex-wrap gap-2">

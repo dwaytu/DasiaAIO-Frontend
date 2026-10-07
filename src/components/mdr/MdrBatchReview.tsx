@@ -58,6 +58,16 @@ interface MdrStagingRow {
   matched_firearm_id?: string | null
   matched_client_id?: string | null
   validation_errors?: string[] | null
+  cleansing_changes?: Array<{
+    field: string
+    original: string
+    cleaned: string
+  }> | null
+  quality_flags?: Array<{
+    field: string
+    code: string
+    message: string
+  }> | null
   created_at: string
 }
 
@@ -142,6 +152,18 @@ function matchStatusClass(matchStatus: string): string {
     default:
       return 'bg-surface text-text-secondary'
   }
+}
+
+function cleaningNotes(row: MdrStagingRow, fields: string[]): string[] {
+  return (row.cleansing_changes ?? [])
+    .filter((change) => fields.includes(change.field))
+    .map((change) => `Cleaned: ${change.original || 'blank'} -> ${change.cleaned || 'blank'}`)
+}
+
+function qualityNotes(row: MdrStagingRow, fields: string[]): string[] {
+  return (row.quality_flags ?? [])
+    .filter((flag) => fields.includes(flag.field))
+    .map((flag) => flag.message)
 }
 
 function buildDefaultDraft(row: MdrStagingRow): ResolveDraft {
@@ -576,6 +598,10 @@ const MdrBatchReview: FC<MdrBatchReviewProps> = ({
               <tbody>
                 {rows.map((row) => {
                   const draft = drafts[row.id] ?? buildDefaultDraft(row)
+                  const clientCleaningNotes = cleaningNotes(row, ['clientName', 'clientAddress'])
+                  const guardCleaningNotes = cleaningNotes(row, ['guardName', 'contactNumber', 'licenseNumber', 'licenseExpiry'])
+                  const firearmCleaningNotes = cleaningNotes(row, ['serialNumber', 'firearmMake', 'firearmKind', 'caliber', 'firearmValidity'])
+                  const guardQualityNotes = qualityNotes(row, ['guardName'])
                   const isResolvable =
                     row.match_status === 'ambiguous' ||
                     row.match_status === 'pending' ||
@@ -591,6 +617,9 @@ const MdrBatchReview: FC<MdrBatchReviewProps> = ({
                       <td className="px-3 py-3">
                         <div>{row.client_name ?? '-'}</div>
                         <div className="text-xs text-text-secondary">{row.client_number ?? '-'}</div>
+                        {clientCleaningNotes.map((note) => (
+                          <div key={`${row.id}-${note}`} className="mt-1 text-xs text-info-text">{note}</div>
+                        ))}
                         {Array.isArray(row.validation_errors) && row.validation_errors.length > 0 ? (
                           <ul className="mt-2 space-y-1 text-xs text-danger">
                             {row.validation_errors.map((issue, index) => (
@@ -608,12 +637,21 @@ const MdrBatchReview: FC<MdrBatchReviewProps> = ({
                         <div className="text-xs text-text-secondary">
                           Expiry: {row.license_expiry || 'Not provided'}
                         </div>
+                        {guardCleaningNotes.map((note) => (
+                          <div key={`${row.id}-${note}`} className="mt-1 text-xs text-info-text">{note}</div>
+                        ))}
+                        {guardQualityNotes.map((note) => (
+                          <div key={`${row.id}-${note}`} className="mt-1 text-xs text-warning">Review: {note}</div>
+                        ))}
                       </td>
                       <td className="px-3 py-3">
                         <div>{row.serial_number ?? '-'}</div>
                         <div className="text-xs text-text-secondary">
                           {[row.firearm_kind, row.firearm_make, row.caliber].filter(Boolean).join(' | ') || '-'}
                         </div>
+                        {firearmCleaningNotes.map((note) => (
+                          <div key={`${row.id}-${note}`} className="mt-1 text-xs text-info-text">{note}</div>
+                        ))}
                       </td>
                       <td className="px-3 py-3">
                         <span className={`inline-flex rounded px-2 py-1 text-xs font-semibold uppercase ${matchStatusClass(row.match_status)}`}>

@@ -35,6 +35,13 @@ interface Firearm {
   lastMaintenance?: string
 }
 
+interface FirearmListResponse {
+  total?: number
+  page?: number
+  pageSize?: number
+  firearms?: Firearm[]
+}
+
 interface ArmoredCar {
   id: string
   license_plate: string
@@ -77,6 +84,10 @@ type UserCreationField = keyof UserCreationFormState
 type UserCreationErrors = Partial<Record<UserCreationField, string>>
 
 const GUARD_PAGE_SIZE = 10
+const FIREARM_PAGE_SIZE = 50
+
+const toDateInputValue = (value?: string | null) => value ? value.slice(0, 10) : ''
+const emptyClientSite = (): ClientSiteInput => ({ name: '', latitude: 7.4478, longitude: 125.8078, address: '' })
 
 const TAB_CONFIG: { key: ManageTab; label: string; icon: FC<{ className?: string }> }[] = [
   { key: 'guards', label: 'Guards', icon: Users },
@@ -887,6 +898,8 @@ const GuardsTab: FC<{
 
 const FirearmsTab: FC = () => {
   const [firearms, setFirearms] = useState<Firearm[]>([])
+  const [totalFirearms, setTotalFirearms] = useState(0)
+  const [currentPage, setCurrentPage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -894,18 +907,21 @@ const FirearmsTab: FC = () => {
   const [newFirearm, setNewFirearm] = useState({ serialNumber: '', model: '', caliber: '', licenseExpiryDate: '' })
   const [submitting, setSubmitting] = useState(false)
   const [firearmPendingRemoval, setFirearmPendingRemoval] = useState<Firearm | null>(null)
+  const [editingFirearm, setEditingFirearm] = useState<Firearm | null>(null)
+  const [firearmEdit, setFirearmEdit] = useState({ serialNumber: '', model: '', caliber: '', licenseExpiryDate: '', status: 'available' })
 
-  useEffect(() => {
-    fetchFirearms()
-  }, [])
-
-  const fetchFirearms = async () => {
+  const fetchFirearms = async (page = currentPage) => {
     try {
       setLoading(true)
-      const response = await fetch(`${API_BASE_URL}/api/firearms`, { headers: getAuthHeaders() })
+      const response = await fetch(
+        `${API_BASE_URL}/api/firearms?page=${page}&page_size=${FIREARM_PAGE_SIZE}`,
+        { headers: getAuthHeaders() },
+      )
       if (response.ok) {
-        const data = await response.json()
-        setFirearms(Array.isArray(data) ? data : (data.firearms || []))
+        const data = await response.json() as Firearm[] | FirearmListResponse
+        const pageItems = Array.isArray(data) ? data : (data.firearms || [])
+        setFirearms(pageItems)
+        setTotalFirearms(Array.isArray(data) ? pageItems.length : (data.total ?? pageItems.length))
       }
     } catch (err) {
       logError('Error fetching firearms:', err)
@@ -913,6 +929,14 @@ const FirearmsTab: FC = () => {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    void fetchFirearms(currentPage)
+  }, [currentPage])
+
+  const pageCount = Math.max(1, Math.ceil(totalFirearms / FIREARM_PAGE_SIZE))
+  const firstVisibleFirearm = totalFirearms === 0 ? 0 : ((currentPage - 1) * FIREARM_PAGE_SIZE) + 1
+  const lastVisibleFirearm = Math.min(currentPage * FIREARM_PAGE_SIZE, totalFirearms)
 
   const addFirearm = async (e: FormEvent) => {
     e.preventDefault()
@@ -928,7 +952,11 @@ const FirearmsTab: FC = () => {
       setSuccess('Firearm added successfully')
        setNewFirearm({ serialNumber: '', model: '', caliber: '', licenseExpiryDate: '' })
       setShowAddModal(false)
-      await fetchFirearms()
+      if (currentPage === 1) {
+        await fetchFirearms(1)
+      } else {
+        setCurrentPage(1)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add firearm')
     } finally {
@@ -945,9 +973,58 @@ const FirearmsTab: FC = () => {
       })
       if (!response.ok) throw new Error('Failed to remove firearm')
       setSuccess('Firearm removed successfully')
-      await fetchFirearms()
+      if (firearms.length === 1 && currentPage > 1) {
+        setCurrentPage((page) => page - 1)
+      } else {
+        await fetchFirearms(currentPage)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to remove firearm')
+    }
+  }
+
+  const openFirearmEditor = (firearm: Firearm) => {
+    setError('')
+    setEditingFirearm(firearm)
+    setFirearmEdit({
+      serialNumber: firearm.serialNumber,
+      model: firearm.model,
+      caliber: firearm.caliber,
+      licenseExpiryDate: toDateInputValue(firearm.licenseExpiryDate),
+      status: firearm.status,
+    })
+  }
+
+  const updateFirearm = async (event: FormEvent) => {
+    event.preventDefault()
+    if (!editingFirearm) return
+    if (!firearmEdit.serialNumber.trim() || !firearmEdit.model.trim() || !firearmEdit.caliber.trim()) {
+      setError('Serial number, model, and caliber are required.')
+      return
+    }
+
+    setSubmitting(true)
+    setError('')
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/firearms/${editingFirearm.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        body: JSON.stringify({
+          serialNumber: firearmEdit.serialNumber.trim(),
+          model: firearmEdit.model.trim(),
+          caliber: firearmEdit.caliber.trim(),
+          licenseExpiryDate: firearmEdit.licenseExpiryDate,
+          status: firearmEdit.status,
+        }),
+      })
+      if (!response.ok) throw new Error('Failed to update firearm')
+      setSuccess('Firearm updated successfully')
+      setEditingFirearm(null)
+      await fetchFirearms(currentPage)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update firearm')
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -959,7 +1036,7 @@ const FirearmsTab: FC = () => {
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-text-tertiary">Armory</p>
-            <span className="soc-chip border border-info-border bg-info-bg text-info-text">{firearms.length} registered</span>
+            <span className="soc-chip border border-info-border bg-info-bg text-info-text">{totalFirearms} registered</span>
           </div>
           <h2 className="mt-1 text-xl font-black uppercase tracking-wide text-text-primary">Firearm inventory</h2>
           <p className="mt-1 text-sm text-text-secondary">Registered firearms, license expiry, and current availability.</p>
@@ -1010,11 +1087,56 @@ const FirearmsTab: FC = () => {
         </form>
       </SentinelModal>
 
+      <SentinelModal
+        open={Boolean(editingFirearm)}
+        onClose={() => {
+          if (!submitting) setEditingFirearm(null)
+        }}
+        title="Edit Firearm"
+        subtitle={editingFirearm ? `Update armory record ${editingFirearm.serialNumber}` : undefined}
+      >
+        <form onSubmit={updateFirearm} noValidate className="space-y-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <label htmlFor="edit-firearm-serial" className="soc-form-label">Serial Number</label>
+              <input id="edit-firearm-serial" type="text" required value={firearmEdit.serialNumber} onChange={(event) => setFirearmEdit({ ...firearmEdit, serialNumber: event.target.value })} className="soc-form-control w-full" />
+            </div>
+            <div>
+              <label htmlFor="edit-firearm-model" className="soc-form-label">Model</label>
+              <input id="edit-firearm-model" type="text" required value={firearmEdit.model} onChange={(event) => setFirearmEdit({ ...firearmEdit, model: event.target.value })} className="soc-form-control w-full" />
+            </div>
+            <div>
+              <label htmlFor="edit-firearm-caliber" className="soc-form-label">Caliber</label>
+              <input id="edit-firearm-caliber" type="text" required value={firearmEdit.caliber} onChange={(event) => setFirearmEdit({ ...firearmEdit, caliber: event.target.value })} className="soc-form-control w-full" />
+            </div>
+            <div>
+              <label htmlFor="edit-firearm-status" className="soc-form-label">Status</label>
+              <select id="edit-firearm-status" value={firearmEdit.status} onChange={(event) => setFirearmEdit({ ...firearmEdit, status: event.target.value })} className="soc-form-control w-full">
+                <option value="available">Available</option>
+                <option value="allocated">Allocated</option>
+                <option value="maintenance">Maintenance</option>
+                <option value="deployed">Deployed</option>
+                <option value="lost">Lost</option>
+              </select>
+            </div>
+            <div className="sm:col-span-2">
+              <label htmlFor="edit-firearm-license-expiry" className="soc-form-label">License Expiration Date</label>
+              <input id="edit-firearm-license-expiry" type="date" value={firearmEdit.licenseExpiryDate} onChange={(event) => setFirearmEdit({ ...firearmEdit, licenseExpiryDate: event.target.value })} className="soc-form-control w-full" />
+            </div>
+          </div>
+          <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
+            <button type="button" onClick={() => setEditingFirearm(null)} disabled={submitting} className="soc-btn soc-btn-neutral">Cancel</button>
+            <button type="submit" disabled={submitting} className="soc-btn soc-btn-primary">{submitting ? 'Saving...' : 'Save Changes'}</button>
+          </div>
+        </form>
+      </SentinelModal>
+
       {firearms.length === 0 ? (
         <EmptyState icon={Shield} title="No firearms registered" subtitle="Add firearms to the inventory to get started" />
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
+        <>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
             <thead className="thead-glass">
               <tr>
                 <th className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Serial</th>
@@ -1043,20 +1165,54 @@ const FirearmsTab: FC = () => {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <button
-                      type="button"
-                      onClick={() => setFirearmPendingRemoval(f)}
-                      className="soc-btn soc-btn-danger"
-                    >
-                      <Trash2 size={15} aria-hidden="true" />
-                      Remove
-                    </button>
+                    <div className="flex justify-end gap-2">
+                      <button type="button" onClick={() => openFirearmEditor(f)} className="soc-btn soc-btn-neutral">
+                        <Pencil size={15} aria-hidden="true" />
+                        Edit
+                      </button>
+                      <button type="button" onClick={() => setFirearmPendingRemoval(f)} className="soc-btn soc-btn-danger">
+                        <Trash2 size={15} aria-hidden="true" />
+                        Remove
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
             </tbody>
-          </table>
-        </div>
+            </table>
+          </div>
+          <div className="flex flex-col gap-3 border-t border-border-subtle pt-4 text-sm text-text-secondary sm:flex-row sm:items-center sm:justify-between">
+            <p>
+              Showing <span className="font-semibold text-text-primary">{firstVisibleFirearm}-{lastVisibleFirearm}</span> of{' '}
+              <span className="font-semibold text-text-primary">{totalFirearms}</span> firearms
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                disabled={currentPage === 1}
+                className="soc-btn soc-btn-neutral min-h-11"
+                aria-label="Previous firearm page"
+              >
+                <ChevronLeft size={16} aria-hidden="true" />
+                Previous
+              </button>
+              <span className="min-w-24 text-center font-semibold text-text-primary" aria-live="polite">
+                Page {currentPage} of {pageCount}
+              </span>
+              <button
+                type="button"
+                onClick={() => setCurrentPage((page) => Math.min(pageCount, page + 1))}
+                disabled={currentPage === pageCount}
+                className="soc-btn soc-btn-neutral min-h-11"
+                aria-label="Next firearm page"
+              >
+                Next
+                <ChevronRight size={16} aria-hidden="true" />
+              </button>
+            </div>
+          </div>
+        </>
       )}
       <ConfirmationDialog
         open={Boolean(firearmPendingRemoval)}
@@ -1080,6 +1236,8 @@ const VehiclesTab: FC = () => {
   const [submitting, setSubmitting] = useState(false)
   const [newCar, setNewCar] = useState({ licensePlate: '', plateNumber: '' })
   const [vehiclePendingRemoval, setVehiclePendingRemoval] = useState<ArmoredCar | null>(null)
+  const [editingVehicle, setEditingVehicle] = useState<ArmoredCar | null>(null)
+  const [vehicleEdit, setVehicleEdit] = useState({ licensePlate: '', plateNumber: '', status: 'available' })
 
   useEffect(() => {
     fetchCars()
@@ -1138,6 +1296,43 @@ const VehiclesTab: FC = () => {
     }
   }
 
+  const openVehicleEditor = (vehicle: ArmoredCar) => {
+    setError('')
+    setEditingVehicle(vehicle)
+    setVehicleEdit({ licensePlate: vehicle.license_plate, plateNumber: vehicle.plate_number || '', status: vehicle.status })
+  }
+
+  const updateVehicle = async (event: FormEvent) => {
+    event.preventDefault()
+    if (!editingVehicle) return
+    if (!vehicleEdit.licensePlate.trim() || !vehicleEdit.plateNumber.trim()) {
+      setError('A/C number and plate number are required.')
+      return
+    }
+
+    setSubmitting(true)
+    setError('')
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/armored-cars/${editingVehicle.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        body: JSON.stringify({
+          licensePlate: vehicleEdit.licensePlate.trim(),
+          plateNumber: vehicleEdit.plateNumber.trim(),
+          status: vehicleEdit.status,
+        }),
+      })
+      if (!response.ok) throw new Error('Failed to update vehicle')
+      setSuccess('Vehicle updated successfully')
+      setEditingVehicle(null)
+      await fetchCars()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update vehicle')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   if (loading) return <LoadingSkeleton variant="table" />
 
   return (
@@ -1189,6 +1384,42 @@ const VehiclesTab: FC = () => {
         </form>
       </SentinelModal>
 
+      <SentinelModal
+        open={Boolean(editingVehicle)}
+        onClose={() => {
+          if (!submitting) setEditingVehicle(null)
+        }}
+        title="Edit Vehicle"
+        subtitle={editingVehicle ? `Update vehicle ${editingVehicle.plate_number || editingVehicle.license_plate}` : undefined}
+      >
+        <form onSubmit={updateVehicle} noValidate className="space-y-3">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label htmlFor="edit-vehicle-ac-number" className="soc-form-label">A/C Number</label>
+              <input id="edit-vehicle-ac-number" type="text" required value={vehicleEdit.licensePlate} onChange={(event) => setVehicleEdit({ ...vehicleEdit, licensePlate: event.target.value })} className="soc-form-control w-full" />
+            </div>
+            <div>
+              <label htmlFor="edit-vehicle-plate-number" className="soc-form-label">Plate Number</label>
+              <input id="edit-vehicle-plate-number" type="text" required value={vehicleEdit.plateNumber} onChange={(event) => setVehicleEdit({ ...vehicleEdit, plateNumber: event.target.value })} className="soc-form-control w-full" />
+            </div>
+            <div className="sm:col-span-2">
+              <label htmlFor="edit-vehicle-status" className="soc-form-label">Status</label>
+              <select id="edit-vehicle-status" value={vehicleEdit.status} onChange={(event) => setVehicleEdit({ ...vehicleEdit, status: event.target.value })} className="soc-form-control w-full">
+                <option value="available">Available</option>
+                <option value="allocated">Allocated</option>
+                <option value="maintenance">Maintenance</option>
+                <option value="in_transit">In transit</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+          </div>
+          <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
+            <button type="button" onClick={() => setEditingVehicle(null)} disabled={submitting} className="soc-btn soc-btn-neutral">Cancel</button>
+            <button type="submit" disabled={submitting} className="soc-btn soc-btn-primary">{submitting ? 'Saving...' : 'Save Changes'}</button>
+          </div>
+        </form>
+      </SentinelModal>
+
       {cars.length === 0 ? (
         <EmptyState icon={Truck} title="No vehicles in fleet" subtitle="Register armored vehicles to manage the fleet" />
       ) : (
@@ -1218,13 +1449,13 @@ const VehiclesTab: FC = () => {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <button
-                      type="button"
-                      onClick={() => setVehiclePendingRemoval(car)}
-                      className="soc-btn soc-btn-danger"
-                    >
-                      Remove
-                    </button>
+                    <div className="flex justify-end gap-2">
+                      <button type="button" onClick={() => openVehicleEditor(car)} className="soc-btn soc-btn-neutral">
+                        <Pencil size={15} aria-hidden="true" />
+                        Edit
+                      </button>
+                      <button type="button" onClick={() => setVehiclePendingRemoval(car)} className="soc-btn soc-btn-danger">Remove</button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -1246,18 +1477,14 @@ const VehiclesTab: FC = () => {
 }
 
 const ClientSitesTab: FC = () => {
-  const { clientSites, createClientSite, deleteClientSite } = useOperationalMapData()
+  const { clientSites, createClientSite, updateClientSite, deleteClientSite } = useOperationalMapData()
   const [showAddModal, setShowAddModal] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [sitePendingRemoval, setSitePendingRemoval] = useState<{ id: string; name: string } | null>(null)
-  const [newSite, setNewSite] = useState<ClientSiteInput>({
-    name: '',
-    latitude: 7.4478,
-    longitude: 125.8078,
-    address: '',
-  })
+  const [editingSite, setEditingSite] = useState<typeof clientSites[number] | null>(null)
+  const [newSite, setNewSite] = useState<ClientSiteInput>(emptyClientSite)
 
   const addSite = async (e: FormEvent) => {
     e.preventDefault()
@@ -1281,6 +1508,44 @@ const ClientSitesTab: FC = () => {
       setSuccess('Site deleted')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete site')
+    }
+  }
+
+  const openSiteEditor = (site: typeof clientSites[number]) => {
+    setError('')
+    setEditingSite(site)
+    setNewSite({
+      name: site.name,
+      address: site.address || '',
+      latitude: site.latitude,
+      longitude: site.longitude,
+      isActive: site.isActive,
+    })
+  }
+
+  const closeSiteEditor = () => {
+    setEditingSite(null)
+    setNewSite(emptyClientSite())
+  }
+
+  const updateSite = async (event: FormEvent) => {
+    event.preventDefault()
+    if (!editingSite) return
+    if (!newSite.name.trim()) {
+      setError('Site name is required.')
+      return
+    }
+
+    setSubmitting(true)
+    setError('')
+    try {
+      await updateClientSite(editingSite.id, { ...newSite, name: newSite.name.trim() })
+      setSuccess('Client site updated successfully')
+      closeSiteEditor()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update site')
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -1341,6 +1606,40 @@ const ClientSitesTab: FC = () => {
         </form>
       </SentinelModal>
 
+      <SentinelModal
+        open={Boolean(editingSite)}
+        onClose={() => {
+          if (!submitting) closeSiteEditor()
+        }}
+        title="Edit Client Site"
+        subtitle={editingSite ? `Update the site location for ${editingSite.name}` : undefined}
+      >
+        <form onSubmit={updateSite} noValidate className="space-y-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="sm:col-span-2 lg:col-span-1">
+              <label htmlFor="edit-site-name" className="soc-form-label">Site Name</label>
+              <input id="edit-site-name" type="text" required value={newSite.name} onChange={(event) => setNewSite({ ...newSite, name: event.target.value })} className="soc-form-control w-full" />
+            </div>
+            <div>
+              <label htmlFor="edit-site-lat" className="soc-form-label">Latitude</label>
+              <input id="edit-site-lat" type="number" step="any" required value={newSite.latitude} onChange={(event) => setNewSite({ ...newSite, latitude: parseFloat(event.target.value) || 0 })} className="soc-form-control w-full" />
+            </div>
+            <div>
+              <label htmlFor="edit-site-lng" className="soc-form-label">Longitude</label>
+              <input id="edit-site-lng" type="number" step="any" required value={newSite.longitude} onChange={(event) => setNewSite({ ...newSite, longitude: parseFloat(event.target.value) || 0 })} className="soc-form-control w-full" />
+            </div>
+            <div className="sm:col-span-2 lg:col-span-3">
+              <label htmlFor="edit-site-address" className="soc-form-label">Address</label>
+              <input id="edit-site-address" type="text" value={newSite.address || ''} onChange={(event) => setNewSite({ ...newSite, address: event.target.value })} className="soc-form-control w-full" />
+            </div>
+          </div>
+          <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
+            <button type="button" onClick={closeSiteEditor} disabled={submitting} className="soc-btn soc-btn-neutral">Cancel</button>
+            <button type="submit" disabled={submitting} className="soc-btn soc-btn-primary">{submitting ? 'Saving...' : 'Save Changes'}</button>
+          </div>
+        </form>
+      </SentinelModal>
+
       {clientSites.length === 0 ? (
         <EmptyState icon={MapPin} title="No client sites" subtitle="Add geofenced client sites for guard tracking" />
       ) : (
@@ -1361,14 +1660,16 @@ const ClientSitesTab: FC = () => {
                   <td className="px-4 py-3 text-text-secondary text-sm hidden sm:table-cell">{site.address || '-'}</td>
                   <td className="px-4 py-3 text-text-secondary text-xs font-mono hidden md:table-cell">{site.latitude.toFixed(4)}, {site.longitude.toFixed(4)}</td>
                   <td className="px-4 py-3 text-right">
-                    <button
-                      type="button"
-                      onClick={() => setSitePendingRemoval({ id: site.id, name: site.name })}
-                      className="soc-btn soc-btn-danger"
-                    >
-                      <Trash2 size={15} aria-hidden="true" />
-                      Remove
-                    </button>
+                    <div className="flex justify-end gap-2">
+                      <button type="button" onClick={() => openSiteEditor(site)} className="soc-btn soc-btn-neutral">
+                        <Pencil size={15} aria-hidden="true" />
+                        Edit
+                      </button>
+                      <button type="button" onClick={() => setSitePendingRemoval({ id: site.id, name: site.name })} className="soc-btn soc-btn-danger">
+                        <Trash2 size={15} aria-hidden="true" />
+                        Remove
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

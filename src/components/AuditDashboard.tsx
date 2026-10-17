@@ -56,6 +56,28 @@ const actionSummary: Record<string, string> = {
   AUTH_LOGIN_ATTEMPT: 'Sign-in attempt recorded',
   AUTH_LOGOUT: 'User signed out',
   AUTH_TOKEN_REFRESH: 'Session refreshed',
+  GUARD_DASHBOARD_VIEWED: 'Guard opened the dashboard',
+  SHIFT_SCHEDULE_VIEWED: 'Guard viewed the assigned schedule',
+  DTR_RECORD_VIEWED: 'Guard viewed the DTR record',
+  ATTENDANCE_HISTORY_VIEWED: 'Guard viewed attendance history',
+  NOTIFICATION_VIEWED: 'Guard viewed a notification',
+  SHIFT_REPLACEMENT_STATUS_VIEWED: 'Guard viewed replacement status',
+  SHIFT_REPLACEMENT_ACKNOWLEDGED: 'Guard acknowledged relief coverage',
+  OPERATIONAL_REQUEST_SUBMITTED: 'Guard submitted an operational request',
+  OPERATIONAL_REQUEST_VIEWED: 'Guard viewed an operational request',
+  INCIDENT_REPORT_OPENED: 'Guard opened an incident report',
+  INCIDENT_REPORT_ACKNOWLEDGED: 'Guard acknowledged an incident update',
+  FEEDBACK_PAGE_VIEWED: 'User opened feedback',
+  FEEDBACK_SUBMITTED: 'User submitted feedback',
+  SUPERVISOR_ATTENDANCE_EXCEPTION_REVIEWED: 'Supervisor reviewed an attendance exception',
+  SUPERVISOR_OPERATIONAL_REQUEST_REVIEWED: 'Supervisor reviewed an operational request',
+  SUPERVISOR_INCIDENT_REVIEWED: 'Supervisor reviewed an incident',
+  SUPERVISOR_RELIEF_COVERAGE_APPROVED: 'Supervisor approved relief coverage',
+  ADMIN_ANALYTICS_VIEWED: 'Administrator viewed analytics',
+  ADMIN_DTR_SUMMARY_REVIEWED: 'Administrator reviewed the DTR summary',
+  ADMIN_FEEDBACK_SUMMARY_REVIEWED: 'Administrator reviewed feedback',
+  ADMIN_SUPPORT_TICKET_REVIEWED: 'Administrator reviewed a support ticket',
+  ADMIN_REPORT_VIEWED: 'Administrator viewed an operational report',
   SUPERVISOR_SHIFT_REVIEW: 'Supervisor reviewed an attendance or replacement record',
   SHIFT_REPLACEMENT_ACCEPTED: 'Shift replacement accepted',
   SHIFT_SCHEDULE_CREATED: 'Shift schedule created',
@@ -115,6 +137,26 @@ const formatOutcome = (status: string) => {
   if (status.toLowerCase() === 'success') return 'Completed successfully.'
   if (status.toLowerCase() === 'failed') return 'The action did not complete.'
   return `Status: ${sentenceCase(status)}.`
+}
+
+const toRfc3339 = (value: string) => {
+  if (!value) return undefined
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString()
+}
+
+const metadataString = (metadata?: Record<string, unknown> | null) => {
+  if (!metadata || Object.keys(metadata).length === 0) return ''
+  try {
+    return JSON.stringify(metadata, null, 2)
+  } catch {
+    return ''
+  }
+}
+
+const relatedRecordLabel = (metadata?: Record<string, unknown> | null) => {
+  const label = metadata?.related_record_label
+  return typeof label === 'string' && label.trim() ? label : ''
 }
 
 export default function AuditDashboard({ user, onLogout, onViewChange, activeView }: AuditDashboardProps) {
@@ -262,11 +304,15 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
     let count = 0
     if (filters.status) count++
     if (filters.resourceType) count++
+    if (filters.actionType) count++
+    if (filters.actorRole) count++
+    if (filters.entityId) count++
+    if (filters.source) count++
     if (dateFrom) count++
     if (dateTo) count++
     if (windowHours !== 24) count++
     return count
-  }, [filters.status, filters.resourceType, dateFrom, dateTo, windowHours])
+  }, [filters.status, filters.resourceType, filters.actionType, filters.actorRole, filters.entityId, filters.source, dateFrom, dateTo, windowHours])
 
   const updateFilters = (partial: Partial<AuditLogFilters>) => {
     setFilters((previous) => ({
@@ -278,7 +324,7 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
 
   const applySearch = (event: FormEvent) => {
     event.preventDefault()
-    updateFilters({ search: searchDraft.trim() || undefined, from: dateFrom || undefined, to: dateTo || undefined })
+    updateFilters({ search: searchDraft.trim() || undefined, from: toRfc3339(dateFrom), to: toRfc3339(dateTo) })
   }
 
   const resetFilters = () => {
@@ -404,7 +450,7 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
 
         {filtersExpanded && (
           <div id="audit-filter-panel" className="border-t border-border-subtle px-4 pb-4 pt-3">
-            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-5" role="group" aria-label="Audit filters">
+            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4" role="group" aria-label="Audit filters">
               <label htmlFor="audit-status" className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-wide text-text-secondary">
                 Status
                 <select
@@ -419,16 +465,79 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
                 </select>
               </label>
 
-              <label htmlFor="audit-resource" className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-wide text-text-secondary">
-                Resource
+              <label htmlFor="audit-module" className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                Module
                 <input
-                  id="audit-resource"
+                  id="audit-module"
                   type="text"
                   value={filters.resourceType || ''}
                   onChange={(event) => updateFilters({ resourceType: event.target.value || undefined })}
-                  placeholder="users, tracking, firearms"
+                  placeholder="attendance, incident, request"
                   className="rounded-md border border-border-subtle bg-background px-3 py-2 text-sm text-text-primary"
                 />
+              </label>
+
+              <label htmlFor="audit-role" className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                Actor role
+                <select
+                  id="audit-role"
+                  value={filters.actorRole || 'all'}
+                  onChange={(event) => updateFilters({ actorRole: event.target.value === 'all' ? undefined : event.target.value })}
+                  className="rounded-md border border-border-subtle bg-background px-3 py-2 text-sm text-text-primary"
+                >
+                  <option value="all">All roles</option>
+                  <option value="guard">Guard</option>
+                  <option value="supervisor">Supervisor</option>
+                  <option value="admin">Admin</option>
+                  <option value="superadmin">Superadmin</option>
+                </select>
+              </label>
+
+              <label htmlFor="audit-action" className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                Action
+                <select
+                  id="audit-action"
+                  value={filters.actionType || 'all'}
+                  onChange={(event) => updateFilters({ actionType: event.target.value === 'all' ? undefined : event.target.value })}
+                  className="rounded-md border border-border-subtle bg-background px-3 py-2 text-sm text-text-primary"
+                >
+                  <option value="all">All actions</option>
+                  <option value="AUTH_LOGIN">Login</option>
+                  <option value="AUTH_LOGOUT">Logout</option>
+                  <option value="ATTENDANCE">Attendance</option>
+                  <option value="DTR">DTR</option>
+                  <option value="OPERATIONAL_REQUEST">Requests</option>
+                  <option value="INCIDENT">Incidents</option>
+                  <option value="REPLACEMENT">Replacements</option>
+                  <option value="FEEDBACK">Feedback</option>
+                  <option value="REPORT">Reports</option>
+                </select>
+              </label>
+
+              <label htmlFor="audit-related-record" className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                Related record
+                <input
+                  id="audit-related-record"
+                  type="search"
+                  value={filters.entityId || ''}
+                  onChange={(event) => updateFilters({ entityId: event.target.value || undefined })}
+                  placeholder="Record ID"
+                  className="rounded-md border border-border-subtle bg-background px-3 py-2 text-sm text-text-primary"
+                />
+              </label>
+
+              <label htmlFor="audit-source" className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                Record source
+                <select
+                  id="audit-source"
+                  value={filters.source || 'all'}
+                  onChange={(event) => updateFilters({ source: event.target.value === 'all' ? undefined : event.target.value })}
+                  className="rounded-md border border-border-subtle bg-background px-3 py-2 text-sm text-text-primary"
+                >
+                  <option value="all">All sources</option>
+                  <option value="runtime">Runtime</option>
+                  <option value="capstone_seed">Capstone seed</option>
+                </select>
               </label>
 
               <label htmlFor="audit-date-from" className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-wide text-text-secondary">
@@ -472,7 +581,7 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
             <div className="mt-3 flex justify-end">
               <button
                 type="button"
-                onClick={() => updateFilters({ search: searchDraft.trim() || undefined, from: dateFrom || undefined, to: dateTo || undefined })}
+                onClick={() => updateFilters({ search: searchDraft.trim() || undefined, from: toRfc3339(dateFrom), to: toRfc3339(dateTo) })}
                 className="rounded bg-accent px-4 py-2 text-xs font-semibold text-white hover:bg-accent/80"
               >
                 Apply Filters
@@ -510,7 +619,7 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
                   <th className="px-2 py-2 text-left" scope="col">Timestamp</th>
                   <th className="px-2 py-2 text-left" scope="col">Actor</th>
                   <th className="px-2 py-2 text-left" scope="col">Action</th>
-                  <th className="px-2 py-2 text-left" scope="col">Severity</th>
+                  <th className="px-2 py-2 text-left" scope="col">Module</th>
                   <th className="px-2 py-2 text-left" scope="col">Status</th>
                 </tr>
               </thead>
@@ -524,13 +633,12 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
                 ) : (
                   logs.map((log) => {
                     const isExpanded = expandedRowId === log.id
-                    const severity = inferSeverity(log)
                     return (
                       <tr key={log.id} className="group" role="row">
                         <td colSpan={5} className="p-0">
                           <button
                             type="button"
-                            className="grid w-full grid-cols-[1fr_1fr_1fr_0.7fr_0.7fr] border-b border-border-subtle/70 text-left hover:bg-surface-hover/40 cursor-pointer"
+                            className="grid w-full grid-cols-[1fr_1fr_1.2fr_1fr_0.7fr] border-b border-border-subtle/70 text-left hover:bg-surface-hover/40 cursor-pointer"
                             onClick={() => setExpandedRowId(isExpanded ? null : log.id)}
                             aria-expanded={isExpanded}
                             aria-controls={`audit-detail-${log.id}`}
@@ -541,12 +649,10 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
                               <span className="block text-text-tertiary">{log.actor_role || 'automated'}</span>
                             </span>
                             <span className="px-2 py-2 text-text-primary">
-                              <span className="rounded border border-border-subtle bg-background px-2 py-0.5 font-mono">{log.action_key}</span>
+                              <span className="font-medium">{formatAuditAction(log.action_key, log.entity_type)}</span>
                             </span>
                             <span className="px-2 py-2">
-                              <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase ${severityTone[severity]}`}>
-                                {severity}
-                              </span>
+                              <span className="text-text-secondary">{sentenceCase(log.entity_type)}</span>
                             </span>
                             <span className="px-2 py-2">
                               <span className={`soc-status-neutral ${statusTone[log.result] || ''}`}>
@@ -566,8 +672,8 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
                                   <p className="text-text-primary font-mono mt-0.5">{log.action_key}</p>
                                 </div>
                                 <div>
-                                  <p className="text-text-tertiary font-semibold uppercase tracking-wide">Entity</p>
-                                  <p className="text-text-primary mt-0.5">{log.entity_type} — {log.entity_id || 'n/a'}</p>
+                                  <p className="text-text-tertiary font-semibold uppercase tracking-wide">Module</p>
+                                  <p className="text-text-primary mt-0.5">{sentenceCase(log.entity_type)}</p>
                                 </div>
                                 <div>
                                   <p className="text-text-tertiary font-semibold uppercase tracking-wide">Result</p>
@@ -582,7 +688,7 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
                                   <p className="text-text-primary mt-0.5 break-all">{log.user_agent || 'unknown client'}</p>
                                 </div>
                                 <div>
-                                  <p className="text-text-tertiary font-semibold uppercase tracking-wide">Reason</p>
+                                  <p className="text-text-tertiary font-semibold uppercase tracking-wide">Details</p>
                                   <p className="text-text-primary mt-0.5">{log.reason || '—'}</p>
                                 </div>
                                 <div>
@@ -593,6 +699,24 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
                                   <p className="text-text-tertiary font-semibold uppercase tracking-wide">Actor Email</p>
                                   <p className="text-text-primary mt-0.5">{log.actor_email || 'n/a'}</p>
                                 </div>
+                                <div>
+                                  <p className="text-text-tertiary font-semibold uppercase tracking-wide">Related record</p>
+                                  <p className="text-text-primary mt-0.5 break-all">{relatedRecordLabel(log.metadata) || log.entity_id || 'n/a'}</p>
+                                </div>
+                                <div>
+                                  <p className="text-text-tertiary font-semibold uppercase tracking-wide">Record source</p>
+                                  <p className="text-text-primary mt-0.5">{log.source || 'runtime'}</p>
+                                </div>
+                                <div>
+                                  <p className="text-text-tertiary font-semibold uppercase tracking-wide">Scenario time</p>
+                                  <p className="text-text-primary mt-0.5">{formatDateTime(log.scenario_occurred_at || log.created_at)}</p>
+                                </div>
+                                {metadataString(log.metadata) && (
+                                  <div className="md:col-span-3">
+                                    <p className="text-text-tertiary font-semibold uppercase tracking-wide">Audit metadata</p>
+                                    <pre className="mt-0.5 max-h-40 overflow-auto whitespace-pre-wrap break-words font-mono text-[11px] text-text-secondary">{metadataString(log.metadata)}</pre>
+                                  </div>
+                                )}
                                 <div>
                                   <button
                                     type="button"
@@ -662,8 +786,8 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
                       <div id={`audit-card-detail-${log.id}`} className="mt-3 border-t border-border-subtle pt-3 space-y-2 text-xs animate-fade-in motion-reduce:animate-none">
                         <div className="grid grid-cols-2 gap-2">
                           <div>
-                            <p className="text-text-tertiary font-semibold uppercase tracking-wide">Entity ID</p>
-                            <p className="text-text-primary mt-0.5">{log.entity_id || 'n/a'}</p>
+                            <p className="text-text-tertiary font-semibold uppercase tracking-wide">Module</p>
+                            <p className="text-text-primary mt-0.5">{sentenceCase(log.entity_type)}</p>
                           </div>
                           <div>
                             <p className="text-text-tertiary font-semibold uppercase tracking-wide">Source IP</p>
@@ -673,9 +797,21 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
                             <p className="text-text-tertiary font-semibold uppercase tracking-wide">User Agent</p>
                             <p className="text-text-primary mt-0.5 break-all">{truncate(log.user_agent || 'unknown', 80)}</p>
                           </div>
+                          <div className="col-span-2">
+                            <p className="text-text-tertiary font-semibold uppercase tracking-wide">Related record</p>
+                            <p className="text-text-primary mt-0.5 break-all">{relatedRecordLabel(log.metadata) || log.entity_id || 'n/a'}</p>
+                          </div>
+                          <div>
+                            <p className="text-text-tertiary font-semibold uppercase tracking-wide">Record source</p>
+                            <p className="text-text-primary mt-0.5">{log.source || 'runtime'}</p>
+                          </div>
+                          <div>
+                            <p className="text-text-tertiary font-semibold uppercase tracking-wide">Scenario time</p>
+                            <p className="text-text-primary mt-0.5">{formatDateTime(log.scenario_occurred_at || log.created_at)}</p>
+                          </div>
                           {log.reason && (
                             <div className="col-span-2">
-                              <p className="text-text-tertiary font-semibold uppercase tracking-wide">Reason</p>
+                              <p className="text-text-tertiary font-semibold uppercase tracking-wide">Details</p>
                               <p className="text-text-primary mt-0.5">{log.reason}</p>
                             </div>
                           )}

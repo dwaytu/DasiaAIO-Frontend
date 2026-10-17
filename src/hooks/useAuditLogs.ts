@@ -11,6 +11,9 @@ export interface AuditLogFilters {
   resourceType?: string
   actionType?: string
   actorId?: string
+  actorRole?: string
+  entityId?: string
+  source?: string
   sourceIp?: string
   userAgent?: string
   from?: string
@@ -32,6 +35,11 @@ export interface AuditLogEntry {
   source_ip?: string | null
   user_agent?: string | null
   metadata?: Record<string, unknown> | null
+  source: string
+  actor_attribution_mode: string
+  capstone_batch_id?: string | null
+  seeded_at?: string | null
+  scenario_occurred_at?: string | null
   created_at: string
 }
 
@@ -74,6 +82,9 @@ export function useAuditLogs() {
       if (nextFilters.result) params.append('result', nextFilters.result)
       if (nextFilters.entityType) params.append('entity_type', nextFilters.entityType)
       if (nextFilters.actorId) params.append('actor_id', nextFilters.actorId)
+      if (nextFilters.actorRole) params.append('actor_role', nextFilters.actorRole)
+      if (nextFilters.entityId) params.append('entity_id', nextFilters.entityId)
+      if (nextFilters.source) params.append('source', nextFilters.source)
       if (nextFilters.search) params.append('search', nextFilters.search)
       if (nextFilters.status) params.append('status', nextFilters.status)
       if (nextFilters.resourceType) params.append('resource_type', nextFilters.resourceType)

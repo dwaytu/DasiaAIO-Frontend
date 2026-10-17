@@ -260,28 +260,35 @@ const DtrReport: FC<Props> = ({ user, onLogout, onViewChange, activeView }) => {
             {report.items.length === 0 && !error ? (
               <div className="rounded border border-border-subtle bg-surface-elevated px-4 py-10 text-center text-sm text-text-secondary">No attendance records were found for the selected filters. Adjust the period, site, guard, or status and try again.</div>
             ) : (
-              <div className="dtr-print-table-wrap overflow-x-auto">
-                <table className="dtr-print-table w-full min-w-[1100px] border-collapse text-left text-sm">
-                  <thead>
-                    <tr className="border-b border-border text-xs uppercase tracking-wider text-text-secondary">
-                      <th className="px-3 py-3">Guard</th><th className="px-3 py-3">Site</th><th className="px-3 py-3">Scheduled</th><th className="px-3 py-3">Check in</th><th className="px-3 py-3">Check out</th><th className="px-3 py-3">Late</th><th className="px-3 py-3">Hours</th><th className="px-3 py-3">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {report.items.map((item) => (
-                      <tr key={item.shiftId} className="border-b border-border-subtle text-text-primary last:border-0">
-                        <td className="px-3 py-3"><div className="font-semibold">{item.guardName}</div><div className="text-xs text-text-tertiary">{item.guardId}</div></td>
-                        <td className="px-3 py-3">{item.clientSite}</td>
-                        <td className="px-3 py-3 whitespace-nowrap"><div>{formatDateTime(item.scheduledStart)}</div><div className="text-xs text-text-tertiary">to {formatDateTime(item.scheduledEnd)}</div></td>
-                        <td className="px-3 py-3 whitespace-nowrap">{formatDateTime(item.actualCheckIn)}</td>
-                        <td className="px-3 py-3 whitespace-nowrap">{formatDateTime(item.actualCheckOut)}</td>
-                        <td className="px-3 py-3">{typeof item.lateMinutes === 'number' ? `${item.lateMinutes} min` : '-'}</td>
-                        <td className="px-3 py-3">{formatHours(item.totalHours)}</td>
-                        <td className="px-3 py-3"><span className={`dtr-print-status inline-flex rounded-full border px-2 py-1 text-xs font-semibold uppercase ${statusClass(item.status)}`}>{item.status.replace('_', ' ')}</span></td>
+              <div className="dtr-print-report">
+                <div className="hidden dtr-print-heading">
+                  <p className="soc-label">SENTINEL Attendance Records</p>
+                  <h2 className="soc-page-title">Daily Time Record</h2>
+                  <p className="mt-1 text-sm">Period: {rangeLabel}</p>
+                </div>
+                <div className="dtr-print-table-wrap overflow-x-auto">
+                  <table className="dtr-print-table w-full min-w-[1100px] border-collapse text-left text-sm">
+                    <thead>
+                      <tr className="border-b border-border text-xs uppercase tracking-wider text-text-secondary">
+                        <th className="px-3 py-3">Guard</th><th className="px-3 py-3">Site</th><th className="px-3 py-3">Scheduled</th><th className="px-3 py-3">Check in</th><th className="px-3 py-3">Check out</th><th className="px-3 py-3">Late</th><th className="px-3 py-3">Hours</th><th className="px-3 py-3">Status</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {report.items.map((item) => (
+                        <tr key={item.shiftId} className="border-b border-border-subtle text-text-primary last:border-0">
+                          <td className="px-3 py-3"><div className="font-semibold">{item.guardName}</div><div className="dtr-print-guard-id text-xs text-text-tertiary">{item.guardId}</div></td>
+                          <td className="px-3 py-3">{item.clientSite}</td>
+                          <td className="px-3 py-3 whitespace-nowrap"><div>{formatDateTime(item.scheduledStart)}</div><div className="text-xs text-text-tertiary">to {formatDateTime(item.scheduledEnd)}</div></td>
+                          <td className="px-3 py-3 whitespace-nowrap">{formatDateTime(item.actualCheckIn)}</td>
+                          <td className="px-3 py-3 whitespace-nowrap">{formatDateTime(item.actualCheckOut)}</td>
+                          <td className="px-3 py-3">{typeof item.lateMinutes === 'number' ? `${item.lateMinutes} min` : '-'}</td>
+                          <td className="px-3 py-3">{formatHours(item.totalHours)}</td>
+                          <td className="px-3 py-3"><span className={`dtr-print-status inline-flex rounded-full border px-2 py-1 text-xs font-semibold uppercase ${statusClass(item.status)}`}>{item.status.replace('_', ' ')}</span></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
 

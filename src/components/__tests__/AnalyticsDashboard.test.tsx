@@ -102,6 +102,7 @@ describe('AnalyticsDashboard printing', () => {
 
     expect(await screen.findByText('Analytics Report')).toBeInTheDocument()
     expect(document.querySelector('.analytics-print-report')).toBeInTheDocument()
+    expect(document.querySelector('.analytics-screen-hero')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Print analytics report' }))
 
@@ -124,5 +125,6 @@ describe('AnalyticsDashboard printing', () => {
     expect(screen.getByLabelText('Reporting period')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Print analytics report' })).toHaveClass('min-h-11')
     expect(screen.getByText('Resource Availability')).toBeInTheDocument()
+    expect(document.querySelector('.analytics-print-heading')).toHaveTextContent('SENTINEL Operational Analytics')
   })
 })

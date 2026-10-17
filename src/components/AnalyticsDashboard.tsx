@@ -645,29 +645,31 @@ const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onVie
         <p className="mt-1 text-sm">Period: last {dateRange} days | Generated {new Date(lastRefreshAt).toLocaleString()}</p>
       </div>
       {/* ── Hero Zone ──────────────────────────────────── */}
-      <OperationalPageHeader
-        eyebrow="Operational intelligence"
-        title="Analytics overview"
-        description="Review mission progress, available resources, attendance, and guard feedback for the selected reporting period."
-        icon={BarChart3}
-        status={
-          <>
-            <LiveFreshnessPill updatedAt={lastRefreshAt} label="Analytics feed" />
-            <StatusBadge label={`Mission completion ${missionCompletion.toFixed(1)}%`} tone={missionTrendTone} />
-          </>
-        }
-        actions={
-          <button
-            type="button"
-            onClick={() => window.print()}
-            className="soc-btn soc-btn-neutral min-h-11 analytics-print-control"
-            aria-label="Print analytics report"
-          >
-            <Printer className="h-4 w-4" aria-hidden="true" />
-            Print report
-          </button>
-        }
-      />
+      <div className="analytics-screen-hero">
+        <OperationalPageHeader
+          eyebrow="Operational intelligence"
+          title="Analytics overview"
+          description="Review mission progress, available resources, attendance, and guard feedback for the selected reporting period."
+          icon={BarChart3}
+          status={
+            <>
+              <LiveFreshnessPill updatedAt={lastRefreshAt} label="Analytics feed" />
+              <StatusBadge label={`Mission completion ${missionCompletion.toFixed(1)}%`} tone={missionTrendTone} />
+            </>
+          }
+          actions={
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="soc-btn soc-btn-neutral min-h-11 analytics-print-control"
+              aria-label="Print analytics report"
+            >
+              <Printer className="h-4 w-4" aria-hidden="true" />
+              Print report
+            </button>
+          }
+        />
+      </div>
 
       {error && analytics && (
         <div

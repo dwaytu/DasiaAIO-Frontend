@@ -55,6 +55,9 @@ describe('DtrReport printing', () => {
 
     const table = await screen.findByRole('table')
     expect(table).toHaveClass('dtr-print-table')
+    expect(document.querySelector('.dtr-print-report')).toBeInTheDocument()
+    expect(document.querySelector('.dtr-print-heading')).toHaveTextContent('Daily Time Record')
+    expect(screen.getByText('guard-1')).toHaveClass('dtr-print-guard-id')
 
     await user.click(screen.getByRole('button', { name: 'Print' }))
 

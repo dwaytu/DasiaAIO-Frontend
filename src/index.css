@@ -1755,23 +1755,38 @@
     visibility: hidden !important;
   }
 
-  .dtr-print-table,
-  .dtr-print-table * {
-    visibility: visible !important;
-  }
-
+  .dtr-print-report,
+  .dtr-print-report *,
   .analytics-print-report,
   .analytics-print-report * {
     visibility: visible !important;
   }
 
+  .dtr-print-report,
   .dtr-print-table-wrap {
     overflow: visible !important;
   }
 
-  .dtr-print-table {
+  .dtr-print-report {
     position: absolute !important;
     inset: 0;
+    width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    background: Canvas !important;
+    color: CanvasText !important;
+  }
+
+  .dtr-print-heading,
+  .analytics-print-heading {
+    display: block !important;
+    margin-bottom: 4mm;
+    border-bottom: 0.3mm solid CanvasText;
+    padding-bottom: 3mm;
+    color: CanvasText !important;
+  }
+
+  .dtr-print-table {
     width: 100% !important;
     min-width: 0 !important;
     margin: 0 !important;
@@ -1784,14 +1799,28 @@
     background: Canvas !important;
     color: CanvasText !important;
     border-color: CanvasText !important;
+    padding: 1.5mm 2mm !important;
+    line-height: 1.25 !important;
   }
 
   .dtr-print-table th {
-    font-size: 10pt;
+    font-size: 8pt;
   }
 
   .dtr-print-table td {
-    font-size: 9pt;
+    font-size: 7.5pt;
+  }
+
+  .dtr-print-table thead {
+    display: table-header-group;
+  }
+
+  .dtr-print-table tr {
+    break-inside: avoid;
+  }
+
+  .dtr-print-guard-id {
+    display: none !important;
   }
 
   .dtr-print-status {
@@ -1831,12 +1860,8 @@
     overflow: visible !important;
   }
 
-  .analytics-print-heading {
-    display: block !important;
-    margin-bottom: 1rem;
-    border-bottom: 1px solid CanvasText;
-    padding-bottom: 0.75rem;
-    color: CanvasText !important;
+  .analytics-screen-hero {
+    display: none !important;
   }
 
   .analytics-print-report {
@@ -1874,6 +1899,30 @@
     color: CanvasText !important;
   }
 
+  .analytics-print-report * {
+    color: CanvasText !important;
+    text-shadow: none !important;
+  }
+
+  .analytics-print-report .text-text-secondary,
+  .analytics-print-report .text-text-tertiary {
+    color: GrayText !important;
+  }
+
+  .analytics-print-report [aria-label="Operational summary"] {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(45mm, 1fr)) !important;
+    gap: 3mm !important;
+    border: 0 !important;
+  }
+
+  .analytics-print-report [aria-label="Operational summary"] > div {
+    min-height: 24mm;
+    border: 0.3mm solid CanvasText !important;
+    border-left: 1mm solid CanvasText !important;
+    padding: 3mm !important;
+  }
+
   .analytics-print-report .soc-dashboard-card,
   .analytics-print-report .command-panel {
     break-inside: avoid;
@@ -1883,8 +1932,18 @@
     color: CanvasText !important;
   }
 
+  .analytics-print-report .soc-dashboard-card {
+    padding: 3mm !important;
+  }
+
+  .analytics-print-report > section {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
   .analytics-print-report svg {
     max-width: 100%;
+    height: 38mm !important;
   }
 }
 

@@ -52,12 +52,13 @@ describe('ResourceManagementPanel resource editing', () => {
   })
 
   it('opens an edit dialog and sends the full firearm update payload', async () => {
-    fetchMock.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ firearms: [{ id: 'firearm-1', serialNumber: 'SN-100', model: 'Armscor', caliber: '9mm', status: 'available', licenseExpiryDate: '2028-06-09' }] }),
+    fetchMock.mockImplementation(async (url: string, options?: RequestInit) => {
+      if (url.includes('/api/firearm-allocations/summary')) {
+        return { ok: true, json: async () => ({ totalFirearms: 110, availableFirearms: 3, allocatedFirearms: 99, maintenanceFirearms: 8 }) }
+      }
+      if (options?.method === 'PUT') return { ok: true, json: async () => ({}) }
+      return { ok: true, json: async () => ({ total: 110, page: 1, pageSize: 50, firearms: [{ id: 'firearm-1', serialNumber: 'SN-100', model: 'Armscor', caliber: '9mm', status: 'available', licenseExpiryDate: '2028-06-09' }] }) }
     })
-    fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({}) })
-    fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ firearms: [] }) })
     const user = userEvent.setup()
     renderPanel()
 
@@ -77,23 +78,22 @@ describe('ResourceManagementPanel resource editing', () => {
   })
 
   it('uses the API total and loads the next firearm page', async () => {
-    fetchMock.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        total: 110,
-        page: 1,
-        pageSize: 50,
-        firearms: [{ id: 'firearm-1', serialNumber: 'SN-001', model: 'Armscor', caliber: '9mm', status: 'available' }],
-      }),
-    })
-    fetchMock.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        total: 110,
-        page: 2,
-        pageSize: 50,
-        firearms: [{ id: 'firearm-51', serialNumber: 'SN-051', model: 'Armscor', caliber: '9mm', status: 'allocated' }],
-      }),
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.includes('/api/firearm-allocations/summary')) {
+        return { ok: true, json: async () => ({ totalFirearms: 110, availableFirearms: 3, allocatedFirearms: 99, maintenanceFirearms: 8 }) }
+      }
+      const secondPage = url.includes('page=2')
+      return {
+        ok: true,
+        json: async () => ({
+          total: 110,
+          page: secondPage ? 2 : 1,
+          pageSize: 50,
+          firearms: [secondPage
+            ? { id: 'firearm-51', serialNumber: 'SN-051', model: 'Armscor', caliber: '9mm', status: 'allocated' }
+            : { id: 'firearm-1', serialNumber: 'SN-001', model: 'Armscor', caliber: '9mm', status: 'available' }],
+        }),
+      }
     })
     const user = userEvent.setup()
     renderPanel()

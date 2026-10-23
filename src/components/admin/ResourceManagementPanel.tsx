@@ -31,6 +31,8 @@ interface Firearm {
   model: string
   caliber: string
   status: string
+  custodyReview?: boolean
+  activeCustody?: boolean
   licenseExpiryDate?: string | null
   lastMaintenance?: string
 }
@@ -40,6 +42,15 @@ interface FirearmListResponse {
   page?: number
   pageSize?: number
   firearms?: Firearm[]
+}
+
+interface FirearmAllocationSummary {
+  totalFirearms: number
+  availableFirearms: number
+  allocatedFirearms: number
+  maintenanceFirearms: number
+  activeCustody: number
+  custodyReviewFirearms: number
 }
 
 interface ArmoredCar {
@@ -899,7 +910,11 @@ const GuardsTab: FC<{
 const FirearmsTab: FC = () => {
   const [firearms, setFirearms] = useState<Firearm[]>([])
   const [totalFirearms, setTotalFirearms] = useState(0)
+  const [firearmSummary, setFirearmSummary] = useState<FirearmAllocationSummary | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
+  const [stateFilter, setStateFilter] = useState('')
+  const [searchInput, setSearchInput] = useState('')
+  const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -913,15 +928,18 @@ const FirearmsTab: FC = () => {
   const fetchFirearms = async (page = currentPage) => {
     try {
       setLoading(true)
-      const response = await fetch(
-        `${API_BASE_URL}/api/firearms?page=${page}&page_size=${FIREARM_PAGE_SIZE}`,
-        { headers: getAuthHeaders() },
-      )
+      const [response, summaryResponse] = await Promise.all([
+        fetch(`${API_BASE_URL}/api/firearms?${new URLSearchParams({ page: String(page), page_size: String(FIREARM_PAGE_SIZE), ...(stateFilter ? { state: stateFilter } : {}), ...(search ? { search } : {}) }).toString()}`, { headers: getAuthHeaders() }),
+        fetch(`${API_BASE_URL}/api/firearm-allocations/summary`, { headers: getAuthHeaders() }),
+      ])
       if (response.ok) {
         const data = await response.json() as Firearm[] | FirearmListResponse
         const pageItems = Array.isArray(data) ? data : (data.firearms || [])
         setFirearms(pageItems)
         setTotalFirearms(Array.isArray(data) ? pageItems.length : (data.total ?? pageItems.length))
+      }
+      if (summaryResponse.ok) {
+        setFirearmSummary(await summaryResponse.json() as FirearmAllocationSummary)
       }
     } catch (err) {
       logError('Error fetching firearms:', err)
@@ -932,7 +950,7 @@ const FirearmsTab: FC = () => {
 
   useEffect(() => {
     void fetchFirearms(currentPage)
-  }, [currentPage])
+  }, [currentPage, search, stateFilter])
 
   const pageCount = Math.max(1, Math.ceil(totalFirearms / FIREARM_PAGE_SIZE))
   const firstVisibleFirearm = totalFirearms === 0 ? 0 : ((currentPage - 1) * FIREARM_PAGE_SIZE) + 1
@@ -1036,10 +1054,11 @@ const FirearmsTab: FC = () => {
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-text-tertiary">Armory</p>
-            <span className="soc-chip border border-info-border bg-info-bg text-info-text">{totalFirearms} registered</span>
+            <span className="soc-chip border border-info-border bg-info-bg text-info-text">{firearmSummary?.totalFirearms ?? totalFirearms} registered</span>
           </div>
           <h2 className="mt-1 text-xl font-black uppercase tracking-wide text-text-primary">Firearm inventory</h2>
-          <p className="mt-1 text-sm text-text-secondary">Registered firearms, license expiry, and current availability.</p>
+          <p className="mt-1 text-sm text-text-secondary">Registered firearms, verified custody, and equipment availability.</p>
+          {firearmSummary ? <div className="mt-3 flex flex-wrap gap-2 text-xs"><span className="soc-chip status-success">{firearmSummary.availableFirearms} available</span><span className="soc-chip status-info">{firearmSummary.activeCustody} verified custody</span><span className="soc-chip border border-warning-border bg-warning-bg text-warning-text">{firearmSummary.custodyReviewFirearms} custody review</span><span className="soc-chip border border-warning-border bg-warning-bg text-warning-text">{firearmSummary.maintenanceFirearms} maintenance</span></div> : null}
         </div>
         <button
           type="button"
@@ -1053,6 +1072,13 @@ const FirearmsTab: FC = () => {
 
       {error && <div className="p-3 bg-danger-bg border border-danger-border rounded text-danger-text text-sm">{error}</div>}
       {success && <div className="p-3 bg-success-bg border border-success-border rounded text-success-text text-sm">{success}</div>}
+
+      <form onSubmit={(event) => { event.preventDefault(); setCurrentPage(1); setSearch(searchInput.trim()) }} className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_190px_auto_auto]" role="search">
+        <label className="relative"><span className="sr-only">Search firearm inventory</span><Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary" aria-hidden="true" /><input value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder="Serial, manufacturer, or model" className="soc-form-control w-full pl-10" /></label>
+        <select value={stateFilter} onChange={(event) => { setStateFilter(event.target.value); setCurrentPage(1) }} className="soc-form-control" aria-label="Filter firearm inventory state"><option value="">All inventory</option><option value="available">Available</option><option value="active_custody">Active custody</option><option value="custody_review">Custody review</option><option value="maintenance">Maintenance</option></select>
+        <button type="submit" className="soc-btn soc-btn-neutral">Search</button>
+        <button type="button" onClick={() => { setSearchInput(''); setSearch(''); setStateFilter(''); setCurrentPage(1) }} className="soc-btn soc-btn-neutral">Clear</button>
+      </form>
 
       <SentinelModal
         open={showAddModal}
@@ -1155,13 +1181,13 @@ const FirearmsTab: FC = () => {
                   <td className="px-4 py-3 text-text-secondary text-sm hidden sm:table-cell">{f.caliber}</td>
                   <td className="px-4 py-3 text-text-primary text-sm">{f.licenseExpiryDate ? new Date(f.licenseExpiryDate).toLocaleDateString() : 'N/A'}</td>
                   <td className="px-4 py-3">
-                    <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold ${
+                    <span title={f.custodyReview ? 'No verified active custody record' : undefined} className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold ${
                       f.status === 'available' ? 'bg-success-bg text-success-text ring-1 ring-success-border' :
                       f.status === 'deployed' ? 'bg-info-bg text-info-text ring-1 ring-info-border' :
                       f.status === 'maintenance' ? 'bg-warning-bg text-warning-text ring-1 ring-warning-border' :
                       'soc-status-neutral'
                     }`}>
-                      {f.status}
+                      {f.custodyReview ? 'Custody review' : f.activeCustody ? 'Active custody' : f.status}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right">

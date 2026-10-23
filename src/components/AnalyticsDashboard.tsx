@@ -46,6 +46,8 @@ interface AnalyticsData {
     firearms_in_use: number
     firearms_available: number
     firearms_unavailable: number
+    firearms_custody_review?: number
+    firearms_maintenance?: number
     vehicles_deployed: number
     vehicles_available: number
     vehicles_unavailable: number
@@ -256,6 +258,7 @@ interface AvailabilityRow {
   label: string
   available: number
   unavailable: number
+  detail?: string
 }
 
 function AvailabilityComparison({ rows }: { rows: AvailabilityRow[] }) {
@@ -275,7 +278,7 @@ function AvailabilityComparison({ rows }: { rows: AvailabilityRow[] }) {
             <div className="mb-2 flex items-center justify-between gap-4">
               <span className="text-sm font-semibold text-text-primary">{row.label}</span>
               <span className="text-xs tabular-nums text-text-secondary">
-                {row.available} available / {row.unavailable} unavailable
+                {row.detail || `${row.available} available / ${row.unavailable} unavailable`}
               </span>
             </div>
             <div
@@ -443,7 +446,7 @@ const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onVie
           <div className="soc-alert-error">
             <p className="font-semibold">Failed to load analytics data</p>
             <p className="text-xs mt-1">{error}</p>
-            <p className="text-xs mt-2">Make sure the backend server is running on port 5000</p>
+            <p className="text-xs mt-2">The analytics service may be restarting. Try again in a moment.</p>
           </div>
           <button type="button" onClick={handleRetry} className="soc-btn soc-btn-danger">
             Retry
@@ -523,6 +526,7 @@ const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onVie
       label: 'Firearms',
       available: analytics.resource_utilization.firearms_available,
       unavailable: analytics.resource_utilization.firearms_unavailable,
+      detail: `${analytics.resource_utilization.firearms_available} available; ${analytics.resource_utilization.firearms_in_use} verified custody; ${analytics.resource_utilization.firearms_custody_review ?? 0} custody review; ${analytics.resource_utilization.firearms_maintenance ?? 0} maintenance`,
     },
     {
       label: 'Vehicles',
@@ -583,7 +587,7 @@ const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onVie
       icon: Target,
     },
     {
-      label: 'Firearms issued',
+      label: 'Active custody',
       value: formatCompactNumber(analytics.overview.allocated_firearms),
       detail: `${formatCompactNumber(analytics.overview.total_firearms)} in inventory`,
       tone: 'warning',

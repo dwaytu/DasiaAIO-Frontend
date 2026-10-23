@@ -92,6 +92,9 @@ interface Trip {
   mission_details?: string
   created_at: string
   updated_at: string
+  vehicle_number?: string | null
+  driver_name?: string | null
+  client_site_name?: string | null
 }
 
 interface ArmoredCarDashboardProps {
@@ -847,23 +850,25 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                 <div className="text-center py-8 text-text-secondary text-sm md:text-base">No trips recorded</div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full min-w-[600px]">
+                  <table className="w-full min-w-[900px]">
                     <thead className="thead-glass">
                       <tr>
                         <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-text-primary border-b-2 border-border text-xs md:text-sm uppercase tracking-wider">Vehicle</th>
-                        <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-text-primary border-b-2 border-border text-xs md:text-sm uppercase tracking-wider hidden sm:table-cell">Start</th>
-                        <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-text-primary border-b-2 border-border text-xs md:text-sm uppercase tracking-wider hidden md:table-cell">End</th>
-                        <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-text-primary border-b-2 border-border text-xs md:text-sm uppercase tracking-wider">Distance</th>
+                        <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-text-primary border-b-2 border-border text-xs md:text-sm uppercase tracking-wider hidden sm:table-cell">Assigned bank</th>
+                        <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-text-primary border-b-2 border-border text-xs md:text-sm uppercase tracking-wider hidden md:table-cell">Driver</th>
+                        <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-text-primary border-b-2 border-border text-xs md:text-sm uppercase tracking-wider hidden lg:table-cell">Dispatch</th>
+                        <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-text-primary border-b-2 border-border text-xs md:text-sm uppercase tracking-wider hidden lg:table-cell">Return</th>
                         <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-text-primary border-b-2 border-border text-xs md:text-sm uppercase tracking-wider">Status</th>
                       </tr>
                     </thead>
                     <tbody>
                       {trips.map((trip) => (
                         <tr key={trip.id} className="border-b border-border hover:bg-surface-hover">
-                          <td className="px-2 md:px-4 py-2 md:py-3 text-text-primary text-xs md:text-sm">{trip.car_id}</td>
-                          <td className="px-2 md:px-4 py-2 md:py-3 text-text-primary text-xs md:text-sm hidden sm:table-cell">{trip.start_location}</td>
-                          <td className="px-2 md:px-4 py-2 md:py-3 text-text-primary text-xs md:text-sm hidden md:table-cell">{trip.end_location || 'In Transit'}</td>
-                          <td className="px-2 md:px-4 py-2 md:py-3 text-text-primary text-xs md:text-sm">{trip.distance_km ? `${trip.distance_km} km` : 'N/A'}</td>
+                          <td className="px-2 md:px-4 py-2 md:py-3 text-text-primary text-xs md:text-sm">{trip.vehicle_number || trip.car_id}</td>
+                          <td className="px-2 md:px-4 py-2 md:py-3 text-text-primary text-xs md:text-sm hidden sm:table-cell">{trip.client_site_name || 'Not recorded'}</td>
+                          <td className="px-2 md:px-4 py-2 md:py-3 text-text-primary text-xs md:text-sm hidden md:table-cell">{trip.driver_name || 'Not recorded'}</td>
+                          <td className="px-2 md:px-4 py-2 md:py-3 text-text-primary text-xs md:text-sm hidden lg:table-cell">{trip.start_time ? new Date(trip.start_time).toLocaleString() : 'Not recorded'}</td>
+                          <td className="px-2 md:px-4 py-2 md:py-3 text-text-primary text-xs md:text-sm hidden lg:table-cell">{trip.end_time ? new Date(trip.end_time).toLocaleString() : 'In transit'}</td>
                           <td className="px-2 md:px-4 py-2 md:py-3">
                             <span className={`inline-block px-2 md:px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(trip.status)}`}>
                               {trip.status}

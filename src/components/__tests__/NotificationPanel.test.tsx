@@ -6,9 +6,17 @@ jest.mock('../../config', () => ({ API_BASE_URL: 'https://example.test' }))
 jest.mock('../../utils/api', () => ({
   getAuthHeaders: () => ({ Authorization: 'Bearer token' }),
   fetchJsonOrThrow: jest.fn(async () => ({
-    unreadCount: 1,
+    unreadCount: 2,
+    currentUnreadCount: 1,
     notifications: [{
-      id: 'license-1',
+      id: 'current-1',
+      title: 'New check-in requires review',
+      message: 'Review the current check-in exception.',
+      type: 'missing_check_in',
+      read: false,
+      createdAt: new Date().toISOString(),
+    }, {
+      id: 'historical-1',
       title: 'Guard license expired',
       message: 'License expired Apr 27, 2026.',
       type: 'guard_compliance',
@@ -42,11 +50,13 @@ const user: User = {
 }
 
 describe('NotificationPanel', () => {
-  it('uses the persisted unread count and does not duplicate summary notifications', async () => {
+  it('shows only current notifications in the quick inbox while keeping history out of the attention view', async () => {
     render(<NotificationPanel user={user} isOpen onToggle={jest.fn()} onClose={jest.fn()} onViewAll={jest.fn()} />)
 
-    expect(await screen.findByRole('button', { name: /open quick inbox \(1 unread notifications\)/i })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: '1 unread' })).toBeInTheDocument()
-    expect(screen.getAllByText('Guard license expired')).toHaveLength(1)
+    expect(await screen.findByRole('button', { name: /open quick inbox \(1 current unread notifications\)/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '1 current unread' })).toBeInTheDocument()
+    expect(screen.getByText('New check-in requires review')).toBeInTheDocument()
+    expect(screen.queryByText('Guard license expired')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /mark all notifications as read/i })).not.toBeInTheDocument()
   })
 })

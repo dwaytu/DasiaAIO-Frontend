@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import AnalyticsDashboard from '../AnalyticsDashboard'
+import { fetchJsonOrThrow } from '../../utils/api'
 
 jest.mock('../../config', () => ({
   API_BASE_URL: 'http://localhost:5000',
@@ -121,10 +122,27 @@ describe('AnalyticsDashboard printing', () => {
 
     expect(await screen.findByRole('heading', { name: 'Analytics overview' })).toBeInTheDocument()
     expect(screen.getByText('Missions this month')).toBeInTheDocument()
-    expect(screen.getByText('Firearms issued')).toBeInTheDocument()
+    expect(screen.getByText('Active custody')).toBeInTheDocument()
     expect(screen.getByLabelText('Reporting period')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Print analytics report' })).toHaveClass('min-h-11')
     expect(screen.getByText('Resource Availability')).toBeInTheDocument()
     expect(document.querySelector('.analytics-print-heading')).toHaveTextContent('SENTINEL Operational Analytics')
+  })
+
+  it('gives a live-service recovery hint instead of a local development port', async () => {
+    jest.mocked(fetchJsonOrThrow).mockRejectedValueOnce(new Error('Service unavailable'))
+
+    render(
+      <AnalyticsDashboard
+        user={{ id: 'admin-1', email: 'admin@example.com', username: 'admin', role: 'admin' }}
+        onLogout={jest.fn()}
+        onViewChange={jest.fn()}
+        activeView="analytics"
+      />,
+    )
+
+    expect(await screen.findByText('Failed to load analytics data')).toBeInTheDocument()
+    expect(screen.getByText('The analytics service may be restarting. Try again in a moment.')).toBeInTheDocument()
+    expect(screen.queryByText(/running on port 5000/i)).not.toBeInTheDocument()
   })
 })

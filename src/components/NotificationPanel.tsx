@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { Bell, CheckCheck, MailOpen } from 'lucide-react'
+import { Bell, MailOpen } from 'lucide-react'
 import { API_BASE_URL } from '../config'
 import type { User } from '../context/AuthContext'
 import type { InboxItem } from './inbox/ActionInbox'
@@ -34,6 +34,7 @@ type PersistentNotification = PersistentNotificationPayload & {
 interface NotificationResponse {
   notifications?: PersistentNotificationPayload[]
   unreadCount?: number
+  currentUnreadCount?: number
 }
 
 const FALLBACK_ITEM_TITLE = 'Inbox Update'
@@ -100,7 +101,7 @@ function normalizePersistentNotification(notification: PersistentNotificationPay
 
 const NotificationPanel: React.FC<NotificationPanelProps> = ({ user, isOpen, onToggle, onClose, onViewAll }) => {
   const [items, setItems] = useState<InboxItem[]>([])
-  const [unreadCount, setUnreadCount] = useState(0)
+  const [currentUnreadCount, setCurrentUnreadCount] = useState(0)
   const [notice, setNotice] = useState('')
   const [loading, setLoading] = useState(true)
   const [panelError, setPanelError] = useState('')
@@ -118,7 +119,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ user, isOpen, onT
     const loadSummary = async () => {
       if (!resolvedUserId || !resolvedUserRole) {
         setItems([])
-        setUnreadCount(0)
+        setCurrentUnreadCount(0)
         setNotice('')
         setPanelError('')
         setNotifications([])
@@ -155,10 +156,10 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ user, isOpen, onT
         if (notificationResult.status === 'fulfilled') {
           const nextNotifications = (notificationResult.value.notifications ?? []).map(normalizePersistentNotification)
           setNotifications(nextNotifications)
-          setUnreadCount(
-            typeof notificationResult.value.unreadCount === 'number'
-              ? notificationResult.value.unreadCount
-              : nextNotifications.filter((notification) => !notification.read).length,
+          setCurrentUnreadCount(
+            typeof notificationResult.value.currentUnreadCount === 'number'
+              ? notificationResult.value.currentUnreadCount
+              : nextNotifications.filter((notification) => !notification.read && Date.now() - new Date(notification.createdAt).getTime() <= 7 * 24 * 60 * 60 * 1000).length,
           )
           setNotificationError('')
         } else {
@@ -168,7 +169,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ user, isOpen, onT
         if (cancelled) return
 
         setItems([])
-          setUnreadCount(0)
+        setCurrentUnreadCount(0)
         setNotice('')
         setPanelError('Unable to load inbox data. Please check your connection and try again.')
         if (!cancelled) setNotificationError('Unable to load notifications.')
@@ -192,6 +193,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ user, isOpen, onT
   }, [refreshKey, resolvedUserId, resolvedUserRole])
 
   const topItems = useMemo(() => items.filter((item) => item.category !== 'notification' && item.category !== 'compliance').slice(0, 4), [items])
+  const currentNotifications = useMemo(() => notifications.filter((notification) => Date.now() - new Date(notification.createdAt).getTime() <= 7 * 24 * 60 * 60 * 1000), [notifications])
 
   const setNotificationReadState = async (notificationId: string, read: boolean) => {
     setNotificationBusy(true)
@@ -203,29 +205,10 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ user, isOpen, onT
         `Unable to mark notification as ${read ? 'read' : 'unread'}.`,
       )
       setNotifications((current) => current.map((notification) => notification.id === notificationId ? { ...notification, read } : notification))
-      setUnreadCount((current) => Math.max(0, current + (read ? -1 : 1)))
+      setCurrentUnreadCount((current) => Math.max(0, current + (read ? -1 : 1)))
       setRefreshKey((value) => value + 1)
     } catch (error) {
       setNotificationError(error instanceof Error ? error.message : 'Unable to update notification.')
-    } finally {
-      setNotificationBusy(false)
-    }
-  }
-
-  const setAllNotificationsReadState = async (read: boolean) => {
-    setNotificationBusy(true)
-    setNotificationError('')
-    try {
-      await fetchJsonOrThrow(
-        `${API_BASE_URL}/api/users/${encodeURIComponent(resolvedUserId)}/notifications/mark-all-${read ? 'read' : 'unread'}`,
-        { method: 'PUT', headers: getAuthHeaders() },
-        `Unable to mark all notifications as ${read ? 'read' : 'unread'}.`,
-      )
-      setNotifications((current) => current.map((notification) => ({ ...notification, read })))
-      setUnreadCount(read ? 0 : notifications.length)
-      setRefreshKey((value) => value + 1)
-    } catch (error) {
-      setNotificationError(error instanceof Error ? error.message : 'Unable to update notifications.')
     } finally {
       setNotificationBusy(false)
     }
@@ -237,14 +220,14 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ user, isOpen, onT
         type="button"
         onClick={onToggle}
         className="soc-notification-trigger relative min-h-11 min-w-11 rounded p-2 text-text-secondary transition-colors hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
-        aria-label={unreadCount > 0 ? `Open quick inbox (${unreadCount} unread notifications)` : 'Open quick inbox'}
+        aria-label={currentUnreadCount > 0 ? `Open quick inbox (${currentUnreadCount} current unread notifications)` : 'Open quick inbox'}
         aria-expanded={isOpen}
         aria-controls="quick-inbox-panel"
       >
         <Bell className="h-5 w-5" aria-hidden="true" />
-        {unreadCount > 0 ? (
+        {currentUnreadCount > 0 ? (
           <span className="absolute right-0 top-0 inline-flex translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-danger px-1.5 py-0.5 text-xs font-bold leading-none text-white">
-            {unreadCount > 99 ? '99+' : unreadCount}
+            {currentUnreadCount > 99 ? '99+' : currentUnreadCount}
           </span>
         ) : null}
       </button>
@@ -254,7 +237,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ user, isOpen, onT
           <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-tertiary">Notifications</p>
-              <h3 className="text-base font-semibold text-text-primary">{unreadCount} unread</h3>
+              <h3 className="text-base font-semibold text-text-primary">{currentUnreadCount} current unread</h3>
             </div>
             <button type="button" onClick={onClose} className="soc-btn-neutral">
               Close
@@ -273,18 +256,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ user, isOpen, onT
             </div>
           ) : null}
 
-          <div className="border-b border-border px-4 py-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-tertiary">Notification controls</p>
-              <div className="flex flex-wrap gap-2">
-                <button type="button" disabled={notificationBusy || unreadCount === 0} onClick={() => void setAllNotificationsReadState(true)} className="soc-btn soc-btn-neutral min-h-9 px-2 text-xs disabled:opacity-50" title="Mark all notifications as read">
-                  <CheckCheck className="h-3.5 w-3.5" aria-hidden="true" />
-                  Mark all as read
-                </button>
-              </div>
-            </div>
-            {notificationError ? <p className="mt-2 text-xs text-danger-text" role="alert">{notificationError}</p> : null}
-          </div>
+          {notificationError ? <div className="border-b border-danger-border bg-danger-bg px-4 py-3 text-xs text-danger-text" role="alert">{notificationError}</div> : null}
 
           <div className="soc-scroll-area flex-1 overflow-y-auto">
             {loading ? (
@@ -319,13 +291,14 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ user, isOpen, onT
               </ul>
               </section>
             ) : notifications.length === 0 ? (
-              <div className="p-8 text-center text-sm text-text-secondary">No unread notifications.</div>
+              <div className="p-8 text-center text-sm text-text-secondary">No unread notifications require review.</div>
             ) : null}
 
-            {!loading && notifications.length > 0 ? (
-              <section className="border-t border-border" aria-label="Notification list">
+            {!loading && currentNotifications.length > 0 ? (
+              <section className="border-t border-border" aria-label="Current notifications">
+                <p className="border-b border-border px-4 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-text-tertiary">Current notifications</p>
                 <ul className="divide-y divide-border-subtle" role="list">
-                  {notifications.map((notification) => (
+                  {currentNotifications.map((notification) => (
                     <li key={notification.id} className={`flex items-start gap-3 px-4 py-3 ${notification.read ? 'bg-surface' : 'bg-primary/5'}`}>
                       {notification.read ? <MailOpen className="mt-0.5 h-4 w-4 shrink-0 text-text-tertiary" aria-hidden="true" /> : <Bell className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />}
                       <div className="min-w-0 flex-1">
@@ -341,6 +314,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ user, isOpen, onT
                 </ul>
               </section>
             ) : null}
+            {!loading && notifications.length > 0 && currentNotifications.length === 0 ? <p className="px-4 py-5 text-sm text-text-secondary">No current notifications. Historical messages remain available in the full inbox.</p> : null}
           </div>
 
           <div className="border-t border-border px-4 py-4">

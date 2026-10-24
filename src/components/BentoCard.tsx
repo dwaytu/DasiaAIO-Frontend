@@ -99,7 +99,7 @@ const getVariantClasses = (variant: BentoCardProps['variant']): string => {
     case 'info':
       return 'border-info-border bg-info-bg/30';
     default:
-      return 'border-border bg-surface';
+      return '';
   }
 };
 
@@ -162,10 +162,10 @@ export const BentoCard = forwardRef<HTMLDivElement, BentoCardProps>(
     const isInteractive = interactive || !!onClick;
 
     const baseClasses = `
-      rounded border transition-all duration-250
+      rounded-lg border border-border-subtle bg-surface shadow-sm
       ${getSizeClasses(size)}
       ${getVariantClasses(variant)}
-      ${isInteractive ? 'cursor-pointer hover:bg-surface-hover' : 'shadow-bento'}
+      ${isInteractive ? 'cursor-pointer transition-transform hover:-translate-y-0.5 hover:bg-surface-hover hover:shadow-md' : ''}
       ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
       ${glass ? 'glass-card' : ''}
       ${glow ? 'accent-glow' : ''}

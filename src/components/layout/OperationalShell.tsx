@@ -1,7 +1,8 @@
 import { CSSProperties, FC, ReactNode, useEffect, useMemo, useRef, useState } from 'react'
-import { Bell, Calendar, ClipboardCheck, LayoutDashboard, MoreHorizontal, X } from 'lucide-react'
+import { Bell, Calendar, ClipboardCheck, Command, LayoutDashboard, MoreHorizontal, X } from 'lucide-react'
 import Sidebar, { SidebarItem } from '../Sidebar'
 import Header from '../shared/Header'
+import CommandPalette from '../shared/CommandPalette'
 import type { User } from '../../context/AuthContext'
 import { getMobileBottomNavViews } from '../../config/navigation'
 
@@ -52,6 +53,8 @@ const OperationalShell: FC<OperationalShellProps> = ({
     }
   })
   const [moreDrawerOpen, setMoreDrawerOpen] = useState(false)
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
+  const [tacticalAlertActive, setTacticalAlertActive] = useState(false)
   const moreDrawerRef = useRef<HTMLDivElement | null>(null)
   const previousMoreFocusRef = useRef<HTMLElement | null>(null)
   const isElevatedRole = user.role !== 'guard'
@@ -103,6 +106,32 @@ const OperationalShell: FC<OperationalShellProps> = ({
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [moreDrawerOpen])
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null
+      const isTyping = target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA' || target?.isContentEditable
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault()
+        setCommandPaletteOpen(true)
+      } else if (event.key === '/' && !isTyping) {
+        event.preventDefault()
+        setCommandPaletteOpen(true)
+      } else if (event.key === 'Escape') {
+        setCommandPaletteOpen(false)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
+  useEffect(() => {
+    const handleTacticalAlert = (event: Event) => {
+      setTacticalAlertActive(Boolean((event as CustomEvent<{ active?: boolean }>).detail?.active))
+    }
+    window.addEventListener('sentinel:tactical-alert', handleTacticalAlert)
+    return () => window.removeEventListener('sentinel:tactical-alert', handleTacticalAlert)
+  }, [])
 
   const desktopSidebarWidth = sidebarCollapsed
     ? 'var(--sidebar-width-collapsed)'
@@ -156,6 +185,19 @@ const OperationalShell: FC<OperationalShellProps> = ({
           onNavigateToProfile={() => onNavigate('profile')}
           onNavigateToSettings={() => onNavigate('settings')}
           rightSlot={rightSlot}
+          commandPaletteTrigger={
+            <button
+              type="button"
+              onClick={() => setCommandPaletteOpen(true)}
+              className="hidden min-h-9 items-center gap-1.5 rounded-md border border-border-subtle bg-surface px-2 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary lg:inline-flex"
+              aria-label="Open command palette"
+            >
+              <Command className="h-3.5 w-3.5" aria-hidden="true" />
+              <kbd className="font-sans text-[10px]">Ctrl K</kbd>
+            </button>
+          }
+          tacticalAlertActive={tacticalAlertActive}
+          onNavigateToTacticalAlert={() => onNavigate('operations-map')}
         />
 
         <div
@@ -171,6 +213,8 @@ const OperationalShell: FC<OperationalShellProps> = ({
           {children}
         </div>
       </main>
+
+      {commandPaletteOpen ? <CommandPalette navItems={navItems} onNavigate={onNavigate} onClose={() => setCommandPaletteOpen(false)} /> : null}
 
       {isElevatedRole ? (
         <>

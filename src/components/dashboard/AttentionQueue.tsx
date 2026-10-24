@@ -11,6 +11,7 @@ export interface AttentionItem {
   icon: LucideIcon
   actionLabel?: string
   onAction?: () => void
+  tone?: 'danger' | 'warning' | 'info'
 }
 
 interface AttentionQueueProps {
@@ -47,7 +48,7 @@ const priorityConfig: Record<AttentionPriority, {
 const AttentionQueue: FC<AttentionQueueProps> = ({ items, isDegraded = false }) => {
   return (
     <section
-      className="border-b border-border-subtle pb-4"
+      className="animate-section-enter border-b border-border-subtle pb-4"
       aria-labelledby="attention-queue-title"
     >
       <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
@@ -99,6 +100,7 @@ const AttentionQueue: FC<AttentionQueueProps> = ({ items, isDegraded = false }) 
             {items.map((item) => {
               const config = priorityConfig[item.priority]
               const Icon = item.icon
+              const isUrgent = item.priority === 'urgent' || item.tone === 'danger'
 
               return (
                 <li key={item.id} className={`flex min-w-0 flex-col border px-3 py-3 sm:flex-row sm:items-start sm:gap-3 ${config.row}`}>
@@ -110,6 +112,7 @@ const AttentionQueue: FC<AttentionQueueProps> = ({ items, isDegraded = false }) 
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="font-semibold text-text-primary">{item.title}</p>
                         <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${config.badge}`}>
+                          {isUrgent ? <span className="mr-1.5 inline-block h-2 w-2 animate-ping rounded-full bg-danger" aria-hidden="true" /> : null}
                           {config.label}
                         </span>
                       </div>
@@ -120,7 +123,7 @@ const AttentionQueue: FC<AttentionQueueProps> = ({ items, isDegraded = false }) 
                     <button
                       type="button"
                       onClick={item.onAction}
-                      className="soc-btn-neutral mt-3 inline-flex min-h-10 w-full shrink-0 items-center justify-center gap-1 px-3 text-xs sm:mt-0 sm:w-auto"
+                      className={`${isUrgent ? 'soc-btn soc-btn-primary' : 'soc-btn-neutral'} mt-3 inline-flex min-h-10 w-full shrink-0 items-center justify-center gap-1 px-3 text-xs sm:mt-0 sm:w-auto`}
                       aria-label={`${item.actionLabel}: ${item.title}`}
                     >
                       {item.actionLabel}

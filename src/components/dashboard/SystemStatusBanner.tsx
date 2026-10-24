@@ -92,7 +92,7 @@ const SystemStatusBanner: FC<SystemStatusBannerProps> = ({
 
   return (
     <section
-      className={`rounded border p-3 md:p-4 ${style.toneClass} ${style.glowClass}`}
+      className={`animate-section-enter rounded border p-3 md:p-4 ${style.toneClass} ${style.glowClass}`}
       aria-label="Global system status"
       role="status"
       aria-live="polite"

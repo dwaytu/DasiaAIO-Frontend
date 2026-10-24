@@ -94,7 +94,7 @@ export function ActionInbox({
   return (
     <section
       aria-label={`Action inbox, ${items.length} items`}
-      className={`soc-dashboard-card flex flex-col overflow-hidden ${className}`}
+      className={`soc-dashboard-card animate-section-enter flex flex-col overflow-hidden ${className}`}
     >
       {isLoading ? (
         <div role="status" aria-label="Loading inbox items">
@@ -103,7 +103,7 @@ export function ActionInbox({
           <SkeletonRow />
         </div>
       ) : sorted.length === 0 ? (
-        <div className="soc-empty-state flex items-center justify-center p-8 text-text-secondary text-sm">
+        <div className="soc-empty-state flex items-center justify-center p-8 text-sm text-text-secondary" role="status" aria-live="polite">
           {emptyMessage}
         </div>
       ) : (

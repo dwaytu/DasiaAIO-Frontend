@@ -14,6 +14,9 @@ export interface Incident {
   priority: 'low' | 'medium' | 'high' | 'critical'
   created_at: string
   updated_at: string
+  latitude?: number | null
+  longitude?: number | null
+  contact_number?: string | null
 }
 
 export interface CreateIncidentPayload {

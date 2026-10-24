@@ -14,9 +14,12 @@ interface HeaderProps {
   onNavigateToProfile?: () => void
   onNavigateToInbox?: () => void
   onNavigateToSettings?: () => void
+  commandPaletteTrigger?: ReactNode
+  tacticalAlertActive?: boolean
+  onNavigateToTacticalAlert?: () => void
 }
 
-const Header: FC<HeaderProps> = ({ title, badgeLabel, onLogout, rightSlot, onMenuClick, user, onNavigateToProfile, onNavigateToInbox, onNavigateToSettings }) => {
+const Header: FC<HeaderProps> = ({ title, badgeLabel, onLogout, rightSlot, onMenuClick, user, onNavigateToProfile, onNavigateToInbox, onNavigateToSettings, commandPaletteTrigger, tacticalAlertActive, onNavigateToTacticalAlert }) => {
   return (
     <header className="relative isolate z-(--z-header) border-b border-border bg-surface/95 px-4 py-3 backdrop-blur md:px-8 md:py-4" style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top, 0px))' }}>
       <div className="flex items-start justify-between gap-3 sm:items-center">
@@ -43,6 +46,9 @@ const Header: FC<HeaderProps> = ({ title, badgeLabel, onLogout, rightSlot, onMen
         onNavigateToInbox={onNavigateToInbox}
         onNavigateToSettings={onNavigateToSettings}
         extraAction={rightSlot}
+        commandPaletteTrigger={commandPaletteTrigger}
+        tacticalAlertActive={tacticalAlertActive}
+        onNavigateToTacticalAlert={onNavigateToTacticalAlert}
       />
       </div>
     </header>

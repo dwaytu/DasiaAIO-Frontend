@@ -12,10 +12,42 @@ const SosAlertDialog: FC<SosAlertDialogProps> = ({ incident, onUpdateStatus, onD
   const dismissButtonRef = useRef<HTMLButtonElement>(null)
   const [processing, setProcessing] = useState<'acknowledge' | 'resolve' | ''>('')
   const [error, setError] = useState('')
+  const [elapsedSeconds, setElapsedSeconds] = useState(0)
+  const canFocusMap = Number.isFinite(incident.latitude) && Number.isFinite(incident.longitude)
+  const responseTime = `${String(Math.floor(elapsedSeconds / 60)).padStart(2, '0')}:${String(elapsedSeconds % 60).padStart(2, '0')}`
 
   useEffect(() => {
     dismissButtonRef.current?.focus()
   }, [incident.id])
+
+  useEffect(() => {
+    const updateElapsed = () => setElapsedSeconds(Math.max(0, Math.floor((Date.now() - new Date(incident.created_at).getTime()) / 1000)))
+    updateElapsed()
+    const timer = window.setInterval(updateElapsed, 1000)
+    return () => window.clearInterval(timer)
+  }, [incident.created_at])
+
+  useEffect(() => {
+    if (incident.status !== 'open') return
+    try {
+      const AudioContextCtor = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+      if (!AudioContextCtor) return
+      const context = new AudioContextCtor()
+      ;[520, 660].forEach((frequency, index) => {
+        const oscillator = context.createOscillator()
+        const gain = context.createGain()
+        oscillator.frequency.value = frequency
+        gain.gain.setValueAtTime(0.04, context.currentTime + index * 0.08)
+        gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.3 + index * 0.08)
+        oscillator.connect(gain).connect(context.destination)
+        oscillator.start(context.currentTime + index * 0.08)
+        oscillator.stop(context.currentTime + 0.32 + index * 0.08)
+      })
+      window.setTimeout(() => void context.close(), 500)
+    } catch {
+      // Browsers may block unattended audio; the visual SOS signal remains available.
+    }
+  }, [incident.id, incident.status])
 
   const handleStatusUpdate = async (status: 'investigating' | 'resolved') => {
     setProcessing(status === 'investigating' ? 'acknowledge' : 'resolve')
@@ -58,6 +90,7 @@ const SosAlertDialog: FC<SosAlertDialogProps> = ({ incident, onUpdateStatus, onD
               </h2>
             </div>
           </div>
+          <span className="rounded-full border border-danger-border bg-surface px-2.5 py-1 text-xs font-bold tabular-nums text-danger-text">Response Time: {responseTime}</span>
           <button
             ref={dismissButtonRef}
             type="button"
@@ -103,6 +136,8 @@ const SosAlertDialog: FC<SosAlertDialogProps> = ({ incident, onUpdateStatus, onD
           ) : null}
 
           <div className="flex flex-wrap justify-end gap-2 border-t border-border-subtle pt-4">
+            {canFocusMap ? <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('sentinel:focus-map', { detail: { latitude: incident.latitude, longitude: incident.longitude } }))} className="soc-btn soc-btn-secondary min-h-11 px-4"><MapPin className="h-4 w-4" aria-hidden="true" /> Focus on Map</button> : null}
+            {incident.contact_number ? <a href={`tel:${incident.contact_number}`} className="soc-btn soc-btn-secondary inline-flex min-h-11 items-center px-4">Call Guard</a> : null}
             <button
               type="button"
               onClick={() => void handleStatusUpdate('investigating')}

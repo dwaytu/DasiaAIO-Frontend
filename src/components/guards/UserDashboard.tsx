@@ -682,6 +682,8 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
   const missionShiftTime = currentShift ? formatTimeWindow(currentShift.start_time, currentShift.end_time) : 'No shift today'
   const missionElapsed = currentShift ? elapsedTime[currentShift.id] || '0h 0m' : '0h 0m'
   const currentShiftCheckedIn = currentShift ? checkInStatus[currentShift.id] === 'checked_in' : false
+  const dutyProgress = currentShift ? Math.max(0, Math.min(100, ((Date.now() - new Date(currentShift.start_time).getTime()) / Math.max(new Date(currentShift.end_time).getTime() - new Date(currentShift.start_time).getTime(), 1)) * 100)) : 0
+  const dutyDurationHours = currentShift ? Math.max(1, Math.round((new Date(currentShift.end_time).getTime() - new Date(currentShift.start_time).getTime()) / 3600000)) : 0
   const isTrackingActiveWithoutSchedule = !currentShift && locationHeartbeatStatus === 'active'
   const trackingExecutionNote = runtimePlatform === 'capacitor'
     ? 'Automatic check-in records when you enter your assigned site geofence up to 1 hour before the shift starts. Android tracking uses a visible foreground service; permission, consent, network access, and device power settings still apply.'
@@ -942,11 +944,13 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
               {/* Zone 1: StatusHero */}
               <section
                 aria-label="Current duty status"
-                className={`rounded border p-5 ${dutyStatusConfig.bannerClass}`}
+                className={`rounded-lg border border-border-subtle bg-surface p-5 shadow-sm ${dutyStatusConfig.bannerClass}`}
               >
-                <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(12rem,1fr)_auto] lg:items-center">
                   <div className="min-w-0 flex-1">
-                    <span className={`text-2xl font-black tracking-tight ${dutyStatusConfig.textClass}`}>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">Current Duty Status</p>
+                    <span className={`mt-1 inline-flex items-center gap-2 text-2xl font-black tracking-tight ${dutyStatusConfig.textClass}`}>
+                      {currentShiftCheckedIn ? <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-success" aria-hidden="true" /> : null}
                       {dutyStatusConfig.label}
                     </span>
                     {currentShift ? (
@@ -961,7 +965,19 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                       <p className={`mt-2 text-sm ${dutyStatusConfig.textClass}`}>No shift assigned. Stand by or contact your supervisor.</p>
                     )}
                   </div>
-                  <div className="flex w-full flex-row items-center justify-between gap-2 sm:w-auto sm:flex-col sm:items-end">
+                  {currentShift ? (
+                    <div className="min-w-0">
+                      <div className="flex items-center justify-between gap-2 text-xs text-text-secondary">
+                        <span>Shift progress</span><span>{missionElapsed} of {dutyDurationHours}h</span>
+                      </div>
+                      <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-surface-elevated" aria-label={`Shift progress ${Math.round(dutyProgress)} percent`}>
+                        <div className="h-full rounded-full bg-success transition-[width] duration-500" style={{ width: `${dutyProgress}%` }} />
+                      </div>
+                    </div>
+                  ) : null}
+                  <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+                    <button type="button" onClick={() => setActionStatus('Use Check In to record arrival at the assigned checkpoint.')} className="soc-btn soc-btn-secondary min-h-11 px-3 text-xs font-semibold">Log Checkpoint</button>
+                    <button type="button" onClick={() => { setIncidentStatus(''); setIncidentModalOpen(true) }} className="soc-btn soc-btn-danger min-h-11 px-3 text-xs font-semibold">Report Incident</button>
                     {isSyncing ? (
                       <span className={`rounded-full border border-current px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider opacity-60 ${dutyStatusConfig.textClass}`}>
                         Syncing

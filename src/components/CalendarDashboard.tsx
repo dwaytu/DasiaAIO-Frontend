@@ -5,7 +5,7 @@ import { parseResponseBody, getAuthHeaders } from '../utils/api'
 import OperationalShell from './layout/OperationalShell'
 import type { User } from '../context/AuthContext'
 import SecurityBentoGrid from './SecurityBentoGrid'
-import BentoGrid, { BentoCard } from './BentoGrid'
+import { BentoCard } from './BentoGrid'
 import Timeline from './dashboard/ui/Timeline'
 import StatusBadge from './dashboard/ui/StatusBadge'
 import LiveFreshnessPill from './dashboard/ui/LiveFreshnessPill'
@@ -617,9 +617,9 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
             </div>
           </div>
 
-          <BentoGrid className="items-start">
-            {/* Main calendar — hero card (2 cols × 2 rows) */}
-            <BentoCard isMain className="p-0! overflow-hidden">
+          <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-4">
+            {/* Keep the seven-day month grid wide enough to read at desktop resolutions. */}
+            <BentoCard className="overflow-hidden p-0! lg:col-span-3 xl:col-span-3">
               {/* Month nav */}
               <div className="flex items-center justify-between px-6 py-5 bg-gradient-to-r from-(--color-surface) to-(--color-surface-elevated) border-b border-border-subtle">
                 <button onClick={prevMonth} aria-label="Previous month" className="p-2 hover:bg-surface-hover rounded text-text-secondary hover:text-text-primary transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)">
@@ -650,7 +650,7 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
                   <div className="hidden grid-cols-7 gap-1 p-3 bg-gradient-to-br from-background to-surface/30 md:grid">
                   {calendarCells.map((day, idx) => {
                     if (day === null) {
-                      return <div key={`empty-${idx}`} className="h-24 sm:h-28 rounded bg-surface/20" />
+                      return <div key={`empty-${idx}`} className="min-h-[7rem] rounded-lg bg-surface/20" />
                     }
                     const dateKey = getDateKey(day)
                     const dayEvents = filteredEventsByDate[dateKey] || []
@@ -661,14 +661,14 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
                       <button
                         key={dateKey}
                         onClick={() => setSelectedDate(dateKey)}
-                        className={`h-24 sm:h-28 rounded p-2 text-left transition-all relative border-2
-                          ${isToday 
-                            ? 'bg-(--color-info-bg) border-(--color-info-border) shadow-lg shadow-black/20' 
-                            : isSelected 
-                            ? 'bg-(--color-surface-elevated) border-(--color-border-elevated)'
+                        className={`relative flex min-h-[7rem] flex-col justify-between rounded-lg border border-border-subtle bg-surface p-2 text-left transition-colors hover:border-info-border hover:bg-surface-hover/30
+                          ${isToday
+                            ? 'border-info-border bg-info-bg shadow-sm'
+                            : isSelected
+                            ? 'border-border-elevated bg-surface-elevated'
                             : dayHasAttention
-                            ? 'bg-surface border-(--color-danger-border) hover:border-(--color-danger-border) hover:bg-surface-hover/40'
-                            : 'bg-surface border-border hover:border-info-border hover:bg-surface-hover'
+                            ? 'border-danger-border hover:border-danger-border hover:bg-surface-hover/40'
+                            : ''
                           }
                         `}
                       >
@@ -685,12 +685,11 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
                         </div>
                         {/* Event badges */}
                         {dayEvents.length > 0 && (
-                          <div className="flex flex-col gap-1">
+                          <div className="flex min-w-0 flex-col gap-1">
                             {dayEvents.slice(0, 2).map((ev, i) => {
-                              const c = EVENT_COLORS[ev.type]
                               return (
-                                <div key={i} className={`text-xs font-medium px-2 py-1 rounded-full truncate ${c.bg} ${c.text} border ${c.border}`}>
-                                  {ev.title.length > 12 ? ev.title.substring(0, 10) + '…' : ev.title}
+                                <div key={i} className="max-w-full truncate rounded-md border border-info-border bg-info-bg px-2 py-0.5 text-[11px] font-medium text-info-text">
+                                  {ev.title}
                                 </div>
                               )
                             })}
@@ -746,8 +745,8 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
               )}
             </BentoCard>
 
-            {/* Day detail panel — 2 cols */}
-            <BentoCard colSpan={2} className="p-0! overflow-hidden flex flex-col min-h-[360px]">
+            {/* Selected-date agenda stays in a dedicated desktop side panel. */}
+            <BentoCard className="flex min-h-[360px] flex-col overflow-hidden p-0! lg:col-span-1">
               <div className="flex-1 overflow-hidden flex flex-col">
                 <div className="px-6 py-4 bg-gradient-to-r from-(--color-surface) to-(--color-surface-elevated) border-b border-border-subtle">
                   <h3 className="text-text-primary font-bold text-lg">{formatDate(selectedDate)}</h3>
@@ -818,7 +817,7 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
 
             </BentoCard>
 
-          </BentoGrid>
+          </div>
 
           {/* Event detail modal */}
       {selectedEvent && (

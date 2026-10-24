@@ -1,5 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import PanicButton from '../PanicButton'
 import { resolveLocationWithFallback } from '../../../utils/location'
 import { enqueueOfflineAction } from '../../../utils/offlineQueue'
@@ -36,6 +35,15 @@ const mockedResolveLocationWithFallback = resolveLocationWithFallback as jest.Mo
 const mockedEnqueueOfflineAction = enqueueOfflineAction as jest.MockedFunction<typeof enqueueOfflineAction>
 const mockedFetchJsonOrThrow = fetchJsonOrThrow as jest.MockedFunction<typeof fetchJsonOrThrow>
 
+async function holdSos() {
+  const button = screen.getByRole('button', { name: /emergency sos/i })
+  fireEvent.pointerDown(button)
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 1250))
+  })
+  fireEvent.pointerUp(button)
+}
+
 describe('PanicButton', () => {
   beforeEach(() => {
     mockedFetchJsonOrThrow.mockResolvedValue({})
@@ -60,11 +68,9 @@ describe('PanicButton', () => {
   })
 
   it('uses shared location resolver instead of direct navigator geolocation', async () => {
-    const user = userEvent.setup()
-
     render(<PanicButton userId="guard-1" userDisplayName="Guard One" />)
 
-    await user.click(screen.getByRole('button', { name: /emergency sos/i }))
+    await holdSos()
 
     await waitFor(() => {
       expect(mockedResolveLocationWithFallback).toHaveBeenCalledWith('capacitor')
@@ -80,12 +86,11 @@ describe('PanicButton', () => {
   })
 
   it('queues SOS payload offline when incident post fails', async () => {
-    const user = userEvent.setup()
     mockedFetchJsonOrThrow.mockRejectedValueOnce(new Error('offline'))
 
     render(<PanicButton userId="guard-1" userDisplayName="Guard One" />)
 
-    await user.click(screen.getByRole('button', { name: /emergency sos/i }))
+    await holdSos()
 
     await waitFor(() => {
       expect(mockedEnqueueOfflineAction).toHaveBeenCalledTimes(1)
@@ -98,11 +103,10 @@ describe('PanicButton', () => {
   })
 
   it('does not queue authorization or validation failures as sent SOS alerts', async () => {
-    const user = userEvent.setup()
     mockedFetchJsonOrThrow.mockRejectedValueOnce(new Error('Session expired. Please log in again.'))
 
     render(<PanicButton userId="guard-1" userDisplayName="Guard One" />)
-    await user.click(screen.getByRole('button', { name: /emergency sos/i }))
+    await holdSos()
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/session expired/i)
     expect(mockedEnqueueOfflineAction).not.toHaveBeenCalled()

@@ -219,7 +219,7 @@ const FeedbackForm: FC<FeedbackFormProps> = ({ user, onLogout, onViewChange, act
         {hasSubmitted ? (
           renderSubmittedState()
         ) : !statusLoading ? (
-          <section className="command-panel p-4 md:p-5">
+          <section className="command-panel p-4 pb-8 md:p-5 md:pb-8">
             <form className="space-y-5" onSubmit={handleSubmit} noValidate>
               <fieldset className="space-y-4">
                 <legend id="feedback-rating-label" className="text-sm font-semibold text-text-primary">
@@ -303,7 +303,7 @@ const FeedbackForm: FC<FeedbackFormProps> = ({ user, onLogout, onViewChange, act
                 </p>
               ) : null}
 
-              <div className="flex justify-end">
+              <div className="mt-4 flex justify-end border-t border-border-subtle pt-4">
                 <button
                   type="submit"
                   disabled={!canSubmit}

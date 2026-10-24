@@ -63,9 +63,9 @@ function escapeCsv(value: unknown): string {
 }
 
 function statusClass(status: string): string {
-  if (status === 'expired' || status === 'no_license') return 'bg-danger-bg text-danger-text ring-1 ring-danger-border'
-  if (status === 'expiring_soon') return 'bg-warning-bg text-warning-text ring-1 ring-warning-border'
-  return 'bg-success-bg text-success-text ring-1 ring-success-border'
+  if (status === 'expired' || status === 'no_license') return 'border-danger-border bg-danger-bg text-danger-text'
+  if (status === 'expiring_soon') return 'border-warning-border bg-warning-bg text-warning-text'
+  return 'border-success-border bg-success-bg text-success-text'
 }
 
 const GuardLicenseComplianceReport: FC<Props> = ({ user, onLogout, onViewChange, activeView }) => {
@@ -221,13 +221,13 @@ const GuardLicenseComplianceReport: FC<Props> = ({ user, onLogout, onViewChange,
             {report?.items.length ? (
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[900px] border-collapse text-sm">
-                  <thead className="thead-glass"><tr>{['Guard', 'License number', 'Issued', 'Expiry', 'Compliance'].map((heading) => <th key={heading} className="border-b-2 border-border px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-secondary">{heading}</th>)}</tr></thead>
-                  <tbody>{report.items.map((item) => <tr key={item.guardId} className="border-b border-border hover:bg-surface-hover">
+                  <thead className="sticky top-0 z-10 h-11 border-b border-border-subtle bg-surface-elevated/60 text-xs font-semibold uppercase tracking-wider text-text-tertiary backdrop-blur-xs"><tr>{['Guard', 'License number', 'Issued', 'Expiry', 'Compliance'].map((heading) => <th key={heading} className="px-4 py-3.5 text-left">{heading}</th>)}</tr></thead>
+                  <tbody>{report.items.map((item) => <tr key={item.guardId} className="border-b border-border-subtle/80 transition-colors hover:bg-surface-hover/50">
                     <td className="px-3 py-3"><p className="font-semibold text-text-primary">{item.guardName}</p><p className="text-xs text-text-secondary">{item.guardNumber ? `Guard #${item.guardNumber}` : 'Guard number not provided'}</p></td>
                     <td className="px-3 py-3 text-text-primary">{item.licenseNumber || 'Not provided'}</td>
                     <td className="px-3 py-3 text-text-primary">{formatDate(item.licenseIssuedDate)}</td>
                     <td className="px-3 py-3 text-text-primary">{item.licenseExpiryDate ? `${formatDate(item.licenseExpiryDate)} (${item.licenseDaysRemaining ?? 0}d)` : 'Not provided'}</td>
-                    <td className="px-3 py-3"><span className={`inline-block rounded px-2 py-1 text-xs font-semibold uppercase ${statusClass(item.complianceStatus)}`}>{item.complianceStatus.replace('_', ' ')}</span></td>
+                    <td className="px-4 py-3.5 align-middle text-sm text-text-primary"><span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium ${statusClass(item.complianceStatus)}`}>{item.complianceStatus.replace('_', ' ')}</span></td>
                   </tr>)}</tbody>
                 </table>
               </div>

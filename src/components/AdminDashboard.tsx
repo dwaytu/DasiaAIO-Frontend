@@ -54,29 +54,22 @@ const isUserOnline = (lastSeenAt?: string) => {
   return Date.now() - lastSeen <= ONLINE_WINDOW_MS
 }
 
-const getRelativeLastActivity = (lastActivityAt?: string) => {
-  if (!lastActivityAt) return 'No activity recorded'
-  const ts = new Date(lastActivityAt).getTime()
-  if (Number.isNaN(ts)) return 'Unknown'
-  const diffMs = Date.now() - ts
-  if (diffMs < 0) return new Date(ts).toLocaleDateString()
-  if (diffMs < 60 * 1000) return 'Just now'
-  if (diffMs < 60 * 60 * 1000) return `${Math.floor(diffMs / (60 * 1000))} minutes ago`
-  if (diffMs < 24 * 60 * 60 * 1000) return `${Math.floor(diffMs / (60 * 60 * 1000))} hours ago`
-  if (diffMs < 48 * 60 * 60 * 1000) return 'Yesterday'
-  if (diffMs < 7 * 24 * 60 * 60 * 1000) return `${Math.floor(diffMs / (24 * 60 * 60 * 1000))} days ago`
-  return new Date(ts).toLocaleDateString()
-}
-
 const getActivityDetail = (lastActivityAt?: string) => {
-  if (!lastActivityAt) return 'No recorded activity'
+  if (!lastActivityAt) return 'Never'
   const ts = new Date(lastActivityAt).getTime()
   if (Number.isNaN(ts)) return 'Unknown'
-  if (Date.now() - ts < 0) return 'Recorded activity'
   const diffMs = Math.max(Date.now() - ts, 0)
-  if (diffMs < 60 * 1000) return `${Math.round(diffMs / 1000)}s ago`
-  if (diffMs < 60 * 60 * 1000) return `${Math.round(diffMs / (60 * 1000))}m ago`
-  return `${Math.round(diffMs / (60 * 60 * 1000))}h ago`
+  const minutes = Math.floor(diffMs / 60000)
+  const hours = Math.floor(diffMs / 3600000)
+  const days = Math.floor(diffMs / 86400000)
+
+  if (minutes < 1) return 'Just now'
+  if (minutes === 1) return '1m ago'
+  if (minutes < 60) return `${minutes}m ago`
+  if (hours < 24) return `${hours}h ago`
+  if (days === 1) return 'Yesterday'
+  if (days < 7) return `${days}d ago`
+  return new Date(ts).toLocaleDateString()
 }
 
 const getUserDerivedStatus = (user: User, pendingIds: Set<string>): UserDerivedStatus => {
@@ -104,13 +97,13 @@ const UserAvatar: FC<{ user: User }> = ({ user }) => {
 const RoleBadge: FC<{ roleRaw: string }> = ({ roleRaw }) => {
   const role = normalizeRole(roleRaw)
   const rolePill = role === 'superadmin' || role === 'admin'
-    ? 'bg-info-bg text-info-text ring-1 ring-info-border'
+    ? 'border border-(--color-info-border) bg-(--color-info-bg) text-(--color-info-text)'
     : role === 'supervisor'
-      ? 'bg-warning-bg text-warning-text ring-1 ring-warning-border'
-      : 'bg-success-bg text-success-text ring-1 ring-success-border'
+      ? 'border border-(--color-warning-border) bg-(--color-warning-bg) text-(--color-warning-text)'
+      : 'border border-(--color-success-border) bg-(--color-success-bg) text-(--color-success-text)'
 
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold uppercase tracking-wide ${rolePill}`}>
+    <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium uppercase tracking-wide ${rolePill}`}>
       <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
         <path d="M10 2a4 4 0 110 8 4 4 0 010-8zM3 16a7 7 0 0114 0v1H3v-1z" />
       </svg>
@@ -125,30 +118,30 @@ const StatusIndicator: FC<{ status: UserDerivedStatus }> = ({ status }) => {
       dot: 'bg-(--color-success)',
       glow: '0 0 6px rgba(52,211,153,0.7)',
       label: 'Active',
-      pill: 'bg-success-bg text-success-text ring-1 ring-success-border',
+      pill: 'border border-(--color-success-border) bg-(--color-success-bg) text-(--color-success-text)',
     },
     inactive: {
       dot: 'bg-text-tertiary',
       glow: '0 0 6px rgba(161,161,170,0.7)',
       label: 'Inactive',
-      pill: 'soc-status-neutral',
+      pill: 'border border-(--color-border-elevated) bg-(--color-surface-elevated) text-text-secondary',
     },
     pending: {
       dot: 'bg-(--color-warning)',
       glow: '0 0 6px rgba(251,191,36,0.7)',
       label: 'Pending',
-      pill: 'bg-warning-bg text-warning-text ring-1 ring-warning-border',
+      pill: 'border border-(--color-warning-border) bg-(--color-warning-bg) text-(--color-warning-text)',
     },
     suspended: {
       dot: 'bg-(--color-danger)',
       glow: '0 0 6px rgba(248,113,113,0.7)',
       label: 'Suspended',
-      pill: 'bg-danger-bg text-danger-text ring-1 ring-danger-border',
+      pill: 'border border-(--color-danger-border) bg-(--color-danger-bg) text-(--color-danger-text)',
     },
   }
   const current = statusConfig[status]
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${current.pill}`}>
+    <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${current.pill}`}>
       <span className={`h-1.5 w-1.5 rounded-full ${current.dot}`} style={{ boxShadow: current.glow }} aria-hidden="true" />
       {current.label}
     </span>
@@ -636,8 +629,11 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                           placeholder="Search users..."
                           value={searchQuery}
                           onChange={e => setSearchQuery(e.target.value)}
-                          className="soc-field w-44 pl-9 pr-4 placeholder:text-text-tertiary"
+                          className="soc-field w-44 pl-9 pr-9 placeholder:text-text-tertiary"
                         />
+                        {searchQuery ? (
+                          <button type="button" onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-text-tertiary hover:text-text-primary focus-visible:outline-2 focus-visible:outline-(--color-focus-ring)" aria-label="Clear user search">×</button>
+                        ) : null}
                       </div>
                       <button
                         type="button"
@@ -663,6 +659,20 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                         <option value="suspended">Suspended</option>
                       </select>
                     </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 border-b border-border-subtle px-5 py-3" role="group" aria-label="Quick user filters">
+                    {([
+                      { label: 'All Users', active: roleFilter === 'all' && statusFilter === 'all', action: () => { setRoleFilter('all'); setStatusFilter('all') } },
+                      { label: 'Active', active: roleFilter === 'all' && statusFilter === 'active', action: () => { setRoleFilter('all'); setStatusFilter('active') } },
+                      { label: 'Pending Approval', active: roleFilter === 'all' && statusFilter === 'pending', action: () => { setRoleFilter('all'); setStatusFilter('pending') } },
+                      { label: 'Supervisors', active: roleFilter === 'supervisor' && statusFilter === 'all', action: () => { setRoleFilter('supervisor'); setStatusFilter('all') } },
+                      { label: 'Guards', active: roleFilter === 'guard' && statusFilter === 'all', action: () => { setRoleFilter('guard'); setStatusFilter('all') } },
+                    ]).map((chip) => (
+                      <button key={chip.label} type="button" onClick={chip.action} className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${chip.active ? 'border-primary bg-primary text-white shadow-xs' : 'border-border-subtle bg-surface text-text-secondary hover:bg-surface-hover'}`}>
+                        {chip.label}
+                      </button>
+                    ))}
                   </div>
 
                   <div className="grid grid-cols-2 gap-3 border-b border-border-subtle px-5 py-4 md:grid-cols-4">
@@ -702,8 +712,8 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                             }}
                             className={`rounded-full px-3 py-1 text-xs font-semibold ${
                               roleFilter === item.key
-                                ? 'bg-info-bg text-info-text ring-1 ring-info-border'
-                                : 'bg-background text-text-secondary ring-1 ring-border-subtle'
+                                ? 'border border-(--color-info-border) bg-(--color-info-bg) text-(--color-info-text)'
+                                : 'border border-(--color-border-subtle) bg-background text-text-secondary'
                             }`}
                           >
                             {item.label}
@@ -758,9 +768,9 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                   {filteredUsers.length > 0 ? (
                     <div className="soc-scroll-area flex-1 min-h-0 overflow-auto">
                       <table className="hidden w-full min-w-[980px] md:table">
-                        <thead className="thead-glass">
-                          <tr className="border-b border-border">
-                            <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">
+                        <thead className="h-11 border-b border-border-subtle bg-surface-elevated/50 text-xs font-semibold uppercase tracking-wider text-text-tertiary">
+                          <tr>
+                            <th className="px-4 py-3.5 text-left">
                               <label className="inline-flex items-center gap-2">
                                 <input
                                   type="checkbox"
@@ -772,15 +782,15 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                                 <span>Select</span>
                               </label>
                             </th>
-                            <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">User Details</th>
-                            <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Username</th>
-                            <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Role</th>
-                            <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Status</th>
-                            <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Last Activity</th>
-                            <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-text-tertiary">Actions</th>
+                            <th className="px-4 py-3.5 text-left">User Details</th>
+                            <th className="px-4 py-3.5 text-left">Username</th>
+                            <th className="px-4 py-3.5 text-left">Role</th>
+                            <th className="px-4 py-3.5 text-left">Status</th>
+                            <th className="px-4 py-3.5 text-left">Last Activity</th>
+                            <th className="px-4 py-3.5 text-right">Actions</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-border-subtle">
+                        <tbody>
                           {filteredUsers.map((u: User) => {
                             const derivedStatus = userStatusById.get(u.id) || 'inactive'
                             const rowSelected = selectedUserIds.includes(u.id)
@@ -789,8 +799,8 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                             const pendingApproval = pendingApprovalIds.has(u.id)
 
                             return (
-                              <tr key={u.id} className="transition-colors hover:bg-surface-hover/50">
-                                <td className="px-5 py-3.5 align-top">
+                              <tr key={u.id} className="border-b border-border-subtle/80 transition-colors hover:bg-surface-hover/50">
+                                <td className="px-4 py-3.5 align-middle text-sm text-text-primary">
                                   <input
                                     type="checkbox"
                                     checked={rowSelected}
@@ -799,7 +809,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                                     aria-label={`Select ${u.full_name || u.username || u.email}`}
                                   />
                                 </td>
-                                <td className="px-5 py-3.5">
+                                <td className="px-4 py-3.5 align-middle text-sm text-text-primary">
                                   <div className="flex items-center gap-3">
                                     <UserAvatar user={u} />
                                     <div className="min-w-0">
@@ -810,16 +820,13 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                                     </div>
                                   </div>
                                 </td>
-                                <td className="px-5 py-3.5 text-sm text-text-secondary" title={u.username}>{truncateText(u.username, 22)}</td>
-                                <td className="px-5 py-3.5"><RoleBadge roleRaw={u.role} /></td>
-                                <td className="px-5 py-3.5"><StatusIndicator status={derivedStatus} /></td>
-                                <td className="px-5 py-3.5 text-xs text-text-secondary">
-                                  <div className="flex flex-col gap-0.5">
-                                    <span>{getRelativeLastActivity(u.last_activity_at ?? u.last_seen_at)}</span>
-                                    <span className="text-[11px] text-text-tertiary">{getActivityDetail(u.last_activity_at ?? u.last_seen_at)}</span>
-                                  </div>
+                                <td className="px-4 py-3.5 align-middle text-sm text-text-secondary" title={u.username}>{truncateText(u.username, 22)}</td>
+                                <td className="px-4 py-3.5 align-middle text-sm text-text-primary"><RoleBadge roleRaw={u.role} /></td>
+                                <td className="px-4 py-3.5 align-middle text-sm text-text-primary"><StatusIndicator status={derivedStatus} /></td>
+                                <td className="px-4 py-3.5 align-middle text-sm text-text-secondary">
+                                  {getActivityDetail(u.last_activity_at ?? u.last_seen_at)}
                                 </td>
-                                <td className="px-5 py-3.5">
+                                <td className="px-4 py-3.5 align-middle text-sm text-text-primary">
                                   <div className="flex items-center justify-end gap-1">
                                     {pendingApproval && (
                                       <button
@@ -918,8 +925,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                                 </div>
                                 <div>
                                   <p className="text-text-tertiary">Last Activity</p>
-                                  <p className="mt-1 font-medium text-text-secondary">{getRelativeLastActivity(u.last_activity_at ?? u.last_seen_at)}</p>
-                                  <p className="mt-1 text-[11px] text-text-tertiary">{getActivityDetail(u.last_activity_at ?? u.last_seen_at)}</p>
+                                  <p className="mt-1 font-medium text-text-secondary">{getActivityDetail(u.last_activity_at ?? u.last_seen_at)}</p>
                                 </div>
                               </div>
                               <div className="mt-3 flex flex-wrap gap-2">
@@ -948,8 +954,18 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                   <div className="flex items-center justify-between border-t border-border-subtle px-5 py-3">
                     <p className="text-xs text-text-tertiary">Showing {filteredUsers.length} of {users.length} users</p>
                     <div className="flex gap-2">
-                      <button type="button" className="soc-btn soc-btn-neutral">Previous</button>
-                      <button type="button" className="soc-btn soc-btn-neutral">Next</button>
+                      <button
+                        type="button"
+                        className="inline-flex items-center justify-center rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
+                      >
+                        Previous
+                      </button>
+                      <button
+                        type="button"
+                        className="inline-flex items-center justify-center rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
+                      >
+                        Next
+                      </button>
                     </div>
                   </div>
                 </section>
@@ -974,13 +990,13 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                   <h2 className="text-xl font-bold text-text-primary mb-6 pb-3 border-b border-border">Pending Guard Registrations</h2>
                   <div className="overflow-x-auto">
                     <table className="hidden w-full min-w-[800px] md:table">
-                      <thead className="thead-glass">
+                      <thead className="h-11 border-b border-border-subtle bg-surface-elevated/50 text-xs font-semibold uppercase tracking-wider text-text-tertiary">
                         <tr>
-                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Guard Name</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Requested Role</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Submitted Date</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Status</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Actions</th>
+                          <th className="px-4 py-3.5 text-left">Guard Name</th>
+                          <th className="px-4 py-3.5 text-left">Requested Role</th>
+                          <th className="px-4 py-3.5 text-left">Submitted Date</th>
+                          <th className="px-4 py-3.5 text-left">Status</th>
+                          <th className="px-4 py-3.5 text-left">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -992,19 +1008,19 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                           </tr>
                         ) : (
                           pendingApprovals.map((pendingUser) => (
-                            <tr key={pendingUser.id} className="border-b border-border hover:bg-surface-hover transition-colors">
-                              <td className="px-4 py-3 text-text-primary">
+                            <tr key={pendingUser.id} className="border-b border-border-subtle/80 transition-colors hover:bg-surface-hover/50">
+                              <td className="px-4 py-3.5 align-middle text-sm text-text-primary">
                                 <div className="font-medium">{pendingUser.full_name || pendingUser.username}</div>
                                 <div className="text-xs text-text-tertiary">{pendingUser.email}</div>
                               </td>
-                              <td className="px-4 py-3 text-text-primary uppercase">{pendingUser.role}</td>
-                              <td className="px-4 py-3 text-text-primary">{new Date(pendingUser.created_at).toLocaleString()}</td>
-                              <td className="px-4 py-3">
+                              <td className="px-4 py-3.5 align-middle text-sm text-text-primary uppercase">{pendingUser.role}</td>
+                              <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{new Date(pendingUser.created_at).toLocaleString()}</td>
+                              <td className="px-4 py-3.5 align-middle text-sm text-text-primary">
                                 <span className={`soc-chip ${pendingUser.verified ? 'status-bar-warning text-warning-text' : 'status-bar-critical text-danger-text'}`}>
                                   {pendingUser.verified ? 'Pending Approval' : 'Pending Verification'}
                                 </span>
                               </td>
-                              <td className="px-4 py-3">
+                              <td className="px-4 py-3.5 align-middle text-sm text-text-primary">
                                 <div className="flex flex-wrap gap-2">
                                   <button
                                     onClick={() => setSelectedApproval(pendingUser)}
@@ -1104,39 +1120,39 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange,
                   {shifts.length > 0 ? (
                     <div className="overflow-x-auto">
                       <table className="hidden w-full min-w-[600px] md:table">
-                        <thead className="bg-surface-hover border-b border-border">
+                        <thead className="h-11 border-b border-border-subtle bg-surface-elevated/50 text-xs font-semibold uppercase tracking-wider text-text-tertiary">
                           <tr>
-                            <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary uppercase tracking-wider">Guard</th>
-                            <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary uppercase tracking-wider">Site</th>
-                            <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary uppercase tracking-wider">Date</th>
-                            <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary uppercase tracking-wider">Start Time</th>
-                            <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary uppercase tracking-wider">End Time</th>
-                            <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary uppercase tracking-wider">Status</th>
-                            <th className="text-left px-6 py-3 text-sm font-semibold text-text-primary uppercase tracking-wider">Actions</th>
+                            <th className="px-4 py-3.5 text-left">Guard</th>
+                            <th className="px-4 py-3.5 text-left">Site</th>
+                            <th className="px-4 py-3.5 text-left">Date</th>
+                            <th className="px-4 py-3.5 text-left">Start Time</th>
+                            <th className="px-4 py-3.5 text-left">End Time</th>
+                            <th className="px-4 py-3.5 text-left">Status</th>
+                            <th className="px-4 py-3.5 text-left">Actions</th>
                           </tr>
                         </thead>
                         <tbody>
                           {shifts.map((shift: any) => (
-                            <tr key={shift.id} className="border-b border-border hover:bg-surface-hover transition-colors">
-                              <td className="px-6 py-3 text-text-primary">
+                            <tr key={shift.id} className="border-b border-border-subtle/80 transition-colors hover:bg-surface-hover/50">
+                              <td className="px-4 py-3.5 align-middle text-sm text-text-primary">
                                 <div className="font-medium">{shift.guard_name || shift.guard_username}</div>
                                 <div className="text-xs text-text-tertiary">{shift.guard_username}</div>
                               </td>
-                              <td className="px-6 py-3 text-text-primary">{shift.client_site}</td>
-                              <td className="px-6 py-3 text-text-primary">{new Date(shift.start_time).toLocaleDateString()}</td>
-                              <td className="px-6 py-3 text-text-primary">{new Date(shift.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
-                              <td className="px-6 py-3 text-text-primary">{new Date(shift.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
-                              <td className="px-6 py-3">
-                                <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
-                                  shift.status === 'completed' ? 'bg-success-bg text-success-text ring-1 ring-success-border' :
-                                  shift.status === 'scheduled' ? 'bg-info-bg text-info-text ring-1 ring-info-border' :
-                                  shift.status === 'in_progress' ? 'bg-warning-bg text-warning-text ring-1 ring-warning-border' :
-                                  'bg-surface-hover text-text-primary'
+                              <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{shift.client_site}</td>
+                              <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{new Date(shift.start_time).toLocaleDateString()}</td>
+                              <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{new Date(shift.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+                              <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{new Date(shift.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+                              <td className="px-4 py-3.5 align-middle text-sm text-text-primary">
+                                <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium ${
+                                  shift.status === 'completed' ? 'border-(--color-success-border) bg-(--color-success-bg) text-(--color-success-text)' :
+                                  shift.status === 'scheduled' ? 'border-(--color-info-border) bg-(--color-info-bg) text-(--color-info-text)' :
+                                  shift.status === 'in_progress' ? 'border-(--color-warning-border) bg-(--color-warning-bg) text-(--color-warning-text)' :
+                                  'border-(--color-border-elevated) bg-(--color-surface-elevated) text-text-secondary'
                                 }`}>
                                   {shift.status}
                                 </span>
                               </td>
-                              <td className="px-6 py-3">
+                              <td className="px-4 py-3.5 align-middle text-sm text-text-primary">
                                 <button
                                   className="bg-(--color-info) hover:opacity-90 text-white px-4 py-1.5 rounded text-sm font-medium transition-colors"
                                   onClick={() => setEditingShift(shift)}

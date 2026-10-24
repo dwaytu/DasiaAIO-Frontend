@@ -70,9 +70,9 @@ function escapeCsv(value: unknown): string {
 }
 
 function statusClass(status: string): string {
-  if (status === 'expired' || status === 'no_permit') return 'bg-danger-bg text-danger-text ring-1 ring-danger-border'
-  if (status === 'expiring_soon' || status === 'maintenance') return 'bg-warning-bg text-warning-text ring-1 ring-warning-border'
-  return 'bg-success-bg text-success-text ring-1 ring-success-border'
+  if (status === 'expired' || status === 'no_permit') return 'border-danger-border bg-danger-bg text-danger-text'
+  if (status === 'expiring_soon' || status === 'maintenance') return 'border-warning-border bg-warning-bg text-warning-text'
+  return 'border-success-border bg-success-bg text-success-text'
 }
 
 const FirearmComplianceReport: FC<Props> = ({ user, onLogout, onViewChange, activeView }) => {
@@ -236,13 +236,13 @@ const FirearmComplianceReport: FC<Props> = ({ user, onLogout, onViewChange, acti
             {report?.items.length ? (
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[980px] border-collapse text-sm">
-                  <thead className="thead-glass"><tr>{['Firearm', 'Custody', 'Permit', 'Maintenance', 'Compliance'].map((heading) => <th key={heading} className="border-b-2 border-border px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-secondary">{heading}</th>)}</tr></thead>
-                  <tbody>{report.items.map((item) => <tr key={item.firearmId} className="border-b border-border hover:bg-surface-hover">
-                    <td className="px-3 py-3"><p className="font-semibold text-text-primary">{item.serialNumber}</p><p className="text-xs text-text-secondary">{item.model} · {item.caliber}</p><p className="text-xs text-text-secondary">Status: {item.firearmStatus}</p></td>
-                    <td className="px-3 py-3 text-text-primary">{item.holderName || item.holderId || 'Unallocated'}<p className="text-xs text-text-secondary">{item.expectedReturnDate ? `Return ${formatDate(item.expectedReturnDate)}` : 'No return date'}</p></td>
-                    <td className="px-3 py-3 text-text-primary">{item.permitType || 'No permit'}<p className="text-xs text-text-secondary">{item.permitExpiryDate ? `${formatDate(item.permitExpiryDate)} (${item.permitDaysRemaining ?? 0}d)` : '—'}</p></td>
-                    <td className="px-3 py-3 text-text-primary">{item.maintenanceType || 'None'}<p className="text-xs text-text-secondary">{item.maintenanceDate ? formatDate(item.maintenanceDate) : '—'}</p></td>
-                    <td className="px-3 py-3"><span className={`inline-block rounded px-2 py-1 text-xs font-semibold uppercase ${statusClass(item.complianceStatus)}`}>{item.complianceStatus.replace('_', ' ')}</span></td>
+                  <thead className="sticky top-0 z-10 h-11 border-b border-border-subtle bg-surface-elevated/60 text-xs font-semibold uppercase tracking-wider text-text-tertiary backdrop-blur-xs"><tr>{['Firearm', 'Custody', 'Permit', 'Maintenance', 'Compliance'].map((heading) => <th key={heading} className="px-4 py-3.5 text-left">{heading}</th>)}</tr></thead>
+                  <tbody>{report.items.map((item) => <tr key={item.firearmId} className="border-b border-border-subtle/80 transition-colors hover:bg-surface-hover/50">
+                    <td className="px-4 py-3.5 align-middle text-sm text-text-primary"><p className="font-semibold text-text-primary">{item.serialNumber}</p><p className="text-xs text-text-secondary">{item.model} · {item.caliber}</p><p className="text-xs text-text-secondary">Status: {item.firearmStatus}</p></td>
+                    <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{item.holderName || item.holderId || 'Unallocated'}<p className="text-xs text-text-secondary">{item.expectedReturnDate ? `Return ${formatDate(item.expectedReturnDate)}` : 'No return date'}</p></td>
+                    <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{item.permitType || 'No permit'}<p className="text-xs text-text-secondary">{item.permitExpiryDate ? `${formatDate(item.permitExpiryDate)} (${item.permitDaysRemaining ?? 0}d)` : '—'}</p></td>
+                    <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{item.maintenanceType || 'None'}<p className="text-xs text-text-secondary">{item.maintenanceDate ? formatDate(item.maintenanceDate) : '—'}</p></td>
+                    <td className="px-4 py-3.5 align-middle text-sm text-text-primary"><span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium ${statusClass(item.complianceStatus)}`}>{item.complianceStatus.replace('_', ' ')}</span></td>
                   </tr>)}</tbody>
                 </table>
               </div>

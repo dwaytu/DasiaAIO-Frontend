@@ -8,6 +8,7 @@ import { getSidebarNav } from '../config/navigation'
 import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
 import OperationalPageHeader from './shared/OperationalPageHeader'
 import OperationalSummaryBand from './shared/OperationalSummaryBand'
+import EmptyState from './shared/EmptyState'
 
 interface Props {
   user: User
@@ -185,8 +186,8 @@ const DtrReport: FC<Props> = ({ user, onLogout, onViewChange, activeView }) => {
             status={<span className="soc-status-neutral">{rangeLabel}</span>}
             actions={(
               <>
-              <button type="button" onClick={() => window.print()} className="soc-btn inline-flex min-h-10 items-center gap-2 px-3" title="Print DTR report">
-                <Printer className="h-4 w-4" aria-hidden="true" /> Print
+              <button type="button" onClick={() => window.print()} className="soc-btn inline-flex min-h-10 items-center gap-2 px-3" title="Print official timesheet">
+                <Printer className="h-4 w-4" aria-hidden="true" /> Print Official Timesheet
               </button>
               <button type="button" onClick={() => { downloadCsv(report.items); setExportNotice('Current report page exported as CSV.') }} disabled={report.items.length === 0} className="soc-btn inline-flex min-h-10 items-center gap-2 px-3 disabled:opacity-50" title="Export current page as CSV">
                 <Download className="h-4 w-4" aria-hidden="true" /> Export CSV
@@ -258,36 +259,42 @@ const DtrReport: FC<Props> = ({ user, onLogout, onViewChange, activeView }) => {
             {error && <p role="alert" className="mb-3 rounded border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger-text">{error}</p>}
             {exportNotice && <p role="status" className="mb-3 rounded border border-success-border bg-success-bg px-3 py-2 text-sm text-success-text">{exportNotice}</p>}
             {report.items.length === 0 && !error ? (
-              <div className="rounded border border-border-subtle bg-surface-elevated px-4 py-10 text-center text-sm text-text-secondary">No attendance records were found for the selected filters. Adjust the period, site, guard, or status and try again.</div>
+              <EmptyState icon={FileText} title="No attendance records found" subtitle="No shifts match the selected date period, site, or guard. Adjust your filters or select a different month." />
             ) : (
               <div className="dtr-print-report">
                 <div className="hidden dtr-print-heading">
-                  <p className="soc-label">SENTINEL Attendance Records</p>
-                  <h2 className="soc-page-title">Daily Time Record</h2>
+                  <p className="soc-label">DAVAO SECURITY &amp; INVESTIGATION AGENCY (DSIA)</p>
+                  <h2 className="soc-page-title">DAILY TIME RECORD &amp; ATTENDANCE VERIFICATION ROSTER</h2>
+                  <p className="mt-1 text-sm">Certified Accurate by Operations Command</p>
                   <p className="mt-1 text-sm">Period: {rangeLabel}</p>
                 </div>
                 <div className="dtr-print-table-wrap overflow-x-auto">
                   <table className="dtr-print-table w-full min-w-[1100px] border-collapse text-left text-sm">
-                    <thead>
-                      <tr className="border-b border-border text-xs uppercase tracking-wider text-text-secondary">
-                        <th className="px-3 py-3">Guard</th><th className="px-3 py-3">Site</th><th className="px-3 py-3">Scheduled</th><th className="px-3 py-3">Check in</th><th className="px-3 py-3">Check out</th><th className="px-3 py-3">Late</th><th className="px-3 py-3">Hours</th><th className="px-3 py-3">Status</th>
+                    <thead className="sticky top-0 z-10 h-11 border-b border-border-subtle bg-surface-elevated/60 text-xs font-semibold uppercase tracking-wider text-text-tertiary backdrop-blur-xs">
+                      <tr>
+                        <th className="px-4 py-3.5">Guard</th><th className="px-4 py-3.5">Site</th><th className="px-4 py-3.5">Scheduled</th><th className="px-4 py-3.5">Check in</th><th className="px-4 py-3.5">Check out</th><th className="px-4 py-3.5">Late</th><th className="px-4 py-3.5">Hours</th><th className="px-4 py-3.5">Status</th>
                       </tr>
                     </thead>
                     <tbody>
                       {report.items.map((item) => (
-                        <tr key={item.shiftId} className="border-b border-border-subtle text-text-primary last:border-0">
-                          <td className="px-3 py-3"><div className="font-semibold">{item.guardName}</div><div className="dtr-print-guard-id text-xs text-text-tertiary">{item.guardId}</div></td>
-                          <td className="px-3 py-3">{item.clientSite}</td>
-                          <td className="px-3 py-3 whitespace-nowrap"><div>{formatDateTime(item.scheduledStart)}</div><div className="text-xs text-text-tertiary">to {formatDateTime(item.scheduledEnd)}</div></td>
-                          <td className="px-3 py-3 whitespace-nowrap">{formatDateTime(item.actualCheckIn)}</td>
-                          <td className="px-3 py-3 whitespace-nowrap">{formatDateTime(item.actualCheckOut)}</td>
-                          <td className="px-3 py-3">{typeof item.lateMinutes === 'number' ? `${item.lateMinutes} min` : '-'}</td>
-                          <td className="px-3 py-3">{formatHours(item.totalHours)}</td>
-                          <td className="px-3 py-3"><span className={`dtr-print-status inline-flex rounded-full border px-2 py-1 text-xs font-semibold uppercase ${statusClass(item.status)}`}>{item.status.replace('_', ' ')}</span></td>
+                        <tr key={item.shiftId} className="border-b border-border-subtle/80 text-text-primary transition-colors hover:bg-surface-hover/50 last:border-0">
+                          <td className="px-4 py-3.5 align-middle text-sm text-text-primary"><div className="font-semibold">{item.guardName}</div><div className="dtr-print-guard-id text-xs text-text-tertiary">{item.guardId}</div></td>
+                          <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{item.clientSite}</td>
+                          <td className="px-4 py-3.5 align-middle text-sm text-text-primary whitespace-nowrap"><div>{formatDateTime(item.scheduledStart)}</div><div className="text-xs text-text-tertiary">to {formatDateTime(item.scheduledEnd)}</div></td>
+                          <td className="px-4 py-3.5 align-middle text-sm text-text-primary whitespace-nowrap">{formatDateTime(item.actualCheckIn)}</td>
+                          <td className="px-4 py-3.5 align-middle text-sm text-text-primary whitespace-nowrap">{formatDateTime(item.actualCheckOut)}</td>
+                          <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{typeof item.lateMinutes === 'number' ? `${item.lateMinutes} min` : '-'}</td>
+                          <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{formatHours(item.totalHours)}</td>
+                          <td className="px-4 py-3.5 align-middle text-sm text-text-primary"><span className={`dtr-print-status inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium ${statusClass(item.status)}`}>{item.status.replace('_', ' ')}</span></td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
+                </div>
+                <div className="dtr-print-signatures mt-12 hidden grid-cols-3 gap-10 text-center text-sm">
+                  <div className="border-t border-black pt-2">Prepared by (Supervisor)</div>
+                  <div className="border-t border-black pt-2">Verified by (Operations Manager)</div>
+                  <div className="border-t border-black pt-2">Client Acknowledgment</div>
                 </div>
               </div>
             )}

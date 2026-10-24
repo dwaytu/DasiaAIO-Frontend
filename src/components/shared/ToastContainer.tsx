@@ -30,17 +30,17 @@ const ICON_COLOR: Record<Toast['type'], string> = {
   info: 'text-info-text',
 }
 
-const MAX_VISIBLE = 5
+const MAX_VISIBLE = 3
 
 export default function ToastContainer() {
   const { toasts, removeToast } = useUI()
-  const visible: Toast[] = toasts.slice(-MAX_VISIBLE)
+  const visible: Toast[] = toasts.slice(-MAX_VISIBLE).reverse()
 
   if (visible.length === 0) return null
 
   return (
     <div
-      className="pointer-events-none fixed bottom-20 right-2 z-[80] flex flex-col-reverse gap-2 sm:bottom-4 sm:right-4"
+      className="pointer-events-none fixed bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] left-[calc(0.75rem+env(safe-area-inset-left,0px))] right-[calc(0.75rem+env(safe-area-inset-right,0px))] z-(--z-toast) flex flex-col gap-2 md:bottom-[calc(1.25rem+env(safe-area-inset-bottom,0px))] md:left-auto md:right-[calc(1rem+env(safe-area-inset-right,0px))] md:w-[min(24rem,calc(100vw-2rem))]"
       aria-label="Notifications"
     >
       {visible.map((toast) => {
@@ -52,7 +52,7 @@ export default function ToastContainer() {
             key={toast.id}
             role={isAssertive ? 'alert' : 'status'}
             aria-live={isAssertive ? 'assertive' : 'polite'}
-            className={`pointer-events-auto flex min-w-[280px] max-w-[400px] items-start gap-3 rounded border px-4 py-3 text-text-primary shadow-lg ${BG[toast.type]} ${BORDER[toast.type]}`}
+            className={`pointer-events-auto relative flex w-full min-w-0 max-w-[24rem] items-start gap-3 overflow-hidden rounded border px-3 py-3 pr-12 text-text-primary shadow-lg animate-notification-enter ${BG[toast.type]} ${BORDER[toast.type]}`}
           >
             <Icon className={`mt-0.5 h-5 w-5 shrink-0 ${ICON_COLOR[toast.type]}`} aria-hidden="true" />
 
@@ -62,7 +62,8 @@ export default function ToastContainer() {
               type="button"
               onClick={() => removeToast(toast.id)}
               aria-label="Dismiss notification"
-              className="-mr-1 flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded text-text-secondary hover:bg-surface-hover hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-(--color-focus-ring)"
+              title="Dismiss notification"
+              className="absolute right-1 top-1 flex min-h-11 min-w-11 items-center justify-center rounded text-text-secondary hover:bg-surface-hover hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-(--color-focus-ring)"
             >
               <X className="h-4 w-4" aria-hidden="true" />
             </button>

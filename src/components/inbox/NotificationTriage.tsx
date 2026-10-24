@@ -97,6 +97,9 @@ export function NotificationTriage({ items, isLoading = false, emptyMessage }: N
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-text-tertiary">Notification center</p>
           <h2 id="inbox-triage-title" className="mt-1 text-xl font-bold text-text-primary">Review queue</h2>
           <p className="mt-1 text-sm text-text-secondary">Review the selected item and take the next relevant action. Items are ordered by priority, then most recent.</p>
+          <p className="mt-2 text-sm text-text-secondary" role="status" aria-live="polite">
+            {isLoading ? 'Loading notifications...' : `${visibleItems.length} item${visibleItems.length === 1 ? '' : 's'} in the current view`}
+          </p>
         </div>
         <div className="flex flex-wrap gap-2" role="toolbar" aria-label="Inbox filters">
           {availableFilters.map((entry) => (
@@ -128,7 +131,7 @@ export function NotificationTriage({ items, isLoading = false, emptyMessage }: N
 
         <aside className="bg-surface p-5" aria-live="polite" aria-label="Selected notification details">
           {selectedItem ? (
-            <div className="flex h-full flex-col">
+            <div key={selectedItem.id} className="animate-section-enter flex h-full flex-col">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex min-w-0 items-start gap-3">
                   <span className="mt-0.5 rounded border border-border-subtle bg-surface-elevated p-2 text-text-secondary" aria-hidden="true">

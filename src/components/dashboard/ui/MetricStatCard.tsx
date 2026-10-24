@@ -6,6 +6,7 @@ interface MetricStatCardProps {
   tone?: 'guard' | 'vehicle' | 'mission' | 'maintenance' | 'analytics' | 'default'
   hint?: string
   trend?: 'up' | 'down' | 'flat'
+  trendData?: number[]
   meter?: {
     value: number
     max: number
@@ -37,20 +38,46 @@ const meterToneClass = {
   analytics: 'bg-info-border',
 }
 
-const MetricStatCard: FC<MetricStatCardProps> = ({ label, value, tone = 'default', hint, trend, meter }) => {
+const sparklineToneClass = {
+  default: 'text-info',
+  guard: 'text-success',
+  vehicle: 'text-warning',
+  mission: 'text-info',
+  maintenance: 'text-danger',
+  analytics: 'text-info',
+}
+
+const MetricStatCard: FC<MetricStatCardProps> = ({ label, value, tone = 'default', hint, trend, trendData, meter }) => {
   const meterRatio = meter && meter.max > 0
     ? Math.max(0, Math.min(100, (meter.value / meter.max) * 100))
     : 0
+  const sparkline = trendData && trendData.length > 1
+    ? trendData.map((point, index) => {
+      const min = Math.min(...trendData)
+      const max = Math.max(...trendData)
+      const x = (index / (trendData.length - 1)) * 100
+      const y = max === min ? 14 : 24 - ((point - min) / (max - min)) * 20
+      return `${x.toFixed(1)},${y.toFixed(1)}`
+    }).join(' ')
+    : null
 
   return (
     <article className={`soc-dashboard-card ${toneClass[tone]}`}>
       <p className="soc-label">{label}</p>
-      <div className="mt-1 flex items-end gap-2">
+      <div className="mt-1 flex items-end justify-between gap-2">
+        <div className="flex items-end gap-2">
         <p className="text-[1.45rem] font-black leading-none text-text-primary">{value}</p>
         {trend ? (
           <span className={`${trendIndicator[trend].className}`} aria-label={`Trend ${trend}`}>
             {trendIndicator[trend].symbol}
           </span>
+        ) : null}
+        </div>
+        {sparkline ? (
+          <svg viewBox="0 0 100 28" className={`h-7 w-24 shrink-0 overflow-visible ${sparklineToneClass[tone]}`} role="img" aria-label={`${label} seven-day trend`}>
+            <polygon points={`0,28 ${sparkline} 100,28`} className="fill-current opacity-15" />
+            <polyline points={sparkline} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
         ) : null}
       </div>
       {hint ? <p className="mt-2 text-[12px] text-text-secondary">{hint}</p> : null}

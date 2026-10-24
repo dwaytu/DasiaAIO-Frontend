@@ -225,7 +225,7 @@ const SupportTickets: FC<SupportTicketsProps> = ({ userId }) => {
             <button
               type="button"
               onClick={switchToCreate}
-              className="min-h-11 rounded bg-info px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-info/90"
+              className="soc-btn soc-btn-primary min-h-11 px-4 py-2 text-sm font-semibold text-white"
             >
               New Ticket
             </button>

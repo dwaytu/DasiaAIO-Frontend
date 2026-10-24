@@ -27,8 +27,8 @@ const entityOptions = [
 ]
 
 const statusChips: Record<string, string> = {
-  success: 'bg-success-bg text-success-text ring-1 ring-success-border',
-  failed: 'bg-danger-bg text-danger-text ring-1 ring-danger-border',
+  success: 'border border-success-border bg-success-bg text-success-text',
+  failed: 'border border-danger-border bg-danger-bg text-danger-text',
 }
 
 const formatDateTime = (value: string) => {
@@ -247,7 +247,7 @@ export default function AuditLogViewer() {
           )}
           <div className="flex-1 min-h-0 overflow-auto">
             <table className="w-full min-w-[900px]" aria-describedby="audit-log-title">
-              <thead className="thead-glass">
+              <thead className="sticky top-0 z-10 h-11 border-b border-border-subtle bg-surface-elevated/60 text-xs font-semibold uppercase tracking-wider text-text-tertiary backdrop-blur-xs">
                 <tr>
                   <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Timestamp</th>
                   <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Actor</th>
@@ -257,14 +257,14 @@ export default function AuditLogViewer() {
                   <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Details</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border-subtle">
+              <tbody>
                 {logs.length === 0 && !loading ? (
                   <tr>
                     <td colSpan={6} className="px-4 py-10 text-center text-sm text-text-secondary">No audit events found for the selected filters.</td>
                   </tr>
                 ) : (
                   logs.map((log) => (
-                    <tr key={log.id} className="hover:bg-surface-hover/50 transition-colors">
+                    <tr key={log.id} className="border-b border-border-subtle/80 transition-colors hover:bg-surface-hover/50">
                       <td className="px-4 py-3 text-sm text-text-primary whitespace-nowrap">{formatDateTime(log.created_at)}</td>
                       <td className="px-4 py-3 text-sm text-text-primary">
                         <div className="font-semibold text-text-primary">{log.actor_name || log.actor_email || 'System'}</div>

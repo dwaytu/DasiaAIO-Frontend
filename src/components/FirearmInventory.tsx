@@ -107,10 +107,10 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
 
   const getStatusBadgeColor = (status: string) => {
     switch (status?.toLowerCase()) {
-      case 'available': return 'bg-success-bg text-success-text ring-1 ring-success-border'
-      case 'deployed': return 'bg-info-bg text-info-text ring-1 ring-info-border'
-      case 'maintenance': return 'bg-warning-bg text-warning-text ring-1 ring-warning-border'
-      case 'lost': return 'bg-danger-bg text-danger-text ring-1 ring-danger-border'
+      case 'available': return 'border-success-border bg-success-bg text-success-text'
+      case 'deployed': return 'border-info-border bg-info-bg text-info-text'
+      case 'maintenance': return 'border-warning-border bg-warning-bg text-warning-text'
+      case 'lost': return 'border-danger-border bg-danger-bg text-danger-text'
       default: return 'soc-status-neutral'
     }
   }
@@ -211,28 +211,28 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
                 <div className="mt-5 overflow-x-auto" aria-label="Firearm inventory register">
                   <table className="w-full min-w-[760px] border-collapse">
                     <caption className="sr-only">Registered firearms and their current operational status.</caption>
-                    <thead className="thead-glass">
+                    <thead className="sticky top-0 z-10 h-11 border-b border-border-subtle bg-surface-elevated/60 text-xs font-semibold uppercase tracking-wider text-text-tertiary backdrop-blur-xs">
                       <tr>
-                        <th scope="col" className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Serial Number</th>
-                        <th scope="col" className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Model</th>
-                        <th scope="col" className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Manufacturer</th>
-                        <th scope="col" className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Caliber</th>
-                        <th scope="col" className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">License Expiry</th>
-                        <th scope="col" className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Status</th>
-                        <th scope="col" className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Verification</th>
-                        <th scope="col" className="px-4 py-3 text-left font-semibold text-text-secondary border-b-2 border-border text-sm uppercase tracking-wider">Last Maintenance</th>
+                        <th scope="col" className="px-4 py-3.5 text-left">Serial Number</th>
+                        <th scope="col" className="px-4 py-3.5 text-left">Model</th>
+                        <th scope="col" className="px-4 py-3.5 text-left">Manufacturer</th>
+                        <th scope="col" className="px-4 py-3.5 text-left">Caliber</th>
+                        <th scope="col" className="px-4 py-3.5 text-left">License Expiry</th>
+                        <th scope="col" className="px-4 py-3.5 text-left">Status</th>
+                        <th scope="col" className="px-4 py-3.5 text-left">Verification</th>
+                        <th scope="col" className="px-4 py-3.5 text-left">Last Maintenance</th>
                       </tr>
                     </thead>
                     <tbody>
                       {firearms.map((f) => (
-                        <tr key={f.id} className="border-b border-border hover:bg-surface-hover">
+                        <tr key={f.id} className="border-b border-border-subtle/80 transition-colors hover:bg-surface-hover/50">
                           <td className="px-4 py-3 text-text-primary">{f.serialNumber}</td>
                           <td className="px-4 py-3 text-text-primary">{f.model}</td>
                           <td className="px-4 py-3 text-text-secondary">{normalizeManufacturer(f.make)}</td>
                           <td className="px-4 py-3 text-text-primary">{f.caliber}</td>
                           <td className="px-4 py-3 text-text-primary">{f.licenseExpiryDate ? new Date(f.licenseExpiryDate).toLocaleDateString() : 'N/A'}</td>
                           <td className="px-4 py-3">
-                            <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${f.custodyReview ? 'bg-warning-bg text-warning-text ring-1 ring-warning-border' : getStatusBadgeColor(f.status)}`}>
+                            <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium ${f.custodyReview ? 'border-warning-border bg-warning-bg text-warning-text' : getStatusBadgeColor(f.status)}`}>
                               {statusLabel(f)}
                             </span>
                           </td>

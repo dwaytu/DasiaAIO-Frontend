@@ -425,7 +425,16 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
   }
 
   const getStatusColor = (status: string) => {
-    return `status-${status.toLowerCase()}`
+    switch (status.toLowerCase()) {
+      case 'available':
+        return 'bg-success-bg text-success-text border-success-border'
+      case 'allocated':
+        return 'bg-info-bg text-info-text border-info-border'
+      case 'maintenance':
+        return 'bg-warning-bg text-warning-text border-warning-border'
+      default:
+        return 'bg-surface-elevated text-text-secondary border-border-elevated'
+    }
   }
 
 
@@ -536,20 +545,20 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full min-w-[600px]">
-                      <thead className="thead-glass">
+                      <thead className="h-11 border-b border-border-subtle bg-surface-elevated/50 text-xs font-semibold uppercase tracking-wider text-text-tertiary">
                         <tr>
-                          <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-text-primary border-b-2 border-border text-xs md:text-sm uppercase tracking-wider">A/C number</th>
-                          <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-text-primary border-b-2 border-border text-xs md:text-sm uppercase tracking-wider">Plate number</th>
-                          <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-text-primary border-b-2 border-border text-xs md:text-sm uppercase tracking-wider">Driver</th>
-                          <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-text-primary border-b-2 border-border text-xs md:text-sm uppercase tracking-wider">Status</th>
+                          <th className="px-4 py-3.5 text-left">A/C number</th>
+                          <th className="px-4 py-3.5 text-left">Plate number</th>
+                          <th className="px-4 py-3.5 text-left">Driver</th>
+                          <th className="px-4 py-3.5 text-left">Status</th>
                         </tr>
                       </thead>
                       <tbody>
                         {cars.map((car) => (
-                          <tr key={car.id} className="border-b border-border hover:bg-surface-hover">
-                            <td className="px-2 md:px-4 py-2 md:py-3 text-text-primary text-xs md:text-sm">{car.license_plate}</td>
-                            <td className="px-2 md:px-4 py-2 md:py-3 text-text-primary text-xs md:text-sm">{car.plate_number || 'Not provided'}</td>
-                            <td className="px-2 md:px-4 py-2 md:py-3 text-text-primary text-xs md:text-sm">
+                          <tr key={car.id} className="border-b border-border-subtle/80 transition-colors hover:bg-surface-hover/50">
+                            <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{car.license_plate}</td>
+                            <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{car.plate_number || 'Not provided'}</td>
+                            <td className="px-4 py-3.5 align-middle text-sm text-text-primary">
                               {(() => {
                                 const assignment = driverAssignments.find((item) => item.car_id === car.id)
                                 const isSaving = driverActionCarId === car.id
@@ -571,12 +580,12 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                                 }
 
                                 return (
-                                  <div className="flex flex-wrap items-center gap-2">
+                                  <div className="flex items-center gap-2">
                                     <select
                                       aria-label={`Choose driver for ${car.license_plate}`}
                                       value={selectedDriverByCar[car.id] || ''}
                                       onChange={(event) => setSelectedDriverByCar((previous) => ({ ...previous, [car.id]: event.target.value }))}
-                                      className="soc-field min-w-44 py-1 text-xs"
+                                      className="h-9 min-w-44 rounded-md border border-border-subtle bg-surface px-2.5 text-xs text-text-primary focus:border-focus focus:outline-none focus:ring-1 focus:ring-focus"
                                       disabled={isSaving}
                                     >
                                       <option value="">Choose guard...</option>
@@ -588,7 +597,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                                     </select>
                                     <button
                                       type="button"
-                                      className="soc-btn soc-btn-secondary px-2 py-1 text-[10px]"
+                                      className="soc-btn soc-btn-secondary h-9 px-3 text-xs font-semibold"
                                       onClick={() => assignDriver(car.id)}
                                       disabled={isSaving || !selectedDriverByCar[car.id]}
                                     >
@@ -598,8 +607,8 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                                 )
                               })()}
                             </td>
-                            <td className="px-2 md:px-4 py-2 md:py-3">
-                              <span className={`inline-block px-2 md:px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(car.status)}`}>
+                            <td className="px-4 py-3.5 align-middle text-sm text-text-primary">
+                              <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${getStatusColor(car.status)}`}>
                                 {car.status}
                               </span>
                             </td>
@@ -699,22 +708,22 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full min-w-[600px]">
-                      <thead className="thead-glass">
+                      <thead className="h-11 border-b border-border-subtle bg-surface-elevated/50 text-xs font-semibold uppercase tracking-wider text-text-tertiary">
                         <tr>
-                          <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-text-primary border-b-2 border-border text-xs md:text-sm uppercase tracking-wider">Vehicle</th>
-                          <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-text-primary border-b-2 border-border text-xs md:text-sm uppercase tracking-wider hidden sm:table-cell">Client Site</th>
-                          <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-text-primary border-b-2 border-border text-xs md:text-sm uppercase tracking-wider hidden md:table-cell">Alloc. Date</th>
-                          <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-text-primary border-b-2 border-border text-xs md:text-sm uppercase tracking-wider">Status</th>
+                          <th className="px-4 py-3.5 text-left">Vehicle</th>
+                          <th className="hidden px-4 py-3.5 text-left sm:table-cell">Client Site</th>
+                          <th className="hidden px-4 py-3.5 text-left md:table-cell">Alloc. Date</th>
+                          <th className="px-4 py-3.5 text-left">Status</th>
                         </tr>
                       </thead>
                       <tbody>
                         {allocations.map((alloc) => (
-                          <tr key={alloc.id} className="border-b border-border hover:bg-surface-hover">
-                            <td className="px-2 md:px-4 py-2 md:py-3 text-text-primary text-xs md:text-sm">{alloc.car_id}</td>
-                            <td className="px-2 md:px-4 py-2 md:py-3 text-text-primary text-xs md:text-sm hidden sm:table-cell">{alloc.client_id}</td>
-                            <td className="px-2 md:px-4 py-2 md:py-3 text-text-primary text-xs md:text-sm hidden md:table-cell">{new Date(alloc.allocation_date).toLocaleDateString()}</td>
-                            <td className="px-2 md:px-4 py-2 md:py-3">
-                              <span className={`inline-block px-2 md:px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(alloc.status)}`}>
+                          <tr key={alloc.id} className="border-b border-border-subtle/80 transition-colors hover:bg-surface-hover/50">
+                            <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{alloc.car_id}</td>
+                            <td className="hidden px-4 py-3.5 align-middle text-sm text-text-primary sm:table-cell">{alloc.client_id}</td>
+                            <td className="hidden px-4 py-3.5 align-middle text-sm text-text-primary md:table-cell">{new Date(alloc.allocation_date).toLocaleDateString()}</td>
+                            <td className="px-4 py-3.5 align-middle text-sm text-text-primary">
+                              <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${getStatusColor(alloc.status)}`}>
                                 {alloc.status}
                               </span>
                             </td>
@@ -813,25 +822,25 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full min-w-[600px]">
-                      <thead className="thead-glass">
+                      <thead className="h-11 border-b border-border-subtle bg-surface-elevated/50 text-xs font-semibold uppercase tracking-wider text-text-tertiary">
                         <tr>
-                          <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-text-primary border-b-2 border-border text-xs md:text-sm uppercase tracking-wider">Vehicle</th>
-                          <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-text-primary border-b-2 border-border text-xs md:text-sm uppercase tracking-wider hidden sm:table-cell">Type</th>
-                          <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-text-primary border-b-2 border-border text-xs md:text-sm uppercase tracking-wider">Status</th>
-                          <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-text-primary border-b-2 border-border text-xs md:text-sm uppercase tracking-wider hidden md:table-cell">Cost</th>
+                          <th className="px-4 py-3.5 text-left">Vehicle</th>
+                          <th className="hidden px-4 py-3.5 text-left sm:table-cell">Type</th>
+                          <th className="px-4 py-3.5 text-left">Status</th>
+                          <th className="hidden px-4 py-3.5 text-left md:table-cell">Cost</th>
                         </tr>
                       </thead>
                       <tbody>
                         {maintenance.map((m) => (
-                          <tr key={m.id} className="border-b border-border hover:bg-surface-hover">
-                            <td className="px-2 md:px-4 py-2 md:py-3 text-text-primary text-xs md:text-sm">{m.car_id}</td>
-                            <td className="px-2 md:px-4 py-2 md:py-3 text-text-primary text-xs md:text-sm hidden sm:table-cell">{m.maintenance_type}</td>
-                            <td className="px-2 md:px-4 py-2 md:py-3">
-                              <span className={`inline-block px-2 md:px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(m.status)}`}>
+                          <tr key={m.id} className="border-b border-border-subtle/80 transition-colors hover:bg-surface-hover/50">
+                            <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{m.car_id}</td>
+                            <td className="hidden px-4 py-3.5 align-middle text-sm text-text-primary sm:table-cell">{m.maintenance_type}</td>
+                            <td className="px-4 py-3.5 align-middle text-sm text-text-primary">
+                              <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${getStatusColor(m.status)}`}>
                                 {m.status}
                               </span>
                             </td>
-                            <td className="px-2 md:px-4 py-2 md:py-3 text-text-primary text-xs md:text-sm hidden md:table-cell">${m.cost || 'N/A'}</td>
+                            <td className="hidden px-4 py-3.5 align-middle text-sm text-text-primary md:table-cell">${m.cost || 'N/A'}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -851,26 +860,26 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[900px]">
-                    <thead className="thead-glass">
+                    <thead className="h-11 border-b border-border-subtle bg-surface-elevated/50 text-xs font-semibold uppercase tracking-wider text-text-tertiary">
                       <tr>
-                        <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-text-primary border-b-2 border-border text-xs md:text-sm uppercase tracking-wider">Vehicle</th>
-                        <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-text-primary border-b-2 border-border text-xs md:text-sm uppercase tracking-wider hidden sm:table-cell">Assigned bank</th>
-                        <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-text-primary border-b-2 border-border text-xs md:text-sm uppercase tracking-wider hidden md:table-cell">Driver</th>
-                        <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-text-primary border-b-2 border-border text-xs md:text-sm uppercase tracking-wider hidden lg:table-cell">Dispatch</th>
-                        <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-text-primary border-b-2 border-border text-xs md:text-sm uppercase tracking-wider hidden lg:table-cell">Return</th>
-                        <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-text-primary border-b-2 border-border text-xs md:text-sm uppercase tracking-wider">Status</th>
+                        <th className="px-4 py-3.5 text-left">Vehicle</th>
+                        <th className="hidden px-4 py-3.5 text-left sm:table-cell">Assigned bank</th>
+                        <th className="hidden px-4 py-3.5 text-left md:table-cell">Driver</th>
+                        <th className="hidden px-4 py-3.5 text-left lg:table-cell">Dispatch</th>
+                        <th className="hidden px-4 py-3.5 text-left lg:table-cell">Return</th>
+                        <th className="px-4 py-3.5 text-left">Status</th>
                       </tr>
                     </thead>
                     <tbody>
                       {trips.map((trip) => (
-                        <tr key={trip.id} className="border-b border-border hover:bg-surface-hover">
-                          <td className="px-2 md:px-4 py-2 md:py-3 text-text-primary text-xs md:text-sm">{trip.vehicle_number || trip.car_id}</td>
-                          <td className="px-2 md:px-4 py-2 md:py-3 text-text-primary text-xs md:text-sm hidden sm:table-cell">{trip.client_site_name || 'Not recorded'}</td>
-                          <td className="px-2 md:px-4 py-2 md:py-3 text-text-primary text-xs md:text-sm hidden md:table-cell">{trip.driver_name || 'Not recorded'}</td>
-                          <td className="px-2 md:px-4 py-2 md:py-3 text-text-primary text-xs md:text-sm hidden lg:table-cell">{trip.start_time ? new Date(trip.start_time).toLocaleString() : 'Not recorded'}</td>
-                          <td className="px-2 md:px-4 py-2 md:py-3 text-text-primary text-xs md:text-sm hidden lg:table-cell">{trip.end_time ? new Date(trip.end_time).toLocaleString() : 'In transit'}</td>
-                          <td className="px-2 md:px-4 py-2 md:py-3">
-                            <span className={`inline-block px-2 md:px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(trip.status)}`}>
+                      <tr key={trip.id} className="border-b border-border-subtle/80 transition-colors hover:bg-surface-hover/50">
+                        <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{trip.vehicle_number || trip.car_id}</td>
+                        <td className="hidden px-4 py-3.5 align-middle text-sm text-text-primary sm:table-cell">{trip.client_site_name || 'Not recorded'}</td>
+                        <td className="hidden px-4 py-3.5 align-middle text-sm text-text-primary md:table-cell">{trip.driver_name || 'Not recorded'}</td>
+                        <td className="hidden px-4 py-3.5 align-middle text-sm text-text-primary lg:table-cell">{trip.start_time ? new Date(trip.start_time).toLocaleString() : 'Not recorded'}</td>
+                        <td className="hidden px-4 py-3.5 align-middle text-sm text-text-primary lg:table-cell">{trip.end_time ? new Date(trip.end_time).toLocaleString() : 'In transit'}</td>
+                        <td className="px-4 py-3.5 align-middle text-sm text-text-primary">
+                          <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${getStatusColor(trip.status)}`}>
                               {trip.status}
                             </span>
                           </td>

@@ -435,7 +435,11 @@ export default function OperationalRequestsPanel({ user }: OperationalRequestsPa
         </form>
       ) : null}
 
-      <div className="flex flex-wrap gap-3" aria-label="Request filters">
+      <div className="flex flex-wrap items-end justify-between gap-3" aria-label="Request filters">
+        <p className="text-sm text-text-secondary" role="status" aria-live="polite">
+          {loading ? 'Loading requests...' : `${total} request${total === 1 ? '' : 's'} in the current view`}
+        </p>
+        <div className="flex flex-wrap gap-3">
         <label className="text-xs font-semibold uppercase text-text-tertiary">
           Status
           <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as OperationalRequestStatus | 'all')} className="ml-2 min-h-11 rounded border border-border bg-background px-3 text-sm normal-case text-text-primary">
@@ -479,9 +483,10 @@ export default function OperationalRequestsPanel({ user }: OperationalRequestsPa
             {Object.entries(REQUEST_TYPE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
           </select>
         </label>
+        </div>
       </div>
 
-      <div className="grid min-h-0 gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(300px,0.75fr)]">
+      <div className="animate-section-enter grid min-h-0 gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(300px,0.75fr)]">
         <section className="overflow-hidden rounded border border-border bg-surface" aria-label="Request list">
           {loading ? (
             <div className="flex min-h-40 items-center justify-center gap-2 text-sm text-text-secondary" role="status"><LoaderCircle className="h-5 w-5 animate-spin" aria-hidden="true" />Loading requests</div>

@@ -87,35 +87,22 @@ const truncateText = (value: string, maxChars: number) => {
 
 type UserDerivedStatus = 'active' | 'inactive' | 'pending' | 'suspended'
 
-const getRelativeLastActivity = (lastActivityAt?: string) => {
-  if (!lastActivityAt) return 'No activity recorded'
-  const ts = new Date(lastActivityAt).getTime()
-  if (Number.isNaN(ts)) return 'Unknown'
-
-  const diffMs = Date.now() - ts
-  if (diffMs < 0) return new Date(ts).toLocaleDateString()
-  const minuteMs = 60 * 1000
-  const hourMs = 60 * minuteMs
-  const dayMs = 24 * hourMs
-
-  if (diffMs < minuteMs) return 'Just now'
-  if (diffMs < hourMs) return `${Math.floor(diffMs / minuteMs)} minutes ago`
-  if (diffMs < dayMs) return `${Math.floor(diffMs / hourMs)} hours ago`
-  if (diffMs < 2 * dayMs) return 'Yesterday'
-  if (diffMs < 7 * dayMs) return `${Math.floor(diffMs / dayMs)} days ago`
-  return new Date(ts).toLocaleDateString()
-}
-
 const getActivityDetail = (lastActivityAt?: string) => {
-  if (!lastActivityAt) return 'No recorded activity'
+  if (!lastActivityAt) return 'Never'
   const ts = new Date(lastActivityAt).getTime()
   if (Number.isNaN(ts)) return 'Unknown'
-  if (Date.now() - ts < 0) return 'Recorded activity'
-
   const diffMs = Math.max(Date.now() - ts, 0)
-  if (diffMs < 60 * 1000) return `${Math.round(diffMs / 1000)}s ago`
-  if (diffMs < 60 * 60 * 1000) return `${Math.round(diffMs / (60 * 1000))}m ago`
-  return `${Math.round(diffMs / (60 * 60 * 1000))}h ago`
+  const minutes = Math.floor(diffMs / 60000)
+  const hours = Math.floor(diffMs / 3600000)
+  const days = Math.floor(diffMs / 86400000)
+
+  if (minutes < 1) return 'Just now'
+  if (minutes === 1) return '1m ago'
+  if (minutes < 60) return `${minutes}m ago`
+  if (hours < 24) return `${hours}h ago`
+  if (days === 1) return 'Yesterday'
+  if (days < 7) return `${days}d ago`
+  return new Date(ts).toLocaleDateString()
 }
 
 const getUserDerivedStatus = (user: User, pendingIds: Set<string>): UserDerivedStatus => {
@@ -143,13 +130,13 @@ const UserAvatar: FC<{ user: User }> = ({ user }) => {
 const RoleBadge: FC<{ roleRaw: string }> = ({ roleRaw }) => {
   const role = normalizeRole(roleRaw)
   const rolePill = role === 'superadmin' || role === 'admin'
-    ? 'bg-info-bg text-info-text ring-1 ring-info-border'
+    ? 'border border-(--color-info-border) bg-(--color-info-bg) text-(--color-info-text)'
     : role === 'supervisor'
-      ? 'bg-warning-bg text-warning-text ring-1 ring-warning-border'
-      : 'bg-success-bg text-success-text ring-1 ring-success-border'
+      ? 'border border-(--color-warning-border) bg-(--color-warning-bg) text-(--color-warning-text)'
+      : 'border border-(--color-success-border) bg-(--color-success-bg) text-(--color-success-text)'
 
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold uppercase tracking-wide ${rolePill}`}>
+    <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium uppercase tracking-wide ${rolePill}`}>
       <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
         <path d="M10 2a4 4 0 110 8 4 4 0 010-8zM3 16a7 7 0 0114 0v1H3v-1z" />
       </svg>
@@ -164,32 +151,32 @@ const StatusIndicator: FC<{ status: UserDerivedStatus }> = ({ status }) => {
       dot: 'bg-(--color-success)',
       glow: '0 0 6px rgba(52,211,153,0.7)',
       label: 'Active',
-      pill: 'bg-success-bg text-success-text ring-1 ring-success-border',
+      pill: 'border border-(--color-success-border) bg-(--color-success-bg) text-(--color-success-text)',
     },
     inactive: {
       dot: 'bg-text-tertiary',
       glow: '0 0 6px rgba(161,161,170,0.7)',
       label: 'Inactive',
-      pill: 'soc-status-neutral',
+      pill: 'border border-(--color-border-elevated) bg-(--color-surface-elevated) text-text-secondary',
     },
     pending: {
       dot: 'bg-(--color-warning)',
       glow: '0 0 6px rgba(251,191,36,0.7)',
       label: 'Pending',
-      pill: 'bg-warning-bg text-warning-text ring-1 ring-warning-border',
+      pill: 'border border-(--color-warning-border) bg-(--color-warning-bg) text-(--color-warning-text)',
     },
     suspended: {
       dot: 'bg-(--color-danger)',
       glow: '0 0 6px rgba(248,113,113,0.7)',
       label: 'Suspended',
-      pill: 'bg-danger-bg text-danger-text ring-1 ring-danger-border',
+      pill: 'border border-(--color-danger-border) bg-(--color-danger-bg) text-(--color-danger-text)',
     },
   }
 
   const current = statusConfig[status]
 
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${current.pill}`}>
+    <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${current.pill}`}>
       <span className={`h-1.5 w-1.5 rounded-full ${current.dot}`} style={{ boxShadow: current.glow }} aria-hidden="true" />
       {current.label}
     </span>
@@ -272,7 +259,7 @@ const SuperadminOperationsMapSection: FC<SuperadminOperationsMapSectionProps> = 
   }, [hasTrackingAccess, trackingAccuracyMode, trackingPoints])
 
   return (
-    <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in">
+    <div className="flex-1 overflow-y-auto w-full animate-fade-in">
       <section className="soc-surface p-4 md:p-5 mb-4">
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-text-tertiary">Intelligence</p>
         <h1 className="text-2xl font-black uppercase tracking-wide text-text-primary">Operations Map</h1>
@@ -321,6 +308,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   const [missionResponse, setMissionResponse] = useState<any>(null)
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [searchQuery, setSearchQuery] = useState<string>('')
+  const [quickUserFilter, setQuickUserFilter] = useState<'all' | 'active' | 'pending' | 'supervisor' | 'guard'>('all')
   const [trackingAccuracyMode] = useState<TrackingAccuracyMode>(getTrackingAccuracyMode())
   const [userPage, setUserPage] = useState(1)
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([])
@@ -832,6 +820,11 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   }, [roleScopedUsers, pendingApprovalIds])
 
   const filteredUsers = roleScopedUsers.filter((u) => {
+    if (quickUserFilter === 'active') return userStatusById.get(u.id) === 'active'
+    if (quickUserFilter === 'pending') return userStatusById.get(u.id) === 'pending'
+    if (quickUserFilter === 'supervisor' || quickUserFilter === 'guard') return normalizeRole(u.role) === quickUserFilter
+    return true
+  }).filter((u) => {
     if (!searchQuery) return true
     const normalizedQuery = searchQuery.toLowerCase()
     const email = (u.email || '').toLowerCase()
@@ -1059,7 +1052,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
           </div>
         ) : activeSection === 'dashboard' && error ? (
           <div className="flex flex-1 items-center justify-center py-8">
-            <section className="w-full max-w-xl rounded border border-danger-border bg-danger-bg/70 p-6 text-left shadow-lg backdrop-blur-sm">
+            <section className="w-full max-w-7xl rounded border border-danger-border bg-danger-bg/70 p-6 text-left shadow-lg backdrop-blur-sm">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-danger-text/80">Command Overview Unavailable</p>
               <h2 className="mt-2 text-2xl font-bold text-danger-text">SENTINEL cannot reach the backend services.</h2>
               <p className="mt-3 text-sm leading-6 text-danger-text/90">
@@ -1086,7 +1079,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
             </section>
           </div>
         ) : activeSection === 'dashboard' && loading ? (
-          <div className="flex-1 flex flex-col gap-6 p-4 md:p-8 animate-pulse" aria-busy="true" aria-label="Loading dashboard">
+          <div className="flex-1 flex flex-col gap-6 animate-pulse" aria-busy="true" aria-label="Loading dashboard">
             {/* Command center skeleton */}
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
               {Array.from({ length: 4 }).map((_, i) => (
@@ -1166,8 +1159,9 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                         setSearchQuery(e.target.value)
                         setUserPage(1)
                       }}
-                      className="pl-9 pr-4 py-2 text-sm bg-background border border-border-subtle rounded text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-(--color-focus-ring) w-44"
+                      className="pl-9 pr-9 py-2 text-sm bg-background border border-border-subtle rounded text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-(--color-focus-ring) w-44"
                     />
+                    {searchQuery ? <button type="button" onClick={() => { setSearchQuery(''); setUserPage(1) }} className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-text-tertiary hover:text-text-primary focus-visible:outline-2 focus-visible:outline-(--color-focus-ring)" aria-label="Clear user search">×</button> : null}
                   </div>
                 </div>
               </div>
@@ -1188,6 +1182,15 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                   <div className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">{isSupervisorViewer ? 'Guards' : 'Supervisors'}</div>
                   <div className="mt-1 text-xl font-bold text-info-text">{isSupervisorViewer ? summaryStats.guards : summaryStats.supervisors}</div>
                 </div>
+              </div>
+              <div className="flex flex-wrap gap-2 border-b border-border-subtle px-5 py-3" role="group" aria-label="Quick user filters">
+                {([
+                  ['all', 'All Users'], ['active', 'Active'], ['pending', 'Pending Approval'], ['supervisor', 'Supervisors'], ['guard', 'Guards'],
+                ] as const).map(([value, label]) => (
+                  <button key={value} type="button" onClick={() => { setQuickUserFilter(value); setUserPage(1) }} className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${quickUserFilter === value ? 'border-primary bg-primary text-white shadow-xs' : 'border-border-subtle bg-surface text-text-secondary hover:bg-surface-hover'}`}>
+                    {label}
+                  </button>
+                ))}
               </div>
               {selectedUserIds.length > 0 ? (
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle bg-background px-5 py-3">
@@ -1238,9 +1241,9 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
               {filteredUsers.length > 0 ? (
                 <div className="soc-scroll-area flex-1 min-h-0 overflow-auto">
                   <table className="hidden w-full min-w-[980px] md:table">
-                    <thead className="thead-glass">
-                      <tr className="border-b border-border">
-                        <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">
+                    <thead className="h-11 border-b border-border-subtle bg-surface-elevated/50 text-xs font-semibold uppercase tracking-wider text-text-tertiary">
+                      <tr>
+                        <th className="px-4 py-3.5 text-left">
                           <label className="inline-flex items-center gap-2">
                             <input
                               type="checkbox"
@@ -1252,15 +1255,15 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                             <span>Select</span>
                           </label>
                         </th>
-                        <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">User Details</th>
-                        <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Username</th>
-                        <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Role</th>
-                        <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Status</th>
-                        <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Last Activity</th>
-                        <th className="px-3 py-2.5 text-right text-xs font-semibold uppercase tracking-wider text-text-tertiary">Actions</th>
+                        <th className="px-4 py-3.5 text-left">User Details</th>
+                        <th className="px-4 py-3.5 text-left">Username</th>
+                        <th className="px-4 py-3.5 text-left">Role</th>
+                        <th className="px-4 py-3.5 text-left">Status</th>
+                        <th className="px-4 py-3.5 text-left">Last Activity</th>
+                        <th className="px-4 py-3.5 text-right">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-border-subtle">
+                    <tbody>
                       {pagedUsers.map((u: User) => {
                         const derivedStatus = userStatusById.get(u.id) || 'inactive'
                         const rowSelected = selectedUserIds.includes(u.id)
@@ -1268,8 +1271,8 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                         const canDelete = canManageUsers && canEditUserRow(u.role) && u.id !== user.id
                         const pendingApproval = pendingApprovalIds.has(u.id)
                         return (
-                          <tr key={u.id} className="transition-colors hover:bg-surface-hover/50">
-                            <td className="px-3 py-2.5 align-top">
+                          <tr key={u.id} className="border-b border-border-subtle/80 transition-colors hover:bg-surface-hover/50">
+                            <td className="px-4 py-3.5 align-middle text-sm text-text-primary">
                               <input
                                 type="checkbox"
                                 checked={rowSelected}
@@ -1278,7 +1281,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                                 aria-label={`Select ${u.full_name || u.username || u.email}`}
                               />
                             </td>
-                            <td className="px-3 py-2.5">
+                            <td className="px-4 py-3.5 align-middle text-sm text-text-primary">
                               <div className="flex items-center gap-3">
                                 <UserAvatar user={u} />
                                 <div className="min-w-0">
@@ -1292,20 +1295,17 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                                 </div>
                               </div>
                             </td>
-                            <td className="px-3 py-2.5 text-sm text-text-secondary" title={u.username}>{truncateText(u.username, 22)}</td>
-                            <td className="px-3 py-2.5">
+                            <td className="px-4 py-3.5 align-middle text-sm text-text-secondary" title={u.username}>{truncateText(u.username, 22)}</td>
+                            <td className="px-4 py-3.5 align-middle text-sm text-text-primary">
                               <RoleBadge roleRaw={u.role} />
                             </td>
-                            <td className="px-3 py-2.5">
+                            <td className="px-4 py-3.5 align-middle text-sm text-text-primary">
                               <StatusIndicator status={derivedStatus} />
                             </td>
-                            <td className="px-3 py-2.5 text-xs text-text-secondary">
-                              <div className="flex flex-col gap-0.5">
-                                <span>{getRelativeLastActivity(u.last_activity_at ?? u.last_seen_at)}</span>
-                                <span className="text-[11px] text-text-tertiary">{getActivityDetail(u.last_activity_at ?? u.last_seen_at)}</span>
-                              </div>
+                            <td className="px-4 py-3.5 align-middle text-sm text-text-secondary">
+                              {getActivityDetail(u.last_activity_at ?? u.last_seen_at)}
                             </td>
-                            <td className="px-3 py-2.5">
+                            <td className="px-4 py-3.5 align-middle text-sm text-text-primary">
                               <div className="flex items-center justify-end gap-1">
                                 {pendingApproval && (
                                   <button
@@ -1406,8 +1406,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                             </div>
                             <div>
                               <p className="text-text-tertiary">Last Activity</p>
-                              <p className="mt-1 font-medium text-text-secondary">{getRelativeLastActivity(u.last_activity_at ?? u.last_seen_at)}</p>
-                              <p className="mt-1 text-[11px] text-text-tertiary">{getActivityDetail(u.last_activity_at ?? u.last_seen_at)}</p>
+                              <p className="mt-1 font-medium text-text-secondary">{getActivityDetail(u.last_activity_at ?? u.last_seen_at)}</p>
                             </div>
                           </div>
                           <div className="mt-3 flex flex-wrap gap-2">
@@ -1496,11 +1495,11 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
             </section>
           </div>
         ) : activeSection === 'requests' ? (
-          <div className="flex-1 overflow-y-auto p-4 md:p-8">
+          <div className="flex-1 overflow-y-auto">
             <OperationalRequestsPanel user={user} />
           </div>
         ) : activeSection === 'approvals' ? (
-          <div className="flex-1 space-y-6 p-4 md:p-8 overflow-y-auto w-full animate-fade-in">
+          <div className="flex-1 space-y-6 overflow-y-auto w-full animate-fade-in">
             {approvalsLoading ? (
               <TableLoadingState
                 title="Pending Guard Registrations"
@@ -1513,13 +1512,13 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                 <h2 className="text-2xl font-bold text-text-primary mb-6">Pending Guard Registrations</h2>
                 <div className="overflow-auto">
                   <table className="w-full border-collapse min-w-[640px]">
-                    <thead className="thead-glass">
+                    <thead className="h-11 border-b border-border-subtle bg-surface-elevated/50 text-xs font-semibold uppercase tracking-wider text-text-tertiary">
                       <tr>
-                        <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Guard Name</th>
-                        <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Requested Role</th>
-                        <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Submitted Date</th>
-                        <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Status</th>
-                        <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Actions</th>
+                        <th className="px-4 py-3.5 text-left">Guard Name</th>
+                        <th className="px-4 py-3.5 text-left">Requested Role</th>
+                        <th className="px-4 py-3.5 text-left">Submitted Date</th>
+                        <th className="px-4 py-3.5 text-left">Status</th>
+                        <th className="px-4 py-3.5 text-left">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1531,19 +1530,19 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                         </tr>
                       ) : (
                         pendingApprovals.map((pendingUser) => (
-                          <tr key={pendingUser.id} className="border-b border-border hover:bg-surface-hover">
-                            <td className="px-4 py-3 text-text-primary">
+                          <tr key={pendingUser.id} className="border-b border-border-subtle/80 transition-colors hover:bg-surface-hover/50">
+                            <td className="px-4 py-3.5 align-middle text-sm text-text-primary">
                               <div className="font-medium">{pendingUser.full_name || pendingUser.username}</div>
                               <div className="text-xs text-text-tertiary">{pendingUser.email}</div>
                             </td>
-                            <td className="px-4 py-3 text-text-primary uppercase">{normalizeRole(pendingUser.role)}</td>
-                            <td className="px-4 py-3 text-text-primary">{new Date(pendingUser.created_at).toLocaleString()}</td>
-                            <td className="px-4 py-3">
+                            <td className="px-4 py-3.5 align-middle text-sm text-text-primary uppercase">{normalizeRole(pendingUser.role)}</td>
+                            <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{new Date(pendingUser.created_at).toLocaleString()}</td>
+                            <td className="px-4 py-3.5 align-middle text-sm text-text-primary">
                               <span className={`soc-chip ${pendingUser.verified ? 'status-bar-warning text-warning-text' : 'status-bar-critical text-danger-text'}`}>
                                 {pendingUser.verified ? 'Pending Approval' : 'Pending Verification'}
                               </span>
                             </td>
-                            <td className="px-4 py-3">
+                            <td className="px-4 py-3.5 align-middle text-sm text-text-primary">
                               <div className="flex flex-wrap gap-2">
                                 <button
                                   onClick={() => setSelectedApproval(pendingUser)}
@@ -1577,7 +1576,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
             )}
           </div>
         ) : activeSection === 'schedule' ? (
-          <div className="flex-1 flex flex-col p-4 md:p-8 overflow-hidden w-full animate-fade-in">
+          <div className="flex-1 flex flex-col overflow-hidden w-full animate-fade-in">
             {shiftsLoading ? (
               <TableLoadingState
                 title="All Guard Schedules"
@@ -1589,7 +1588,12 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
               <>
                 <section className="flex flex-col flex-1 min-h-0 w-full rounded overflow-hidden table-glass mb-4">
                   <div className="shrink-0 px-6 py-5 border-b border-border-subtle flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <h2 className="text-xl font-bold text-text-primary">All Guard Schedules</h2>
+                    <div>
+                      <h2 className="text-xl font-bold text-text-primary">All Guard Schedules</h2>
+                      <p className="mt-1 text-sm text-text-secondary" role="status" aria-live="polite">
+                        {shifts.length} schedule{shifts.length === 1 ? '' : 's'} in the current roster. Select Edit to update an existing assignment.
+                      </p>
+                    </div>
                     <button
                       type="button"
                       onClick={() => {
@@ -1606,45 +1610,45 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                   {shifts.length > 0 ? (
                   <div className="flex-1 min-h-0 overflow-auto">
                     <table className="w-full border-collapse min-w-[600px]">
-                      <thead className="thead-glass">
+                      <thead className="h-11 border-b border-border-subtle bg-surface-elevated/50 text-xs font-semibold uppercase tracking-wider text-text-tertiary">
                         <tr>
-                          <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Guard</th>
-                          <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Site</th>
-                          <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Date</th>
-                          <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Start Time</th>
-                          <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">End Time</th>
-                          <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Status</th>
-                          <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Actions</th>
+                          <th scope="col" className="px-4 py-3.5 text-left">Guard</th>
+                          <th scope="col" className="px-4 py-3.5 text-left">Site</th>
+                          <th scope="col" className="px-4 py-3.5 text-left">Date</th>
+                          <th scope="col" className="px-4 py-3.5 text-left">Start Time</th>
+                          <th scope="col" className="px-4 py-3.5 text-left">End Time</th>
+                          <th scope="col" className="px-4 py-3.5 text-left">Status</th>
+                          <th scope="col" className="px-4 py-3.5 text-left">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
                         {shifts.map((shift: any) => (
-                          <tr key={shift.id} className="border-b border-border hover:bg-surface-hover">
-                            <td className="px-4 py-3 text-text-primary">
+                          <tr key={shift.id} className="border-b border-border-subtle/80 transition-colors hover:bg-surface-hover/50">
+                            <td className="px-4 py-3.5 align-middle text-sm text-text-primary">
                               <div className="font-medium">{shift.guard_name || shift.guard_username}</div>
                               <div className="text-xs text-text-tertiary">{shift.guard_username}</div>
                             </td>
-                            <td className="px-4 py-3 text-text-primary">{shift.client_site}</td>
-                            <td className="px-4 py-3 text-text-primary">{new Date(shift.start_time).toLocaleDateString()}</td>
-                            <td className="px-4 py-3 text-text-primary">{new Date(shift.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
-                            <td className="px-4 py-3 text-text-primary">{new Date(shift.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
-                            <td className="px-4 py-3">
-                              <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
-                                shift.status === 'completed' ? 'bg-success-bg text-success-text ring-1 ring-success-border' :
-                                shift.status === 'scheduled' ? 'bg-info-bg text-info-text ring-1 ring-info-border' :
-                                shift.status === 'in_progress' ? 'bg-warning-bg text-warning-text ring-1 ring-warning-border' :
-                                'soc-status-neutral'
+                            <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{shift.client_site}</td>
+                            <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{new Date(shift.start_time).toLocaleDateString()}</td>
+                            <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{new Date(shift.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+                            <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{new Date(shift.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+                            <td className="px-4 py-3.5 align-middle text-sm text-text-primary">
+                              <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium ${
+                                shift.status === 'completed' ? 'border-(--color-success-border) bg-(--color-success-bg) text-(--color-success-text)' :
+                                shift.status === 'scheduled' ? 'border-(--color-info-border) bg-(--color-info-bg) text-(--color-info-text)' :
+                                shift.status === 'in_progress' ? 'border-(--color-warning-border) bg-(--color-warning-bg) text-(--color-warning-text)' :
+                                'border-(--color-border-elevated) bg-(--color-surface-elevated) text-text-secondary'
                               }`}>
                                 {shift.status}
                               </span>
                             </td>
-                            <td className="px-4 py-3">
+                            <td className="px-4 py-3.5 align-middle text-sm text-text-primary">
                               <button
-                                className="bg-primary hover:bg-primary-hover text-primary-text px-4 py-1.5 rounded text-sm font-medium transition-colors"
+                                className="soc-btn soc-btn-neutral min-h-10 px-3 text-sm"
                                 onClick={() => setEditingShift(shift)}
                                 title="Edit shift"
                               >
-                                Edit
+                                Edit schedule
                               </button>
                             </td>
                           </tr>
@@ -1653,7 +1657,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                     </table>
                   </div>
                 ) : (
-                  <EmptyState icon={CalendarX2} title="No schedules found" subtitle="Create a new schedule to get started" />
+                  <EmptyState icon={CalendarX2} title="No schedules found" subtitle="No assignments match the current roster. Create a schedule to assign a guard to a client site." />
                 )}
               </section>
 
@@ -1767,7 +1771,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
             )}
           </div>
         ) : activeSection === 'missions' ? (
-          <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in">
+          <div className="flex-1 overflow-y-auto w-full animate-fade-in">
             {/* Mission Assignment Form */}
             <section className="w-full table-glass rounded p-6 md:p-8 mb-6">
               <h2 className="text-2xl font-bold text-text-primary mb-6">Assign New Mission</h2>
@@ -1951,36 +1955,36 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
               ) : missions.length > 0 ? (
                 <div className="overflow-auto">
                   <table className="w-full border-collapse min-w-[600px]">
-                    <thead className="thead-glass">
+                    <thead className="h-11 border-b border-border-subtle bg-surface-elevated/50 text-xs font-semibold uppercase tracking-wider text-text-tertiary">
                       <tr>
-                        <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">ID</th>
-                        <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Destination</th>
-                        <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Date</th>
-                        <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Time</th>
-                        <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Vehicle</th>
-                        <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Driver</th>
-                        <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Status</th>
+                        <th className="px-4 py-3.5 text-left">ID</th>
+                        <th className="px-4 py-3.5 text-left">Destination</th>
+                        <th className="px-4 py-3.5 text-left">Date</th>
+                        <th className="px-4 py-3.5 text-left">Time</th>
+                        <th className="px-4 py-3.5 text-left">Vehicle</th>
+                        <th className="px-4 py-3.5 text-left">Driver</th>
+                        <th className="px-4 py-3.5 text-left">Status</th>
                       </tr>
                     </thead>
                     <tbody>
                       {missions.map((mission: any) => (
-                        <tr key={mission.id} className="border-b border-border hover:bg-surface-hover">
-                          <td className="px-4 py-3 text-text-primary text-xs font-mono">{mission.id.substring(0, 8)}...</td>
-                          <td className="px-4 py-3 text-text-primary">{mission.destination || 'N/A'}</td>
-                          <td className="px-4 py-3 text-text-primary">{mission.start_time ? new Date(mission.start_time).toLocaleDateString() : 'N/A'}</td>
-                          <td className="px-4 py-3 text-text-primary">
+                        <tr key={mission.id} className="border-b border-border-subtle/80 transition-colors hover:bg-surface-hover/50">
+                          <td className="px-4 py-3.5 align-middle text-xs font-mono text-text-primary">{mission.id.substring(0, 8)}...</td>
+                          <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{mission.destination || 'N/A'}</td>
+                          <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{mission.start_time ? new Date(mission.start_time).toLocaleDateString() : 'N/A'}</td>
+                          <td className="px-4 py-3.5 align-middle text-sm text-text-primary">
                             {mission.start_time && mission.end_time 
                               ? `${new Date(mission.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${new Date(mission.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` 
                               : 'N/A'}
                           </td>
-                          <td className="px-4 py-3 text-text-primary">{mission.vehicle_model || 'N/A'}</td>
-                          <td className="px-4 py-3 text-text-primary">{mission.driver_name || 'N/A'}</td>
-                          <td className="px-4 py-3">
-                            <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
-                              mission.status === 'completed' ? 'bg-success-bg text-success-text ring-1 ring-success-border' :
-                              mission.status === 'scheduled' ? 'bg-info-bg text-info-text ring-1 ring-info-border' :
-                              mission.status === 'in_progress' ? 'bg-warning-bg text-warning-text ring-1 ring-warning-border' :
-                              'soc-status-neutral'
+                          <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{mission.vehicle_model || 'N/A'}</td>
+                          <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{mission.driver_name || 'N/A'}</td>
+                          <td className="px-4 py-3.5 align-middle text-sm text-text-primary">
+                            <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium ${
+                              mission.status === 'completed' ? 'border-(--color-success-border) bg-(--color-success-bg) text-(--color-success-text)' :
+                              mission.status === 'scheduled' ? 'border-(--color-info-border) bg-(--color-info-bg) text-(--color-info-text)' :
+                              mission.status === 'in_progress' ? 'border-(--color-warning-border) bg-(--color-warning-bg) text-(--color-warning-text)' :
+                              'border-(--color-border-elevated) bg-(--color-surface-elevated) text-text-secondary'
                             }`}>
                               {mission.status || 'unknown'}
                             </span>
@@ -1996,18 +2000,18 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
             </section>
           </div>
         ) : activeSection === 'analytics' ? (
-          <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in">
+          <div className="flex-1 overflow-y-auto w-full animate-fade-in">
             <AnalyticsDashboard user={user} onLogout={onLogout} onViewChange={onViewChange ?? (() => undefined)} activeView={activeView ?? 'analytics'} />
           </div>
         ) : activeSection === 'trips' ? (
-          <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in">
+          <div className="flex-1 overflow-y-auto w-full animate-fade-in">
             <TripManagement />
           </div>
         ) : activeSection === 'audit-log' ? (
           <Suspense
             fallback={
               <section
-                className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in"
+                className="flex-1 overflow-y-auto w-full animate-fade-in"
                 aria-live="polite"
               >
                 <div className="table-glass rounded p-6 md:p-8">

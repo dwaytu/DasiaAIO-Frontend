@@ -15,7 +15,7 @@ const SectionPanel: FC<SectionPanelProps> = ({ title, subtitle, actions, childre
   const headingId = `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-heading`
 
   return (
-    <section className="command-panel w-full p-5 md:p-6" aria-labelledby={headingId}>
+    <section className="animate-section-enter command-panel w-full p-5 md:p-6" aria-labelledby={headingId}>
       <div className="mb-4 flex flex-col gap-3 border-b border-border-subtle pb-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3">
           {icon && <div className="mt-0.5 rounded-md border border-border-subtle bg-surface p-2 text-text-secondary">{icon}</div>}

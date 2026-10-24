@@ -51,7 +51,8 @@ const LoadingSkeleton: FC<LoadingSkeletonProps> = ({ variant, count = 1 }) => {
   const VariantComponent = variants[variant];
 
   return (
-    <div role="status" aria-label="Loading" className="flex flex-col gap-4">
+    <div role="status" aria-live="polite" aria-label="Loading data" className="flex flex-col gap-4">
+      <span className="sr-only">Loading data</span>
       {Array.from({ length: count }, (_, i) => (
         <VariantComponent key={i} />
       ))}

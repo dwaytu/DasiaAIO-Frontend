@@ -121,7 +121,7 @@ const ResourceManagementPanel: FC<ResourceManagementPanelProps> = ({
     <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in space-y-6">
       <section className="soc-surface p-4 md:p-5">
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-text-tertiary">Operations</p>
-        <h1 className="text-2xl font-black uppercase tracking-wide text-text-primary">Resource Management</h1>
+        <h1 className="text-2xl font-bold text-text-primary">Resource Management</h1>
         <p className="mt-1 text-sm text-text-secondary">
           {isSupervisorViewer
             ? 'Create and manage guard accounts, firearms, vehicles, and client sites for your operations.'
@@ -140,7 +140,7 @@ const ResourceManagementPanel: FC<ResourceManagementPanelProps> = ({
             key={key}
             onClick={() => setActiveTab(key)}
             aria-current={activeTab === key ? 'page' : undefined}
-            className={`inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-semibold uppercase tracking-wide whitespace-nowrap transition-all duration-300 ${
+            className={`inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-semibold whitespace-nowrap transition-all duration-300 ${
               activeTab === key
                 ? 'bg-(--color-info-bg) text-(--color-info-text) border border-(--color-info-border)'
                 : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover'
@@ -152,18 +152,20 @@ const ResourceManagementPanel: FC<ResourceManagementPanelProps> = ({
         ))}
       </nav>
 
-      {activeTab === 'guards' && (
-        <GuardsTab
-          users={users}
-          onDeleteUser={onDeleteUser}
-          onUsersChanged={onUsersChanged}
-          canManageGuardAccounts={canManageGuardAccounts}
-          canDeleteGuardAccounts={canDeleteGuardAccounts}
-        />
-      )}
-      {activeTab === 'firearms' && <FirearmsTab />}
-      {activeTab === 'vehicles' && <VehiclesTab />}
-      {activeTab === 'clients' && <ClientSitesTab />}
+      <div key={activeTab} className="animate-section-enter">
+        {activeTab === 'guards' && (
+          <GuardsTab
+            users={users}
+            onDeleteUser={onDeleteUser}
+            onUsersChanged={onUsersChanged}
+            canManageGuardAccounts={canManageGuardAccounts}
+            canDeleteGuardAccounts={canDeleteGuardAccounts}
+          />
+        )}
+        {activeTab === 'firearms' && <FirearmsTab />}
+        {activeTab === 'vehicles' && <VehiclesTab />}
+        {activeTab === 'clients' && <ClientSitesTab />}
+      </div>
     </div>
   )
 }
@@ -458,7 +460,7 @@ const GuardsTab: FC<{
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-text-tertiary">Personnel</p>
             <span className="soc-chip border border-info-border bg-info-bg text-info-text">{guards.length} registered</span>
           </div>
-          <h2 className="mt-1 text-xl font-black uppercase tracking-wide text-text-primary">Guard roster</h2>
+          <h2 className="mt-1 text-xl font-bold text-text-primary">Guard roster</h2>
           <p className="mt-1 max-w-2xl text-sm text-text-secondary">
             Approved field personnel and their contact and license records.
           </p>
@@ -1056,7 +1058,7 @@ const FirearmsTab: FC = () => {
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-text-tertiary">Armory</p>
             <span className="soc-chip border border-info-border bg-info-bg text-info-text">{firearmSummary?.totalFirearms ?? totalFirearms} registered</span>
           </div>
-          <h2 className="mt-1 text-xl font-black uppercase tracking-wide text-text-primary">Firearm inventory</h2>
+          <h2 className="mt-1 text-xl font-bold text-text-primary">Firearm inventory</h2>
           <p className="mt-1 text-sm text-text-secondary">Registered firearms, verified custody, and equipment availability.</p>
           {firearmSummary ? <div className="mt-3 flex flex-wrap gap-2 text-xs"><span className="soc-chip status-success">{firearmSummary.availableFirearms} available</span><span className="soc-chip status-info">{firearmSummary.activeCustody} verified custody</span><span className="soc-chip border border-warning-border bg-warning-bg text-warning-text">{firearmSummary.custodyReviewFirearms} custody review</span><span className="soc-chip border border-warning-border bg-warning-bg text-warning-text">{firearmSummary.maintenanceFirearms} maintenance</span></div> : null}
         </div>
@@ -1369,7 +1371,7 @@ const VehiclesTab: FC = () => {
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-text-tertiary">Fleet</p>
             <span className="soc-chip border border-info-border bg-info-bg text-info-text">{cars.length} registered</span>
           </div>
-          <h2 className="mt-1 text-xl font-black uppercase tracking-wide text-text-primary">Vehicle fleet</h2>
+          <h2 className="mt-1 text-xl font-bold text-text-primary">Vehicle fleet</h2>
           <p className="mt-1 text-sm text-text-secondary">Armored vehicles are added manually with an internal A/C number and road plate number.</p>
         </div>
         <button
@@ -1583,7 +1585,7 @@ const ClientSitesTab: FC = () => {
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-text-tertiary">Locations</p>
             <span className="soc-chip border border-info-border bg-info-bg text-info-text">{clientSites.length} registered</span>
           </div>
-          <h2 className="mt-1 text-xl font-black uppercase tracking-wide text-text-primary">Client sites</h2>
+          <h2 className="mt-1 text-xl font-bold text-text-primary">Client sites</h2>
           <p className="mt-1 text-sm text-text-secondary">Geofenced sites used for assignments, attendance, and tracking.</p>
         </div>
         <button

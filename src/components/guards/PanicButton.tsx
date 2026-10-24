@@ -10,16 +10,19 @@ interface PanicButtonProps {
   siteName?: string
 }
 
-type ButtonState = 'idle' | 'sending' | 'sent' | 'queued' | 'failed'
+type ButtonState = 'idle' | 'arming' | 'sending' | 'sent' | 'queued' | 'failed'
 
 const PanicButton: FC<PanicButtonProps> = ({ userId, userDisplayName, siteName }) => {
   const [state, setState] = useState<ButtonState>('idle')
   const [failureMessage, setFailureMessage] = useState('')
+  const [gpsStatus, setGpsStatus] = useState('GPS accuracy pending • Offline Queue Ready')
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     return () => {
       if (resetTimerRef.current) clearTimeout(resetTimerRef.current)
+      if (holdTimerRef.current) clearTimeout(holdTimerRef.current)
     }
   }, [])
 
@@ -41,6 +44,9 @@ const PanicButton: FC<PanicButtonProps> = ({ userId, userDisplayName, siteName }
       const resolvedLocation = await resolveLocationWithFallback(platform)
       const coordinates = `${resolvedLocation.latitude.toFixed(6)}, ${resolvedLocation.longitude.toFixed(6)}`
       location = resolvedLocation.source === 'ip' ? `${coordinates} (approximate)` : coordinates
+      setGpsStatus(resolvedLocation.accuracyMeters != null
+        ? `GPS Accuracy: ±${Math.round(resolvedLocation.accuracyMeters)}m • Offline Queue Ready`
+        : 'GPS accuracy unavailable • Offline Queue Ready')
     } catch {
       // GPS unavailable or timed out — proceed without location
     }
@@ -97,6 +103,22 @@ const PanicButton: FC<PanicButtonProps> = ({ userId, userDisplayName, siteName }
     }, 5000)
   }, [siteName, state, userDisplayName, userId])
 
+  const beginHold = () => {
+    if (state !== 'idle') return
+    setState('arming')
+    holdTimerRef.current = setTimeout(() => {
+      holdTimerRef.current = null
+      void handlePanic()
+    }, 1200)
+  }
+
+  const cancelHold = () => {
+    if (!holdTimerRef.current) return
+    clearTimeout(holdTimerRef.current)
+    holdTimerRef.current = null
+    setState('idle')
+  }
+
   return (
     <div className="guard-panic-button fixed z-(--z-toast) flex flex-col items-center gap-1">
       <span
@@ -105,18 +127,26 @@ const PanicButton: FC<PanicButtonProps> = ({ userId, userDisplayName, siteName }
       />
       <button
         type="button"
-        onClick={() => void handlePanic()}
+        onPointerDown={beginHold}
+        onPointerUp={cancelHold}
+        onPointerLeave={cancelHold}
+        onPointerCancel={cancelHold}
+        onKeyDown={(event) => { if ((event.key === 'Enter' || event.key === ' ') && !event.repeat) { event.preventDefault(); beginHold() } }}
+        onKeyUp={(event) => { if (event.key === 'Enter' || event.key === ' ') cancelHold() }}
         disabled={state === 'sending'}
         aria-label="Emergency SOS — tap to send distress signal"
         className="soc-btn soc-btn-emergency relative h-16 w-16 min-h-16 min-w-16 rounded-full p-0 text-lg font-black shadow-lg transition-transform active:scale-95"
       >
         {state === 'idle' && 'SOS'}
+        {state === 'arming' && 'Hold'}
         {state === 'sending' && (
           <span className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
         )}
         {(state === 'sent' || state === 'queued') && '\u2713'}
         {state === 'failed' && '!'}
       </button>
+      {state === 'arming' ? <p className="whitespace-nowrap rounded-md border border-danger-border bg-danger-bg px-2 py-1 text-xs font-bold text-danger-text" role="status">Hold to send SOS</p> : null}
+      <p className="max-w-64 text-center text-[10px] font-semibold text-text-secondary" aria-live="polite">{gpsStatus}</p>
       {state === 'sent' && (
         <div
           role="status"

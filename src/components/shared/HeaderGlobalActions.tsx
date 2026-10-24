@@ -14,6 +14,9 @@ type HeaderGlobalActionsProps = {
   extraAction?: ReactNode
   profileButtonRef?: Ref<HTMLButtonElement>
   guardMode?: boolean
+  commandPaletteTrigger?: ReactNode
+  tacticalAlertActive?: boolean
+  onNavigateToTacticalAlert?: () => void
 }
 
 const HeaderGlobalActions: FC<HeaderGlobalActionsProps> = ({
@@ -25,6 +28,9 @@ const HeaderGlobalActions: FC<HeaderGlobalActionsProps> = ({
   extraAction,
   profileButtonRef,
   guardMode,
+  commandPaletteTrigger,
+  tacticalAlertActive = false,
+  onNavigateToTacticalAlert,
 }) => {
   const { rootRef, toggleOverlay, closeOverlay, isOverlayOpen } = useOverlayController<'inbox' | 'profile'>()
 
@@ -32,6 +38,16 @@ const HeaderGlobalActions: FC<HeaderGlobalActionsProps> = ({
     <div ref={rootRef} className="relative flex shrink-0 items-center gap-1.5 md:gap-2">
       {!guardMode ? <ThemeToggleButton className="flex" /> : null}
       {!guardMode ? extraAction : null}
+      {!guardMode ? commandPaletteTrigger : null}
+      {tacticalAlertActive ? (
+        <button
+          type="button"
+          onClick={onNavigateToTacticalAlert}
+          className="hidden min-h-9 items-center rounded-full border border-danger-border bg-danger-bg px-2 text-[10px] font-bold tracking-wide text-danger-text ring-2 ring-danger/60 animate-pulse md:inline-flex"
+        >
+          TACTICAL ALERT
+        </button>
+      ) : null}
 
       <NotificationPanel
         user={user}

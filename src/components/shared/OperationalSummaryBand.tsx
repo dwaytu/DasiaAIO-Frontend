@@ -15,32 +15,34 @@ interface OperationalSummaryBandProps {
   items: OperationalSummaryItem[]
 }
 
-const toneStyles: Record<SummaryTone, { accent: string; value: string; icon: string }> = {
-  neutral: { accent: 'border-border-subtle', value: 'text-text-primary', icon: 'bg-surface-elevated text-text-secondary' },
-  success: { accent: 'border-success-border', value: 'text-success-text', icon: 'bg-success-bg text-success-text' },
-  info: { accent: 'border-info-border', value: 'text-info-text', icon: 'bg-info-bg text-info-text' },
-  warning: { accent: 'border-warning-border', value: 'text-warning-text', icon: 'bg-warning-bg text-warning-text' },
-  danger: { accent: 'border-danger-border', value: 'text-danger-text', icon: 'bg-danger-bg text-danger-text' },
+const toneStyles: Record<SummaryTone, { icon: string }> = {
+  neutral: { icon: 'bg-surface-elevated text-text-secondary' },
+  success: { icon: 'bg-success-bg text-success-text' },
+  info: { icon: 'bg-info-bg text-info-text' },
+  warning: { icon: 'bg-warning-bg text-warning-text' },
+  danger: { icon: 'bg-danger-bg text-danger-text' },
 }
 
 const OperationalSummaryBand: FC<OperationalSummaryBandProps> = ({ items }) => {
   return (
-    <section className="grid border-y border-border-subtle sm:grid-cols-2 xl:grid-cols-[repeat(auto-fit,minmax(10rem,1fr))]" aria-label="Operational summary">
-      {items.map((item, index) => {
+    <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Operational summary">
+      {items.map((item) => {
         const style = toneStyles[item.tone || 'neutral']
         const Icon = item.icon
 
         return (
-          <div key={item.label} className={`flex min-w-0 items-center gap-3 border-l-4 ${style.accent} px-3 py-3 ${index > 0 ? 'border-t border-border-subtle' : ''} ${index < 2 ? 'sm:border-t-0' : 'sm:border-t'} xl:border-t-0`}>
-            {Icon ? (
-              <span className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md ${style.icon}`}>
-                <Icon className="h-4 w-4" aria-hidden="true" />
-              </span>
-            ) : null}
-            <div className="min-w-0">
-              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-text-tertiary">{item.label}</p>
-              <p className={`mt-0.5 text-xl font-black ${style.value}`}>{item.value}</p>
-              {item.detail ? <p className="text-xs text-text-secondary">{item.detail}</p> : null}
+          <div key={item.label} className="rounded-lg border border-border-subtle bg-surface p-4 shadow-sm transition-all hover:shadow-md">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">{item.label}</p>
+                <p className="mt-2 text-2xl font-bold tracking-tight text-text-primary">{item.value}</p>
+                {item.detail ? <p className="mt-1 text-xs text-text-secondary">{item.detail}</p> : null}
+              </div>
+              {Icon ? (
+                <span className={`inline-flex shrink-0 rounded-md p-2 ${style.icon}`}>
+                  <Icon className="h-4 w-4" aria-hidden="true" />
+                </span>
+              ) : null}
             </div>
           </div>
         )

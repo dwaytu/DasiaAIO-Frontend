@@ -58,8 +58,9 @@ const QuickActionsPanel: FC<QuickActionsPanelProps> = ({ actions }) => {
             key={action.label}
             onClick={action.onClick}
             disabled={action.disabled}
-            className={`group flex min-h-[3rem] items-center gap-3 rounded-lg border px-3 py-2.5 text-left text-xs font-bold uppercase tracking-wide transition-all duration-200 ${style.base} ${style.hover} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-text focus-visible:ring-offset-1 focus-visible:ring-offset-surface active:scale-[0.97] disabled:pointer-events-none disabled:opacity-40`}
+            className={`group flex min-h-[3rem] items-center gap-3 rounded-md border px-3 py-2.5 text-left text-sm font-semibold transition-all duration-200 ${style.base} ${style.hover} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-text focus-visible:ring-offset-1 focus-visible:ring-offset-surface active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40`}
             aria-label={action.label}
+            title={action.label}
           >
             <span className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border transition-colors duration-200 ${style.icon}`}>
               <Icon className="h-4 w-4" aria-hidden="true" />

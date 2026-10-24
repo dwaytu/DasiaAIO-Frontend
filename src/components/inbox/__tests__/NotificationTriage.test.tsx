@@ -42,8 +42,11 @@ describe('NotificationTriage', () => {
     const user = userEvent.setup()
     render(<NotificationTriage items={items} emptyMessage="No notifications require attention." />)
 
+    expect(screen.getByText('2 items in the current view')).toBeInTheDocument()
+
     await user.click(screen.getByRole('button', { name: 'Compliance' }))
 
+    expect(screen.getByText('1 item in the current view')).toBeInTheDocument()
     expect(screen.getAllByText('Guard license expired: Sam Guard (LIC-77)')).toHaveLength(2)
     expect(screen.getByText('Expired Apr 27, 2026')).toBeInTheDocument()
 

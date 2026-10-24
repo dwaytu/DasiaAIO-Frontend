@@ -19,7 +19,7 @@ const OperationalPageHeader: FC<OperationalPageHeaderProps> = ({
   status,
 }) => {
   return (
-    <header className="border-b border-border-subtle pb-4">
+    <header className="animate-section-enter border-b border-border-subtle pb-4">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex min-w-0 flex-col items-start gap-3 sm:flex-row">
           {Icon ? (
@@ -34,7 +34,7 @@ const OperationalPageHeader: FC<OperationalPageHeaderProps> = ({
             {status ? <div className="mt-3 flex flex-wrap items-center gap-2">{status}</div> : null}
           </div>
         </div>
-        {actions ? <div className="flex flex-wrap items-center gap-2 lg:justify-end">{actions}</div> : null}
+        {actions ? <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto lg:justify-end" aria-label={`${title} actions`}>{actions}</div> : null}
       </div>
     </header>
   )

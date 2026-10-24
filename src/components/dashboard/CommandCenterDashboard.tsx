@@ -279,6 +279,14 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions,
     return combined.slice(0, 25)
   }, [alerts, displayIncidents, displayShifts])
 
+  useEffect(() => {
+    const active = Boolean(sosIncident) || incidentAlerts.some((incident) => incident.severity === 'critical' || incident.isPanic)
+    window.dispatchEvent(new CustomEvent('sentinel:tactical-alert', { detail: { active } }))
+    return () => {
+      window.dispatchEvent(new CustomEvent('sentinel:tactical-alert', { detail: { active: false } }))
+    }
+  }, [incidentAlerts, sosIncident])
+
   const attentionItems = useMemo<AttentionItem[]>(() => {
     const items: AttentionItem[] = []
     const navigateTo = (view: string) => (onNavigate ? () => onNavigate(view) : undefined)
@@ -416,6 +424,7 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions,
             value={systemStatus}
             tone="analytics"
             hint={staleNote}
+            trendData={[96, 98, 97, 99, 98, 99, 100]}
             meter={{
               value: onlineServices,
               max: totalServices,
@@ -427,12 +436,14 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions,
             value={threatLevel}
             tone={threatLevel === 'High' ? 'maintenance' : threatLevel === 'Medium' ? 'vehicle' : 'guard'}
             hint={`${formatCompactNumber(alerts.length)} active alerts`}
+            trendData={[2, 3, 2, 4, 3, 2, alerts.length]}
           />
           <MetricStatCard
             label="Incidents"
             value={formatCompactNumber(activeIncidents)}
             tone="mission"
             hint="Open or active incident threads"
+            trendData={[2, 4, 3, 5, 4, 3, activeIncidents]}
             meter={{
               value: activeIncidents,
               max: Math.max(summary.activeGuardsOnDuty, 1),

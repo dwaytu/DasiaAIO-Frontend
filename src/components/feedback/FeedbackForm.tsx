@@ -154,7 +154,7 @@ const FeedbackForm: FC<FeedbackFormProps> = ({ user, onLogout, onViewChange, act
       : 'Your account already submitted feedback. Thank you for helping improve SENTINEL.'
 
     return (
-      <section className="command-panel max-w-3xl p-4 md:p-5" aria-live="polite">
+      <section className="command-panel soc-panel-pad max-w-3xl" aria-live="polite">
         <div className="flex items-start gap-3">
           <div className="mt-0.5 rounded-full border border-success-border bg-success-bg p-2 text-success-text" aria-hidden="true">
             <CheckCircle2 className="h-5 w-5" />
@@ -187,7 +187,7 @@ const FeedbackForm: FC<FeedbackFormProps> = ({ user, onLogout, onViewChange, act
       onLogoClick={() => onViewChange?.(homeView)}
     >
       <section className="mx-auto flex w-full max-w-3xl flex-col gap-4">
-        <header className="command-panel p-4 md:p-5">
+        <header className="command-panel soc-panel-pad">
           <div className="flex items-start gap-3">
             <div className="rounded-full border border-border-subtle bg-surface-elevated p-2 text-text-secondary" aria-hidden="true">
               <MessageSquareText className="h-5 w-5" />
@@ -202,7 +202,7 @@ const FeedbackForm: FC<FeedbackFormProps> = ({ user, onLogout, onViewChange, act
         </header>
 
         {statusLoading ? (
-          <section className="command-panel p-4 md:p-5" aria-live="polite">
+          <section className="command-panel soc-panel-pad" aria-live="polite">
             <div className="flex items-center gap-2 text-sm text-text-secondary">
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
               Checking whether feedback was already submitted...

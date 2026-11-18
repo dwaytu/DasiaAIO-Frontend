@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import DtrReport from '../DtrReport'
+import DtrReport, { getDtrReportingPeriod } from '../DtrReport'
 
 jest.mock('../../config', () => ({
   API_BASE_URL: 'http://localhost:5000',
@@ -56,11 +56,21 @@ describe('DtrReport printing', () => {
     const table = await screen.findByRole('table')
     expect(table).toHaveClass('dtr-print-table')
     expect(document.querySelector('.dtr-print-report')).toBeInTheDocument()
-    expect(document.querySelector('.dtr-print-heading')).toHaveTextContent('Daily Time Record')
+    expect(document.querySelector('.dtr-print-heading')).toHaveTextContent('DAVAO SECURITY & INVESTIGATION AGENCY (DSIA)')
+    expect(document.querySelector('.dtr-print-heading')).toHaveTextContent('DAILY TIME RECORD & ATTENDANCE VERIFICATION ROSTER')
+    expect(document.querySelector('.dtr-print-heading')).not.toHaveTextContent('Certified Accurate')
+    expect(document.querySelector('.dtr-print-signatures')).toHaveTextContent('Prepared by')
+    expect(document.querySelector('.dtr-print-signatures')).toHaveTextContent('Reviewed by')
+    expect(document.querySelector('.dtr-print-signatures')).toHaveTextContent('Signature / Date')
     expect(screen.getByText('guard-1')).toHaveClass('dtr-print-guard-id')
 
-    await user.click(screen.getByRole('button', { name: 'Print' }))
+    await user.click(screen.getByRole('button', { name: 'Print Official Timesheet' }))
 
     await waitFor(() => expect(printSpy).toHaveBeenCalledTimes(1))
+  })
+
+  it('keeps the reporting period distinct from record pagination', () => {
+    expect(getDtrReportingPeriod({ from: '2026-09-01', to: '2026-09-30' }, [])).toMatch(/Sep.*2026.*to.*Sep.*2026/i)
+    expect(getDtrReportingPeriod({ from: '', to: '' }, [{ scheduledStart: '2026-09-17T02:45:00.000Z' } as any])).toMatch(/Sep.*17.*2026/i)
   })
 })

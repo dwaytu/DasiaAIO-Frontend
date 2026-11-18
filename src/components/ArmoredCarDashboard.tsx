@@ -626,7 +626,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
           {activeTab === 'allocation' && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-8">
               {/* Allocate Vehicle Form */}
-              <div className="command-panel p-4 md:p-6">
+              <div className="command-panel soc-panel-pad">
                 <h2 className="text-lg md:text-xl font-bold text-text-primary mb-4 md:mb-6 pb-3 border-b border-border">Allocate Vehicle</h2>
                 <form onSubmit={issueAllocation} className="space-y-3 md:space-y-4">
                   <div>
@@ -741,7 +741,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
           {activeTab === 'maintenance' && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-8">
               {/* Schedule Maintenance Form */}
-              <div className="command-panel p-4 md:p-6">
+              <div className="command-panel soc-panel-pad">
                 <h2 className="text-lg md:text-xl font-bold text-text-primary mb-4 md:mb-6 pb-3 border-b border-border">Schedule Maintenance</h2>
                 <form onSubmit={scheduleMaintenance} className="space-y-3 md:space-y-4">
                   <div>

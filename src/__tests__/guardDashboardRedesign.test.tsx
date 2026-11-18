@@ -141,6 +141,7 @@ describe('guard dashboard redesign tranche', () => {
   })
 
   beforeEach(() => {
+    localStorage.clear()
     localStorage.setItem('sentinel-theme', 'dark')
     mockFetchJsonOrThrow.mockImplementation(defaultApiMock)
 
@@ -180,6 +181,23 @@ describe('guard dashboard redesign tranche', () => {
     expect(screen.queryByRole('button', { name: /^check in$/i })).not.toBeInTheDocument()
     expect(screen.getByText('Tracking details')).toBeInTheDocument()
     expect(within(screen.getByRole('navigation', { name: /emergency contacts/i })).getAllByRole('link')).toHaveLength(4)
+  })
+
+  it('provides an optional local-first quick guide without hiding SOS access', async () => {
+    const user = userEvent.setup()
+    renderGuardDashboard('mission')
+
+    expect(await screen.findByRole('heading', { name: /check in starts a routine shift/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /emergency sos/i })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Next' }))
+    expect(screen.getByText(/step 2 of 5/i)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Skip guide' }))
+    expect(screen.queryByRole('heading', { name: /use inbox for operational updates/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Open quick guide' })).toHaveFocus()
+
+    await user.click(screen.getByRole('button', { name: 'Open quick guide' }))
+    await user.keyboard('{Escape}')
+    expect(screen.getByRole('button', { name: 'Open quick guide' })).toHaveFocus()
   })
 
   it('renders resources in a summary-first hierarchy', () => {
@@ -407,5 +425,38 @@ describe('guard dashboard redesign tranche', () => {
     await waitFor(() => {
       expect(screen.queryByRole('dialog', { name: /guard profile settings/i })).not.toBeInTheDocument()
     })
+  })
+
+  it('keeps incident reporting finger-friendly, focus-contained, and safely dismissible', async () => {
+    const user = userEvent.setup()
+    renderGuardDashboard('mission')
+
+    const trigger = (await screen.findAllByRole('button', { name: /report incident/i }))[0]
+    await user.click(trigger)
+
+    const dialog = screen.getByRole('dialog', { name: /report incident/i })
+    expect(dialog).toHaveClass('rounded-t-xl', 'sm:rounded-xl', 'overflow-y-auto')
+    const highPriority = screen.getByRole('button', { name: 'high' })
+    expect(highPriority).toHaveAttribute('aria-pressed', 'true')
+    expect(highPriority).toHaveClass('min-h-11')
+    await user.click(screen.getByRole('button', { name: 'low' }))
+    expect(screen.getByRole('button', { name: 'low' })).toHaveAttribute('aria-pressed', 'true')
+
+    await user.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: /report incident/i })).not.toBeInTheDocument())
+    expect(document.activeElement).toBe(trigger)
+  })
+
+  it('vibrates only after an incident report is accepted', async () => {
+    const user = userEvent.setup()
+    const vibrate = jest.fn()
+    Object.defineProperty(navigator, 'vibrate', { configurable: true, value: vibrate })
+    renderGuardDashboard('mission')
+
+    await user.click((await screen.findAllByRole('button', { name: /report incident/i }))[0])
+    await user.type(screen.getByRole('textbox', { name: /what happened/i }), 'A suspicious person is attempting to enter the assigned post.')
+    await user.click(screen.getByRole('button', { name: 'Submit Report' }))
+
+    await waitFor(() => expect(vibrate).toHaveBeenCalledWith(40))
   })
 })

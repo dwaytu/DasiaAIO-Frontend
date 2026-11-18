@@ -30,6 +30,7 @@ const MdrImportPage: FC<MdrImportPageProps> = ({ user, onLogout, onViewChange, a
   const [isExporting, setIsExporting] = useState(false)
   const [isClearing, setIsClearing] = useState(false)
   const [showClearModal, setShowClearModal] = useState(false)
+  const [clearConfirmation, setClearConfirmation] = useState('')
   const [actionMessage, setActionMessage] = useState('')
   const [actionError, setActionError] = useState('')
 
@@ -97,6 +98,7 @@ const MdrImportPage: FC<MdrImportPageProps> = ({ user, onLogout, onViewChange, a
       )
 
       setShowClearModal(false)
+      setClearConfirmation('')
       setActionMessage(
         `MDR resources cleared: ${response.deleted.guards} guards, ${response.deleted.firearms} firearms, and ${response.deleted.vehicles} vehicles deleted.`,
       )
@@ -111,7 +113,7 @@ const MdrImportPage: FC<MdrImportPageProps> = ({ user, onLogout, onViewChange, a
   return (
     <OperationalShell
       user={user}
-      title="MDR IMPORT"
+      title="Import Agency Records"
       badgeLabel="MDR"
       navItems={getSidebarNav(user.role)}
       activeView={resolvedActiveView}
@@ -129,10 +131,15 @@ const MdrImportPage: FC<MdrImportPageProps> = ({ user, onLogout, onViewChange, a
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="space-y-1">
                   <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Master Data Register</p>
-                  <h2 className="text-xl font-semibold text-text-primary">MDR Resource Workspace</h2>
+                  <h2 className="text-xl font-semibold text-text-primary">Import agency records (MDR)</h2>
                   <p className="max-w-2xl text-sm text-text-secondary">
-                    Import a supported workbook, validate its rows, review the staged result, then commit current guard, firearm, and vehicle records.
+                    Upload a supported workbook, check its rows, review the staged result, then save valid guard, firearm, and vehicle records.
                   </p>
+                  <ol className="mt-3 flex flex-wrap gap-2 text-xs font-semibold text-text-secondary" aria-label="Import steps">
+                    <li className="rounded border border-border-subtle bg-surface px-2 py-1">1. Select file</li>
+                    <li className="rounded border border-border-subtle bg-surface px-2 py-1">2. Review changes</li>
+                    <li className="rounded border border-border-subtle bg-surface px-2 py-1">3. Import records</li>
+                  </ol>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <button
@@ -143,25 +150,30 @@ const MdrImportPage: FC<MdrImportPageProps> = ({ user, onLogout, onViewChange, a
                     title="Export current MDR resource data as CSV"
                   >
                     {isExporting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Download className="h-4 w-4" aria-hidden="true" />}
-                    {isExporting ? 'Exporting...' : 'Export Current Data'}
-                  </button>
-                  <button
-                    type="button"
-                    className="soc-btn soc-btn-danger inline-flex min-h-11 items-center gap-2"
-                    onClick={() => {
-                      setActionMessage('')
-                      setActionError('')
-                      setShowClearModal(true)
-                    }}
-                    disabled={isExporting || isClearing}
-                    title="Delete all guard, firearm, and vehicle records"
-                  >
-                    <Trash2 className="h-4 w-4" aria-hidden="true" />
-                    Delete All Resources
+                    {isExporting ? 'Exporting...' : 'Export current records'}
                   </button>
                 </div>
               </div>
             </section>
+
+            <details className="rounded border border-danger-border bg-danger-bg/30 p-4">
+              <summary className="cursor-pointer text-sm font-semibold text-danger-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus">Danger zone</summary>
+              <p className="mt-2 max-w-2xl text-sm text-text-secondary">Delete all imported guard accounts, firearms, and armored vehicle records only when you have confirmed the exact impact and have exported any required records.</p>
+              <button
+                type="button"
+                className="soc-btn soc-btn-danger mt-3 inline-flex min-h-11 items-center gap-2"
+                onClick={() => {
+                  setActionMessage('')
+                  setActionError('')
+                  setClearConfirmation('')
+                  setShowClearModal(true)
+                }}
+                disabled={isExporting || isClearing}
+              >
+                <Trash2 className="h-4 w-4" aria-hidden="true" />
+                Delete imported resource records
+              </button>
+            </details>
 
             {actionError ? (
               <div className="flex items-start gap-2 rounded border border-danger bg-danger/10 p-3 text-sm text-danger" role="alert">
@@ -231,7 +243,7 @@ const MdrImportPage: FC<MdrImportPageProps> = ({ user, onLogout, onViewChange, a
           </>
         ) : (
           <section className="rounded border border-warning bg-warning/10 p-4 text-sm text-warning">
-            MDR import workspace is available for admin and superadmin roles.
+            Import agency records is available for admin and superadmin roles.
           </section>
         )}
       </div>
@@ -252,12 +264,22 @@ const MdrImportPage: FC<MdrImportPageProps> = ({ user, onLogout, onViewChange, a
               This will delete every guard account, firearm, and armored vehicle record. Admin, superadmin, supervisor, client, MDR batch history, and audit records will remain.
             </p>
           </div>
+          <label className="block text-sm font-semibold text-text-primary" htmlFor="mdr-clear-confirmation">
+            Type <span className="font-mono">DELETE MDR RESOURCES</span> to confirm
+            <input
+              id="mdr-clear-confirmation"
+              value={clearConfirmation}
+              onChange={(event) => setClearConfirmation(event.target.value)}
+              className="soc-input mt-2 w-full"
+              autoComplete="off"
+            />
+          </label>
           <div className="flex flex-wrap justify-end gap-2">
             <button
               type="button"
               className="soc-btn soc-btn-neutral"
               onClick={() => setShowClearModal(false)}
-              disabled={isClearing}
+              disabled={isClearing || clearConfirmation !== 'DELETE MDR RESOURCES'}
             >
               Cancel
             </button>

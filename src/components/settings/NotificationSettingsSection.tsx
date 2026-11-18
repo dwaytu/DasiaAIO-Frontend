@@ -6,6 +6,11 @@ import {
   unsubscribeFromPush,
 } from '../../utils/pushNotifications'
 import StatusSwitch from './StatusSwitch'
+import {
+  isEmergencyAudioBeaconEnabled,
+  playTacticalSosChime,
+  setEmergencyAudioBeaconEnabled,
+} from '../../utils/tacticalAudio'
 
 type NotificationSettingsSectionProps = {
   userId: string
@@ -16,6 +21,8 @@ export const NotificationSettingsSection: FC<NotificationSettingsSectionProps> =
   const [enabled, setEnabled] = useState(false)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
+  const [audioBeaconEnabled, setAudioBeaconEnabled] = useState(isEmergencyAudioBeaconEnabled)
+  const [testingAudio, setTestingAudio] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -68,8 +75,24 @@ export const NotificationSettingsSection: FC<NotificationSettingsSectionProps> =
     }
   }
 
+  const toggleAudioBeacon = () => {
+    const next = !audioBeaconEnabled
+    setEmergencyAudioBeaconEnabled(next)
+    setAudioBeaconEnabled(next)
+    setMessage(next ? 'Emergency audio beacon is on for this device.' : 'Emergency audio beacon is off for this device.')
+  }
+
+  const testAudioBeacon = async () => {
+    if (!audioBeaconEnabled || testingAudio) return
+    setTestingAudio(true)
+    setMessage('')
+    const played = await playTacticalSosChime().completed
+    setMessage(played ? 'Test alert chime played on this device.' : 'This browser blocked or does not support the test alert chime.')
+    setTestingAudio(false)
+  }
+
   return (
-    <section className="command-panel p-4 md:p-6" aria-labelledby="notifications-settings-title">
+    <section className="command-panel soc-panel-pad" aria-labelledby="notifications-settings-title">
       <h2 id="notifications-settings-title" className="text-xl font-bold text-text-primary md:text-2xl">
         Notifications
       </h2>
@@ -91,6 +114,18 @@ export const NotificationSettingsSection: FC<NotificationSettingsSectionProps> =
           label="Device push notifications"
           onToggle={() => void togglePush()}
         />
+      </div>
+      <div className="mt-3 flex flex-col gap-3 rounded border border-border bg-surface p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <p className="font-semibold text-text-primary">Emergency Audio Beacon</p>
+          <p className="mt-1 text-sm leading-5 text-text-secondary">Play a subtle synthetic chime when this device receives a new critical SOS alert. This preference is stored on this device only.</p>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <button type="button" onClick={() => void testAudioBeacon()} disabled={!audioBeaconEnabled || testingAudio} className="soc-btn soc-btn-secondary min-h-11 px-3 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-50">
+            {testingAudio ? 'Testing...' : 'Test Alert Chime'}
+          </button>
+          <StatusSwitch checked={audioBeaconEnabled} label="Emergency Audio Beacon" onToggle={toggleAudioBeacon} />
+        </div>
       </div>
       {message ? <p className="mt-3 text-sm text-text-secondary" role="status">{message}</p> : null}
     </section>

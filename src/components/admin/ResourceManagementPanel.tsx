@@ -221,6 +221,8 @@ const GuardsTab: FC<{
   const [createSuccess, setCreateSuccess] = useState('')
   const [editUser, setEditUser] = useState<any>(null)
   const [passwordUser, setPasswordUser] = useState<any>(null)
+  const [selectedGuard, setSelectedGuard] = useState<any>(null)
+  const [guardPendingRemoval, setGuardPendingRemoval] = useState<any>(null)
   const [newUser, setNewUser] = useState<UserCreationFormState>({
     fullName: '',
     username: '',
@@ -478,7 +480,7 @@ const GuardsTab: FC<{
               className="soc-btn soc-btn-primary"
             >
               <Plus size={16} aria-hidden="true" />
-              Create guard account
+              Add guard
             </button>
           )}
           {nonGuardCreatableRoles.length > 0 && (
@@ -488,7 +490,7 @@ const GuardsTab: FC<{
               className="soc-btn soc-btn-neutral"
             >
               <Plus size={16} aria-hidden="true" />
-              Add account
+              Add staff account
             </button>
           )}
         </div>
@@ -509,7 +511,7 @@ const GuardsTab: FC<{
               type="search"
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="Guard ID, name, email, phone, or license"
+              placeholder="Search by name, Guard ID, phone, email, or license"
               className="soc-input min-h-11 flex-1"
             />
             <button type="submit" className="soc-btn soc-btn-primary min-h-11">
@@ -587,38 +589,9 @@ const GuardsTab: FC<{
                     </td>
                     {(canManageGuardAccounts || canManageGuardPassword || canDeleteGuardAccounts) && (
                       <td className="px-4 py-4 align-middle text-right">
-                        <div className="flex justify-end gap-2">
-                          {canManageGuardPassword && (
-                            <button
-                              type="button"
-                              onClick={() => setPasswordUser(g)}
-                              className="soc-btn soc-btn-neutral"
-                            >
-                              <KeyRound size={15} aria-hidden="true" />
-                              Password
-                            </button>
-                          )}
-                          {canManageGuardAccounts && (
-                          <button
-                            type="button"
-                            onClick={() => setEditUser(g)}
-                            className="soc-btn soc-btn-neutral"
-                          >
-                            <Pencil size={15} aria-hidden="true" />
-                            Edit
-                          </button>
-                          )}
-                          {canDeleteGuardAccounts && (
-                          <button
-                            type="button"
-                            onClick={() => onDeleteUser(g.id, g.email)}
-                            className="soc-btn soc-btn-danger"
-                          >
-                            <Trash2 size={15} aria-hidden="true" />
-                            Remove
-                          </button>
-                          )}
-                        </div>
+                        <button type="button" onClick={() => setSelectedGuard(g)} className="soc-btn soc-btn-neutral min-h-11 px-3" aria-label={`View details for ${g.full_name || g.username}`}>
+                          View details
+                        </button>
                       </td>
                     )}
                   </tr>
@@ -905,6 +878,32 @@ const GuardsTab: FC<{
         onClose={() => setPasswordUser(null)}
         onSuccess={onUsersChanged}
       />
+      <SentinelModal
+        open={Boolean(selectedGuard)}
+        onClose={() => setSelectedGuard(null)}
+        title={selectedGuard ? `Guard details: ${selectedGuard.full_name || selectedGuard.username}` : 'Guard details'}
+        subtitle="Review the available account and license details before taking an action."
+        size="md"
+      >
+        {selectedGuard ? <div className="space-y-5">
+          <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+            {[
+              ['Guard number', selectedGuard.guard_code || selectedGuard.guard_number || 'Not provided'],
+              ['Email', selectedGuard.email || 'Not provided'],
+              ['Phone', selectedGuard.phone_number || 'Not provided'],
+              ['License', selectedGuard.license_number || 'Not provided'],
+              ['License expiry', selectedGuard.license_expiry_date ? new Date(selectedGuard.license_expiry_date).toLocaleDateString() : 'Not provided'],
+              ['Account status', selectedGuard.status || 'Not provided'],
+            ].map(([label, value]) => <div key={label} className="rounded border border-border-subtle bg-surface-elevated p-3"><dt className="text-xs font-semibold text-text-tertiary">{label}</dt><dd className="mt-1 break-words font-medium text-text-primary">{value}</dd></div>)}
+          </dl>
+          <div className="flex flex-wrap justify-end gap-2 border-t border-border-subtle pt-4">
+            {canManageGuardPassword ? <button type="button" className="soc-btn soc-btn-neutral min-h-11" onClick={() => { setPasswordUser(selectedGuard); setSelectedGuard(null) }}><KeyRound size={15} aria-hidden="true" />Reset password</button> : null}
+            {canManageGuardAccounts ? <button type="button" className="soc-btn soc-btn-neutral min-h-11" onClick={() => { setEditUser(selectedGuard); setSelectedGuard(null) }}><Pencil size={15} aria-hidden="true" />Edit details</button> : null}
+            {canDeleteGuardAccounts ? <button type="button" className="soc-btn soc-btn-danger min-h-11" onClick={() => setGuardPendingRemoval(selectedGuard)}><Trash2 size={15} aria-hidden="true" />Remove guard</button> : null}
+          </div>
+        </div> : null}
+      </SentinelModal>
+      <ConfirmationDialog open={Boolean(guardPendingRemoval)} onClose={() => setGuardPendingRemoval(null)} onConfirm={() => { if (guardPendingRemoval) onDeleteUser(guardPendingRemoval.id, guardPendingRemoval.email); setGuardPendingRemoval(null); setSelectedGuard(null) }} title="Remove guard account?" description={guardPendingRemoval ? `Remove ${guardPendingRemoval.full_name || guardPendingRemoval.username}${guardPendingRemoval.guard_code ? ` (Guard ID ${guardPendingRemoval.guard_code})` : ''}? This removes the account using the existing account-removal process.` : ''} confirmLabel="Remove guard" tone="danger" />
     </section>
   )
 }

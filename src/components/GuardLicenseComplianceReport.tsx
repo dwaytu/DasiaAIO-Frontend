@@ -161,7 +161,7 @@ const GuardLicenseComplianceReport: FC<Props> = ({ user, onLogout, onViewChange,
   return (
     <OperationalShell
       user={user}
-      title="GUARD LICENSE COMPLIANCE"
+      title="Guard Documents"
       navItems={getSidebarNav(user.role)}
       activeView={activeView || 'guard-compliance'}
       onNavigate={(view) => onViewChange?.(view)}
@@ -178,8 +178,8 @@ const GuardLicenseComplianceReport: FC<Props> = ({ user, onLogout, onViewChange,
           <section className="table-glass rounded p-4 md:p-6 print:hidden">
             <OperationalPageHeader
               eyebrow="Personnel governance"
-              title="Guard License Compliance"
-              description="Review guard licenses and identify expired or approaching expiry records."
+              title="Guard Documents"
+              description="Review guard license records and identify documents that are expired or nearing expiry."
               icon={ShieldCheck}
               actions={
                 <>
@@ -221,12 +221,12 @@ const GuardLicenseComplianceReport: FC<Props> = ({ user, onLogout, onViewChange,
             {report?.items.length ? (
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[900px] border-collapse text-sm">
-                  <thead className="sticky top-0 z-10 h-11 border-b border-border-subtle bg-surface-elevated/60 text-xs font-semibold uppercase tracking-wider text-text-tertiary backdrop-blur-xs"><tr>{['Guard', 'License number', 'Issued', 'Expiry', 'Compliance'].map((heading) => <th key={heading} className="px-4 py-3.5 text-left">{heading}</th>)}</tr></thead>
+                  <thead className="sticky top-0 z-10 h-11 border-b border-border-subtle bg-surface-elevated/60 text-xs font-semibold uppercase tracking-wider text-text-tertiary backdrop-blur-xs"><tr>{['Guard', 'License number', 'Issued', 'Expiry', 'Compliance'].map((heading) => <th key={heading} scope="col" className="px-4 py-3.5 text-left">{heading}</th>)}</tr></thead>
                   <tbody>{report.items.map((item) => <tr key={item.guardId} className="border-b border-border-subtle/80 transition-colors hover:bg-surface-hover/50">
-                    <td className="px-3 py-3"><p className="font-semibold text-text-primary">{item.guardName}</p><p className="text-xs text-text-secondary">{item.guardNumber ? `Guard #${item.guardNumber}` : 'Guard number not provided'}</p></td>
-                    <td className="px-3 py-3 text-text-primary">{item.licenseNumber || 'Not provided'}</td>
-                    <td className="px-3 py-3 text-text-primary">{formatDate(item.licenseIssuedDate)}</td>
-                    <td className="px-3 py-3 text-text-primary">{item.licenseExpiryDate ? `${formatDate(item.licenseExpiryDate)} (${item.licenseDaysRemaining ?? 0}d)` : 'Not provided'}</td>
+                    <td className="px-4 py-3.5 align-middle text-sm text-text-primary"><p className="font-semibold text-text-primary">{item.guardName}</p><p className="text-xs text-text-secondary">{item.guardNumber ? `Guard #${item.guardNumber}` : 'Guard number not provided'}</p></td>
+                    <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{item.licenseNumber || 'Not provided'}</td>
+                    <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{formatDate(item.licenseIssuedDate)}</td>
+                    <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{item.licenseExpiryDate ? `${formatDate(item.licenseExpiryDate)} (${item.licenseDaysRemaining ?? 0}d)` : 'Not provided'}</td>
                     <td className="px-4 py-3.5 align-middle text-sm text-text-primary"><span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium ${statusClass(item.complianceStatus)}`}>{item.complianceStatus.replace('_', ' ')}</span></td>
                   </tr>)}</tbody>
                 </table>

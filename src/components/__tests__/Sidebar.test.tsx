@@ -67,17 +67,17 @@ describe('Sidebar navigation state', () => {
     const { rerender } = render(<Sidebar {...props} />)
 
     expect(screen.getByRole('button', { name: 'Analytics' })).toHaveAttribute('aria-current', 'page')
-    fireEvent.click(screen.getByRole('button', { name: 'Intelligence' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Reports & Insights' }))
 
     expect(document.getElementById('sidebar-group-intelligence')).toHaveClass('hidden')
     expect(screen.getByRole('button', { name: 'Analytics' })).toHaveAttribute('aria-current', 'page')
-    expect(screen.getByRole('button', { name: 'Intelligence' })).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.getByRole('button', { name: 'Reports & Insights' })).toHaveAttribute('aria-expanded', 'false')
 
     rerender(<Sidebar {...props} items={[...items]} />)
-    expect(screen.getByRole('button', { name: 'Intelligence' })).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.getByRole('button', { name: 'Reports & Insights' })).toHaveAttribute('aria-expanded', 'false')
     expect(document.getElementById('sidebar-group-intelligence')).toHaveClass('hidden')
 
-    fireEvent.click(screen.getByRole('button', { name: 'Intelligence' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Reports & Insights' }))
     expect(screen.getByRole('button', { name: 'Analytics' })).toHaveAttribute('aria-current', 'page')
     expect(document.getElementById('sidebar-group-intelligence')).not.toHaveClass('hidden')
 
@@ -94,7 +94,11 @@ describe('Sidebar navigation state', () => {
     expect(document.getElementById('sidebar-group-core')).toHaveClass('hidden')
   })
 
-  it.each(['Operations', 'Resources', 'System'])('allows %s to expand and collapse independently of the active route', (groupName) => {
+  it.each([
+    ['Operations', 'Operations'],
+    ['Resources', 'Resources'],
+    ['System', 'Administration'],
+  ])('allows %s to expand and collapse independently of the active route', (groupName, visibleName) => {
     render(
       <Sidebar
         items={items}
@@ -104,7 +108,7 @@ describe('Sidebar navigation state', () => {
       />,
     )
 
-    const heading = screen.getByRole('button', { name: groupName })
+    const heading = screen.getByRole('button', { name: visibleName })
     const groupItems = document.getElementById(`sidebar-group-${groupName.toLowerCase()}`)
 
     if (heading.getAttribute('aria-expanded') === 'false') {

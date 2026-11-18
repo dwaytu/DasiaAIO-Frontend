@@ -1,4 +1,5 @@
 import { ReactNode, useEffect, useId, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 
 type SentinelModalSize = 'sm' | 'md' | 'lg'
@@ -62,6 +63,9 @@ const SentinelModal = ({
     }
 
     const handleKeyDown = (event: KeyboardEvent) => {
+      const dialogs = document.querySelectorAll('.soc-modal-backdrop [role="dialog"]')
+      if (dialogs[dialogs.length - 1] !== panelRef.current) return
+
       if (dismissible && event.key === 'Escape') {
         onCloseRef.current()
         return
@@ -113,7 +117,7 @@ const SentinelModal = ({
     return null
   }
 
-  return (
+  return createPortal(
     <div className="soc-modal-backdrop" onClick={dismissible ? onClose : undefined}>
       <div
         ref={panelRef}
@@ -144,7 +148,8 @@ const SentinelModal = ({
         </div>
         <div className="overflow-y-auto px-6 py-5">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 

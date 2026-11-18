@@ -578,8 +578,8 @@ const MdrBatchReview: FC<MdrBatchReviewProps> = ({
           <div className="rounded border border-border bg-surface p-3 text-xs text-text-secondary">
             Uploaded by {batch.uploaded_by} on {formatDateTime(batch.created_at)}.
             {unresolvedCount > 0
-              ? ` ${unresolvedCount} unresolved rows require action before commit.`
-              : ' All rows are resolved for commit.'}
+              ? ` ${unresolvedCount} unresolved rows require action before records can be saved.`
+              : ' All rows are ready to save.'}
           </div>
 
           <div className="overflow-x-auto rounded border border-border bg-surface">
@@ -794,7 +794,7 @@ const MdrBatchReview: FC<MdrBatchReviewProps> = ({
                   }}
                   disabled={isCommitting || batch.status === 'committed'}
                 >
-                  {isCommitting ? 'Committing...' : 'Commit Batch'}
+                  {isCommitting ? 'Saving records...' : 'Save approved records'}
                 </button>
               ) : null}
 

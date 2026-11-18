@@ -7,7 +7,7 @@ interface OperationalMapPlaceholderProps {
 
 const OperationalMapPlaceholder: FC<OperationalMapPlaceholderProps> = ({ activeTrips, activeGuards }) => {
   return (
-    <section className="command-panel p-4 md:p-5" aria-label="Operational map">
+    <section className="command-panel soc-panel-pad" aria-label="Operational map">
       <div className="mb-4 border-b border-border-subtle pb-3">
         <h3 className="text-base font-bold uppercase tracking-wide text-text-primary">Operational Map</h3>
         <p className="text-xs uppercase tracking-[0.16em] text-text-tertiary">Animated tactical area monitor</p>

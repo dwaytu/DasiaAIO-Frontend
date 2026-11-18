@@ -19,6 +19,36 @@ function ModalHarness() {
 }
 
 describe('SentinelModal', () => {
+  it('closes only the topmost modal on Escape and restores focus to its trigger', async () => {
+    const user = userEvent.setup()
+    function NestedHarness() {
+      const [outer, setOuter] = useState(true)
+      const [inner, setInner] = useState(false)
+      return <>
+        <SentinelModal open={outer} onClose={() => setOuter(false)} title="Details">
+          <button onClick={() => setInner(true)}>Remove</button>
+        </SentinelModal>
+        <SentinelModal open={inner} onClose={() => setInner(false)} title="Confirm removal">
+          <button>Confirm</button>
+        </SentinelModal>
+      </>
+    }
+    render(<NestedHarness />)
+    const trigger = screen.getByRole('button', { name: 'Remove' })
+    await user.click(trigger)
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog', { name: 'Confirm removal' })).not.toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Details' })).toBeInTheDocument()
+    expect(trigger).toHaveFocus()
+  })
+  it('renders its backdrop outside the invoking layout stacking context', async () => {
+    const user = userEvent.setup()
+    const { container } = render(<div style={{ transform: 'translateY(0)', overflow: 'hidden' }}><ModalHarness /></div>)
+    await user.click(screen.getByRole('button', { name: 'Open modal' }))
+    const dialog = screen.getByRole('dialog', { name: 'Review item' })
+    expect(container).not.toContainElement(dialog)
+    expect(dialog.parentElement?.parentElement).toBe(document.body)
+  })
   it('moves focus into the dialog, traps tab focus, and restores the trigger focus', async () => {
     const user = userEvent.setup()
     render(<ModalHarness />)

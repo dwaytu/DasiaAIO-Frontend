@@ -9,6 +9,7 @@ import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
 import OperationalPageHeader from './shared/OperationalPageHeader'
 import OperationalSummaryBand from './shared/OperationalSummaryBand'
 import EmptyState from './shared/EmptyState'
+import GuardSearchSelect, { type GuardSearchOption } from './shared/GuardSearchSelect'
 
 interface Props {
   user: User
@@ -70,6 +71,26 @@ function formatHours(value?: number | null): string {
   return typeof value === 'number' && Number.isFinite(value) ? `${value.toFixed(2)} h` : '-'
 }
 
+function formatDate(value: string): string {
+  const parsed = new Date(`${value}T00:00:00`)
+  return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleDateString([], { dateStyle: 'medium' })
+}
+
+export function getDtrReportingPeriod(filters: Pick<DtrFilters, 'from' | 'to'>, items: DtrRecord[]): string {
+  if (filters.from && filters.to) return `${formatDate(filters.from)} to ${formatDate(filters.to)}`
+  if (filters.from) return `${formatDate(filters.from)} to present`
+  if (filters.to) return `Through ${formatDate(filters.to)}`
+
+  const dates = items
+    .map((item) => item.scheduledStart.slice(0, 10))
+    .filter(Boolean)
+    .sort()
+  if (dates.length === 0) return 'All recorded dates'
+  const first = dates[0]
+  const last = dates[dates.length - 1]
+  return first === last ? formatDate(first) : `${formatDate(first)} to ${formatDate(last)}`
+}
+
 function statusClass(status: string): string {
   switch (status) {
     case 'completed': return 'border-success-border bg-success-bg text-success-text'
@@ -119,6 +140,7 @@ const DtrReport: FC<Props> = ({ user, onLogout, onViewChange, activeView }) => {
   const [error, setError] = useState('')
   const [exportNotice, setExportNotice] = useState('')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [guards, setGuards] = useState<GuardSearchOption[]>([])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -140,6 +162,28 @@ const DtrReport: FC<Props> = ({ user, onLogout, onViewChange, activeView }) => {
     return () => controller.abort()
   }, [appliedFilters, page])
 
+  useEffect(() => {
+    const controller = new AbortController()
+    void fetchJsonOrThrow<any>(
+      `${API_BASE_URL}/api/users?page_size=200`,
+      { headers: getAuthHeaders(), signal: controller.signal },
+      'Failed to load guards',
+    ).then((data) => {
+      const users = Array.isArray(data) ? data : (data?.users ?? [])
+      setGuards(users
+        .filter((entry: any) => String(entry.role ?? '').toLowerCase() === 'guard')
+        .map((entry: any) => ({
+          id: String(entry.id),
+          fullName: entry.full_name ?? entry.fullName,
+          username: entry.username,
+          guardCode: entry.guard_code ?? entry.guardCode,
+        })))
+    }).catch(() => {
+      if (!controller.signal.aborted) setGuards([])
+    })
+    return () => controller.abort()
+  }, [])
+
   const totalPages = Math.max(1, Math.ceil(report.total / report.pageSize))
   const rangeLabel = useMemo(() => {
     if (report.total === 0) return 'No records'
@@ -147,6 +191,10 @@ const DtrReport: FC<Props> = ({ user, onLogout, onViewChange, activeView }) => {
     const end = Math.min(report.page * report.pageSize, report.total)
     return `${start}-${end} of ${report.total}`
   }, [report.page, report.pageSize, report.total])
+  const reportingPeriod = useMemo(
+    () => getDtrReportingPeriod(appliedFilters, report.items),
+    [appliedFilters, report.items],
+  )
 
   const submitFilters = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -166,7 +214,7 @@ const DtrReport: FC<Props> = ({ user, onLogout, onViewChange, activeView }) => {
   return (
     <OperationalShell
       user={user}
-      title="DTR REPORT"
+      title="Attendance & Time Records"
       navItems={navItems}
       activeView={activeView || 'dtr'}
       onNavigate={(view) => onViewChange?.(view)}
@@ -180,19 +228,14 @@ const DtrReport: FC<Props> = ({ user, onLogout, onViewChange, activeView }) => {
         <section className="soc-surface print:hidden mb-4 p-4 md:p-5">
           <OperationalPageHeader
             eyebrow="Attendance records"
-            title="Daily Time Record"
-            description="Review guard attendance, check-in/check-out records, and working hours for the selected period."
+            title="Attendance & Time Records (DTR)"
+            description="Review guard attendance, check-in/check-out records, and working hours for the selected reporting period."
             icon={FileText}
             status={<span className="soc-status-neutral">{rangeLabel}</span>}
             actions={(
-              <>
-              <button type="button" onClick={() => window.print()} className="soc-btn inline-flex min-h-10 items-center gap-2 px-3" title="Print official timesheet">
-                <Printer className="h-4 w-4" aria-hidden="true" /> Print Official Timesheet
-              </button>
               <button type="button" onClick={() => { downloadCsv(report.items); setExportNotice('Current report page exported as CSV.') }} disabled={report.items.length === 0} className="soc-btn inline-flex min-h-10 items-center gap-2 px-3 disabled:opacity-50" title="Export current page as CSV">
                 <Download className="h-4 w-4" aria-hidden="true" /> Export CSV
               </button>
-              </>
             )}
           />
 
@@ -200,7 +243,7 @@ const DtrReport: FC<Props> = ({ user, onLogout, onViewChange, activeView }) => {
             <OperationalSummaryBand
               items={[
                 { label: 'Matching records', value: report.total, detail: 'Across all result pages', tone: 'info', icon: FileText },
-                { label: 'Showing now', value: report.items.length, detail: rangeLabel, tone: 'neutral', icon: Filter },
+                { label: 'Showing now', value: report.items.length, detail: `Records ${rangeLabel}`, tone: 'neutral', icon: Filter },
               ]}
             />
           </div>
@@ -208,10 +251,13 @@ const DtrReport: FC<Props> = ({ user, onLogout, onViewChange, activeView }) => {
           <form onSubmit={submitFilters} className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-6">
             <p className="md:col-span-2 xl:col-span-6 text-xs font-bold uppercase tracking-[0.14em] text-text-tertiary">Filter records</p>
             <p className="md:col-span-2 xl:col-span-6 text-xs text-text-secondary">Leave a filter blank to include all records. Apply filters to update the displayed period.</p>
-            <label className="space-y-1 text-xs font-semibold text-text-secondary">
-              Guard ID
-              <input value={filters.guardId} onChange={(event) => setFilters({ ...filters, guardId: event.target.value })} className="soc-input w-full" placeholder="Optional guard ID" />
-            </label>
+            <GuardSearchSelect
+              id="dtr-guard"
+              label="Guard"
+              guards={guards}
+              value={filters.guardId}
+              onChange={(guardId) => setFilters({ ...filters, guardId })}
+            />
             <label className="space-y-1 text-xs font-semibold text-text-secondary">
               From
               <input type="date" value={filters.from} onChange={(event) => setFilters({ ...filters, from: event.target.value })} className="soc-input w-full" />
@@ -249,11 +295,17 @@ const DtrReport: FC<Props> = ({ user, onLogout, onViewChange, activeView }) => {
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h3 className="text-lg font-bold text-text-primary">DTR Entries</h3>
-                <p className="text-sm text-text-secondary">{rangeLabel}</p>
+                <p className="text-sm text-text-secondary">Reporting period: {reportingPeriod}</p>
+                <p className="mt-1 text-xs text-text-tertiary">Records {rangeLabel}</p>
               </div>
-              <button type="button" onClick={() => setAppliedFilters({ ...appliedFilters })} className="soc-btn inline-flex min-h-10 items-center gap-2 px-3" title="Refresh DTR report">
-                <RefreshCw className="h-4 w-4" aria-hidden="true" /> Refresh
-              </button>
+              <div className="flex flex-wrap items-center gap-2 print:hidden">
+                <button type="button" onClick={() => window.print()} className="soc-btn soc-btn-primary inline-flex min-h-10 items-center gap-2 px-3" title="Print official timesheet">
+                  <Printer className="h-4 w-4" aria-hidden="true" /> Print Official Timesheet
+                </button>
+                <button type="button" onClick={() => setAppliedFilters({ ...appliedFilters })} className="soc-btn inline-flex min-h-10 items-center gap-2 px-3" title="Refresh DTR report">
+                  <RefreshCw className="h-4 w-4" aria-hidden="true" /> Refresh
+                </button>
+              </div>
             </div>
 
             {error && <p role="alert" className="mb-3 rounded border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger-text">{error}</p>}
@@ -265,14 +317,14 @@ const DtrReport: FC<Props> = ({ user, onLogout, onViewChange, activeView }) => {
                 <div className="hidden dtr-print-heading">
                   <p className="soc-label">DAVAO SECURITY &amp; INVESTIGATION AGENCY (DSIA)</p>
                   <h2 className="soc-page-title">DAILY TIME RECORD &amp; ATTENDANCE VERIFICATION ROSTER</h2>
-                  <p className="mt-1 text-sm">Certified Accurate by Operations Command</p>
-                  <p className="mt-1 text-sm">Period: {rangeLabel}</p>
+                  <p className="mt-1 text-sm">Reporting period: {reportingPeriod}</p>
+                  <p className="mt-1 text-sm">Records shown: {rangeLabel}</p>
                 </div>
                 <div className="dtr-print-table-wrap overflow-x-auto">
                   <table className="dtr-print-table w-full min-w-[1100px] border-collapse text-left text-sm">
                     <thead className="sticky top-0 z-10 h-11 border-b border-border-subtle bg-surface-elevated/60 text-xs font-semibold uppercase tracking-wider text-text-tertiary backdrop-blur-xs">
                       <tr>
-                        <th className="px-4 py-3.5">Guard</th><th className="px-4 py-3.5">Site</th><th className="px-4 py-3.5">Scheduled</th><th className="px-4 py-3.5">Check in</th><th className="px-4 py-3.5">Check out</th><th className="px-4 py-3.5">Late</th><th className="px-4 py-3.5">Hours</th><th className="px-4 py-3.5">Status</th>
+                        <th scope="col" className="px-4 py-3.5">Guard</th><th scope="col" className="px-4 py-3.5">Site</th><th scope="col" className="px-4 py-3.5">Scheduled</th><th scope="col" className="px-4 py-3.5">Check in</th><th scope="col" className="px-4 py-3.5">Check out</th><th scope="col" className="px-4 py-3.5">Late</th><th scope="col" className="px-4 py-3.5">Hours</th><th scope="col" className="px-4 py-3.5">Status</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -292,9 +344,9 @@ const DtrReport: FC<Props> = ({ user, onLogout, onViewChange, activeView }) => {
                   </table>
                 </div>
                 <div className="dtr-print-signatures mt-12 hidden grid-cols-3 gap-10 text-center text-sm">
-                  <div className="border-t border-black pt-2">Prepared by (Supervisor)</div>
-                  <div className="border-t border-black pt-2">Verified by (Operations Manager)</div>
-                  <div className="border-t border-black pt-2">Client Acknowledgment</div>
+                  <div className="border-t border-black pt-2">Prepared by<br /><span className="text-xs">Signature / Date</span></div>
+                  <div className="border-t border-black pt-2">Reviewed by<br /><span className="text-xs">Signature / Date</span></div>
+                  <div className="border-t border-black pt-2">Received by<br /><span className="text-xs">Signature / Date</span></div>
                 </div>
               </div>
             )}

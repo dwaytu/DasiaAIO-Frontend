@@ -56,6 +56,26 @@ const EMPTY_FORM: CreateOperationalRequestPayload = {
 
 const PAGE_SIZE = 25
 
+const GUARD_REQUEST_TYPE_LABELS: Record<OperationalRequestType, string> = {
+  service: 'Hangyo og tabang',
+  deposit: 'Itugyan ang gamit',
+  return: 'Iuli ang gamit',
+  firearm_registration: 'Sugyot sa pagparehistro sa armas',
+}
+
+const SHIFT_DATE_TIME = new Intl.DateTimeFormat('en-PH', {
+  dateStyle: 'medium',
+  timeStyle: 'short',
+  timeZone: 'Asia/Manila',
+})
+
+function relatedShiftLabel(request: OperationalRequest): string {
+  const start = request.shiftStartTime ? Date.parse(request.shiftStartTime) : NaN
+  const end = request.shiftEndTime ? Date.parse(request.shiftEndTime) : NaN
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return 'Shift details unavailable'
+  return `${SHIFT_DATE_TIME.format(start)} – ${SHIFT_DATE_TIME.format(end)} (PH time)`
+}
+
 const STATUS_TONE: Record<OperationalRequestStatus, string> = {
   pending: 'border-warning-border bg-warning-bg text-warning-text',
   needs_correction: 'border-danger-border bg-danger-bg text-danger-text',
@@ -118,6 +138,7 @@ export default function OperationalRequestsPanel({ user }: OperationalRequestsPa
   )
   const needsResource = form.requestType === 'deposit' || form.requestType === 'return'
   const role = normalizeRole(user.role)
+  const guardForm = role === 'guard'
   const canCreateRequest = role === 'guard' || role === 'supervisor'
   const canReviewAllRequests = role === 'admin' || role === 'superadmin'
   const ownCorrection = canCreateRequest && selected?.status === 'needs_correction' && selected.requesterId === user.id
@@ -352,7 +373,7 @@ export default function OperationalRequestsPanel({ user }: OperationalRequestsPa
               className="soc-btn soc-btn-primary min-h-11"
             >
               {showForm ? <X className="h-4 w-4" aria-hidden="true" /> : <Plus className="h-4 w-4" aria-hidden="true" />}
-              {showForm ? 'Close' : 'New Request'}
+              {showForm ? (guardForm ? 'Sirad-i' : 'Close') : (guardForm ? 'Bag-ong hangyo' : 'New Request')}
             </button>
           ) : null}
           </>
@@ -363,39 +384,41 @@ export default function OperationalRequestsPanel({ user }: OperationalRequestsPa
       {notice ? <div role="status" className="rounded border border-success-border bg-success-bg p-3 text-sm text-success-text">{notice}</div> : null}
 
       {showForm ? (
-        <form onSubmit={composerIsCorrection ? submitResubmission : submitRequest} className="space-y-4 border-b border-border pb-5">
+        <form lang={guardForm ? 'ceb' : undefined} onSubmit={composerIsCorrection ? submitResubmission : submitRequest} className="space-y-4 border-b border-border pb-5">
           <div className="flex items-center gap-2 text-text-primary">
             <FilePenLine className="h-5 w-5" aria-hidden="true" />
-            <h3 className="font-semibold">{composerIsCorrection ? 'Correct and Resubmit' : 'Create Request'}</h3>
+            <h3 className="font-semibold">{guardForm
+              ? (composerIsCorrection ? 'Usba ang hangyo' : 'Paghimo og hangyo')
+              : (composerIsCorrection ? 'Correct and Resubmit' : 'Create Request')}</h3>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             <label className="text-sm font-medium text-text-secondary">
-              Request type
+              {guardForm ? 'Matang sa hangyo' : 'Request type'}
               <select
                 value={form.requestType}
                 disabled={composerIsCorrection}
                 onChange={(event) => updateForm('requestType', event.target.value as OperationalRequestType)}
                 className="mt-1 min-h-11 w-full rounded border border-border bg-background px-3 text-text-primary"
               >
-                {Object.entries(REQUEST_TYPE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                {Object.entries(guardForm ? GUARD_REQUEST_TYPE_LABELS : REQUEST_TYPE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
               </select>
             </label>
             <label className="text-sm font-medium text-text-secondary">
-              Priority
+              {guardForm ? 'Pagkadinalian' : 'Priority'}
               <select
                 value={form.priority}
                 onChange={(event) => updateForm('priority', event.target.value as OperationalRequestPriority)}
                 className="mt-1 min-h-11 w-full rounded border border-border bg-background px-3 text-text-primary"
               >
                 <option value="normal">Normal</option>
-                <option value="high">High</option>
-                <option value="urgent">Urgent</option>
+                <option value="high">{guardForm ? 'Importante' : 'High'}</option>
+                <option value="urgent">{guardForm ? 'Dinalian' : 'Urgent'}</option>
               </select>
             </label>
           </div>
           {needsResource ? (
             <label className="block text-sm font-medium text-text-secondary">
-              Assigned resource
+              {guardForm ? 'Gamit nga gihatag nimo' : 'Assigned resource'}
               <select
                 required
                 value={form.resourceId ?? ''}
@@ -407,29 +430,31 @@ export default function OperationalRequestsPanel({ user }: OperationalRequestsPa
                 }}
                 className="mt-1 min-h-11 w-full rounded border border-border bg-background px-3 text-text-primary"
               >
-                <option value="">Select an assigned resource</option>
+                <option value="">{guardForm ? 'Pilia ang gamit' : 'Select an assigned resource'}</option>
                 {resources.map((resource) => <option key={resource.id} value={resource.id}>{resourceLabel(resource)}</option>)}
               </select>
-              {resources.length === 0 ? <span className="mt-1 block text-xs text-warning-text">No active firearm or equipment assignments are available.</span> : null}
+              {resources.length === 0 ? <span className="mt-1 block text-xs text-warning-text">{guardForm ? 'Walay gamit nga naka-assign nimo.' : 'No active firearm or equipment assignments are available.'}</span> : null}
             </label>
           ) : null}
           <label className="block text-sm font-medium text-text-secondary">
-            Subject
+            {guardForm ? 'Hilisgutan' : 'Subject'}
             <input required maxLength={255} value={form.subject} onChange={(event) => updateForm('subject', event.target.value)} className="mt-1 min-h-11 w-full rounded border border-border bg-background px-3 text-text-primary" />
           </label>
           <label className="block text-sm font-medium text-text-secondary">
-            Reason and purpose
+            {guardForm ? 'Rason sa hangyo' : 'Reason and purpose'}
             <textarea required maxLength={2000} rows={3} value={form.reason} onChange={(event) => updateForm('reason', event.target.value)} className="mt-1 w-full rounded border border-border bg-background p-3 text-text-primary" />
           </label>
           <label className="block text-sm font-medium text-text-secondary">
-            {form.requestType === 'firearm_registration' ? 'Firearm identifying details' : 'Additional details'}
+            {form.requestType === 'firearm_registration'
+              ? (guardForm ? 'Detalye sa armas' : 'Firearm identifying details')
+              : (guardForm ? 'Dugang detalye' : 'Additional details')}
             <textarea required={form.requestType === 'firearm_registration'} maxLength={4000} rows={3} value={form.details ?? ''} onChange={(event) => updateForm('details', event.target.value)} className="mt-1 w-full rounded border border-border bg-background p-3 text-text-primary" />
           </label>
           <div className="flex justify-end gap-2">
-            <button type="button" onClick={resetComposer} className="soc-btn soc-btn-neutral min-h-11">Cancel</button>
+            <button type="button" onClick={resetComposer} className="soc-btn soc-btn-neutral min-h-11">{guardForm ? 'Kansela' : 'Cancel'}</button>
             <button type="submit" disabled={busy || (needsResource && !form.resourceId)} className="soc-btn soc-btn-primary min-h-11 disabled:opacity-50">
               {busy ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" /> : composerIsCorrection ? <RotateCcw className="h-4 w-4" aria-hidden="true" /> : <ClipboardCheck className="h-4 w-4" aria-hidden="true" />}
-              {composerIsCorrection ? 'Resubmit' : 'Submit for Review'}
+              {guardForm ? (composerIsCorrection ? 'Ipadala pag-usab' : 'Ipadala ang hangyo') : (composerIsCorrection ? 'Resubmit' : 'Submit for Review')}
             </button>
           </div>
         </form>
@@ -543,8 +568,8 @@ export default function OperationalRequestsPanel({ user }: OperationalRequestsPa
                 <div><dt className="text-xs font-semibold uppercase text-text-tertiary">Reason</dt><dd className="mt-1 whitespace-pre-wrap text-text-primary">{selected.reason}</dd></div>
                 {selected.details ? <div><dt className="text-xs font-semibold uppercase text-text-tertiary">Details</dt><dd className="mt-1 whitespace-pre-wrap text-text-primary">{selected.details}</dd></div> : null}
                 {selected.resourceId ? <div><dt className="text-xs font-semibold uppercase text-text-tertiary">Resource</dt><dd className="mt-1 break-all text-text-primary">{selected.resourceType?.replace('_', ' ')} · {selected.resourceId}</dd></div> : null}
-                {selected.clientSiteId ? <div><dt className="text-xs font-semibold uppercase text-text-tertiary">Client site</dt><dd className="mt-1 break-all text-text-primary">{selected.clientSiteId}</dd></div> : null}
-                {selected.shiftId ? <div><dt className="text-xs font-semibold uppercase text-text-tertiary">Related shift</dt><dd className="mt-1 break-all text-text-primary">{selected.shiftId}</dd></div> : null}
+                {selected.clientSiteId ? <div><dt className="text-xs font-semibold uppercase text-text-tertiary">Client site</dt><dd className="mt-1 break-words text-text-primary">{selected.clientSiteName?.trim() || 'Site details unavailable'}</dd></div> : null}
+                {selected.shiftId ? <div><dt className="text-xs font-semibold uppercase text-text-tertiary">Related shift</dt><dd className="mt-1 break-words text-text-primary">{relatedShiftLabel(selected)}</dd></div> : null}
                 {selected.decisionReason ? <div><dt className="text-xs font-semibold uppercase text-text-tertiary">Decision note</dt><dd className="mt-1 whitespace-pre-wrap text-text-primary">{selected.decisionReason}</dd></div> : null}
               </dl>
 

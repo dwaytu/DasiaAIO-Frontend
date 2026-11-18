@@ -1114,13 +1114,13 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
             <CommandCenterDashboard
               onNavigate={handleNavigate}
               quickActions={[
-                { label: 'Assign Shift', tone: 'indigo', onClick: () => handleNavigate('schedule') },
-                ...(canApproveGuards ? [{ label: 'Approve Guard', tone: 'emerald' as const, onClick: () => handleNavigate('approvals') }] : []),
-                { label: 'Allocate Firearm', tone: 'blue', onClick: () => onViewChange?.('allocation') },
-                { label: 'Assign Vehicle', tone: 'amber', onClick: () => onViewChange?.('armored-cars') },
-                { label: 'Start Trip', tone: 'indigo', onClick: () => handleNavigate('trips') },
-                { label: 'End Trip', tone: 'amber', onClick: () => handleNavigate('trips') },
-                { label: 'Create Mission', tone: 'blue', onClick: () => handleNavigate('missions') },
+                { label: 'Assign Shift', tone: 'primary', onClick: () => handleNavigate('schedule') },
+                ...(canApproveGuards ? [{ label: 'Approve Guard', tone: 'approval' as const, onClick: () => handleNavigate('approvals') }] : []),
+                { label: 'Allocate Firearm', tone: 'resource', onClick: () => onViewChange?.('allocation') },
+                { label: 'Assign Vehicle', tone: 'resource', onClick: () => onViewChange?.('armored-cars') },
+                { label: 'Start Trip', tone: 'primary', onClick: () => handleNavigate('trips') },
+                { label: 'End Trip', tone: 'caution', onClick: () => handleNavigate('trips') },
+                { label: 'Create Mission', tone: 'primary', onClick: () => handleNavigate('missions') },
               ]}
             />
 

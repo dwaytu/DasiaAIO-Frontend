@@ -362,12 +362,12 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
     <section className="flex-1 p-4 md:p-8 overflow-y-auto w-full animate-fade-in motion-reduce:animate-none space-y-4" aria-labelledby="audit-intel-title">
 
       {/* Hero: Summary Stats */}
-      <section className="command-panel" aria-label="Audit intelligence summary">
+      <section className="command-panel soc-panel-pad" aria-label="Audit intelligence summary">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between mb-4">
           <div>
-            <h2 id="audit-intel-title" className="soc-section-title">Audit Intelligence</h2>
+            <h2 id="audit-intel-title" className="soc-section-title">Activity History</h2>
             <p className="text-sm text-text-secondary max-w-3xl mt-1">
-              Track every system decision with anomaly detection, timeline replay, and operational story reconstruction.
+              Review recorded operational activity, who performed it, and whether it completed successfully.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -376,7 +376,7 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
               onClick={() => fetchLogs(filters).catch(() => undefined)}
               className="rounded border border-border bg-surface px-3 py-2 text-xs font-semibold text-text-primary hover:bg-surface-hover"
             >
-              Refresh Logs
+              Refresh activity
             </button>
             <button
               type="button"
@@ -536,7 +536,7 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
                 >
                   <option value="all">All sources</option>
                   <option value="runtime">Runtime</option>
-                  <option value="capstone_seed">Capstone seed</option>
+                  <option value="capstone_seed">Presentation records</option>
                 </select>
               </label>
 
@@ -604,7 +604,7 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
         {/* Left: Log Timeline */}
         <div className="table-glass self-start rounded p-4 flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <h3 className="soc-section-title">Realtime Timeline</h3>
+            <h3 className="soc-section-title">Activity</h3>
             <span className="text-xs text-text-tertiary">
               Page {currentPage} of {totalPages}
               {meta ? ` · ${meta.total} entries` : ''}
@@ -616,11 +616,11 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
             <table className="w-full min-w-[680px] text-xs">
               <thead className="thead-glass sticky top-0 z-10">
                 <tr className="border-b border-border-subtle text-text-tertiary">
-                  <th className="px-2 py-2 text-left" scope="col">Timestamp</th>
-                  <th className="px-2 py-2 text-left" scope="col">Actor</th>
-                  <th className="px-2 py-2 text-left" scope="col">Action</th>
-                  <th className="px-2 py-2 text-left" scope="col">Module</th>
-                  <th className="px-2 py-2 text-left" scope="col">Status</th>
+                  <th className="px-2 py-2 text-left" scope="col">Date and time</th>
+                  <th className="px-2 py-2 text-left" scope="col">Performed by</th>
+                  <th className="px-2 py-2 text-left" scope="col">Activity</th>
+                  <th className="px-2 py-2 text-left" scope="col">Affected record</th>
+                  <th className="px-2 py-2 text-left" scope="col">Outcome</th>
                 </tr>
               </thead>
               <tbody>
@@ -652,7 +652,7 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
                               <span className="font-medium">{formatAuditAction(log.action_key, log.entity_type)}</span>
                             </span>
                             <span className="px-2 py-2">
-                              <span className="text-text-secondary">{sentenceCase(log.entity_type)}</span>
+                              <span className="text-text-secondary">{relatedRecordLabel(log.metadata) || sentenceCase(log.entity_type)}</span>
                             </span>
                             <span className="px-2 py-2">
                               <span className={`soc-status-neutral ${statusTone[log.result] || ''}`}>
@@ -666,7 +666,9 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
                               id={`audit-detail-${log.id}`}
                               className="border-b border-border-subtle bg-surface-elevated px-4 py-3 animate-fade-in motion-reduce:animate-none"
                             >
-                              <div className="grid gap-3 md:grid-cols-3 text-xs">
+                              <details className="text-xs">
+                                <summary className="cursor-pointer font-semibold text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">Technical details</summary>
+                              <div className="mt-3 grid gap-3 md:grid-cols-3">
                                 <div>
                                   <p className="text-text-tertiary font-semibold uppercase tracking-wide">Action Key</p>
                                   <p className="text-text-primary font-mono mt-0.5">{log.action_key}</p>
@@ -705,7 +707,7 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
                                 </div>
                                 <div>
                                   <p className="text-text-tertiary font-semibold uppercase tracking-wide">Record source</p>
-                                  <p className="text-text-primary mt-0.5">{log.source || 'runtime'}</p>
+                                  <p className="text-text-primary mt-0.5">{log.source === 'capstone_seed' ? 'Presentation record' : log.source || 'Runtime'}</p>
                                 </div>
                                 <div>
                                   <p className="text-text-tertiary font-semibold uppercase tracking-wide">Scenario time</p>
@@ -730,6 +732,7 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
                                   </button>
                                 </div>
                               </div>
+                              </details>
                             </div>
                           )}
                         </td>
@@ -763,7 +766,7 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
                     >
                       <div className="min-w-0 flex-1">
                         <h4 className="text-sm font-semibold text-text-primary truncate">
-                          {log.action_key}
+                          {formatAuditAction(log.action_key, log.entity_type)}
                         </h4>
                         <p className="text-xs text-text-secondary mt-0.5">
                           {log.actor_name || log.actor_email || 'System'} · {formatDateTime(log.created_at)}
@@ -803,7 +806,7 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
                           </div>
                           <div>
                             <p className="text-text-tertiary font-semibold uppercase tracking-wide">Record source</p>
-                            <p className="text-text-primary mt-0.5">{log.source || 'runtime'}</p>
+                            <p className="text-text-primary mt-0.5">{log.source === 'capstone_seed' ? 'Presentation record' : log.source || 'Runtime'}</p>
                           </div>
                           <div>
                             <p className="text-text-tertiary font-semibold uppercase tracking-wide">Scenario time</p>
@@ -857,33 +860,6 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
 
         {/* Right: Sidebar */}
         <div className="space-y-4">
-          <section className="rounded border border-border-subtle bg-surface-elevated p-4">
-            <h3 className="soc-section-title">Anomaly Signals</h3>
-            <ul className="mt-3 space-y-2 text-xs">
-              {anomalies.length === 0 ? (
-                <li className="text-text-tertiary">No anomalies detected in selected window.</li>
-              ) : (
-                anomalies.slice(0, 8).map((anomaly, index) => (
-                  <li key={`${anomaly.type}-${index}`} className="rounded border border-border-subtle bg-background px-3 py-2">
-                    <div className="flex items-center gap-2">
-                      <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase ${severityTone[anomaly.severity] || severityTone.medium}`}>
-                        {anomaly.severity}
-                      </span>
-                      <span className="font-semibold text-text-primary">{anomaly.type.replace(/_/g, ' ')}</span>
-                    </div>
-                    <p className="mt-1 text-text-secondary">
-                      {anomaly.actorName ? `${anomaly.actorName} ` : ''}
-                      {anomaly.sourceIp ? `(${anomaly.sourceIp}) ` : ''}
-                      {anomaly.failedCount ? `${anomaly.failedCount} failed attempts` : ''}
-                      {anomaly.eventTotal ? `${anomaly.eventTotal} events` : ''}
-                      {anomaly.bucket ? ` @ ${formatDateTime(anomaly.bucket)}` : ''}
-                    </p>
-                  </li>
-                ))
-              )}
-            </ul>
-          </section>
-
           <section className="rounded border border-border-subtle bg-surface-elevated p-4">
             <h3 className="soc-section-title">Activity Heatmap (Hour of Day)</h3>
             <div className="mt-3 grid grid-cols-6 gap-1">

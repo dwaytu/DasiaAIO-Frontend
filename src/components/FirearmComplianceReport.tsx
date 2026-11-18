@@ -176,7 +176,7 @@ const FirearmComplianceReport: FC<Props> = ({ user, onLogout, onViewChange, acti
   return (
     <OperationalShell
       user={user}
-      title="FIREARM COMPLIANCE"
+      title="Firearm Documents"
       navItems={getSidebarNav(user.role)}
       activeView={activeView || 'firearm-compliance'}
       onNavigate={(view) => onViewChange?.(view)}
@@ -193,8 +193,8 @@ const FirearmComplianceReport: FC<Props> = ({ user, onLogout, onViewChange, acti
           <section className="table-glass rounded p-4 md:p-6 print:hidden">
             <OperationalPageHeader
               eyebrow="Asset governance"
-              title="Firearm Compliance"
-              description="Inventory, custody, permits, maintenance, and expiration visibility in one report."
+              title="Firearm Documents"
+              description="Review firearm permits, custody records, maintenance, and expiry dates in one report."
               icon={ShieldCheck}
               actions={
                 <>
@@ -236,7 +236,7 @@ const FirearmComplianceReport: FC<Props> = ({ user, onLogout, onViewChange, acti
             {report?.items.length ? (
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[980px] border-collapse text-sm">
-                  <thead className="sticky top-0 z-10 h-11 border-b border-border-subtle bg-surface-elevated/60 text-xs font-semibold uppercase tracking-wider text-text-tertiary backdrop-blur-xs"><tr>{['Firearm', 'Custody', 'Permit', 'Maintenance', 'Compliance'].map((heading) => <th key={heading} className="px-4 py-3.5 text-left">{heading}</th>)}</tr></thead>
+                  <thead className="sticky top-0 z-10 h-11 border-b border-border-subtle bg-surface-elevated/60 text-xs font-semibold uppercase tracking-wider text-text-tertiary backdrop-blur-xs"><tr>{['Firearm', 'Custody', 'Permit', 'Maintenance', 'Compliance'].map((heading) => <th key={heading} scope="col" className="px-4 py-3.5 text-left">{heading}</th>)}</tr></thead>
                   <tbody>{report.items.map((item) => <tr key={item.firearmId} className="border-b border-border-subtle/80 transition-colors hover:bg-surface-hover/50">
                     <td className="px-4 py-3.5 align-middle text-sm text-text-primary"><p className="font-semibold text-text-primary">{item.serialNumber}</p><p className="text-xs text-text-secondary">{item.model} · {item.caliber}</p><p className="text-xs text-text-secondary">Status: {item.firearmStatus}</p></td>
                     <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{item.holderName || item.holderId || 'Unallocated'}<p className="text-xs text-text-secondary">{item.expectedReturnDate ? `Return ${formatDate(item.expectedReturnDate)}` : 'No return date'}</p></td>

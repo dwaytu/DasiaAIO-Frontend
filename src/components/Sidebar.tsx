@@ -77,6 +77,12 @@ const navIcons: Record<string, LucideIcon> = {
   'mdr-import': FileUp,
 }
 
+const GROUP_LABELS: Record<string, string> = {
+  Intelligence: 'Reports & Insights',
+  Resources: 'Resources',
+  System: 'Administration',
+}
+
 const Sidebar: FC<SidebarProps> = ({
   items,
   activeView,
@@ -257,7 +263,7 @@ const Sidebar: FC<SidebarProps> = ({
                       aria-expanded={collapsed ? true : !collapsedGroups[groupName]}
                       aria-controls={`sidebar-group-${groupName.toLowerCase().replace(/\s+/g, '-')}`}
                     >
-                      <span>{groupName}</span>
+                      <span>{GROUP_LABELS[groupName] || groupName}</span>
                       <ChevronDown
                         className={`h-3.5 w-3.5 transition-transform ${collapsedGroups[groupName] && !collapsed ? '-rotate-90' : ''}`}
                         aria-hidden="true"
@@ -273,7 +279,7 @@ const Sidebar: FC<SidebarProps> = ({
                       return (
                         <button
                           key={view}
-                          className={`soc-sidebar-nav-item cursor-pointer select-none px-3 py-2.5 text-left text-sm font-semibold uppercase tracking-wide ${
+                          className={`soc-sidebar-nav-item cursor-pointer select-none px-3 py-2.5 text-left text-sm font-semibold tracking-normal ${
                             view === activeView ? 'soc-sidebar-nav-item-active' : ''
                           } ${collapsed ? 'lg:px-2 lg:py-2' : ''}`}
                           onClick={() => handleNavigate(view)}
@@ -301,7 +307,7 @@ const Sidebar: FC<SidebarProps> = ({
           <button 
             type="button"
             onClick={onLogout} 
-            className={`soc-sidebar-logout mt-3 flex min-h-11 shrink-0 cursor-pointer items-center gap-2 rounded px-3 py-2 text-sm font-semibold uppercase tracking-wide ${collapsed ? 'lg:justify-center lg:px-2' : ''}`}
+            className={`soc-sidebar-logout mt-3 flex min-h-11 shrink-0 cursor-pointer items-center gap-2 rounded px-3 py-2 text-sm font-semibold tracking-normal ${collapsed ? 'lg:justify-center lg:px-2' : ''}`}
             title={collapsed ? 'Logout' : undefined}
             aria-label="Logout"
           >

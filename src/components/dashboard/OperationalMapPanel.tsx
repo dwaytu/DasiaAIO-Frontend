@@ -1,6 +1,6 @@
 import { FC, FormEvent, Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import L from 'leaflet'
-import { ChevronLeft, ChevronRight, MapPin, Pencil, Plus, Trash2 } from 'lucide-react'
+import { Activity, CalendarClock, Car, ChevronLeft, ChevronRight, MapPin, Pencil, Plus, Shield, Trash2, X } from 'lucide-react'
 import { Circle, CircleMarker, MapContainer, Marker, Polygon, Polyline, Popup, TileLayer, useMap, useMapEvents } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import { type ActiveGuard, type ClientSiteInput, type ClientSiteSetupInput, type GeofenceZoneInput, type MapTrackingPoint, useOperationalMapData } from '../../hooks/useOperationalMapData'
@@ -46,6 +46,8 @@ type TelemetryEntry = {
   ageSeconds: number
   guardMetadata?: ActiveGuard
 }
+
+type AssetInspectorView = 'summary' | 'schedule' | 'activity'
 
 const eventTypeBadgeClass: Record<'incident' | 'alert' | 'guard' | 'vehicle', string> = {
   incident: 'border-danger-border bg-danger-bg text-danger-text',
@@ -336,8 +338,10 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ recentVehicleReport
   const [clientSitesPage, setClientSitesPage] = useState<number>(1)
   const [dismissedDegradedError, setDismissedDegradedError] = useState<string>('')
   const [selectedTelemetry, setSelectedTelemetry] = useState<TelemetryEntry | null>(null)
+  const [assetInspectorView, setAssetInspectorView] = useState<AssetInspectorView>('summary')
 
   const selectedEventPanelRef = useRef<HTMLElement | null>(null)
+  const assetInspectorRef = useRef<HTMLElement | null>(null)
   const siteManagerRef = useRef<HTMLDivElement | null>(null)
   const siteNameInputRef = useRef<HTMLInputElement | null>(null)
   const trackingMode = getTrackingAccuracyMode()
@@ -420,6 +424,11 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ recentVehicleReport
     [pointTelemetry],
   )
 
+  const vehicleTelemetry = useMemo(
+    () => pointTelemetry.filter((entry) => entry.point.entityType === 'vehicle'),
+    [pointTelemetry],
+  )
+
   const visibleTelemetry = useMemo(
     () => pointTelemetry.filter((entry) => {
       if (entry.point.entityType === 'vehicle') {
@@ -474,6 +483,24 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ recentVehicleReport
         setFocusCenter([detail.latitude, detail.longitude])
       }
     }
+
+    try {
+      const pendingFocus = sessionStorage.getItem('sentinel:pending-map-focus')
+      if (pendingFocus) {
+        const detail = JSON.parse(pendingFocus) as { latitude?: number; longitude?: number }
+        if (typeof detail.latitude === 'number' && typeof detail.longitude === 'number') {
+          setFocusCenter([detail.latitude, detail.longitude])
+        }
+        sessionStorage.removeItem('sentinel:pending-map-focus')
+      }
+    } catch {
+      try {
+        sessionStorage.removeItem('sentinel:pending-map-focus')
+      } catch {
+        // Storage can be unavailable in privacy-restricted runtimes.
+      }
+    }
+
     window.addEventListener('sentinel:focus-map', focusIncident)
     return () => window.removeEventListener('sentinel:focus-map', focusIncident)
   }, [])
@@ -632,6 +659,24 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ recentVehicleReport
       window.removeEventListener('keydown', handleEscape)
     }
   }, [clearSelection, selectedEvent])
+
+  useEffect(() => {
+    if (!selectedTelemetry) {
+      setAssetInspectorView('summary')
+      return
+    }
+
+    setAssetInspectorView('summary')
+    requestAnimationFrame(() => assetInspectorRef.current?.focus())
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      setSelectedTelemetry(null)
+    }
+
+    window.addEventListener('keydown', handleEscape)
+    return () => window.removeEventListener('keydown', handleEscape)
+  }, [selectedTelemetry])
 
   useEffect(() => {
     if (!followSelectedGuard || selectedEvent?.type !== 'guard' || !selectedGuardEventMatch) {
@@ -816,6 +861,32 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ recentVehicleReport
     [guardTelemetry],
   )
 
+  const activeClientSites = useMemo(
+    () => clientSites.filter((site) => site.isActive),
+    [clientSites],
+  )
+
+  const reportingSitesCount = useMemo(() => {
+    const activeSiteNames = new Set(activeClientSites.map((site) => site.name.trim().toLocaleLowerCase()))
+    const reportingSiteNames = new Set(
+      guardTelemetry
+        .filter((entry) => entry.heartbeatState === 'active' && entry.scheduleState === 'scheduled')
+        .map((entry) => entry.point.scheduleClientSite || entry.guardMetadata?.scheduleClientSite || '')
+        .map((siteName) => siteName.trim().toLocaleLowerCase())
+        .filter((siteName) => activeSiteNames.has(siteName)),
+    )
+    return reportingSiteNames.size
+  }, [activeClientSites, guardTelemetry])
+
+  const activeGuardCount = useMemo(
+    () => guardTelemetry.filter((entry) => entry.heartbeatState === 'active').length,
+    [guardTelemetry],
+  )
+
+  const coverageStatus = loading
+    ? 'Updating coverage'
+    : (!hasTrackingAccess || Boolean(error) ? 'Coverage unavailable' : 'Live coverage')
+
   const issueMapCommand = (type: 'fit-all' | 'center-tagum' | 'center-user') => {
     setMapViewCommand((previous) => ({
       id: previous.id + 1,
@@ -946,8 +1017,40 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ recentVehicleReport
     setFollowSelectedGuard(true)
   }
 
+  const openAssetInspector = (entry: TelemetryEntry) => {
+    setSelectedTelemetry(entry)
+    setFocusCenter([entry.point.latitude, entry.point.longitude])
+  }
+
+  const inspectAssetActivity = () => {
+    if (!selectedTelemetry) return
+
+    setAssetInspectorView('activity')
+    setFocusCenter([selectedTelemetry.point.latitude, selectedTelemetry.point.longitude])
+    if (selectedTelemetry.point.entityType !== 'vehicle') {
+      setSelectedGuardId(selectedTelemetry.point.entityId)
+      setFollowSelectedGuard(true)
+    }
+  }
+
+  const selectedAssetName = selectedTelemetry
+    ? selectedTelemetry.point.label || selectedTelemetry.guardMetadata?.guardName || 'Field unit'
+    : ''
+  const selectedAssetSite = selectedTelemetry
+    ? selectedTelemetry.point.scheduleClientSite || selectedTelemetry.guardMetadata?.scheduleClientSite
+    : undefined
+  const selectedAssetScheduleStatus = selectedTelemetry
+    ? selectedTelemetry.point.scheduleStatus || selectedTelemetry.guardMetadata?.scheduleStatus
+    : undefined
+  const selectedAssetScheduleStart = selectedTelemetry
+    ? selectedTelemetry.point.scheduleStartTime || selectedTelemetry.guardMetadata?.scheduleStartTime
+    : undefined
+  const selectedAssetScheduleEnd = selectedTelemetry
+    ? selectedTelemetry.point.scheduleEndTime || selectedTelemetry.guardMetadata?.scheduleEndTime
+    : undefined
+
   return (
-    <section className="command-panel p-4 md:p-6" aria-label="Operational map">
+    <section className="command-panel soc-panel-pad" aria-label="Operational map">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3 border-b border-border-subtle pb-3">
         <div>
           <h3 className="text-base font-bold uppercase tracking-wide text-text-primary">Operational Map</h3>
@@ -1008,52 +1111,26 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ recentVehicleReport
         </div>
       </div>
 
-      <div className="mb-3 flex flex-wrap items-center gap-2 rounded border border-border-subtle bg-surface-elevated p-2 text-xs">
-        <button
-          type="button"
-          onClick={() => setLayerVisibility((prev) => ({ ...prev, guards: !prev.guards }))}
-          className={`min-h-10 rounded-md border px-2.5 py-1 font-semibold uppercase tracking-wide ${layerVisibility.guards ? 'border-success-border bg-success-bg text-success-text' : 'border-border-subtle bg-background text-text-secondary'}`}
-        >
-          Guards
-        </button>
-        <button
-          type="button"
-          onClick={() => setLayerVisibility((prev) => ({ ...prev, vehicles: !prev.vehicles }))}
-          className={`min-h-10 rounded-md border px-2.5 py-1 font-semibold uppercase tracking-wide ${layerVisibility.vehicles ? 'border-info-border bg-info-bg text-info-text' : 'border-border-subtle bg-background text-text-secondary'}`}
-        >
-          Vehicles
-        </button>
-        <button
-          type="button"
-          onClick={() => setLayerVisibility((prev) => ({ ...prev, clientSites: !prev.clientSites }))}
-          className={`min-h-10 rounded-md border px-2.5 py-1 font-semibold uppercase tracking-wide ${layerVisibility.clientSites ? 'border-warning-border bg-warning-bg text-warning-text' : 'border-border-subtle bg-background text-text-secondary'}`}
-        >
-          Client Sites
-        </button>
-        <button
-          type="button"
-          onClick={() => setLayerVisibility((prev) => ({ ...prev, alerts: !prev.alerts }))}
-          className={`min-h-10 rounded-md border px-2.5 py-1 font-semibold uppercase tracking-wide ${layerVisibility.alerts ? 'border-danger-border bg-danger-bg text-danger-text' : 'border-border-subtle bg-background text-text-secondary'}`}
-        >
-          Alerts
-        </button>
+      {selectedGuardId || selectedEvent?.type === 'guard' ? (
+        <div className="mb-3 flex justify-end">
         <button
           type="button"
           onClick={() => setFollowSelectedGuard((previous) => !previous)}
-          className={`min-h-10 rounded-md border px-2.5 py-1 font-semibold uppercase tracking-wide ${followSelectedGuard ? 'border-info-border bg-info-bg text-info-text' : 'border-border-subtle bg-background text-text-secondary'}`}
+          aria-pressed={followSelectedGuard}
+          className={`min-h-11 rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wide focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${followSelectedGuard ? 'border-info-border bg-info-bg text-info-text' : 'border-border-subtle bg-surface-elevated text-text-secondary'}`}
         >
           Follow Selected Guard: {followSelectedGuard ? 'On' : 'Off'}
         </button>
-      </div>
+        </div>
+      ) : null}
 
-      <div className="relative isolate h-80 overflow-hidden rounded border border-border-elevated bg-surface md:h-96">
+      <div className="relative isolate h-80 overflow-hidden rounded border border-border-elevated bg-surface md:h-96" role="region" aria-label="Live operations map with guard, vehicle, and client site markers">
         <MapContainer
           center={mapCenter}
           zoom={12}
           className="h-full w-full"
           scrollWheelZoom
           bounds={mapBounds}
-          aria-label="Live operations map with guard, vehicle, and client site markers"
         >
           <MapViewportSync center={mapCenter} />
           <MapViewCommandController
@@ -1208,7 +1285,11 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ recentVehicleReport
                           pathOptions={{ color: markerColor, fillColor: markerColor, fillOpacity: 0.04, opacity: 0.3, weight: 1 }}
                         />
                       ) : null}
-                      <Marker position={[point.latitude, point.longitude]} icon={currentUserPin}>
+                      <Marker
+                        position={[point.latitude, point.longitude]}
+                        icon={currentUserPin}
+                        eventHandlers={{ click: () => openAssetInspector(entry) }}
+                      >
                         <Popup>
                           <strong>Your Location</strong>
                           <div>{point.label || 'Entity'}</div>
@@ -1243,7 +1324,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ recentVehicleReport
                         weight: isSelectedGuardPoint ? 3 : 1,
                         dashArray: point.entityType !== 'vehicle' && entry.scheduleState === 'unscheduled' ? '4 3' : undefined,
                       }}
-                      eventHandlers={{ click: () => setSelectedTelemetry(entry) }}
+                      eventHandlers={{ click: () => openAssetInspector(entry) }}
                     >
                       <Popup>
                         <strong>{point.entityType === 'vehicle' ? 'Armored Vehicle' : 'Guard'}</strong>
@@ -1277,17 +1358,49 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ recentVehicleReport
           ) : null}
         </MapContainer>
 
-        <div className="absolute left-3 top-3 z-[410] flex max-w-[calc(100%-1.5rem)] flex-wrap gap-1.5 rounded-full bg-surface/90 p-1.5 shadow-sm backdrop-blur-md">
+        <div
+          className="absolute left-14 top-3 z-[410] flex max-w-[calc(100%-4.25rem)] flex-wrap gap-1.5 rounded-2xl border border-border-subtle bg-surface/90 p-1.5 shadow-sm backdrop-blur-md sm:rounded-full"
+          role="group"
+          aria-label="Map layer visibility"
+        >
           {([
-            ['guards', `Guards (${visibleTelemetry.filter((entry) => entry.point.entityType !== 'vehicle').length})`, 'bg-success'],
-            ['vehicles', `Vehicles (${visibleTelemetry.filter((entry) => entry.point.entityType === 'vehicle').length})`, 'bg-info'],
+            ['guards', `Guards (${guardTelemetry.length})`, 'bg-success'],
+            ['vehicles', `Vehicles (${vehicleTelemetry.length})`, 'bg-info'],
             ['clientSites', `Sites (${clientSites.length})`, 'bg-warning'],
             ['alerts', `Alerts (${alertMarkers.length})`, 'bg-danger'],
           ] as const).map(([layer, label, dot]) => (
-            <button key={layer} type="button" onClick={() => setLayerVisibility((current) => ({ ...current, [layer]: !current[layer] }))} className={`inline-flex items-center gap-1.5 rounded-full border border-border-subtle px-3 py-1 text-xs font-semibold ${layerVisibility[layer] ? 'bg-surface/90 text-text-primary' : 'bg-surface-elevated text-text-secondary'}`}>
-              <span className={`h-1.5 w-1.5 rounded-full ${dot}`} aria-hidden="true" />{label}
+            <button
+              key={layer}
+              type="button"
+              aria-pressed={layerVisibility[layer]}
+              aria-label={`${label} layer ${layerVisibility[layer] ? 'visible' : 'hidden'}`}
+              onClick={() => setLayerVisibility((current) => ({ ...current, [layer]: !current[layer] }))}
+              className={`inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border-subtle px-3 py-1 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${layerVisibility[layer] ? 'bg-surface/90 text-text-primary shadow-sm' : 'bg-surface-elevated text-text-secondary'}`}
+            >
+              <span className={`h-1.5 w-1.5 rounded-full ${layerVisibility[layer] ? dot : 'bg-text-tertiary'}`} aria-hidden="true" />
+              {label}
+              <span className="sr-only">{layerVisibility[layer] ? 'On' : 'Off'}</span>
             </button>
           ))}
+        </div>
+
+        <details className="absolute bottom-3 left-3 z-[410] max-w-[calc(100%-1.5rem)] rounded-lg border border-border-subtle bg-surface/95 px-3 py-2 shadow-sm backdrop-blur-md sm:hidden">
+          <summary className="cursor-pointer list-none text-xs font-semibold text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus">
+            Coverage: {coverageStatus}
+          </summary>
+          <div className="mt-2 space-y-1 border-t border-border-subtle pt-2 text-xs text-text-secondary" aria-label="Territorial coverage">
+            <p>Sites with Reporting Guards: {reportingSitesCount} / {activeClientSites.length} active sites</p>
+            <p>Guards: {activeGuardCount} active · {staleGuardCount} stale · {offlineGuardCount} offline</p>
+            <p className="text-text-tertiary">Reporting is based on active, scheduled guard heartbeats and named site assignments.</p>
+          </div>
+        </details>
+
+        <div className="absolute bottom-3 left-3 z-[410] hidden max-w-xs rounded-lg border border-border-subtle bg-surface/95 p-3 shadow-sm backdrop-blur-md sm:block" aria-label="Territorial coverage">
+          <p className="text-xs font-bold uppercase tracking-wider text-text-tertiary">Territorial Coverage</p>
+          <p className="mt-1 text-sm font-semibold text-text-primary">{coverageStatus}</p>
+          <p className="mt-2 text-xs text-text-secondary">Sites with Reporting Guards: <span className="font-semibold text-text-primary">{reportingSitesCount} / {activeClientSites.length}</span> active sites</p>
+          <p className="mt-1 text-xs text-text-secondary">Guards: <span className="font-semibold text-text-primary">{activeGuardCount}</span> active · {staleGuardCount} stale · {offlineGuardCount} offline</p>
+          <p className="mt-2 text-[11px] leading-4 text-text-tertiary">Reporting is based on active, scheduled guard heartbeats and named site assignments.</p>
         </div>
 
         {loading ? (
@@ -1324,7 +1437,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ recentVehicleReport
         ) : null}
 
         {showDegradedBanner ? (
-          <div className="absolute left-3 right-3 top-3 z-[420]">
+          <div className="absolute left-3 right-3 top-28 z-[420] sm:top-16">
             <div className="flex items-start justify-between gap-3 rounded border border-warning-border bg-warning-bg px-3 py-2 shadow-sm" role="status" aria-live="polite">
               <p className="text-sm text-text-secondary">Live tracking data temporarily unavailable - map shows last known positions.</p>
               <button
@@ -1381,14 +1494,98 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ recentVehicleReport
         ) : null}
 
         {selectedTelemetry ? (
-          <aside className="absolute bottom-3 right-3 z-[500] w-full max-w-[290px] rounded-lg border border-border-subtle bg-surface p-4 shadow-lg" aria-label="Selected asset quick inspection">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0"><p className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">{selectedTelemetry.point.entityType === 'vehicle' ? 'Vehicle' : 'Guard'}</p><p className="truncate text-sm font-bold text-text-primary">{selectedTelemetry.point.label || selectedTelemetry.guardMetadata?.guardName || 'Field unit'}</p></div>
-              <button type="button" onClick={() => setSelectedTelemetry(null)} className="text-xs font-semibold text-text-secondary hover:text-text-primary" aria-label="Close asset inspection">Close</button>
+          <aside
+            ref={assetInspectorRef}
+            tabIndex={-1}
+            aria-labelledby="asset-inspector-title"
+            onKeyDown={(event) => {
+              if (event.key !== 'Escape') return
+              event.preventDefault()
+              setSelectedTelemetry(null)
+            }}
+            className="absolute inset-y-0 right-0 z-[500] flex w-[min(22rem,calc(100%-1rem))] flex-col overflow-y-auto border-l border-border-subtle bg-surface/95 p-4 shadow-xl outline-none backdrop-blur-md focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
+          >
+            <div className="flex items-start justify-between gap-3 border-b border-border-subtle pb-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-border-subtle bg-surface-elevated text-text-primary" aria-hidden="true">
+                  {selectedTelemetry.point.entityType === 'vehicle' ? <Car size={20} /> : <Shield size={20} />}
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-tertiary">
+                    {selectedTelemetry.point.entityType === 'vehicle' ? 'Vehicle' : 'Guard'}
+                  </p>
+                  <h4 id="asset-inspector-title" className="break-words text-sm font-bold text-text-primary">
+                    {selectedTelemetry.point.entityType === 'vehicle' ? 'Vehicle' : 'Guard'}: {selectedAssetName}
+                  </h4>
+                  <p className={`mt-1 text-xs font-semibold ${selectedTelemetry.heartbeatState === 'active' ? 'text-success-text' : selectedTelemetry.heartbeatState === 'stale' ? 'text-warning-text' : 'text-danger-text'}`}>
+                    {selectedTelemetry.heartbeatState === 'active' ? 'Live' : selectedTelemetry.heartbeatState === 'stale' ? 'Stale' : 'Offline'} • {selectedTelemetry.ageSeconds}s ago
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedTelemetry(null)}
+                className="grid min-h-11 min-w-11 place-items-center rounded-md border border-border-subtle text-text-secondary hover:bg-surface-hover hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                aria-label="Close asset inspection"
+              >
+                <X size={17} aria-hidden="true" />
+              </button>
             </div>
-            <p className="mt-2 text-xs font-semibold text-success-text">Live • {selectedTelemetry.ageSeconds}s ago</p>
-            <dl className="mt-3 space-y-1 text-xs text-text-secondary"><div>Post: {selectedTelemetry.guardMetadata?.scheduleClientSite || 'Not assigned'}</div><div>GPS accuracy: {selectedTelemetry.point.accuracyMeters != null ? `±${Math.round(selectedTelemetry.point.accuracyMeters)}m` : 'Unavailable'}</div><div>Movement: {selectedTelemetry.point.movementStatus || 'No movement signal'}</div></dl>
-            <div className="mt-3 flex gap-2"><button type="button" onClick={() => { setSelectedGuardId(selectedTelemetry.point.entityId); setFollowSelectedGuard(true) }} className="soc-btn soc-btn-secondary min-h-10 px-3 text-xs">View Schedule</button><button type="button" onClick={() => setFocusCenter([selectedTelemetry.point.latitude, selectedTelemetry.point.longitude])} className="soc-btn soc-btn-secondary min-h-10 px-3 text-xs">Inspect Activity</button></div>
+
+            <dl className="mt-4 grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-2 text-xs">
+              <dt className="text-text-tertiary">Current post</dt>
+              <dd className="max-w-44 text-right font-semibold text-text-primary">{selectedAssetSite || 'Not assigned'}</dd>
+              <dt className="text-text-tertiary">GPS accuracy</dt>
+              <dd className="font-semibold text-text-primary">{selectedTelemetry.point.accuracyMeters != null ? `±${Math.round(selectedTelemetry.point.accuracyMeters)} m` : 'Unavailable'}</dd>
+              <dt className="text-text-tertiary">Movement</dt>
+              <dd className="font-semibold capitalize text-text-primary">{selectedTelemetry.point.movementStatus || 'Unavailable'}</dd>
+              <dt className="text-text-tertiary">Last report</dt>
+              <dd className="text-right font-semibold text-text-primary">{new Date(selectedTelemetry.point.recordedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</dd>
+            </dl>
+
+            {assetInspectorView === 'schedule' ? (
+              <section className="mt-4 rounded-md border border-border-subtle bg-surface-elevated p-3" aria-label="Asset schedule details">
+                <div className="flex items-center gap-2 text-text-primary">
+                  <CalendarClock size={16} aria-hidden="true" />
+                  <h5 className="text-xs font-bold uppercase tracking-wide">Schedule</h5>
+                </div>
+                <p className="mt-2 text-xs text-text-secondary">Status: <span className="font-semibold capitalize text-text-primary">{selectedAssetScheduleStatus || selectedTelemetry.scheduleState}</span></p>
+                <p className="mt-1 text-xs text-text-secondary">Shift: <span className="font-semibold text-text-primary">{selectedAssetScheduleStart && selectedAssetScheduleEnd ? `${selectedAssetScheduleStart} – ${selectedAssetScheduleEnd}` : 'No shift window reported'}</span></p>
+              </section>
+            ) : null}
+
+            {assetInspectorView === 'activity' ? (
+              <section className="mt-4 rounded-md border border-border-subtle bg-surface-elevated p-3" aria-label="Asset activity details">
+                <div className="flex items-center gap-2 text-text-primary">
+                  <Activity size={16} aria-hidden="true" />
+                  <h5 className="text-xs font-bold uppercase tracking-wide">Recent Activity</h5>
+                </div>
+                <p className="mt-2 text-xs text-text-secondary">Source: <span className="font-semibold text-text-primary">{selectedTelemetry.point.source || 'Not reported'}</span></p>
+                <p className="mt-1 text-xs text-text-secondary">Speed: <span className="font-semibold text-text-primary">{selectedTelemetry.point.speedKph != null ? `${selectedTelemetry.point.speedKph.toFixed(1)} km/h` : 'Not reported'}</span></p>
+                <p className="mt-1 text-xs text-text-secondary">The map is centered on this asset.{selectedTelemetry.point.entityType !== 'vehicle' ? ' Its available movement trail is loading below.' : ''}</p>
+              </section>
+            ) : null}
+
+            <div className="mt-auto grid grid-cols-1 gap-2 pt-4 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => setAssetInspectorView((current) => current === 'schedule' ? 'summary' : 'schedule')}
+                aria-pressed={assetInspectorView === 'schedule'}
+                className="soc-btn soc-btn-secondary min-h-11 px-3 text-xs"
+              >
+                <CalendarClock size={15} aria-hidden="true" />
+                View Schedule
+              </button>
+              <button
+                type="button"
+                onClick={inspectAssetActivity}
+                aria-pressed={assetInspectorView === 'activity'}
+                className="soc-btn soc-btn-secondary min-h-11 px-3 text-xs"
+              >
+                <Activity size={15} aria-hidden="true" />
+                Inspect Activity
+              </button>
+            </div>
           </aside>
         ) : null}
       </div>

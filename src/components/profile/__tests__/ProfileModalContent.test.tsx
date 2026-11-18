@@ -61,7 +61,7 @@ describe('ProfileModalContent', () => {
 
     expect(screen.getByRole('heading', { name: 'Personal Information' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'License and Credentials' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Account Information' })).toBeInTheDocument()
+    expect(screen.getByText('Technical account information')).toBeInTheDocument()
     expect(screen.queryByLabelText('User ID')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Save Profile' })).toBeDisabled()
     await waitFor(() => expect(screen.getByText('G-0042')).toBeInTheDocument())

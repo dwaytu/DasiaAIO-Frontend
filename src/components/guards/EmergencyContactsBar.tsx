@@ -21,7 +21,7 @@ const EmergencyContactsBar: FC = () => {
       </button>
 
       {expanded ? (
-        <div className="mt-2 grid grid-cols-2 gap-2">
+        <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
           {EMERGENCY_CONTACTS.map((contact) => (
             <a
               key={contact.phone}

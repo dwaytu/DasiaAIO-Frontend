@@ -65,6 +65,15 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions,
   const [dismissedFeedIds, setDismissedFeedIds] = useState<Set<string>>(new Set())
   const [dismissedSosIds, setDismissedSosIds] = useState<Set<string>>(new Set())
 
+  const handleFocusMap = useCallback((latitude: number, longitude: number) => {
+    try {
+      window.sessionStorage.setItem('sentinel:pending-map-focus', JSON.stringify({ latitude, longitude }))
+    } catch {
+      // Navigation still works when browser storage is unavailable.
+    }
+    onNavigate?.('operations-map')
+  }, [onNavigate])
+
   const summary = summaryState.summary
   const alerts = useMemo(() => getOpsAlerts(summary), [summary])
   const now = summaryState.lastUpdated || '--'
@@ -391,6 +400,7 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions,
             incident={sosIncident}
             onUpdateStatus={handleIncidentStatusUpdate}
             onDismiss={() => handleDismissSos(sosIncident.id)}
+            onFocusMap={handleFocusMap}
           />
         ) : null}
         <AttentionQueue

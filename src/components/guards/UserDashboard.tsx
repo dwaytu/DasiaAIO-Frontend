@@ -27,6 +27,7 @@ import ConfirmationDialog from '../shared/ConfirmationDialog'
 import OffDutyPanel from './OffDutyPanel'
 import PanicButton from './PanicButton'
 import { buildGuardMapLinks } from './mapLinks'
+import { getGuardGuidePreference, saveGuardGuidePreference } from '../../utils/guardGuide'
 import {
   deriveCheckedInAttendance,
   findActiveAttendanceForShift,
@@ -91,6 +92,29 @@ interface LastKnownLocation {
   source: string
 }
 
+const GUARD_GUIDE_STEPS = [
+  {
+    title: 'Check In starts a routine shift',
+    body: 'Open Mission, confirm the assigned post, and use Check In only after arriving. Check In is attendance for an assigned shift; it is not an emergency action.',
+  },
+  {
+    title: 'Use Inbox for operational updates',
+    body: 'Review messages and updates from the command desk. Return to Mission when you need to act on your current shift.',
+  },
+  {
+    title: 'Use Requests for non-emergency needs',
+    body: 'Submit routine requests and follow their status here. Do not use a request when immediate emergency help is needed.',
+  },
+  {
+    title: 'Live Map uses your location permission',
+    body: 'The map can show your available location after you consent and your device grants permission. Availability and accuracy depend on the device and connection.',
+  },
+  {
+    title: 'SOS is for emergencies only',
+    body: 'Use the always-available SOS control only for an immediate emergency or threat. It is separate from Check In and routine communication.',
+  },
+] as const
+
 function resolveSectionFromView(activeView?: string): GuardSection {
   if (activeView === 'inbox') return 'inbox'
   if (activeView === 'support') return 'support'
@@ -142,8 +166,16 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
   })
   const [incidentStatus, setIncidentStatus] = useState<string>('')
   const [incidentSubmitting, setIncidentSubmitting] = useState<boolean>(false)
+  const incidentDialogRef = useRef<HTMLElement | null>(null)
+  const incidentDescriptionRef = useRef<HTMLTextAreaElement | null>(null)
+  const incidentTriggerRef = useRef<HTMLElement | null>(null)
+  const incidentSubmittingRef = useRef(false)
 
   const [instructionsOpen, setInstructionsOpen] = useState<boolean>(false)
+  const [guardGuideOpen, setGuardGuideOpen] = useState<boolean>(() => !getGuardGuidePreference(user.id))
+  const [guardGuideStep, setGuardGuideStep] = useState(0)
+  const guideTriggerRef = useRef<HTMLButtonElement | null>(null)
+  const guidePanelRef = useRef<HTMLElement | null>(null)
 
   const [checkInStatus, setCheckInStatus] = useState<Record<string, 'idle' | 'checked_in'>>({})
   const [checkInTimes, setCheckInTimes] = useState<Record<string, Date>>({})
@@ -160,6 +192,10 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
   const [profileModalOpen, setProfileModalOpen] = useState<boolean>(false)
   const profileTriggerRef = useRef<HTMLButtonElement | null>(null)
   const guardStickyRegionRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    incidentSubmittingRef.current = incidentSubmitting
+  }, [incidentSubmitting])
 
   useEffect(() => {
     const stickyRegion = guardStickyRegionRef.current
@@ -184,6 +220,27 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
   useEffect(() => {
     setActiveSection(resolveSectionFromView(activeView))
   }, [activeView])
+
+  const closeGuardGuide = useCallback((preference: 'dismissed' | 'completed') => {
+    saveGuardGuidePreference(user.id, preference)
+    setGuardGuideOpen(false)
+    window.setTimeout(() => guideTriggerRef.current?.focus(), 0)
+  }, [user.id])
+
+  const reopenGuardGuide = useCallback(() => {
+    setGuardGuideStep(0)
+    setGuardGuideOpen(true)
+    window.setTimeout(() => guidePanelRef.current?.focus(), 0)
+  }, [])
+
+  useEffect(() => {
+    if (!guardGuideOpen) return undefined
+    const handleGuideEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && guidePanelRef.current?.contains(document.activeElement)) closeGuardGuide('dismissed')
+    }
+    window.addEventListener('keydown', handleGuideEscape)
+    return () => window.removeEventListener('keydown', handleGuideEscape)
+  }, [closeGuardGuide, guardGuideOpen])
 
   const lastKnownLocation = useMemo<LastKnownLocation | null>(() => {
     if (!lastResolvedLocation) {
@@ -612,6 +669,49 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
     await handleCheckIn(currentShift)
   }
 
+  const openIncidentModal = (trigger?: HTMLElement) => {
+    incidentTriggerRef.current = trigger || (document.activeElement instanceof HTMLElement ? document.activeElement : null)
+    setIncidentStatus('')
+    setIncidentModalOpen(true)
+  }
+
+  const closeIncidentModal = () => {
+    if (incidentSubmitting) return
+    setIncidentModalOpen(false)
+  }
+
+  useEffect(() => {
+    if (!incidentModalOpen) return
+
+    const focusableSelector = 'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    const frameId = window.requestAnimationFrame(() => incidentDescriptionRef.current?.focus())
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !incidentSubmittingRef.current) {
+        event.preventDefault()
+        setIncidentModalOpen(false)
+        return
+      }
+      if (event.key !== 'Tab') return
+      const focusable = Array.from(incidentDialogRef.current?.querySelectorAll<HTMLElement>(focusableSelector) || [])
+      if (focusable.length === 0) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.cancelAnimationFrame(frameId)
+      window.removeEventListener('keydown', handleKeyDown)
+      if (incidentTriggerRef.current?.isConnected) incidentTriggerRef.current.focus()
+    }
+  }, [incidentModalOpen])
+
   const handleIncidentSubmit = async (event: FormEvent) => {
     event.preventDefault()
 
@@ -651,6 +751,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
       setIncidentStatus('Incident report submitted.')
       setIncidentForm({ description: '', priority: 'high' })
       setIncidentModalOpen(false)
+      try { navigator.vibrate?.(40) } catch { /* Vibration is optional device feedback. */ }
     } catch (error) {
       if (isOfflineRequestError(error)) {
         try {
@@ -664,6 +765,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
           setIncidentStatus('Saved \u2014 will send when back online.')
           setIncidentForm({ description: '', priority: 'high' })
           setIncidentModalOpen(false)
+          try { navigator.vibrate?.(40) } catch { /* Vibration is optional device feedback. */ }
         } catch {
           setIncidentStatus('Unable to save the incident offline. Please try again.')
         }
@@ -832,10 +934,10 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
   ) : null
 
   return (
-    <div className="relative min-h-[100dvh] w-full overflow-hidden bg-background font-sans">
+    <div className="relative flex h-dvh w-full flex-col overflow-hidden bg-background font-sans">
       <a href="#maincontent" className="skip-link">Skip to main content</a>
 
-      <header className="sticky top-0 z-(--z-header) border-b border-border bg-surface/95 px-4 py-3 backdrop-blur" style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top, 0px))' }}>
+      <header className="sticky top-0 z-(--z-header) shrink-0 border-b border-border bg-surface/95 px-4 py-3 backdrop-blur" style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top, 0px))' }}>
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-tertiary">Field Operations</p>
@@ -856,8 +958,28 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
       <main
         id="maincontent"
         tabIndex={-1}
-        className="guard-sticky-main mx-auto h-[calc(100dvh-var(--guard-main-reserved-height)-var(--guard-sticky-region-height))] w-full max-w-5xl overflow-y-auto px-4 pt-4"
+        className="guard-sticky-main mx-auto min-h-0 w-full max-w-5xl flex-1 overflow-y-auto px-4 pt-4"
       >
+        {guardGuideOpen ? (
+          <aside ref={guidePanelRef} tabIndex={-1} className="mb-4 rounded-lg border border-info-border bg-info-bg/30 p-4 shadow-sm" aria-labelledby="guard-guide-title">
+            <div aria-live="polite" aria-atomic="true">
+              <p className="text-xs font-semibold uppercase tracking-wider text-info-text">Step {guardGuideStep + 1} of {GUARD_GUIDE_STEPS.length}</p>
+              <h2 id="guard-guide-title" className="mt-2 text-lg font-bold text-text-primary">{GUARD_GUIDE_STEPS[guardGuideStep].title}</h2>
+              <p className="mt-2 text-sm leading-6 text-text-secondary">{GUARD_GUIDE_STEPS[guardGuideStep].body}</p>
+            </div>
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-info-border/60 pt-4">
+              <button type="button" className="soc-btn soc-btn-neutral min-h-11 px-3 text-sm" onClick={() => closeGuardGuide('dismissed')}>Skip guide</button>
+              <div className="flex gap-2">
+                <button type="button" className="soc-btn soc-btn-neutral min-h-11 px-3 text-sm" disabled={guardGuideStep === 0} onClick={() => setGuardGuideStep((step) => Math.max(0, step - 1))}>Back</button>
+                {guardGuideStep === GUARD_GUIDE_STEPS.length - 1 ? (
+                  <button type="button" className="soc-btn soc-btn-primary min-h-11 px-3 text-sm" onClick={() => closeGuardGuide('completed')}>Complete guide</button>
+                ) : (
+                  <button type="button" className="soc-btn soc-btn-primary min-h-11 px-3 text-sm" onClick={() => setGuardGuideStep((step) => Math.min(GUARD_GUIDE_STEPS.length - 1, step + 1))}>Next</button>
+                )}
+              </div>
+            </div>
+          </aside>
+        ) : null}
         <section className="guard-section-frame" aria-label="Guard mission workspace">
           {!isNetworkOnline ? (
             <div className="rounded border border-danger-border bg-danger-bg p-4 text-danger-text" role="status" aria-live="polite">
@@ -866,7 +988,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
             </div>
           ) : null}
 
-          {activeSection !== 'mission' ? locationBlockingNoticePanel : null}
+          {activeSection === 'map' ? locationBlockingNoticePanel : null}
 
           {pendingCount > 0 ? (
             <div className="flex items-center gap-2 rounded border border-warning-border bg-warning-bg p-3 text-warning-text text-sm" role="status" aria-live="polite">
@@ -977,7 +1099,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                   ) : null}
                   <div className="flex flex-wrap items-center gap-2 lg:justify-end">
                     <button type="button" onClick={() => setActionStatus('Use Check In to record arrival at the assigned checkpoint.')} className="soc-btn soc-btn-secondary min-h-11 px-3 text-xs font-semibold">Log Checkpoint</button>
-                    <button type="button" onClick={() => { setIncidentStatus(''); setIncidentModalOpen(true) }} className="soc-btn soc-btn-danger min-h-11 px-3 text-xs font-semibold">Report Incident</button>
+                    <button type="button" onClick={(event) => openIncidentModal(event.currentTarget)} className="soc-btn soc-btn-danger min-h-11 px-3 text-xs font-semibold">Report Incident</button>
                     {isSyncing ? (
                       <span className={`rounded-full border border-current px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider opacity-60 ${dutyStatusConfig.textClass}`}>
                         Syncing
@@ -1068,9 +1190,8 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                 {locationBlockingNoticePanel}
                 <button
                   type="button"
-                  onClick={() => {
-                    setIncidentStatus('')
-                    setIncidentModalOpen(true)
+                  onClick={(event) => {
+                    openIncidentModal(event.currentTarget)
                   }}
                    className="soc-btn-danger min-h-12 w-full border-2 px-4 py-3 text-sm font-extrabold"
                 >
@@ -1082,6 +1203,14 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                    className="soc-btn w-full min-h-10 px-4 py-2 text-xs"
                 >
                   View Instructions
+                </button>
+                <button
+                  type="button"
+                  ref={guideTriggerRef}
+                  onClick={reopenGuardGuide}
+                  className="soc-btn soc-btn-neutral w-full min-h-10 px-4 py-2 text-xs"
+                >
+                  Open quick guide
                 </button>
               </div>
 
@@ -1184,6 +1313,11 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
 
       <div ref={guardStickyRegionRef} className="guard-sticky-region" data-testid="guard-sticky-region">
         <EmergencyContactsBar />
+        <PanicButton
+          userId={user.id}
+          userDisplayName={user.full_name || user.username || user.id}
+          siteName={currentShift?.client_site}
+        />
         <section className="guard-sticky-inner" aria-label="Guard primary navigation">
           <nav aria-label="Guard primary navigation">
             <ul className="guard-sticky-nav">
@@ -1214,12 +1348,6 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
           </nav>
         </section>
       </div>
-
-      <PanicButton
-        userId={user.id}
-        userDisplayName={user.full_name || user.username || user.id}
-        siteName={currentShift?.client_site}
-      />
 
       {profileModalOpen ? (
         <div className="fixed inset-0 z-(--z-overlay) flex items-center justify-center bg-black/50 p-4" role="presentation">
@@ -1278,19 +1406,20 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
       ) : null}
 
       {incidentModalOpen ? (
-        <div className="fixed inset-0 z-(--z-overlay) flex items-end justify-center bg-black/50 p-4 sm:items-center" role="presentation" onKeyDown={(e) => { if (e.key === 'Escape') setIncidentModalOpen(false) }}>
+        <div className="fixed inset-0 z-(--z-overlay) flex items-end justify-center bg-black/60 p-0 backdrop-blur-xs sm:items-center sm:p-4" role="presentation">
           <section
+            ref={incidentDialogRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby="incident-report-title"
-            className="soc-modal-surface w-full max-w-xl rounded border border-border bg-surface p-5 shadow-xl"
+            className="soc-modal-surface max-h-[calc(100dvh-env(safe-area-inset-bottom,0px))] w-full max-w-xl overflow-y-auto rounded-t-xl border border-border bg-surface px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] pt-5 shadow-xl sm:max-h-[85dvh] sm:rounded-xl sm:p-5"
           >
             <h2 id="incident-report-title" className="text-xl font-bold text-text-primary">Report Incident</h2>
             <form className="mt-3 space-y-3" onSubmit={handleIncidentSubmit}>
               <label className="block text-sm font-semibold text-text-secondary" htmlFor="incident-description">What happened?</label>
               <textarea
                 id="incident-description"
-                autoFocus
+                ref={incidentDescriptionRef}
                 value={incidentForm.description}
                 onChange={(event) => setIncidentForm((previous) => ({ ...previous, description: event.target.value }))}
                 className="min-h-32 w-full rounded border border-border bg-background px-3 py-2 text-text-primary"
@@ -1298,18 +1427,32 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                 required
               />
 
-              <label className="block text-sm font-semibold text-text-secondary" htmlFor="incident-priority">Priority</label>
-              <select
-                id="incident-priority"
-                value={incidentForm.priority}
-                onChange={(event) => setIncidentForm((previous) => ({ ...previous, priority: event.target.value as IncidentPriority }))}
-                className="w-full rounded border border-border bg-background px-3 py-2 text-text-primary"
-              >
-                <option value="critical">Critical</option>
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
-              </select>
+              <fieldset>
+                <legend className="mb-2 block text-sm font-semibold text-text-secondary">Priority</legend>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {(['critical', 'high', 'medium', 'low'] as IncidentPriority[]).map((priority) => {
+                    const selected = incidentForm.priority === priority
+                    const selectedClass = priority === 'critical'
+                      ? 'border-danger-border bg-danger-bg text-danger-text'
+                      : priority === 'high'
+                        ? 'border-warning-border bg-warning-bg text-warning-text'
+                        : priority === 'medium'
+                          ? 'border-border-elevated bg-surface-elevated text-text-primary'
+                          : 'border-info-border bg-info-bg text-info-text'
+                    return (
+                      <button
+                        key={priority}
+                        type="button"
+                        aria-pressed={selected}
+                        onClick={() => setIncidentForm((previous) => ({ ...previous, priority }))}
+                        className={`min-h-11 flex-1 rounded-lg border px-3 py-2 text-xs font-bold uppercase tracking-wider transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${selected ? selectedClass : 'border-border-subtle bg-surface text-text-secondary hover:bg-surface-hover'}`}
+                      >
+                        {priority}
+                      </button>
+                    )
+                  })}
+                </div>
+              </fieldset>
 
               <p className="flex items-center gap-1 text-xs text-text-secondary" aria-live="polite">
                 <span aria-hidden="true">{"\uD83D\uDCCD"}</span>
@@ -1318,20 +1461,21 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                   : 'Getting your location\u2026'}
               </p>
 
-              {incidentStatus ? <p className="text-sm text-text-secondary">{incidentStatus}</p> : null}
+              {incidentStatus ? <p className="text-sm text-text-secondary" role="status">{incidentStatus}</p> : null}
 
               <div className="flex flex-wrap gap-2">
                 <button
                   type="submit"
                   disabled={incidentSubmitting}
-                  className="soc-btn-danger"
+                  className="soc-btn-danger min-h-12 w-full px-4 text-sm font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:w-auto"
                 >
                   {incidentSubmitting ? 'Submitting...' : 'Submit Report'}
                 </button>
                 <button
                   type="button"
-                  onClick={() => setIncidentModalOpen(false)}
-                  className="soc-btn-neutral"
+                  onClick={closeIncidentModal}
+                  disabled={incidentSubmitting}
+                  className="soc-btn-neutral min-h-11 px-4 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Cancel
                 </button>

@@ -168,7 +168,7 @@ const FeedbackDashboard: FC<FeedbackDashboardProps> = ({ user, onLogout, onViewC
       onLogoClick={() => onViewChange?.('dashboard')}
     >
       <section className="mx-auto flex w-full max-w-6xl flex-col gap-4">
-        <header className="command-panel p-4 md:p-5">
+        <header className="command-panel soc-panel-pad">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-3">
               <div className="rounded-full border border-border-subtle bg-surface-elevated p-2 text-text-secondary" aria-hidden="true">
@@ -213,7 +213,7 @@ const FeedbackDashboard: FC<FeedbackDashboardProps> = ({ user, onLogout, onViewC
         </section>
 
         {loading ? (
-          <section className="command-panel" aria-live="polite">
+          <section className="command-panel soc-panel-pad" aria-live="polite">
             <div className="flex items-center gap-2 text-sm text-text-secondary">
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
               Loading feedback records...
@@ -222,7 +222,7 @@ const FeedbackDashboard: FC<FeedbackDashboardProps> = ({ user, onLogout, onViewC
         ) : null}
 
         {!loading && error ? (
-          <section className="command-panel space-y-3" role="alert">
+          <section className="command-panel soc-panel-pad space-y-3" role="alert">
             <p className="rounded border border-danger-border bg-danger-bg p-3 text-sm text-danger-text">{error}</p>
             <div>
               <button
@@ -239,7 +239,7 @@ const FeedbackDashboard: FC<FeedbackDashboardProps> = ({ user, onLogout, onViewC
         ) : null}
 
         {!loading && !error && records.length === 0 ? (
-          <section className="command-panel">
+          <section className="command-panel soc-panel-pad">
             <EmptyState
               icon={MessageSquareText}
               title="No feedback submissions yet"

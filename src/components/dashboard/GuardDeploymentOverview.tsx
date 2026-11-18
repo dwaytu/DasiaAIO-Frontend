@@ -10,7 +10,7 @@ const GuardDeploymentOverview: FC<GuardDeploymentOverviewProps> = ({ shifts }) =
   const absent = shifts.filter((shift) => shift.status === 'absent' || shift.status === 'no_show')
 
   return (
-    <section className="command-panel p-4 md:p-5" aria-label="Guard deployment overview">
+    <section className="command-panel soc-panel-pad" aria-label="Guard deployment overview">
       <div className="mb-4 border-b border-border-subtle pb-3">
         <h3 className="text-base font-bold uppercase tracking-wide text-text-primary">Guard Deployment Overview</h3>
         <p className="text-xs uppercase tracking-[0.16em] text-text-tertiary">Current field allocation and readiness snapshot</p>

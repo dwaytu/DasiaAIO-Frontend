@@ -26,7 +26,7 @@ const dotClass: Record<MissionTimelineItem['state'], string> = {
 
 const MissionTimelinePanel: FC<MissionTimelinePanelProps> = ({ items }) => {
   return (
-    <section className="command-panel p-4 md:p-5" aria-label="Mission timeline">
+    <section className="command-panel soc-panel-pad" aria-label="Mission timeline">
       <div className="mb-4 border-b border-border-subtle pb-3">
         <h3 className="text-base font-bold uppercase tracking-wide text-text-primary">Mission Timeline</h3>
         <p className="text-xs uppercase tracking-[0.16em] text-text-tertiary">Live mission progression and checkpoints</p>

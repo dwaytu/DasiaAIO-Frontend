@@ -261,7 +261,7 @@ const MdrUploader: FC<MdrUploaderProps> = ({ onUploadSuccess }) => {
               <p className="text-xs text-text-secondary">
                 Month: {parsedResult.reportMonth} | Branch: {parsedResult.branch}
               </p>
-              <p className="mt-1 text-xs text-text-secondary">Upload the parsed workbook to open its row-by-row review before records are committed.</p>
+              <p className="mt-1 text-xs text-text-secondary">Next: review every row. Records needing correction are kept visible and are not silently discarded.</p>
             </div>
           </div>
 
@@ -332,7 +332,7 @@ const MdrUploader: FC<MdrUploaderProps> = ({ onUploadSuccess }) => {
         }}
       >
         {isUploading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Upload className="h-4 w-4" aria-hidden="true" />}
-        {isUploading ? 'Uploading...' : 'Upload & Process'}
+        {isUploading ? 'Preparing review...' : 'Review changes'}
       </button>
     </section>
   )

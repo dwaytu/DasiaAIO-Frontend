@@ -92,6 +92,8 @@ const emptyReport: GuardPerformanceReport = {
   guards: [],
 }
 
+const PERFORMANCE_PAGE_SIZE = 15
+
 function formatPercent(value: number): string {
   return `${Math.round(value)}%`
 }
@@ -133,7 +135,7 @@ const VerticalBarChart: FC<{
   const colorClass = tone === 'success' ? 'text-success-text' : 'text-info-text'
 
   return (
-    <section className="command-panel p-4 md:p-5">
+    <section className="command-panel soc-panel-pad">
       <h3 className="text-lg font-bold text-text-primary">{title}</h3>
       {chartRows.length > 0 ? (
         <svg
@@ -216,7 +218,7 @@ const WorkloadBars: FC<{ rows: GuardPerformanceRow[] }> = ({ rows }) => {
   const maxCompleted = Math.max(1, ...displayRows.map((row) => row.completedShifts))
 
   return (
-    <section className="command-panel p-4 md:p-5">
+    <section className="command-panel soc-panel-pad">
       <h3 className="text-lg font-bold text-text-primary">Completed Shifts and Attendance Exceptions</h3>
       <div className="mt-4 space-y-4">
         {displayRows.length > 0 ? displayRows.map((row) => {
@@ -257,6 +259,8 @@ const PerformanceDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeV
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string>('')
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false)
+  const [guardSearch, setGuardSearch] = useState('')
+  const [guardPage, setGuardPage] = useState(1)
   const currentView = activeView || 'performance'
 
   useEffect(() => {
@@ -294,6 +298,13 @@ const PerformanceDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeV
     () => [...report.guards].sort((a, b) => b.attendanceRate - a.attendanceRate),
     [report.guards],
   )
+  const filteredGuardRows = useMemo(() => {
+    const query = guardSearch.trim().toLocaleLowerCase()
+    if (!query) return report.guards
+    return report.guards.filter((guard) => `${guard.guardName} ${guard.guardId}`.toLocaleLowerCase().includes(query))
+  }, [guardSearch, report.guards])
+  const guardPageCount = Math.max(1, Math.ceil(filteredGuardRows.length / PERFORMANCE_PAGE_SIZE))
+  const visibleGuardRows = filteredGuardRows.slice((guardPage - 1) * PERFORMANCE_PAGE_SIZE, guardPage * PERFORMANCE_PAGE_SIZE)
   const summary = report.summary
   const periodLabel = report.period.from || report.period.to
     ? `${report.period.from ?? 'Start'} to ${report.period.to ?? 'Present'}`
@@ -309,13 +320,19 @@ const PerformanceDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeV
     ? 'border-warning-border bg-warning-bg text-warning-text'
     : 'border-success-border bg-success-bg text-success-text'
 
+  useEffect(() => {
+    setGuardPage((page) => Math.min(page, guardPageCount))
+  }, [guardPageCount])
+
   const applyFilters = () => {
+    setGuardPage(1)
     setAppliedFilters(filters)
   }
 
   const clearFilters = () => {
     const empty = { from: '', to: '' }
     setFilters(empty)
+    setGuardPage(1)
     setAppliedFilters(empty)
   }
 
@@ -505,6 +522,17 @@ const PerformanceDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeV
                   <p className="text-sm text-text-secondary">
                     Attendance, punctuality, completion, incident, guard evaluation, merit, and replacement activity.
                   </p>
+                  <label className="mt-4 block max-w-md text-sm font-semibold text-text-secondary" htmlFor="performance-guard-search">
+                    Find a guard
+                    <input
+                      id="performance-guard-search"
+                      value={guardSearch}
+                      onChange={(event) => { setGuardSearch(event.target.value); setGuardPage(1) }}
+                      className="soc-input mt-1 w-full"
+                      placeholder="Search by guard name or Guard ID"
+                    />
+                  </label>
+                  <p className="mt-2 text-sm text-text-secondary" role="status" aria-live="polite">{filteredGuardRows.length} matching guard{filteredGuardRows.length === 1 ? '' : 's'}; page {guardPage} of {guardPageCount}.</p>
                 </div>
                 <div className="overflow-auto">
                   <table className="w-full min-w-[1120px] border-collapse">
@@ -522,7 +550,7 @@ const PerformanceDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeV
                       </tr>
                     </thead>
                     <tbody>
-                      {report.guards.map((row) => (
+                      {visibleGuardRows.map((row) => (
                         <tr key={row.guardId} className="border-b border-border hover:bg-surface-hover">
                           <td className="px-4 py-3 text-sm font-semibold text-text-primary">{row.guardName}</td>
                           <td className="px-4 py-3 text-sm text-text-primary">
@@ -544,6 +572,13 @@ const PerformanceDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeV
                     </tbody>
                   </table>
                 </div>
+                <nav className="flex flex-wrap items-center justify-between gap-3 border-t border-border-subtle px-4 py-3 md:px-6" aria-label="Performance report pages">
+                  <p className="text-sm text-text-secondary">Showing {filteredGuardRows.length === 0 ? 0 : (guardPage - 1) * PERFORMANCE_PAGE_SIZE + 1}-{Math.min(guardPage * PERFORMANCE_PAGE_SIZE, filteredGuardRows.length)} of {filteredGuardRows.length}</p>
+                  <div className="flex gap-2">
+                    <button type="button" className="soc-btn soc-btn-neutral min-h-11 px-3" disabled={guardPage === 1} onClick={() => setGuardPage((page) => Math.max(1, page - 1))}>Previous</button>
+                    <button type="button" className="soc-btn soc-btn-neutral min-h-11 px-3" disabled={guardPage === guardPageCount} onClick={() => setGuardPage((page) => Math.min(guardPageCount, page + 1))}>Next</button>
+                  </div>
+                </nav>
               </section>
             </>
           ) : (

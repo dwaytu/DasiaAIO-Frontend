@@ -20,7 +20,7 @@ const IncidentAlertFeed: FC<IncidentAlertFeedProps> = ({ alerts, nowLabel, onUpd
   const criticalCount = alerts.filter((a) => a.severity === 'critical').length
 
   return (
-    <section className="command-panel p-4 md:p-5" aria-label="Incident alert feed">
+    <section className="command-panel soc-panel-pad" aria-label="Incident alert feed">
       <div className="mb-4 border-b border-border-subtle pb-3">
         {criticalCount > 0 ? (
           <>

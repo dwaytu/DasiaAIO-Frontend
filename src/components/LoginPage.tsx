@@ -30,6 +30,8 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
   const [resetCode, setResetCode] = useState<string>('')
   const [newPassword, setNewPassword] = useState<string>('')
   const [confirmPassword, setConfirmPassword] = useState<string>('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [capsLockOn, setCapsLockOn] = useState(false)
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -421,7 +423,12 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
 
           <div>
             <label htmlFor="password" className={labelClass}>Password</label>
-            <input id="password" type="password" value={password} onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)} placeholder="Enter your password" disabled={isLoading} className={inputClass} />
+            <div className="relative">
+              <input id="password" type={showPassword ? 'text' : 'password'} value={password} onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)} onKeyUp={(event) => setCapsLockOn(event.getModifierState('CapsLock'))} onKeyDown={(event) => setCapsLockOn(event.getModifierState('CapsLock'))} placeholder="Enter your password" disabled={isLoading} className={`${inputClass} pr-20`} />
+              <button type="button" onClick={() => setShowPassword((visible) => !visible)} className="absolute right-2 top-1/2 -translate-y-1/2 rounded px-2 py-1 text-xs font-semibold text-text-secondary focus-visible:outline-2 focus-visible:outline-focus" aria-pressed={showPassword}>{showPassword ? 'Hide password' : 'Show password'}</button>
+            </div>
+            {capsLockOn ? <p className="mt-2 text-xs font-medium text-warning-text" role="status">Caps Lock is on.</p> : null}
+            <p className="mt-2 text-xs text-text-secondary">Passwords are case-sensitive. Contact your administrator if your account is pending, locked, or unavailable.</p>
           </div>
 
           {error && (

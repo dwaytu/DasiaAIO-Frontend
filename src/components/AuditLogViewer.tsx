@@ -27,8 +27,8 @@ const entityOptions = [
 ]
 
 const statusChips: Record<string, string> = {
-  success: 'border border-success-border bg-success-bg text-success-text',
-  failed: 'border border-danger-border bg-danger-bg text-danger-text',
+  success: 'border-success-border bg-success-bg text-success-text',
+  failed: 'border-danger-border bg-danger-bg text-danger-text',
 }
 
 const formatDateTime = (value: string) => {
@@ -105,7 +105,7 @@ export default function AuditLogViewer() {
         <header className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
             <p className="text-xs text-text-tertiary uppercase tracking-wider">Operations Oversight</p>
-            <h2 id="audit-log-title" className="text-2xl font-bold text-text-primary">System Audit Log</h2>
+            <h2 id="audit-log-title" className="text-2xl font-bold text-text-primary">Activity History</h2>
             <p className="text-sm text-text-secondary max-w-2xl mt-1">
               Review every privileged action sent to the SENTINEL API. Each record captures who performed the action, what resource was touched,
               whether it succeeded, and contextual metadata for forensic review.
@@ -122,7 +122,7 @@ export default function AuditLogViewer() {
                 <path d="M21 12a9 9 0 10-3.2 6.9" />
                 <path d="M21 3v6h-6" />
               </svg>
-              Refresh
+              Refresh activity
             </button>
             <button
               type="button"
@@ -155,7 +155,7 @@ export default function AuditLogViewer() {
           </label>
 
           <label htmlFor="audit-result" className="flex flex-col gap-2 text-sm font-semibold text-text-primary">
-            Result
+            Outcome
             <select
               id="audit-result"
               name="auditResult"
@@ -170,7 +170,7 @@ export default function AuditLogViewer() {
           </label>
 
           <label htmlFor="audit-entity-type" className="flex flex-col gap-2 text-sm font-semibold text-text-primary">
-            Entity type
+            Activity type
             <select
               id="audit-entity-type"
               name="auditEntityType"
@@ -249,12 +249,12 @@ export default function AuditLogViewer() {
             <table className="w-full min-w-[900px]" aria-describedby="audit-log-title">
               <thead className="sticky top-0 z-10 h-11 border-b border-border-subtle bg-surface-elevated/60 text-xs font-semibold uppercase tracking-wider text-text-tertiary backdrop-blur-xs">
                 <tr>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Timestamp</th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Actor</th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Action</th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Entity</th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Result</th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Details</th>
+                  <th scope="col" className="px-4 py-3.5 text-left">Date and time</th>
+                  <th scope="col" className="px-4 py-3.5 text-left">Performed by</th>
+                  <th scope="col" className="px-4 py-3.5 text-left">Activity</th>
+                  <th scope="col" className="px-4 py-3.5 text-left">Affected record</th>
+                  <th scope="col" className="px-4 py-3.5 text-left">Outcome</th>
+                  <th scope="col" className="px-4 py-3.5 text-left">Details</th>
                 </tr>
               </thead>
               <tbody>
@@ -265,26 +265,26 @@ export default function AuditLogViewer() {
                 ) : (
                   logs.map((log) => (
                     <tr key={log.id} className="border-b border-border-subtle/80 transition-colors hover:bg-surface-hover/50">
-                      <td className="px-4 py-3 text-sm text-text-primary whitespace-nowrap">{formatDateTime(log.created_at)}</td>
-                      <td className="px-4 py-3 text-sm text-text-primary">
+                      <td className="whitespace-nowrap px-4 py-3.5 align-middle text-sm text-text-primary">{formatDateTime(log.created_at)}</td>
+                      <td className="px-4 py-3.5 align-middle text-sm text-text-primary">
                         <div className="font-semibold text-text-primary">{log.actor_name || log.actor_email || 'System'}</div>
                         <div className="text-xs text-text-tertiary">{log.actor_role ? log.actor_role : 'Automated'}</div>
                       </td>
-                      <td className="px-4 py-3 text-sm text-text-primary">
+                      <td className="px-4 py-3.5 align-middle text-sm text-text-primary">
                         <span className="font-mono text-xs tracking-tight text-text-secondary bg-background border border-border-subtle px-2 py-1 rounded">
                           {log.action_key}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-sm text-text-primary">
+                      <td className="px-4 py-3.5 align-middle text-sm text-text-primary">
                         <div className="font-medium capitalize">{log.entity_type || 'unknown'}</div>
                         <div className="text-xs text-text-tertiary">{log.entity_id || '—'}</div>
                       </td>
-                      <td className="px-4 py-3 text-sm text-text-primary">
-                        <span className={`soc-status-neutral ${statusChips[log.result] || ''}`}>
+                      <td className="px-4 py-3.5 align-middle text-sm text-text-primary">
+                        <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium ${statusChips[log.result] || 'border-border-subtle bg-surface-elevated text-text-secondary'}`}>
                           {log.result}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-sm text-text-primary">
+                      <td className="px-4 py-3.5 align-middle text-sm text-text-primary">
                         <p className="text-sm text-text-secondary">{log.reason || 'No additional details recorded.'}</p>
                         {log.metadata ? (
                           <code className="mt-2 block w-full overflow-hidden text-ellipsis whitespace-nowrap rounded-md bg-background px-2 py-1 text-xs text-text-tertiary">

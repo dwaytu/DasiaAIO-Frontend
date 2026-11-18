@@ -8,7 +8,7 @@ const SecuritySettingsSection: FC<SecuritySettingsSectionProps> = ({ userId }) =
   const [dialogOpen, setDialogOpen] = useState(false)
   const [message, setMessage] = useState('')
   return (
-    <section className="command-panel p-4 md:p-6" aria-labelledby="security-settings-title">
+    <section className="command-panel soc-panel-pad" aria-labelledby="security-settings-title">
       <h2 id="security-settings-title" className="text-xl font-bold text-text-primary md:text-2xl">Security</h2>
       <p className="mt-2 text-sm leading-6 text-text-secondary">Manage the password that protects this account.</p>
       <div className="mt-4 flex flex-col gap-3 rounded border border-border bg-surface p-4 sm:flex-row sm:items-center sm:justify-between">

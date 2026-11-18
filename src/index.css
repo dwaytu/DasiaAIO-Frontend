@@ -11,6 +11,10 @@
   --color-border-subtle: var(--color-border-subtle);
   --color-border-elevated: var(--color-border-elevated);
   --color-primary: var(--color-primary);
+  --color-accent: var(--color-accent);
+  --color-accent-bg: var(--color-accent-bg);
+  --color-accent-border: var(--color-accent-border);
+  --color-accent-text: var(--color-accent-text);
   --color-info: var(--color-info);
   --color-info-bg: var(--color-info-bg);
   --color-info-border: var(--color-info-border);
@@ -154,6 +158,9 @@
 
   --color-accent: #0891b2;
   --color-accent-secondary: #0e7490;
+  --color-accent-bg: #ecfeff;
+  --color-accent-border: #0e7490;
+  --color-accent-text: #0e7490;
 
   --scrollbar-track: #e8edf5;
   --scrollbar-thumb: #c7d2e0;
@@ -309,6 +316,9 @@
 
   --color-accent: #22d3ee;
   --color-accent-secondary: #06b6d4;
+  --color-accent-bg: #083344;
+  --color-accent-border: #22d3ee;
+  --color-accent-text: #a5f3fc;
 
   --scrollbar-track: #1a2435;
   --scrollbar-thumb: #3a4c68;
@@ -494,8 +504,8 @@
     font-size: 22px;
     font-weight: 800;
     line-height: 1.15;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
+    letter-spacing: 0.01em;
+    text-transform: none;
     color: var(--color-text-primary);
   }
 
@@ -503,8 +513,8 @@
     font-size: 16px;
     font-weight: 700;
     line-height: 1.25;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
+    letter-spacing: 0.01em;
+    text-transform: none;
     color: var(--color-text-primary);
   }
 
@@ -512,8 +522,8 @@
     font-size: 14px;
     font-weight: 700;
     line-height: 1.3;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+    text-transform: none;
+    letter-spacing: 0.01em;
     color: var(--color-text-primary);
   }
 
@@ -563,6 +573,17 @@
     border-radius: var(--radius-card);
     background: var(--color-surface);
     box-shadow: var(--shadow-bento);
+  }
+
+  /* Standard inset for content panels. Edge-to-edge tables and split panels opt out. */
+  .soc-panel-pad {
+    padding: var(--space-4);
+  }
+
+  @media (min-width: 768px) {
+    .soc-panel-pad {
+      padding: var(--space-5);
+    }
   }
 
   .leaflet-touch .leaflet-control-zoom a,
@@ -702,8 +723,8 @@
     padding: 0.55rem 0.9rem;
     font-size: 0.75rem;
     font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    text-transform: none;
     transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, filter 160ms ease;
   }
 
@@ -1561,16 +1582,13 @@
   }
 
   .guard-sticky-main {
-    /* Use the defined sticky region height variable to avoid magic numbers */
-    padding-bottom: calc(var(--guard-sticky-region-height) + 5rem + env(safe-area-inset-bottom, 0px));
+    padding-bottom: 5rem;
+    scroll-padding-bottom: var(--space-2);
   }
 
   /* Guard screens in this tranche use a single sticky bottom region only. */
   .guard-sticky-region {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    flex: none;
     /* Use centralized z-index token to prevent future collisions. Must be below drawer but above content. */
     z-index: var(--z-guard-sticky-region);
     background: var(--color-surface);
@@ -1578,6 +1596,7 @@
   }
 
   .guard-panic-button {
+    position: fixed;
     right: max(1rem, calc(env(safe-area-inset-right, 0px) + 0.75rem));
     bottom: calc(var(--guard-sticky-region-height) + 0.75rem);
   }
@@ -1674,10 +1693,6 @@
   }
 
   @media (min-width: 640px) {
-    .guard-panic-button {
-      bottom: 8rem;
-    }
-
     .guard-sticky-nav button {
       gap: 0.375rem;
       padding-inline: 0.5rem;
@@ -1689,6 +1704,29 @@
 
     .guard-kpi-row {
       grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (orientation: landscape) and (max-height: 500px) and (min-width: 640px) {
+    .guard-sticky-main {
+      padding-bottom: var(--space-4);
+    }
+
+    .guard-sticky-region {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      column-gap: var(--space-2);
+    }
+
+    .guard-sticky-region .guard-panic-button {
+      position: relative;
+      inset: auto;
+      max-width: 9rem;
+    }
+
+    .guard-sticky-inner {
+      grid-column: 1 / -1;
     }
   }
 
@@ -1805,6 +1843,11 @@
     margin: 12mm;
   }
 
+  @page sentinel-dtr-timesheet {
+    size: A4 landscape;
+    margin: 12mm;
+  }
+
   body * {
     visibility: hidden !important;
   }
@@ -1821,14 +1864,46 @@
     overflow: visible !important;
   }
 
+  /* Give the report normal page flow, independent of screen scroll containers. */
+  html:has(.dtr-print-report),
+  body:has(.dtr-print-report),
+  #root:has(.dtr-print-report),
+  #root :has(.dtr-print-report) {
+    display: block !important;
+    position: static !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    transform: none !important;
+  }
+
+  body:has(.dtr-print-report) > :not(:has(.dtr-print-report)),
+  #root:has(.dtr-print-report) > :not(.dtr-print-report, :has(.dtr-print-report)),
+  #root :has(.dtr-print-report) > :not(.dtr-print-report, :has(.dtr-print-report)) {
+    display: none !important;
+  }
+
   .dtr-print-report {
-    position: absolute !important;
-    inset: 0;
+    page: sentinel-dtr-timesheet;
+    position: static !important;
     width: 100% !important;
     min-width: 0 !important;
     margin: 0 !important;
     background: Canvas !important;
     color: CanvasText !important;
+  }
+
+  body:has(.dtr-print-report) aside,
+  body:has(.dtr-print-report) nav,
+  body:has(.dtr-print-report) form,
+  body:has(.dtr-print-report) button {
+    display: none !important;
   }
 
   .dtr-print-heading,

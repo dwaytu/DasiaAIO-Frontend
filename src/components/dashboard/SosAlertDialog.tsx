@@ -1,14 +1,21 @@
 import { AlertTriangle, Check, CheckCircle2, MapPin, X } from 'lucide-react'
 import { FC, useEffect, useRef, useState } from 'react'
 import type { Incident } from '../../hooks/useIncidents'
+import { isEmergencyAudioBeaconEnabled, playTacticalSosChime } from '../../utils/tacticalAudio'
+
+// Do not replay an alarm for an incident an operator is merely revisiting.
+// One minute covers normal polling and rendering delay while keeping the alert
+// tied to a newly opened, unacknowledged SOS.
+const SOS_CHIME_FRESHNESS_MS = 60_000
 
 interface SosAlertDialogProps {
   incident: Incident
   onUpdateStatus: (incidentId: string, status: 'investigating' | 'resolved') => Promise<void>
   onDismiss: () => void
+  onFocusMap?: (latitude: number, longitude: number) => void
 }
 
-const SosAlertDialog: FC<SosAlertDialogProps> = ({ incident, onUpdateStatus, onDismiss }) => {
+const SosAlertDialog: FC<SosAlertDialogProps> = ({ incident, onUpdateStatus, onDismiss, onFocusMap }) => {
   const dismissButtonRef = useRef<HTMLButtonElement>(null)
   const [processing, setProcessing] = useState<'acknowledge' | 'resolve' | ''>('')
   const [error, setError] = useState('')
@@ -21,33 +28,35 @@ const SosAlertDialog: FC<SosAlertDialogProps> = ({ incident, onUpdateStatus, onD
   }, [incident.id])
 
   useEffect(() => {
-    const updateElapsed = () => setElapsedSeconds(Math.max(0, Math.floor((Date.now() - new Date(incident.created_at).getTime()) / 1000)))
+    const incidentTime = Date.parse(incident.created_at)
+    const updateElapsed = () => {
+      const elapsed = Number.isFinite(incidentTime)
+        ? Math.max(0, Math.floor((Date.now() - incidentTime) / 1000))
+        : 0
+      setElapsedSeconds(elapsed)
+    }
     updateElapsed()
     const timer = window.setInterval(updateElapsed, 1000)
     return () => window.clearInterval(timer)
   }, [incident.created_at])
 
   useEffect(() => {
-    if (incident.status !== 'open') return
-    try {
-      const AudioContextCtor = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
-      if (!AudioContextCtor) return
-      const context = new AudioContextCtor()
-      ;[520, 660].forEach((frequency, index) => {
-        const oscillator = context.createOscillator()
-        const gain = context.createGain()
-        oscillator.frequency.value = frequency
-        gain.gain.setValueAtTime(0.04, context.currentTime + index * 0.08)
-        gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.3 + index * 0.08)
-        oscillator.connect(gain).connect(context.destination)
-        oscillator.start(context.currentTime + index * 0.08)
-        oscillator.stop(context.currentTime + 0.32 + index * 0.08)
-      })
-      window.setTimeout(() => void context.close(), 500)
-    } catch {
-      // Browsers may block unattended audio; the visual SOS signal remains available.
-    }
+    if (incident.status !== 'open' || !isEmergencyAudioBeaconEnabled()) return
+
+    const openedAt = Date.parse(incident.created_at)
+    if (!Number.isFinite(openedAt) || Date.now() - openedAt > SOS_CHIME_FRESHNESS_MS) return
+
+    const playback = playTacticalSosChime()
+    return () => playback.stop()
   }, [incident.id, incident.status])
+
+  const handleFocusMap = () => {
+    if (!canFocusMap) return
+    const latitude = incident.latitude as number
+    const longitude = incident.longitude as number
+    window.dispatchEvent(new CustomEvent('sentinel:focus-map', { detail: { latitude, longitude } }))
+    onFocusMap?.(latitude, longitude)
+  }
 
   const handleStatusUpdate = async (status: 'investigating' | 'resolved') => {
     setProcessing(status === 'investigating' ? 'acknowledge' : 'resolve')
@@ -65,7 +74,7 @@ const SosAlertDialog: FC<SosAlertDialogProps> = ({ incident, onUpdateStatus, onD
 
   return (
     <div
-      className="fixed inset-0 z-(--z-overlay) flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm animate-fade-in"
+      className="fixed inset-0 z-[200] flex items-start justify-center overflow-y-auto bg-black/75 p-4 pt-6 backdrop-blur-sm animate-fade-in sm:items-center"
       role="presentation"
       onKeyDown={(event) => {
         if (event.key === 'Escape' && !processing) onDismiss()
@@ -76,9 +85,9 @@ const SosAlertDialog: FC<SosAlertDialogProps> = ({ incident, onUpdateStatus, onD
         aria-modal="true"
         aria-labelledby="sos-alert-title"
         aria-describedby="sos-alert-description"
-        className="soc-modal-surface w-full max-w-xl overflow-hidden rounded-md border-2 border-danger-border bg-surface-elevated shadow-2xl"
+        className="soc-modal-surface flex max-h-[calc(100dvh-10rem)] w-full max-w-xl flex-col overflow-hidden rounded-md border-2 border-danger-border bg-surface-elevated shadow-2xl sm:max-h-[calc(100dvh-3rem)]"
       >
-        <header className="flex items-start justify-between gap-4 border-b border-danger-border bg-danger-bg px-5 py-4">
+        <header className="shrink-0 flex flex-wrap items-start gap-3 border-b border-danger-border bg-danger-bg px-5 py-4 sm:flex-nowrap sm:gap-4">
           <div className="flex items-start gap-3">
             <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-danger text-white animate-pulse" aria-hidden="true">
               <AlertTriangle className="h-6 w-6" />
@@ -90,7 +99,7 @@ const SosAlertDialog: FC<SosAlertDialogProps> = ({ incident, onUpdateStatus, onD
               </h2>
             </div>
           </div>
-          <span className="rounded-full border border-danger-border bg-surface px-2.5 py-1 text-xs font-bold tabular-nums text-danger-text">Response Time: {responseTime}</span>
+          <span className="ml-auto rounded-full border border-danger-border bg-surface px-2.5 py-1 text-xs font-bold tabular-nums text-danger-text">Response Time: {responseTime}</span>
           <button
             ref={dismissButtonRef}
             type="button"
@@ -104,7 +113,7 @@ const SosAlertDialog: FC<SosAlertDialogProps> = ({ incident, onUpdateStatus, onD
           </button>
         </header>
 
-        <div className="space-y-4 px-5 py-5">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-5">
           <p id="sos-alert-description" className="text-base font-semibold text-text-primary">
             {incident.description || 'A guard has triggered an emergency panic alert.'}
           </p>
@@ -135,28 +144,28 @@ const SosAlertDialog: FC<SosAlertDialogProps> = ({ incident, onUpdateStatus, onD
             </p>
           ) : null}
 
-          <div className="flex flex-wrap justify-end gap-2 border-t border-border-subtle pt-4">
-            {canFocusMap ? <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('sentinel:focus-map', { detail: { latitude: incident.latitude, longitude: incident.longitude } }))} className="soc-btn soc-btn-secondary min-h-11 px-4"><MapPin className="h-4 w-4" aria-hidden="true" /> Focus on Map</button> : null}
-            {incident.contact_number ? <a href={`tel:${incident.contact_number}`} className="soc-btn soc-btn-secondary inline-flex min-h-11 items-center px-4">Call Guard</a> : null}
-            <button
-              type="button"
-              onClick={() => void handleStatusUpdate('investigating')}
-              disabled={Boolean(processing)}
-              className="soc-btn soc-btn-warning min-h-11 px-4"
-            >
-              <Check className="h-4 w-4" aria-hidden="true" />
-              {processing === 'acknowledge' ? 'Acknowledging...' : 'Acknowledge'}
-            </button>
-            <button
-              type="button"
-              onClick={() => void handleStatusUpdate('resolved')}
-              disabled={Boolean(processing)}
-              className="soc-btn soc-btn-danger min-h-11 px-4"
-            >
-              <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
-              {processing === 'resolve' ? 'Resolving...' : 'Resolve SOS'}
-            </button>
-          </div>
+        </div>
+        <div className="shrink-0 flex flex-wrap justify-end gap-2 border-t border-border-subtle bg-surface-elevated px-5 py-4">
+          {canFocusMap ? <button type="button" onClick={handleFocusMap} className="soc-btn soc-btn-secondary min-h-11 px-4"><MapPin className="h-4 w-4" aria-hidden="true" /> Focus on Map</button> : null}
+          {incident.contact_number ? <a href={`tel:${incident.contact_number}`} className="soc-btn soc-btn-secondary inline-flex min-h-11 items-center px-4">Call Guard</a> : null}
+          <button
+            type="button"
+            onClick={() => void handleStatusUpdate('investigating')}
+            disabled={Boolean(processing)}
+            className="soc-btn soc-btn-warning min-h-11 px-4"
+          >
+            <Check className="h-4 w-4" aria-hidden="true" />
+            {processing === 'acknowledge' ? 'Acknowledging...' : 'Acknowledge'}
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleStatusUpdate('resolved')}
+            disabled={Boolean(processing)}
+            className="soc-btn soc-btn-danger min-h-11 px-4"
+          >
+            <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+            {processing === 'resolve' ? 'Resolving...' : 'Resolve SOS'}
+          </button>
         </div>
       </section>
     </div>

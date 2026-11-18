@@ -71,7 +71,7 @@ const LiveOperationsFeed: FC<LiveOperationsFeedProps> = ({ items, onDismiss, onU
   const { selectedEventId, selectEvent } = useOperationalEvent()
 
   return (
-    <section className="command-panel p-4 md:p-5" aria-label="Live operations feed">
+    <section className="command-panel soc-panel-pad" aria-label="Live operations feed">
       <div className="mb-4 flex items-center justify-between gap-3 border-b border-border-subtle pb-3">
         <div>
           <h3 className="text-base font-bold uppercase tracking-wide text-text-primary">Live Operations Feed</h3>

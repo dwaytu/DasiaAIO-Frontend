@@ -23,6 +23,9 @@ export interface OperationalRequest {
   priority: OperationalRequestPriority
   clientSiteId?: string | null
   shiftId?: string | null
+  clientSiteName?: string | null
+  shiftStartTime?: string | null
+  shiftEndTime?: string | null
   operationalEventKey?: string | null
   reviewerId?: string | null
   reviewedAt?: string | null

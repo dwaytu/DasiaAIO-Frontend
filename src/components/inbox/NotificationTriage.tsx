@@ -33,6 +33,9 @@ const PRIORITY_BADGE_CLASS: Record<InboxItem['priority'], string> = {
   normal: 'soc-status-success',
 }
 
+const QUEUE_PAGE_SIZE = 12
+const priorityOrder: Record<InboxItem['priority'], number> = { urgent: 0, high: 1, normal: 2 }
+
 function itemMatchesFilter(item: InboxItem, filter: TriageFilter): boolean {
   if (filter === 'all') return true
   if (filter === 'unread') return item.notificationId !== undefined && !item.isRead
@@ -45,6 +48,7 @@ export function NotificationTriage({ items, isLoading = false, emptyMessage }: N
   const [readOverrides, setReadOverrides] = useState<Record<string, boolean>>({})
   const [readBusy, setReadBusy] = useState(false)
   const [readError, setReadError] = useState('')
+  const [queuePage, setQueuePage] = useState(1)
 
   const resolvedItems = useMemo(
     () => items.map((item) => item.notificationId && item.notificationId in readOverrides
@@ -62,11 +66,25 @@ export function NotificationTriage({ items, isLoading = false, emptyMessage }: N
     () => resolvedItems.filter((item) => itemMatchesFilter(item, filter)),
     [filter, resolvedItems],
   )
-  const selectedItem = visibleItems.find((item) => item.id === selectedId) ?? visibleItems[0] ?? null
+  const prioritizedItems = useMemo(
+    () => [...visibleItems].sort((left, right) => priorityOrder[left.priority] - priorityOrder[right.priority] || new Date(right.timestamp).getTime() - new Date(left.timestamp).getTime()),
+    [visibleItems],
+  )
+  const queuePageCount = Math.max(1, Math.ceil(prioritizedItems.length / QUEUE_PAGE_SIZE))
+  const pageItems = prioritizedItems.slice((queuePage - 1) * QUEUE_PAGE_SIZE, queuePage * QUEUE_PAGE_SIZE)
+  const selectedItem = visibleItems.find((item) => item.id === selectedId) ?? pageItems[0] ?? null
 
   useEffect(() => {
     if (!availableFilters.some((entry) => entry.id === filter)) setFilter('all')
   }, [availableFilters, filter])
+
+  useEffect(() => {
+    setQueuePage(1)
+  }, [filter])
+
+  useEffect(() => {
+    setQueuePage((page) => Math.min(page, queuePageCount))
+  }, [queuePageCount])
 
   useEffect(() => {
     if (selectedItem && selectedItem.id !== selectedId) setSelectedId(selectedItem.id)
@@ -98,7 +116,7 @@ export function NotificationTriage({ items, isLoading = false, emptyMessage }: N
           <h2 id="inbox-triage-title" className="mt-1 text-xl font-bold text-text-primary">Review queue</h2>
           <p className="mt-1 text-sm text-text-secondary">Review the selected item and take the next relevant action. Items are ordered by priority, then most recent.</p>
           <p className="mt-2 text-sm text-text-secondary" role="status" aria-live="polite">
-            {isLoading ? 'Loading notifications...' : `${visibleItems.length} item${visibleItems.length === 1 ? '' : 's'} in the current view`}
+            {isLoading ? 'Loading notifications...' : `${visibleItems.length} item${visibleItems.length === 1 ? '' : 's'} in the current view; page ${queuePage} of ${queuePageCount}.`}
           </p>
         </div>
         <div className="flex flex-wrap gap-2" role="toolbar" aria-label="Inbox filters">
@@ -119,7 +137,7 @@ export function NotificationTriage({ items, isLoading = false, emptyMessage }: N
       <div className="grid min-h-[30rem] grid-cols-1 overflow-hidden rounded border border-border-subtle bg-surface lg:grid-cols-[minmax(0,0.9fr)_minmax(20rem,1.1fr)]">
         <div className="border-b border-border-subtle lg:border-b-0 lg:border-r">
           <ActionInbox
-            items={visibleItems}
+            items={pageItems}
             isLoading={isLoading}
             emptyMessage={filter === 'all' ? emptyMessage : 'No notifications match the selected filters.'}
             onItemClick={(item) => setSelectedId(item.id)}
@@ -127,6 +145,15 @@ export function NotificationTriage({ items, isLoading = false, emptyMessage }: N
             showInlineActions={false}
             className="h-full rounded-none border-0 bg-transparent shadow-none"
           />
+          {prioritizedItems.length > QUEUE_PAGE_SIZE ? (
+            <nav className="flex flex-wrap items-center justify-between gap-2 border-t border-border-subtle p-3" aria-label="Inbox pages">
+              <span className="text-xs text-text-secondary">Showing {(queuePage - 1) * QUEUE_PAGE_SIZE + 1}-{Math.min(queuePage * QUEUE_PAGE_SIZE, prioritizedItems.length)} of {prioritizedItems.length}</span>
+              <div className="flex gap-2">
+                <button type="button" className="soc-btn soc-btn-neutral min-h-11 px-3 text-xs" disabled={queuePage === 1} onClick={() => setQueuePage((page) => Math.max(1, page - 1))}>Previous</button>
+                <button type="button" className="soc-btn soc-btn-neutral min-h-11 px-3 text-xs" disabled={queuePage === queuePageCount} onClick={() => setQueuePage((page) => Math.min(queuePageCount, page + 1))}>Next</button>
+              </div>
+            </nav>
+          ) : null}
         </div>
 
         <aside className="bg-surface p-5" aria-live="polite" aria-label="Selected notification details">
@@ -184,7 +211,7 @@ export function NotificationTriage({ items, isLoading = false, emptyMessage }: N
                     className="soc-btn-neutral disabled:opacity-50"
                   >
                     {selectedItem.isRead ? <Circle size={15} aria-hidden="true" /> : <CheckCircle2 size={15} aria-hidden="true" />}
-                    {selectedItem.isRead ? 'Mark as unread' : 'Mark as read'}
+                    {selectedItem.isRead ? 'Mark as unread' : 'Mark as reviewed'}
                   </button>
                 ) : null}
               </div>

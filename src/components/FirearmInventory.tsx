@@ -111,7 +111,7 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
       case 'deployed': return 'border-info-border bg-info-bg text-info-text'
       case 'maintenance': return 'border-warning-border bg-warning-bg text-warning-text'
       case 'lost': return 'border-danger-border bg-danger-bg text-danger-text'
-      default: return 'soc-status-neutral'
+      default: return 'border-border-subtle bg-surface-elevated text-text-secondary'
     }
   }
 
@@ -226,20 +226,20 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
                     <tbody>
                       {firearms.map((f) => (
                         <tr key={f.id} className="border-b border-border-subtle/80 transition-colors hover:bg-surface-hover/50">
-                          <td className="px-4 py-3 text-text-primary">{f.serialNumber}</td>
-                          <td className="px-4 py-3 text-text-primary">{f.model}</td>
-                          <td className="px-4 py-3 text-text-secondary">{normalizeManufacturer(f.make)}</td>
-                          <td className="px-4 py-3 text-text-primary">{f.caliber}</td>
-                          <td className="px-4 py-3 text-text-primary">{f.licenseExpiryDate ? new Date(f.licenseExpiryDate).toLocaleDateString() : 'N/A'}</td>
-                          <td className="px-4 py-3">
+                          <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{f.serialNumber}</td>
+                          <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{f.model}</td>
+                          <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{normalizeManufacturer(f.make)}</td>
+                          <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{f.caliber}</td>
+                          <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{f.licenseExpiryDate ? new Date(f.licenseExpiryDate).toLocaleDateString() : 'N/A'}</td>
+                          <td className="px-4 py-3.5 align-middle text-sm text-text-primary">
                             <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium ${f.custodyReview ? 'border-warning-border bg-warning-bg text-warning-text' : getStatusBadgeColor(f.status)}`}>
                               {statusLabel(f)}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-sm text-text-secondary">
+                          <td className="px-4 py-3.5 align-middle text-sm text-text-primary">
                             {f.custodyReview ? <div><p className="font-medium text-warning-text">No verified active custody record</p><p className="mt-1 text-xs">Imported status: {f.status}. Active custody: No.</p><p className="mt-1 text-xs">MDR source: {f.mdrRowRef || 'Not linked'}{f.sourceGuardText ? `; source guard: ${f.sourceGuardText}` : ''}. Direct guard match: {f.directGuardMatch ? 'Yes' : 'No'}.</p></div> : f.activeCustody ? 'Verified active custody' : 'No active custody'}
                           </td>
-                          <td className="px-4 py-3 text-text-primary">{f.lastMaintenance ? new Date(f.lastMaintenance).toLocaleDateString() : 'N/A'}</td>
+                          <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{f.lastMaintenance ? new Date(f.lastMaintenance).toLocaleDateString() : 'N/A'}</td>
                         </tr>
                       ))}
                     </tbody>

@@ -1,4 +1,4 @@
-import { useState, useEffect, FC } from 'react'
+import { useState, useEffect, useMemo, FC } from 'react'
 import { ArrowLeft, ArrowRight, Award, CalendarCheck2, ClipboardCheck, Clock3, Star, Trophy, Users } from 'lucide-react'
 import { API_BASE_URL } from '../config'
 import OperationalShell from './layout/OperationalShell'
@@ -56,6 +56,8 @@ interface Evaluation {
   evaluatorRole?: string
   createdAt: string
 }
+
+const RANKINGS_PAGE_SIZE = 12
 
 function buildScoreHistory(evals: Evaluation[]): { label: string; score: number }[] {
   const sorted = [...evals].sort(
@@ -144,6 +146,8 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
   const [showEvaluationForm, setShowEvaluationForm] = useState<boolean>(false)
   const [evaluationStatus, setEvaluationStatus] = useState<string>('')
   const [submittingEvaluation, setSubmittingEvaluation] = useState<boolean>(false)
+  const [rankingSearch, setRankingSearch] = useState('')
+  const [rankingPage, setRankingPage] = useState(1)
   const [evaluationData, setEvaluationData] = useState({
     rating: 5,
     comment: '',
@@ -299,10 +303,21 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
     return 'danger'
   }
 
+  const filteredRankings = useMemo(() => {
+    const query = rankingSearch.trim().toLocaleLowerCase()
+    if (!query) return rankings
+    return rankings.filter((guard) => `${guard.guardName} ${guard.guardId}`.toLocaleLowerCase().includes(query))
+  }, [rankingSearch, rankings])
+  const rankingPageCount = Math.max(1, Math.ceil(filteredRankings.length / RANKINGS_PAGE_SIZE))
+  const visibleRankings = filteredRankings.slice((rankingPage - 1) * RANKINGS_PAGE_SIZE, rankingPage * RANKINGS_PAGE_SIZE)
   const evaluatedRankings = rankings.filter((guard) => guard.meritRank.toLowerCase() !== 'not evaluated')
   const averageScore = evaluatedRankings.length > 0
     ? evaluatedRankings.reduce((total, guard) => total + guard.overallScore, 0) / evaluatedRankings.length
     : 0
+
+  useEffect(() => {
+    setRankingPage((page) => Math.min(page, rankingPageCount))
+  }, [rankingPageCount])
   const rankingSummary: OperationalSummaryItem[] = [
     { label: 'Eligible guards', value: rankings.length, detail: 'Shown in the ranking register', tone: 'neutral', icon: Users },
     {
@@ -331,7 +346,7 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
   return (
     <OperationalShell
       user={user}
-      title="MERIT"
+      title="Guard Evaluations"
       navItems={getSidebarNav(user.role)}
       activeView={currentView}
       onNavigate={(view) => onViewChange?.(view)}
@@ -346,9 +361,9 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
         ) : (
           <div className="w-full animate-fade-in">
             <OperationalPageHeader
-              eyebrow="Merit intelligence"
-              title="Guard merit and evaluation"
-              description="Scores combine attendance, punctuality, and submitted evaluator ratings. Higher scores reflect stronger recorded performance."
+              eyebrow="Guard evaluations"
+              title="Guard evaluations"
+              description="Review recorded attendance, punctuality, and evaluator ratings. A merit score appears in each guard scorecard."
               icon={Award}
               status={<span className="soc-status-info">{rankings.length} eligible guard{rankings.length === 1 ? '' : 's'}</span>}
             />
@@ -531,59 +546,73 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
                 <OperationalSummaryBand items={rankingSummary} />
                 <section className="table-glass overflow-hidden">
                   <div className="border-b border-border-subtle px-5 py-5 md:px-6">
-                    <p className="soc-kicker">Rankings register</p>
-                    <h2 className="mt-1 text-lg font-bold text-text-primary">Guard merit score rankings</h2>
-                    <p className="mt-1 text-sm text-text-secondary">Higher scores indicate stronger recorded performance. Open a scorecard to review the factors behind each score.</p>
+                    <p className="soc-kicker">Guard register</p>
+                    <h2 className="mt-1 text-lg font-bold text-text-primary">Evaluation register</h2>
+                    <p className="mt-1 text-sm text-text-secondary">Search by guard name or Guard ID. Open a scorecard to review the recorded factors behind each merit score.</p>
+                    <label className="mt-4 block max-w-md text-sm font-semibold text-text-secondary" htmlFor="guard-evaluations-search">
+                      Find a guard
+                      <input
+                        id="guard-evaluations-search"
+                        value={rankingSearch}
+                        onChange={(event) => { setRankingSearch(event.target.value); setRankingPage(1) }}
+                        className="soc-input mt-1 w-full"
+                        placeholder="Search by name or Guard ID"
+                      />
+                    </label>
+                    <p className="mt-2 text-sm text-text-secondary" role="status" aria-live="polite">
+                      {filteredRankings.length} matching guard{filteredRankings.length === 1 ? '' : 's'}; page {rankingPage} of {rankingPageCount}.
+                    </p>
                   </div>
 
-                  {rankings.length > 0 ? (
+                  {filteredRankings.length > 0 ? (
+                    <>
                     <div className="overflow-x-auto">
                       <table className="min-w-[42rem] w-full border-collapse lg:min-w-0">
-                      <thead className="thead-glass">
+                      <thead className="h-11 border-b border-border-subtle bg-surface-elevated/50 text-xs font-semibold uppercase tracking-wider text-text-tertiary">
                         <tr>
-                          <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">
+                          <th className="px-4 py-3.5 text-left">
                             Rank
                           </th>
-                          <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">
+                          <th className="px-4 py-3.5 text-left">
                             Guard Name
                           </th>
-                          <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">
+                          <th className="px-4 py-3.5 text-left">
                             Overall Score
                           </th>
-                          <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">
+                          <th className="px-4 py-3.5 text-left">
                             Merit Rank
                           </th>
-                          <th className="hidden px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider lg:table-cell">
+                          <th className="hidden px-4 py-3.5 text-left lg:table-cell">
                             Punctuality
                           </th>
-                          <th className="hidden px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider lg:table-cell">
+                          <th className="hidden px-4 py-3.5 text-left lg:table-cell">
                             Evaluator Rating
                           </th>
-                          <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">
+                          <th className="px-4 py-3.5 text-left">
                             Action
                           </th>
                         </tr>
                       </thead>
                       <tbody>
-                        {rankings.map((guard) => (
-                          <tr key={guard.guardId} className="border-b border-border hover:bg-surface-hover">
-                            <td className="px-4 py-3">
+                        {visibleRankings.map((guard) => (
+                          <tr key={guard.guardId} className="border-b border-border-subtle/80 transition-colors hover:bg-surface-hover/50">
+                            <td className="px-4 py-3.5 align-middle text-sm text-text-primary">
                               <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-info text-(--color-primary-text) font-bold">
                                 {guard.rank}
                               </span>
                             </td>
-                            <td className="px-4 py-3 text-text-primary font-medium">{guard.guardName}</td>
-                            <td className="px-4 py-3">
+                            <td className="px-4 py-3.5 align-middle text-sm font-medium text-text-primary">{guard.guardName}</td>
+                            <td className="px-4 py-3.5 align-middle text-sm text-text-primary">
                               <span className={`font-bold text-lg ${getScoreColor(guard.overallScore)}`}>
                                 {guard.overallScore.toFixed(1)}
                               </span>
                             </td>
-                            <td className="px-4 py-3">
+                            <td className="px-4 py-3.5 align-middle text-sm text-text-primary">
                               <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getMeritRankColor(guard.meritRank)}`}>
                                 {guard.meritRank}
                               </span>
                             </td>
-                            <td className="hidden px-4 py-3 lg:table-cell">
+                            <td className="hidden px-4 py-3.5 align-middle text-sm text-text-primary lg:table-cell">
                               <div className="flex items-center gap-2">
                                 <div className="flex-1 bg-border rounded-full h-2 overflow-hidden">
                                   <div
@@ -594,10 +623,10 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
                                 <span className="text-sm font-medium text-text-primary min-w-12">{guard.onTimePercentage.toFixed(0)}%</span>
                               </div>
                             </td>
-                            <td className="hidden px-4 py-3 text-center text-lg font-bold text-warning-text lg:table-cell">
+                            <td className="hidden px-4 py-3.5 align-middle text-center text-lg font-bold text-warning-text lg:table-cell">
                               {(guard.clientRating / 20).toFixed(1)} ★
                             </td>
-                            <td className="px-4 py-3">
+                            <td className="px-4 py-3.5 align-middle text-sm text-text-primary">
                               <button
                                 type="button"
                                 onClick={() => void fetchGuardDetails(guard.guardId)}
@@ -613,8 +642,16 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
                       </tbody>
                     </table>
                   </div>
+                  <nav className="flex flex-wrap items-center justify-between gap-3 border-t border-border-subtle px-4 py-3 md:px-6" aria-label="Guard evaluation pages">
+                    <p className="text-sm text-text-secondary">Showing {filteredRankings.length === 0 ? 0 : (rankingPage - 1) * RANKINGS_PAGE_SIZE + 1}-{Math.min(rankingPage * RANKINGS_PAGE_SIZE, filteredRankings.length)} of {filteredRankings.length}</p>
+                    <div className="flex gap-2">
+                      <button type="button" className="soc-btn soc-btn-neutral min-h-11 px-3" disabled={rankingPage === 1} onClick={() => setRankingPage((page) => Math.max(1, page - 1))}>Previous</button>
+                      <button type="button" className="soc-btn soc-btn-neutral min-h-11 px-3" disabled={rankingPage === rankingPageCount} onClick={() => setRankingPage((page) => Math.min(rankingPageCount, page + 1))}>Next</button>
+                    </div>
+                  </nav>
+                  </>
                 ) : (
-                  <EmptyState icon={Award} title="No eligible guards available" subtitle="Approved active guards will appear here so supervisors and administrators can submit evaluations" />
+                  <EmptyState icon={Award} title={rankingSearch ? 'No guards match this search' : 'No eligible guards available'} subtitle={rankingSearch ? 'Try a guard name or Guard ID.' : 'Approved active guards will appear here so supervisors and administrators can submit evaluations'} />
                 )}
                 </section>
               </div>

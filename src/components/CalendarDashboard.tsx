@@ -16,6 +16,7 @@ import LoadingSkeleton from './shared/LoadingSkeleton'
 import OperationalPageHeader from './shared/OperationalPageHeader'
 import OperationalSummaryBand from './shared/OperationalSummaryBand'
 import { logError } from '../utils/logger'
+import { toLocalDateInputValue } from '../utils/scheduleDateTime'
 
 interface CalendarDashboardProps {
   user: User
@@ -24,7 +25,7 @@ interface CalendarDashboardProps {
   activeView?: string
 }
 
-interface ShiftEvent {
+export interface ShiftEvent {
   id: string
   type: 'shift'
   title: string
@@ -71,6 +72,7 @@ interface MaintenanceEvent {
 }
 
 type CalendarEvent = ShiftEvent | TripEvent | MissionEvent | MaintenanceEvent
+type ListFilter = 'all' | 'unassigned' | 'starting-soon' | 'overlapping' | 'overnight'
 
 const EVENT_COLORS: Record<string, { bg: string; border: string; text: string; dot: string; chip: string }> = {
   shift:       { bg: 'bg-(--color-info-bg)', border: 'border-(--color-info-border)', text: 'text-(--color-info-text)', dot: 'bg-(--color-info-text)', chip: 'soc-chip status-info' },
@@ -85,6 +87,8 @@ const TYPE_LABELS: Record<string, string> = {
   mission: 'Mission',
   maintenance: 'Maintenance',
 }
+
+const AGENDA_PAGE_SIZE = 3
 
 type OperationalState = 'scheduled' | 'active' | 'attention' | 'completed'
 
@@ -130,15 +134,53 @@ function getEventAction(event: CalendarEvent, state: OperationalState): string {
   return 'Keep staffing, assets, and timing confirmed before start.'
 }
 
-function isoToDateKey(iso: string): string {
-  return iso.slice(0, 10)
-}
-
 function safeIsoToDateKey(value: unknown): string | null {
   if (typeof value !== 'string' || value.trim().length === 0) return null
-  const parsed = new Date(value)
-  if (Number.isNaN(parsed.getTime())) return null
-  return isoToDateKey(parsed.toISOString())
+  const dateKey = toLocalDateInputValue(value)
+  return dateKey || null
+}
+
+export function isOvernightShift(shift: Pick<ShiftEvent, 'startTime' | 'endTime'>): boolean {
+  const start = new Date(shift.startTime)
+  const end = new Date(shift.endTime)
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end.getTime() <= start.getTime()) return false
+  return toLocalDateInputValue(shift.startTime) !== toLocalDateInputValue(shift.endTime)
+}
+
+export function getOverlappingShiftIds(shifts: ShiftEvent[]): Set<string> {
+  const overlapping = new Set<string>()
+  const byGuard = shifts.reduce<Record<string, ShiftEvent[]>>((groups, shift) => {
+    if (!shift.guardId || !shift.endTime) return groups
+    ;(groups[shift.guardId] ||= []).push(shift)
+    return groups
+  }, {})
+
+  Object.values(byGuard).forEach((guardShifts) => {
+    const ordered = [...guardShifts].sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
+    for (let index = 0; index < ordered.length; index += 1) {
+      const current = ordered[index]
+      const currentStart = new Date(current.startTime).getTime()
+      const currentEnd = new Date(current.endTime).getTime()
+      if (Number.isNaN(currentStart) || Number.isNaN(currentEnd) || currentEnd <= currentStart) continue
+      for (let nextIndex = index + 1; nextIndex < ordered.length; nextIndex += 1) {
+        const next = ordered[nextIndex]
+        const nextStart = new Date(next.startTime).getTime()
+        if (Number.isNaN(nextStart) || nextStart >= currentEnd) break
+        overlapping.add(current.id)
+        overlapping.add(next.id)
+      }
+    }
+  })
+
+  return overlapping
+}
+
+export function formatShiftTimeRange(shift: Pick<ShiftEvent, 'startTime' | 'endTime'>): string {
+  const startDate = safeIsoToDateKey(shift.startTime)
+  const endDate = safeIsoToDateKey(shift.endTime)
+  if (!startDate || !endDate) return 'Schedule time unavailable'
+  if (!isOvernightShift(shift)) return `${formatDate(startDate)}, ${formatTime(shift.startTime)} – ${formatTime(shift.endTime)}`
+  return `${formatDate(startDate)}, ${formatTime(shift.startTime)} – ${formatDate(endDate)}, ${formatTime(shift.endTime)}`
 }
 
 function formatTime(iso: string): string {
@@ -174,12 +216,16 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
   const today = new Date()
   const [currentYear, setCurrentYear] = useState(today.getFullYear())
   const [currentMonth, setCurrentMonth] = useState(today.getMonth())
-  const [selectedDate, setSelectedDate] = useState<string>(() => today.toISOString().slice(0, 10))
+  const [selectedDate, setSelectedDate] = useState<string>(() => toLocalDateInputValue(today.toISOString()))
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
   const [filterType, setFilterType] = useState<string>('all')
+  const [agendaStateFilter, setAgendaStateFilter] = useState<'all' | OperationalState>('all')
+  const [agendaPage, setAgendaPage] = useState(1)
+  const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar')
+  const [listFilter, setListFilter] = useState<ListFilter>('all')
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false)
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState<boolean>(false)
   const [lastRefreshAt, setLastRefreshAt] = useState<number>(() => Date.now())
@@ -411,6 +457,44 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
     () => filteredEventsByDate[selectedDate] || [],
     [filteredEventsByDate, selectedDate],
   )
+  const filteredListEvents = useMemo(
+    () => Object.values(filteredEventsByDate).flat().sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()),
+    [filteredEventsByDate],
+  )
+  const shiftEvents = useMemo(
+    () => events.filter((event): event is ShiftEvent => event.type === 'shift'),
+    [events],
+  )
+  const overlappingShiftIds = useMemo(() => getOverlappingShiftIds(shiftEvents), [shiftEvents])
+  const scheduleSummary = useMemo(() => {
+    const now = Date.now()
+    const twoHoursFromNow = now + (2 * 60 * 60 * 1000)
+    return {
+      unassigned: shiftEvents.filter((shift) => !shift.guardId && !shift.guardName),
+      startingSoon: shiftEvents.filter((shift) => {
+        const start = new Date(shift.startTime).getTime()
+        return !Number.isNaN(start) && start >= now && start <= twoHoursFromNow
+      }),
+      overlapping: shiftEvents.filter((shift) => overlappingShiftIds.has(shift.id)),
+      overnight: shiftEvents.filter(isOvernightShift),
+    }
+  }, [overlappingShiftIds, shiftEvents])
+  const listEvents = useMemo(() => {
+    if (listFilter === 'all') return filteredListEvents
+    if (listFilter === 'unassigned') return filteredListEvents.filter((event) => event.type === 'shift' && scheduleSummary.unassigned.some((shift) => shift.id === event.id))
+    if (listFilter === 'starting-soon') return filteredListEvents.filter((event) => event.type === 'shift' && scheduleSummary.startingSoon.some((shift) => shift.id === event.id))
+    if (listFilter === 'overlapping') return filteredListEvents.filter((event) => event.type === 'shift' && overlappingShiftIds.has(event.id))
+    return filteredListEvents.filter((event) => event.type === 'shift' && isOvernightShift(event))
+  }, [filteredListEvents, listFilter, overlappingShiftIds, scheduleSummary])
+  const listEventsByDate = useMemo(() => listEvents.reduce<Record<string, CalendarEvent[]>>((groups, event) => {
+    ;(groups[event.date] ||= []).push(event)
+    return groups
+  }, {}), [listEvents])
+
+  const openScheduleSummary = (filter: Exclude<ListFilter, 'all'>) => {
+    setListFilter(filter)
+    setViewMode('list')
+  }
 
   const timelineItems = useMemo(() => {
     return events.slice(0, 8).map((ev) => ({
@@ -457,22 +541,14 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
     }
   }, [events])
 
-  const mobileAgendaEvents = useMemo(() => {
-    const now = new Date().getTime()
-    return events
-      .filter((ev) => filterType === 'all' || ev.type === filterType)
-      .filter((ev) => new Date(ev.startTime).getTime() >= now)
-      .slice(0, 10)
-  }, [events, filterType])
-
-  const prevMonth = () => {
-    if (currentMonth === 0) { setCurrentMonth(11); setCurrentYear(y => y - 1) }
-    else setCurrentMonth(m => m - 1)
+  const changeMonth = (offset: number) => {
+    const next = new Date(currentYear, currentMonth + offset, 1)
+    setCurrentYear(next.getFullYear())
+    setCurrentMonth(next.getMonth())
+    setSelectedDate(toLocalDateInputValue(next.toISOString()))
   }
-  const nextMonth = () => {
-    if (currentMonth === 11) { setCurrentMonth(0); setCurrentYear(y => y + 1) }
-    else setCurrentMonth(m => m + 1)
-  }
+  const prevMonth = () => changeMonth(-1)
+  const nextMonth = () => changeMonth(1)
 
   const daysInMonth = getDaysInMonth(currentYear, currentMonth)
   const firstDay = getFirstDayOfMonth(currentYear, currentMonth)
@@ -483,7 +559,18 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
   // Pad to complete last row
   while (calendarCells.length % 7 !== 0) calendarCells.push(null)
 
-  const todayKey = today.toISOString().slice(0, 10)
+  const todayKey = toLocalDateInputValue(today.toISOString())
+  const agendaEvents = useMemo(() => {
+    const order: Record<OperationalState, number> = { attention: 0, active: 1, scheduled: 2, completed: 3 }
+    return selectedDateEvents
+      .filter((event) => agendaStateFilter === 'all' || getOperationalState(event, todayKey) === agendaStateFilter)
+      .slice()
+      .sort((a, b) => order[getOperationalState(a, todayKey)] - order[getOperationalState(b, todayKey)]
+        || a.startTime.localeCompare(b.startTime) || a.id.localeCompare(b.id))
+  }, [agendaStateFilter, selectedDateEvents, todayKey])
+  const agendaPageCount = Math.max(1, Math.ceil(agendaEvents.length / AGENDA_PAGE_SIZE))
+  const safeAgendaPage = Math.min(agendaPage, agendaPageCount)
+  useEffect(() => { setAgendaPage(1) }, [selectedDate, filterType, agendaStateFilter])
   const selectedDateAttentionCount = useMemo(
     () => selectedDateEvents.filter((event) => getOperationalState(event, todayKey) === 'attention').length,
     [selectedDateEvents, todayKey],
@@ -500,7 +587,7 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
   return (
     <OperationalShell
       user={user}
-      title={isAdmin ? 'Operations Calendar' : 'My Schedule Calendar'}
+      title="Calendar"
       navItems={getSidebarNav(user.role)}
       activeView="calendar"
       onNavigate={handleNavigate}
@@ -542,6 +629,18 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
                 ]}
               />
             </div>
+            {shiftEvents.length > 0 ? (
+              <div className="mt-4 flex flex-wrap gap-2" aria-label="Schedule attention filters">
+                <button type="button" onClick={() => openScheduleSummary('unassigned')} className="soc-btn soc-btn-neutral min-h-11 px-3 text-sm">
+                  Needs assignment ({scheduleSummary.unassigned.length})
+                </button>
+                <button type="button" onClick={() => openScheduleSummary('starting-soon')} className="soc-btn soc-btn-neutral min-h-11 px-3 text-sm">
+                  Starting soon ({scheduleSummary.startingSoon.length})
+                </button>
+                {scheduleSummary.overlapping.length > 0 ? <button type="button" onClick={() => openScheduleSummary('overlapping')} className="soc-btn soc-btn-warning min-h-11 px-3 text-sm">Overlapping shifts ({scheduleSummary.overlapping.length})</button> : null}
+                {scheduleSummary.overnight.length > 0 ? <button type="button" onClick={() => openScheduleSummary('overnight')} className="soc-btn soc-btn-neutral min-h-11 px-3 text-sm">Overnight shifts ({scheduleSummary.overnight.length})</button> : null}
+              </div>
+            ) : null}
           </section>
 
           {/* Security Bento Grid - Mission-Critical Dashboard */}
@@ -562,6 +661,10 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
 
           {/* Legend */}
           <div className="mb-5 space-y-3">
+            <div className="inline-flex rounded border border-border-subtle bg-surface p-1" role="group" aria-label="Calendar view">
+              <button type="button" aria-pressed={viewMode === 'calendar'} onClick={() => setViewMode('calendar')} className={viewMode === 'calendar' ? 'soc-btn soc-btn-primary min-h-10 px-3 text-xs' : 'soc-btn soc-btn-neutral min-h-10 px-3 text-xs'}>Calendar</button>
+              <button type="button" aria-pressed={viewMode === 'list'} onClick={() => setViewMode('list')} className={viewMode === 'list' ? 'soc-btn soc-btn-primary min-h-10 px-3 text-xs' : 'soc-btn soc-btn-neutral min-h-10 px-3 text-xs'}>List</button>
+            </div>
             <div className="flex items-center justify-between gap-2 md:hidden">
               <button
                 type="button"
@@ -617,7 +720,53 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
             </div>
           </div>
 
-          <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-4">
+          {viewMode === 'list' ? (
+            <section className="soc-surface p-4 md:p-6" aria-live="polite" aria-label="Schedule list">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-xl font-bold text-text-primary">Schedule list</h2>
+                  <p className="mt-1 text-sm text-text-secondary">{listEvents.length} matching scheduled item{listEvents.length === 1 ? '' : 's'}.</p>
+                </div>
+                {listFilter !== 'all' ? <button type="button" className="soc-btn soc-btn-neutral min-h-10 px-3 text-xs" onClick={() => setListFilter('all')}>Show all scheduled items</button> : null}
+              </div>
+              <div className="mt-5 space-y-6">
+                {Object.entries(listEventsByDate).map(([date, dayEvents]) => (
+                  <section key={date} aria-labelledby={`schedule-date-${date}`}>
+                    <h3 id={`schedule-date-${date}`} className="border-b border-border-subtle pb-2 text-sm font-semibold text-text-primary">{formatDate(date)}</h3>
+                    <div className="mt-3 space-y-3">
+                      {dayEvents.map((event) => {
+                        const isShift = event.type === 'shift'
+                        const shift = isShift ? event as ShiftEvent : null
+                        const isOverlapping = Boolean(shift && overlappingShiftIds.has(shift.id))
+                        return (
+                          <article key={event.id} className={`rounded-lg border bg-surface p-4 ${isOverlapping ? 'border-warning-border' : 'border-border-subtle'}`}>
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                              <div className="min-w-0">
+                                <p className="font-semibold text-text-primary">{event.title}</p>
+                                <p className="mt-1 break-words text-sm text-text-secondary">
+                                  {shift ? formatShiftTimeRange(shift) : `${formatTime(event.startTime)}`}
+                                </p>
+                                {shift ? <p className="mt-1 break-words text-sm text-text-secondary">{shift.guardName || 'Unassigned'} · {shift.clientSite}</p> : null}
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                {shift && isOvernightShift(shift) ? <StatusBadge label="Overnight shift" tone="warning" /> : null}
+                                {isOverlapping ? <StatusBadge label="Overlapping shifts" tone="warning" /> : null}
+                                {shift && !shift.guardId && !shift.guardName ? <StatusBadge label="Unassigned" tone="danger" /> : null}
+                                <StatusBadge label={TYPE_LABELS[event.type]} tone="analytics" />
+                                <button type="button" className="soc-btn soc-btn-neutral min-h-10 px-3 text-xs" onClick={() => { setSelectedDate(event.date); setSelectedEvent(event); setViewMode('calendar') }}>View shift</button>
+                                {shift && !shift.guardId && !shift.guardName && isAdmin ? <button type="button" className="soc-btn soc-btn-primary min-h-10 px-3 text-xs" onClick={() => onViewChange?.('schedule')}>Assign guard</button> : null}
+                              </div>
+                            </div>
+                          </article>
+                        )
+                      })}
+                    </div>
+                  </section>
+                ))}
+              </div>
+              {!loading && listEvents.length === 0 ? <div className="mt-4"><EmptyState icon={Calendar} title="No scheduled items" subtitle="Try another event filter." /></div> : null}
+            </section>
+          ) : <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-4">
             {/* Keep the seven-day month grid wide enough to read at desktop resolutions. */}
             <BentoCard className="overflow-hidden p-0! lg:col-span-3 xl:col-span-3">
               {/* Month nav */}
@@ -634,7 +783,7 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
               </div>
 
               {/* Day headers */}
-              <div className="grid grid-cols-7 gap-1 px-3 pt-3 pb-2 bg-surface-elevated/50 border-b border-border">
+              <div className="hidden grid-cols-7 gap-1 border-b border-border bg-surface-elevated/50 px-3 pb-2 pt-3 md:grid">
                 {DAY_NAMES.map(d => (
                   <div key={d} className="py-2 text-center text-xs font-bold text-text-primary uppercase tracking-widest">
                     {d}
@@ -704,42 +853,22 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
                     )
                   })}
                   </div>
-                  <div className="space-y-2 p-3 md:hidden">
-                    <h3 className="soc-card-title">Mobile Agenda</h3>
-                    {mobileAgendaEvents.length === 0 ? (
-                      <EmptyState icon={Calendar} title="No events scheduled" subtitle="Create events to populate the calendar" />
-                    ) : (
-                      mobileAgendaEvents.map((ev) => {
-                        const c = EVENT_COLORS[ev.type]
-                        return (
-                          <button
-                            key={`mobile-${ev.id}`}
-                            onClick={() => {
-                              setSelectedDate(ev.date)
-                              setSelectedEvent(ev)
-                            }}
-                            className={`w-full rounded border p-3 text-left ${c.bg} ${c.border}`}
-                          >
-                            <div className="flex items-center justify-between gap-2">
-                              <p className={`truncate text-sm font-semibold ${c.text}`}>{ev.title}</p>
-                              <span className="text-xs text-text-secondary">{formatTime(ev.startTime)}</span>
-                            </div>
-                            <div className="mt-2">
-                              <StatusBadge
-                                label={TYPE_LABELS[ev.type]}
-                                tone={ev.type === 'shift' ? 'guard' : ev.type === 'trip' ? 'vehicle' : ev.type === 'mission' ? 'mission' : 'maintenance'}
-                              />
-                              <div className="mt-1">
-                                <StatusBadge
-                                  label={EVENT_STATE_META[getOperationalState(ev, todayKey)].label}
-                                  tone={EVENT_STATE_META[getOperationalState(ev, todayKey)].tone}
-                                />
-                              </div>
-                            </div>
-                          </button>
-                        )
-                      })
-                    )}
+                  <div className="p-3 md:hidden">
+                    <label htmlFor="calendar-mobile-date" className="soc-form-label">Agenda date</label>
+                    <input
+                      id="calendar-mobile-date"
+                      type="date"
+                      value={selectedDate}
+                      className="soc-form-control w-full min-w-0"
+                      onChange={(event) => {
+                        const date = event.target.value
+                        if (!date) return
+                        const [year, month] = date.split('-').map(Number)
+                        setSelectedDate(date)
+                        setCurrentYear(year)
+                        setCurrentMonth(month - 1)
+                      }}
+                    />
                   </div>
                 </>
               )}
@@ -747,23 +876,32 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
 
             {/* Selected-date agenda stays in a dedicated desktop side panel. */}
             <BentoCard className="flex min-h-[360px] flex-col overflow-hidden p-0! lg:col-span-1">
-              <div className="flex-1 overflow-hidden flex flex-col">
+              <div className="flex flex-1 flex-col overflow-hidden" role="region" aria-labelledby="selected-date-agenda-heading">
                 <div className="px-6 py-4 bg-gradient-to-r from-(--color-surface) to-(--color-surface-elevated) border-b border-border-subtle">
-                  <h3 className="text-text-primary font-bold text-lg">{formatDate(selectedDate)}</h3>
+                  <h3 id="selected-date-agenda-heading" className="text-text-primary font-bold text-lg">{formatDate(selectedDate)}</h3>
                   <p className="text-text-secondary text-sm mt-1">{selectedDateEvents.length} event{selectedDateEvents.length !== 1 ? 's' : ''} scheduled</p>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <StatusBadge label={`Attention ${selectedDateAttentionCount}`} tone={selectedDateAttentionCount > 0 ? 'danger' : 'success'} />
                     <StatusBadge label={`Filter ${filterType === 'all' ? 'All Types' : TYPE_LABELS[filterType]}`} tone="analytics" />
                   </div>
+                  <label className="mt-3 block text-xs font-semibold text-text-secondary" htmlFor="agenda-state-filter">Event status</label>
+                  <select id="agenda-state-filter" value={agendaStateFilter} onChange={(event) => setAgendaStateFilter(event.target.value as 'all' | OperationalState)} className="soc-form-control mt-1 w-full">
+                    <option value="all">All statuses</option>
+                    <option value="attention">Needs attention</option>
+                    <option value="active">Active</option>
+                    <option value="scheduled">Scheduled</option>
+                    <option value="completed">Completed</option>
+                  </select>
                 </div>
                 <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                  {selectedDateEvents.length === 0 ? (
-                    <EmptyState icon={Calendar} title="No events scheduled" subtitle="Pick another day or create a new event" />
+                  {agendaEvents.length === 0 ? (
+                    <EmptyState icon={Calendar} title="No matching events" subtitle="Choose another status or date." />
                   ) : (
-                    selectedDateEvents.map(ev => {
+                    agendaEvents.slice((safeAgendaPage - 1) * AGENDA_PAGE_SIZE, safeAgendaPage * AGENDA_PAGE_SIZE).map(ev => {
                       const c = EVENT_COLORS[ev.type]
                       const operationalState = getOperationalState(ev, todayKey)
                       const operationalMeta = EVENT_STATE_META[operationalState]
+                      const hasDistinctStatus = ev.status.toLowerCase().replace(/[_-]/g, ' ') !== operationalMeta.label.toLowerCase()
                       return (
                         <button
                           key={ev.id}
@@ -783,14 +921,14 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
                               </div>
                               <div className="mt-2">
                                 <div className="flex flex-wrap items-center gap-2">
-                                  <StatusBadge
+                                  {hasDistinctStatus && <StatusBadge
                                     label={ev.status}
                                     tone={operationalState === 'attention'
                                       ? 'danger'
                                       : operationalState === 'active' || operationalState === 'completed'
                                         ? 'success'
                                         : 'analytics'}
-                                  />
+                                  />}
                                   <StatusBadge label={operationalMeta.label} tone={operationalMeta.tone} />
                                 </div>
                               </div>
@@ -813,11 +951,16 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
                     })
                   )}
                 </div>
+                <nav className="flex flex-wrap items-center justify-between gap-2 border-t border-border-subtle p-4" aria-label="Selected date agenda pages">
+                  <button type="button" className="soc-btn soc-btn-neutral disabled:opacity-50" disabled={safeAgendaPage === 1} onClick={() => setAgendaPage(safeAgendaPage - 1)}>Previous</button>
+                  <span className="text-xs text-text-secondary" aria-live="polite">Page {safeAgendaPage} of {agendaPageCount}</span>
+                  <button type="button" className="soc-btn soc-btn-neutral disabled:opacity-50" disabled={safeAgendaPage === agendaPageCount} onClick={() => setAgendaPage(safeAgendaPage + 1)}>Next</button>
+                </nav>
               </div>
 
             </BentoCard>
 
-          </div>
+          </div>}
 
           {/* Event detail modal */}
       {selectedEvent && (
@@ -827,6 +970,9 @@ const CalendarDashboard: FC<CalendarDashboardProps> = ({ user, onLogout, onViewC
         >
           <div
             className="soc-modal-panel w-full max-w-sm rounded border border-border bg-surface p-5 shadow-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Shift details"
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-start justify-between mb-4">

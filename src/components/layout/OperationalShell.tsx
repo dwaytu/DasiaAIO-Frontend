@@ -3,6 +3,7 @@ import { Bell, Calendar, ClipboardCheck, Command, LayoutDashboard, MoreHorizonta
 import Sidebar, { SidebarItem } from '../Sidebar'
 import Header from '../shared/Header'
 import CommandPalette from '../shared/CommandPalette'
+import KeyboardShortcutsDialog, { type KeyboardShortcut } from '../shared/KeyboardShortcutsDialog'
 import type { User } from '../../context/AuthContext'
 import { getMobileBottomNavViews } from '../../config/navigation'
 
@@ -54,9 +55,12 @@ const OperationalShell: FC<OperationalShellProps> = ({
   })
   const [moreDrawerOpen, setMoreDrawerOpen] = useState(false)
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
+  const [keyboardHelpOpen, setKeyboardHelpOpen] = useState(false)
   const [tacticalAlertActive, setTacticalAlertActive] = useState(false)
   const moreDrawerRef = useRef<HTMLDivElement | null>(null)
   const previousMoreFocusRef = useRef<HTMLElement | null>(null)
+  const pendingGoSequenceRef = useRef<number | null>(null)
+  const shortcutProcessingRef = useRef(false)
   const isElevatedRole = user.role !== 'guard'
   const mobileBottomTabs = useMemo(() => {
     const tabs = [
@@ -74,6 +78,22 @@ const OperationalShell: FC<OperationalShellProps> = ({
     const bottomTabKeys = new Set(mobileBottomTabs.map((tab) => tab.key))
     return navItems.filter((item) => !bottomTabKeys.has(item.view))
   }, [mobileBottomTabs, navItems])
+
+  const keyboardShortcuts = useMemo<KeyboardShortcut[]>(() => {
+    const preferredRoutes = [
+      { key: 'd', views: ['dashboard'], label: 'Dashboard' },
+      { key: 's', views: ['schedule'], label: 'Schedule' },
+      { key: 'm', views: ['operations-map'], label: 'Operations Map' },
+      { key: 'f', views: ['firearms'], label: 'Firearms' },
+      { key: 'a', views: ['approvals'], label: 'Approvals' },
+      { key: 'i', views: ['inbox', 'alerts'], label: 'Inbox / Alerts' },
+    ]
+
+    return preferredRoutes.flatMap(({ key, views, label }) => {
+      const allowedItem = views.map((view) => navItems.find((item) => item.view === view)).find(Boolean)
+      return allowedItem ? [{ keys: ['g', key], label: allowedItem.label || label, view: allowedItem.view }] : []
+    })
+  }, [navItems])
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -108,22 +128,63 @@ const OperationalShell: FC<OperationalShellProps> = ({
   }, [moreDrawerOpen])
 
   useEffect(() => {
+    const clearPendingSequence = () => {
+      if (pendingGoSequenceRef.current !== null) window.clearTimeout(pendingGoSequenceRef.current)
+      pendingGoSequenceRef.current = null
+    }
+
     const handleKeyDown = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement | null
-      const isTyping = target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA' || target?.isContentEditable
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+      const target = event.target instanceof HTMLElement ? event.target : null
+      const isTyping = target?.matches('input, textarea, select, [contenteditable="true"]')
+      const insideDialog = Boolean(target?.closest('[role="dialog"], [role="alertdialog"]'))
+      const key = event.key.toLowerCase()
+      const commandPaletteShortcut = (event.metaKey || event.ctrlKey) && key === 'k'
+
+      if (commandPaletteShortcut && !event.altKey && !commandPaletteOpen && !keyboardHelpOpen && !moreDrawerOpen && !mobileMenuOpen && !insideDialog) {
         event.preventDefault()
+        clearPendingSequence()
         setCommandPaletteOpen(true)
-      } else if (event.key === '/' && !isTyping) {
+        return
+      }
+
+      if (event.repeat || event.altKey || event.ctrlKey || event.metaKey || isTyping || insideDialog || commandPaletteOpen || keyboardHelpOpen || moreDrawerOpen || mobileMenuOpen || shortcutProcessingRef.current) return
+
+      if (event.key === '?') {
         event.preventDefault()
+        clearPendingSequence()
+        setKeyboardHelpOpen(true)
+        return
+      }
+      if (event.key === '/') {
+        event.preventDefault()
+        clearPendingSequence()
         setCommandPaletteOpen(true)
-      } else if (event.key === 'Escape') {
-        setCommandPaletteOpen(false)
+        return
+      }
+      if (key === 'g') {
+        event.preventDefault()
+        clearPendingSequence()
+        pendingGoSequenceRef.current = window.setTimeout(clearPendingSequence, 1000)
+        return
+      }
+      if (pendingGoSequenceRef.current !== null) {
+        clearPendingSequence()
+        const shortcut = keyboardShortcuts.find((entry) => entry.keys[1] === key)
+        if (shortcut?.view) {
+          event.preventDefault()
+          shortcutProcessingRef.current = true
+          onNavigate(shortcut.view)
+          window.setTimeout(() => { shortcutProcessingRef.current = false }, 0)
+        }
       }
     }
+
     window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [])
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      clearPendingSequence()
+    }
+  }, [commandPaletteOpen, keyboardHelpOpen, keyboardShortcuts, mobileMenuOpen, moreDrawerOpen, onNavigate])
 
   useEffect(() => {
     const handleTacticalAlert = (event: Event) => {
@@ -215,6 +276,7 @@ const OperationalShell: FC<OperationalShellProps> = ({
       </main>
 
       {commandPaletteOpen ? <CommandPalette navItems={navItems} onNavigate={onNavigate} onClose={() => setCommandPaletteOpen(false)} /> : null}
+      {keyboardHelpOpen ? <KeyboardShortcutsDialog shortcuts={keyboardShortcuts} onClose={() => setKeyboardHelpOpen(false)} /> : null}
 
       {isElevatedRole ? (
         <>

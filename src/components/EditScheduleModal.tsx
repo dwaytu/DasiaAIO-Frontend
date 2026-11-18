@@ -55,6 +55,13 @@ const EditScheduleModal: FC<EditScheduleModalProps> = ({ shift, onClose, onSave,
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   useEffect(() => {
+    const trigger = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    return () => {
+      if (trigger?.isConnected) trigger.focus()
+    }
+  }, [])
+
+  useEffect(() => {
     if (!shift) return
     setFormData({
       guardId: shift.guard_id,

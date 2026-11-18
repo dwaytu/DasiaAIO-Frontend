@@ -47,11 +47,11 @@ const evaluations = [
   { id: 'eval-2', guardId: 'guard-1', rating: 5, comment: 'Excellent', evaluatorName: 'Supervisor Two', createdAt: '2026-09-10T08:00:00.000Z' },
 ]
 
-function mockMeritFetch({ rankingStatus = 200 }: { rankingStatus?: number } = {}) {
+function mockMeritFetch({ rankingStatus = 200, rankingItems = rankings }: { rankingStatus?: number; rankingItems?: typeof rankings } = {}) {
   return jest.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
     const url = String(input)
     if (url.endsWith('/api/merit/rankings/all')) {
-      return { ok: rankingStatus === 200, json: async () => ({ rankings }) } as Response
+      return { ok: rankingStatus === 200, json: async () => ({ rankings: rankingItems }) } as Response
     }
     if (url.endsWith('/api/merit/guard-1')) {
       return { ok: true, json: async () => scorecard } as Response
@@ -74,11 +74,11 @@ describe('MeritScoreDashboard', () => {
 
     render(<MeritScoreDashboard user={user} onLogout={jest.fn()} />)
 
-    expect(await screen.findByRole('heading', { name: 'Guard merit and evaluation' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Guard evaluations' })).toBeInTheDocument()
     expect(screen.getByText('Eligible guards').parentElement).toHaveTextContent('2')
     expect(screen.getByText('Evaluated').parentElement).toHaveTextContent('1')
     expect(screen.getByText('Awaiting evaluation').parentElement).toHaveTextContent('1')
-    expect(screen.getByRole('heading', { name: 'Guard merit score rankings' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Guard evaluations' })).toBeInTheDocument()
   })
 
   it('opens a scorecard with drivers, trend, and evaluation controls', async () => {
@@ -96,7 +96,32 @@ describe('MeritScoreDashboard', () => {
     expect(screen.getByRole('button', { name: 'Add evaluation' })).toBeInTheDocument()
 
     await interactions.click(screen.getByRole('button', { name: 'Back to rankings' }))
-    expect(screen.getByRole('heading', { name: 'Guard merit score rankings' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Guard evaluations' })).toBeInTheDocument()
+  })
+
+  it('searches by guard name or ID and keeps the ranking page valid after the result set changes', async () => {
+    const interactions = userEvent.setup()
+    const rankingItems = Array.from({ length: 13 }, (_, index) => ({
+      rank: index + 1,
+      guardId: `guard-${index + 1}`,
+      guardName: `Guard ${index + 1}`,
+      overallScore: 90 - index,
+      meritRank: 'Gold',
+      onTimePercentage: 95,
+      clientRating: 90,
+    }))
+    mockMeritFetch({ rankingItems })
+
+    render(<MeritScoreDashboard user={user} onLogout={jest.fn()} />)
+
+    await screen.findByRole('heading', { name: 'Guard evaluations' })
+    expect(screen.queryByText('Guard 13')).not.toBeInTheDocument()
+    await interactions.click(screen.getByRole('button', { name: 'Next' }))
+    expect(await screen.findByText('Guard 13')).toBeInTheDocument()
+
+    await interactions.type(screen.getByLabelText('Find a guard'), 'guard-1')
+    expect(await screen.findByText('Guard 1')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('page 1 of 1')
   })
 
   it('shows a retry action when rankings cannot be loaded', async () => {

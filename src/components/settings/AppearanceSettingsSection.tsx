@@ -6,7 +6,7 @@ const AppearanceSettingsSection: FC = () => {
   const { theme, setTheme } = useTheme()
   const darkMode = theme === 'dark'
   return (
-    <section className="command-panel p-4 md:p-6" aria-labelledby="display-settings-title">
+    <section className="command-panel soc-panel-pad" aria-labelledby="display-settings-title">
       <h2 id="display-settings-title" className="text-xl font-bold text-text-primary md:text-2xl">Display</h2>
       <p className="mt-2 text-sm leading-6 text-text-secondary">Set the interface theme used on this device.</p>
       <div className="mt-4 flex items-center justify-between gap-4 rounded border border-border bg-surface p-4">

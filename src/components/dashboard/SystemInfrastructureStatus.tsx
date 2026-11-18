@@ -24,7 +24,7 @@ const dotClass: Record<ServiceStatus, string> = {
 
 const SystemInfrastructureStatus: FC<SystemInfrastructureStatusProps> = ({ services }) => {
   return (
-    <section className="command-panel p-4 md:p-5" aria-label="System infrastructure status">
+    <section className="command-panel soc-panel-pad" aria-label="System infrastructure status">
       <div className="mb-4 border-b border-border-subtle pb-3">
         <h3 className="text-base font-bold uppercase tracking-wide text-text-primary">System Infrastructure Status</h3>
         <p className="text-xs uppercase tracking-[0.16em] text-text-tertiary">Platform service health overview</p>

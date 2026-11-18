@@ -4,7 +4,7 @@ import { BadgeCheck, CarFront, ClipboardList, Plus, Play, Shield, Square, type L
 export interface QuickActionItem {
   label: string
   onClick: () => void
-  tone?: 'indigo' | 'blue' | 'emerald' | 'amber'
+  tone?: 'primary' | 'resource' | 'approval' | 'caution'
   disabled?: boolean
 }
 
@@ -13,22 +13,22 @@ interface QuickActionsPanelProps {
 }
 
 const toneStyles: Record<NonNullable<QuickActionItem['tone']>, { base: string; icon: string; hover: string }> = {
-  indigo: {
+  primary: {
     base: 'border-accent-border bg-surface-elevated text-text-primary',
     icon: 'border-accent-border bg-accent-bg text-accent-text',
     hover: 'hover:bg-accent-bg hover:border-accent-text hover:shadow-md hover:shadow-accent-bg/20',
   },
-  blue: {
+  resource: {
     base: 'border-info-border bg-surface-elevated text-text-primary',
     icon: 'border-info-border bg-info-bg text-info-text',
     hover: 'hover:bg-info-bg hover:border-info-text hover:shadow-md hover:shadow-info-bg/20',
   },
-  emerald: {
+  approval: {
     base: 'border-success-border bg-surface-elevated text-text-primary',
     icon: 'border-success-border bg-success-bg text-success-text',
     hover: 'hover:bg-success-bg hover:border-success-text hover:shadow-md hover:shadow-success-bg/20',
   },
-  amber: {
+  caution: {
     base: 'border-warning-border bg-surface-elevated text-text-primary',
     icon: 'border-warning-border bg-warning-bg text-warning-text',
     hover: 'hover:bg-warning-bg hover:border-warning-text hover:shadow-md hover:shadow-warning-bg/20',
@@ -49,7 +49,8 @@ const QuickActionsPanel: FC<QuickActionsPanelProps> = ({ actions }) => {
   return (
     <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-3">
       {actions.map((action) => {
-        const style = toneStyles[action.tone || 'indigo']
+        const tone = action.tone || 'primary'
+        const style = toneStyles[tone]
         const Icon = actionIcons[action.label] || Plus
 
         return (
@@ -58,7 +59,8 @@ const QuickActionsPanel: FC<QuickActionsPanelProps> = ({ actions }) => {
             key={action.label}
             onClick={action.onClick}
             disabled={action.disabled}
-            className={`group flex min-h-[3rem] items-center gap-3 rounded-md border px-3 py-2.5 text-left text-sm font-semibold transition-all duration-200 ${style.base} ${style.hover} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-text focus-visible:ring-offset-1 focus-visible:ring-offset-surface active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40`}
+            data-tone={tone}
+            className={`group flex min-h-11 items-center gap-3 rounded-md border px-3 py-2.5 text-left text-sm font-semibold transition-colors ${style.base} ${style.hover} focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40`}
             aria-label={action.label}
             title={action.label}
           >

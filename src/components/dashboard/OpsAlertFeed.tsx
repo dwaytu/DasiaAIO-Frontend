@@ -30,7 +30,7 @@ const OpsAlertFeed: FC<OpsAlertFeedProps> = ({ alerts }) => {
   const sorted = [...alerts].sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity])
 
   return (
-    <section className="command-panel p-4">
+    <section className="command-panel soc-panel-pad">
       <h3 className="text-base font-bold uppercase tracking-wide text-text-primary">Alerts</h3>
       <div className="mt-3 space-y-2">
         {sorted.length === 0 ? (

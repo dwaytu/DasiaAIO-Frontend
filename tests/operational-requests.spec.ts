@@ -13,6 +13,11 @@ type RequestRecord = {
   createdAt: string
   updatedAt: string
   decisionReason?: string
+  clientSiteId?: string
+  clientSiteName?: string
+  shiftId?: string
+  shiftStartTime?: string
+  shiftEndTime?: string
 }
 
 function installSession(page: Page, role: 'guard' | 'admin') {
@@ -140,18 +145,20 @@ function installRequestApi(page: Page, initial: RequestRecord[] = []) {
 }
 
 test('guard submits a service request from the guard workspace', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
   await installSession(page, 'guard')
   await installRequestApi(page)
   await page.goto('/requests')
 
   await expect(page.getByRole('heading', { name: 'Operational Requests' })).toBeVisible()
-  await page.getByRole('button', { name: 'New Request' }).click()
-  await page.getByLabel('Subject').fill('Relief service request')
-  await page.getByLabel('Reason and purpose').fill('Relief support is required for the next shift.')
-  await page.getByRole('button', { name: 'Submit for Review' }).click()
+  await page.getByRole('button', { name: 'Bag-ong hangyo' }).click()
+  await expect(page.getByLabel('Matang sa hangyo')).toContainText('Hangyo og tabang')
+  await page.getByLabel('Hilisgutan').fill('Hangyo og relibo')
+  await page.getByLabel('Rason sa hangyo').fill('Kinahanglan og relibo sa sunod nga duty.')
+  await page.getByRole('button', { name: 'Ipadala ang hangyo' }).click()
 
   await expect(page.getByText('Request submitted for review.')).toBeVisible()
-  const createdRequest = page.getByRole('button', { name: /Relief service request/ })
+  const createdRequest = page.getByRole('button', { name: /Hangyo og relibo/ })
   await expect(createdRequest).toBeVisible()
   await expect(createdRequest).toContainText('Pending Review')
 })
@@ -168,12 +175,21 @@ test('administrator reviews a pending request and sees its history', async ({ pa
     subject: 'Escort service request',
     reason: 'Client requested an additional escort.',
     priority: 'high',
+    clientSiteId: 'internal-site-id',
+    clientSiteName: 'North Gate',
+    shiftId: 'internal-shift-id',
+    shiftStartTime: '2026-11-18T22:00:00+08:00',
+    shiftEndTime: '2026-11-19T06:00:00+08:00',
     createdAt: now,
     updatedAt: now,
   }])
   await page.goto('/requests')
 
-  await expect(page.getByRole('region', { name: 'Selected request details' }).getByText('Escort service request')).toBeVisible()
+  const details = page.getByRole('region', { name: 'Selected request details' })
+  await expect(details.getByText('Escort service request')).toBeVisible()
+  await expect(details.getByText('North Gate')).toBeVisible()
+  await expect(details.getByText(/10:00 PM.*6:00 AM.*PH time/i)).toBeVisible()
+  await expect(details).not.toContainText(/internal-(site|shift)-id/)
   await page.getByRole('button', { name: 'Approve' }).click()
   await page.getByLabel('Approve note').fill('Staffing and schedule verified.')
   await page.getByRole('button', { name: 'Confirm' }).click()
@@ -222,11 +238,11 @@ test('new request does not resubmit the selected correction request', async ({ p
   }])
   await page.goto('/requests')
   await page.getByRole('button', { name: /Original request/ }).click()
-  await page.getByRole('button', { name: 'New Request' }).click()
-  await expect(page.getByRole('heading', { name: 'Create Request' })).toBeVisible()
-  await page.getByLabel('Subject').fill('Separate service request')
-  await page.getByLabel('Reason and purpose').fill('This is a different request.')
-  await page.getByRole('button', { name: 'Submit for Review' }).click()
+  await page.getByRole('button', { name: 'Bag-ong hangyo' }).click()
+  await expect(page.getByRole('heading', { name: 'Paghimo og hangyo' })).toBeVisible()
+  await page.getByLabel('Hilisgutan').fill('Separate service request')
+  await page.getByLabel('Rason sa hangyo').fill('This is a different request.')
+  await page.getByRole('button', { name: 'Ipadala ang hangyo' }).click()
   await expect(page.getByRole('button', { name: /Separate service request/ })).toBeVisible()
   await expect(page.getByRole('button', { name: /Original request/ })).toContainText('Needs Correction')
 })

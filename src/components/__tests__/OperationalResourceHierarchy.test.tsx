@@ -50,7 +50,7 @@ describe('operational resource hierarchy', () => {
         return { eligibleGuards: 1, availableFirearms: issued ? 0 : 1 } as never
       }
       if (url.includes('/api/firearm-allocations/eligible-guards?')) {
-        return { guards: [{ id: 'guard-1', fullName: 'Fixture Guard' }] } as never
+        return { guards: [{ id: 'guard-1', fullName: 'Fixture Guard', guardCode: 'G-0142' }] } as never
       }
       if (url.includes('/api/firearms?')) return {
         firearms: [{ id: 'fixture-asset', serialNumber: 'TRAINING-ONLY', model: 'Inert fixture', status: issued ? 'allocated' : 'available' }],
@@ -68,7 +68,10 @@ describe('operational resource hierarchy', () => {
     expect(screen.queryByText('Application-recorded')).not.toBeInTheDocument()
     await operator.click(screen.getByRole('button', { name: 'Allocate firearm' }))
     const form = within(screen.getByRole('dialog', { name: 'Allocate firearm' }))
-    await operator.selectOptions(form.getByLabelText('Eligible guard'), 'guard-1')
+    const picker = form.getByRole('combobox', { name: 'Eligible guard' })
+    await operator.type(picker, 'xture gua')
+    await operator.keyboard('{ArrowDown}{Enter}')
+    expect(picker).toHaveValue('G-0142 - Fixture Guard')
     await operator.selectOptions(form.getByLabelText('Available firearm'), 'fixture-asset')
     await operator.click(form.getByRole('button', { name: 'Allocate firearm' }))
 

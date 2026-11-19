@@ -21,6 +21,7 @@ interface SearchableSelectProps {
   noResultsMessage: (query: string) => string
   required?: boolean
   disabled?: boolean
+  clearSelectionOnEdit?: boolean
 }
 
 const matchesOption = (option: SearchableSelectOption, query: string) => {
@@ -47,9 +48,11 @@ const SearchableSelect: FC<SearchableSelectProps> = ({
   noResultsMessage,
   required = false,
   disabled = false,
+  clearSelectionOnEdit = false,
 }) => {
   const listboxId = useId()
   const rootRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
   const optionRefs = useRef(new Map<number, HTMLButtonElement>())
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -76,6 +79,12 @@ const SearchableSelect: FC<SearchableSelectProps> = ({
     }
   }, [activeIndex])
 
+  useEffect(() => {
+    if (clearSelectionOnEdit && !open && selectedOption && inputRef.current === document.activeElement) {
+      inputRef.current?.select()
+    }
+  }, [clearSelectionOnEdit, open, selectedOption])
+
   const openSearch = () => {
     if (disabled) return
     setOpen(true)
@@ -91,7 +100,7 @@ const SearchableSelect: FC<SearchableSelectProps> = ({
   }
 
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'Escape') {
+    if (event.key === 'Escape' && open) {
       event.preventDefault()
       event.stopPropagation()
       setOpen(false)
@@ -118,9 +127,11 @@ const SearchableSelect: FC<SearchableSelectProps> = ({
       return
     }
 
-    if (event.key === 'Enter' && open && activeIndex >= 0) {
+    if (event.key === 'Enter' && open && (activeIndex >= 0 || clearSelectionOnEdit)) {
       event.preventDefault()
-      const activeOption = matchingOptions[activeIndex]
+      const activeOption = activeIndex >= 0
+        ? matchingOptions[activeIndex]
+        : matchingOptions.length === 1 ? matchingOptions[0] : undefined
       if (activeOption) selectOption(activeOption)
     }
   }
@@ -142,6 +153,7 @@ const SearchableSelect: FC<SearchableSelectProps> = ({
       </label>
       <div className="relative">
         <input
+          ref={inputRef}
           id={id}
           type="text"
           role="combobox"
@@ -156,7 +168,9 @@ const SearchableSelect: FC<SearchableSelectProps> = ({
           aria-autocomplete="list"
           value={open ? query : (selectedOption?.label || '')}
           onFocus={openSearch}
+          onClick={clearSelectionOnEdit && !open ? openSearch : undefined}
           onChange={(event) => {
+            if (clearSelectionOnEdit && value) onChange('')
             setOpen(true)
             setQuery(event.target.value)
             setActiveIndex(-1)
@@ -194,6 +208,7 @@ const SearchableSelect: FC<SearchableSelectProps> = ({
                 id={`${listboxId}-option-${index}`}
                 type="button"
                 role="option"
+                tabIndex={clearSelectionOnEdit ? -1 : undefined}
                 aria-selected={option.value === value}
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => selectOption(option)}

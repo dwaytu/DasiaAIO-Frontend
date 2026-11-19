@@ -8,6 +8,7 @@ import { getSidebarNav } from '../config/navigation'
 import OperationalPageHeader from './shared/OperationalPageHeader'
 import OperationalSummaryBand from './shared/OperationalSummaryBand'
 import SentinelModal from './shared/SentinelModal'
+import GuardSearchSelect, { type GuardSearchOption } from './shared/GuardSearchSelect'
 
 const PAGE_SIZE = 15
 const ORIGIN_LABELS = {
@@ -33,7 +34,6 @@ interface Allocation {
   recordOrigin?: RecordOrigin
 }
 
-interface Guard { id: string; fullName: string; guardCode?: string | null }
 interface Firearm { id: string; serialNumber: string; model: string; status?: string }
 interface AllocationSummary {
   totalFirearms: number
@@ -70,7 +70,6 @@ const emptySummary: AllocationSummary = {
 }
 
 const formatDate = (value?: string | null) => value ? new Date(value).toLocaleDateString() : '-'
-const guardLabel = (guard: Guard) => [guard.guardCode, guard.fullName].filter(Boolean).join(' - ')
 const allocationStatusLabel = (status: string) => {
   if (status.toLowerCase() === 'returned') return 'Returned'
   if (status.toLowerCase() === 'imported') return 'Import record'
@@ -82,7 +81,7 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
   const [allocations, setAllocations] = useState<Allocation[]>([])
   const [summary, setSummary] = useState<AllocationSummary>(emptySummary)
   const [summaryAvailable, setSummaryAvailable] = useState(false)
-  const [guards, setGuards] = useState<Guard[]>([])
+  const [guards, setGuards] = useState<GuardSearchOption[]>([])
   const [firearms, setFirearms] = useState<Firearm[]>([])
   const [loading, setLoading] = useState(true)
   const [registerLoading, setRegisterLoading] = useState(false)
@@ -105,6 +104,7 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
   const firstVisible = totalAllocations === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1
   const lastVisible = Math.min(currentPage * PAGE_SIZE, totalAllocations)
   const availableFirearms = firearms.filter((firearm) => firearm.status?.toLowerCase() === 'available')
+  const selectedGuard = newAllocation.guardId ? guards.find((guard) => guard.id === newAllocation.guardId) : undefined
   const eligibleCount = summary.eligibleGuards
   const availableCount = summary.availableFirearms
   const allocationBlockedReason = !summaryAvailable
@@ -168,7 +168,7 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
   }
 
   const fetchEligibleGuards = async (signal?: AbortSignal) => {
-    const data = await fetchJsonOrThrow<{ guards?: Guard[] }>(
+    const data = await fetchJsonOrThrow<{ guards?: GuardSearchOption[] }>(
       `${API_BASE_URL}/api/firearm-allocations/eligible-guards?page=1&page_size=200`,
       { headers: getAuthHeaders(), signal },
       'Failed to load eligible guards',
@@ -221,6 +221,10 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
       setError(allocationBlockedReason)
       return
     }
+    if (!selectedGuard) {
+      setError('Select an eligible guard from the results.')
+      return
+    }
     setLoading(true)
     setError('')
     try {
@@ -229,7 +233,7 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-          body: JSON.stringify({ guardId: newAllocation.guardId, firearmId: newAllocation.firearmId }),
+          body: JSON.stringify({ guardId: selectedGuard.id, firearmId: newAllocation.firearmId }),
         },
         'Unable to allocate firearm',
       )
@@ -354,7 +358,30 @@ const FirearmAllocation: FC<Props> = ({ user, onLogout, onViewChange, activeView
           ]} /></div>}
 
           <SentinelModal open={showAllocateForm} onClose={() => { if (!loading) setShowAllocateForm(false) }} title="Allocate firearm" subtitle="Select one eligible guard and one available firearm.">
-            <form onSubmit={allocateFirearm} className="space-y-4"><div className="grid grid-cols-1 gap-4 md:grid-cols-2"><div><label htmlFor="allocation-guard" className="soc-form-label">Eligible guard</label><select id="allocation-guard" value={newAllocation.guardId} onChange={(event) => setNewAllocation({ ...newAllocation, guardId: event.target.value })} className="soc-form-control w-full" required><option value="">Select an eligible guard</option>{guards.map((guard) => <option key={guard.id} value={guard.id}>{guardLabel(guard)}</option>)}</select></div><div><label htmlFor="allocation-firearm" className="soc-form-label">Available firearm</label><select id="allocation-firearm" value={newAllocation.firearmId} onChange={(event) => setNewAllocation({ ...newAllocation, firearmId: event.target.value })} className="soc-form-control w-full" required><option value="">Select an available firearm</option>{availableFirearms.map((firearm) => <option key={firearm.id} value={firearm.id}>{[firearm.serialNumber, firearm.model].filter(Boolean).join(' - ')}</option>)}</select></div></div><button type="submit" disabled={loading || Boolean(allocationBlockedReason)} className="soc-btn-primary w-full disabled:cursor-not-allowed disabled:opacity-60">{loading ? 'Allocating...' : 'Allocate firearm'}</button></form>
+            <form onSubmit={allocateFirearm} className="space-y-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <GuardSearchSelect
+                  id="allocation-guard"
+                  label="Eligible guard"
+                  guards={guards}
+                  value={newAllocation.guardId}
+                  onChange={(guardId) => setNewAllocation((current) => ({ ...current, guardId }))}
+                  emptyMessage="No eligible guards are available for firearm allocation."
+                  clearSelectionOnEdit
+                  required
+                />
+                <div>
+                  <label htmlFor="allocation-firearm" className="soc-form-label">Available firearm</label>
+                  <select id="allocation-firearm" value={newAllocation.firearmId} onChange={(event) => setNewAllocation({ ...newAllocation, firearmId: event.target.value })} className="soc-form-control w-full" required>
+                    <option value="">Select an available firearm</option>
+                    {availableFirearms.map((firearm) => <option key={firearm.id} value={firearm.id}>{[firearm.serialNumber, firearm.model].filter(Boolean).join(' - ')}</option>)}
+                  </select>
+                </div>
+              </div>
+              <button type="submit" disabled={loading || Boolean(allocationBlockedReason) || !selectedGuard} className="soc-btn-primary w-full disabled:cursor-not-allowed disabled:opacity-60">
+                {loading ? 'Allocating...' : 'Allocate firearm'}
+              </button>
+            </form>
           </SentinelModal>
 
           <section className="table-glass animate-section-enter rounded p-4 md:p-6"><div className="mb-4 flex items-start gap-3 border-b border-border-subtle pb-4"><PackageCheck className="h-5 w-5 text-info-text" aria-hidden="true" /><div><h3 className="text-lg font-bold text-text-primary">Allocation register</h3><p className="text-sm text-text-secondary">Search custody records by guard, Guard ID, firearm serial number, or issue date.</p></div></div>

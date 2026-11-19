@@ -16,6 +16,8 @@ interface GuardSearchSelectProps {
   onChange: (guardId: string) => void
   required?: boolean
   disabled?: boolean
+  emptyMessage?: string
+  clearSelectionOnEdit?: boolean
 }
 
 const GuardSearchSelect: FC<GuardSearchSelectProps> = ({
@@ -26,6 +28,8 @@ const GuardSearchSelect: FC<GuardSearchSelectProps> = ({
   onChange,
   required = false,
   disabled = false,
+  emptyMessage = 'No eligible guards are available for this schedule.',
+  clearSelectionOnEdit = false,
 }) => {
   const options = useMemo(() => guards.map((guard) => {
     const name = guard.fullName?.trim() || guard.username?.trim() || 'Unnamed guard'
@@ -47,10 +51,11 @@ const GuardSearchSelect: FC<GuardSearchSelectProps> = ({
       onChange={onChange}
       placeholder="Search by Guard ID or name..."
       helperText="Search by Guard ID or name."
-      emptyMessage="No eligible guards are available for this schedule."
+      emptyMessage={emptyMessage}
       noResultsMessage={(query) => `No guards match "${query}". Try searching by Guard ID or name.`}
       required={required}
       disabled={disabled}
+      clearSelectionOnEdit={clearSelectionOnEdit}
     />
   )
 }

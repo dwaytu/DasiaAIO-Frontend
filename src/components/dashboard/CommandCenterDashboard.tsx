@@ -31,7 +31,8 @@ import { useServiceHealth } from '../../hooks/useServiceHealth'
 import { useIncidents } from '../../hooks/useIncidents'
 import { usePredictiveAlerts } from '../../hooks/usePredictiveAlerts'
 import { useGuardAbsencePrediction } from '../../hooks/useGuardAbsencePrediction'
-import { useReplacementSuggestions } from '../../hooks/useReplacementSuggestions'
+import { useAuth } from '../../hooks/useAuth'
+import { can } from '../../utils/permissions'
 import { useVehicleMaintenancePrediction } from '../../hooks/useVehicleMaintenancePrediction'
 import { resolveIncidentSiteName } from '../../utils/incidentSite'
 
@@ -52,6 +53,7 @@ const humanizeStatus = (status: string): string => {
 }
 
 const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions, onNavigate }) => {
+  const { user } = useAuth()
   const summaryState = useOpsSummary()
   const shiftsState = useOpsShifts()
   const assetsState = useOpsAssets()
@@ -59,7 +61,6 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions,
   const incidentsState = useIncidents()
   const predictiveAlertsState = usePredictiveAlerts()
   const guardAbsencePredictionState = useGuardAbsencePrediction()
-  const replacementSuggestionsState = useReplacementSuggestions()
   const vehicleMaintenancePredictionState = useVehicleMaintenancePrediction()
   const [clock, setClock] = useState(() => new Date())
   const [dismissedFeedIds, setDismissedFeedIds] = useState<Set<string>>(new Set())
@@ -101,7 +102,6 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions,
         incidentsState.refresh,
         predictiveAlertsState.refresh,
         guardAbsencePredictionState.refresh,
-        replacementSuggestionsState.refresh,
         vehicleMaintenancePredictionState.refresh,
       ]
 
@@ -124,7 +124,7 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions,
       isCancelled = true
       window.clearInterval(refresher)
     }
-  }, [summaryState.refresh, shiftsState.refresh, assetsState.refresh, incidentsState.refresh, predictiveAlertsState.refresh, guardAbsencePredictionState.refresh, replacementSuggestionsState.refresh, vehicleMaintenancePredictionState.refresh])
+  }, [summaryState.refresh, shiftsState.refresh, assetsState.refresh, incidentsState.refresh, predictiveAlertsState.refresh, guardAbsencePredictionState.refresh, vehicleMaintenancePredictionState.refresh])
 
   const serviceStatuses = [
     serviceState.services.database,
@@ -158,7 +158,6 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions,
   const displayShifts = shiftsState.shifts
   const displayIncidents = incidentsState.incidents
   const displayGuardPredictions = guardAbsencePredictionState.predictions
-  const displayReplacementSuggestions = replacementSuggestionsState.suggestions
   const displayVehiclePredictions = vehicleMaintenancePredictionState.predictions
 
   const sosIncident = useMemo(
@@ -298,6 +297,22 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions,
 
   const attentionItems = useMemo<AttentionItem[]>(() => {
     const items: AttentionItem[] = []
+    const missedCheckIns = displayShifts.filter((shift) => shift.missed_check_in)
+    if (missedCheckIns.length > 0) {
+      items.push({
+        id: 'missed-check-ins',
+        title: `${missedCheckIns.length} missed check-in${missedCheckIns.length === 1 ? '' : 's'}`,
+        detail: missedCheckIns.map((shift) => shift.guard_name || shift.guard_username || 'Unknown guard').slice(0, 3).join(', '),
+        priority: 'high',
+        icon: TimerReset,
+        actionLabel: 'Review coverage',
+        onAction: () => {
+          const replacementPanel = document.getElementById('smart-guard-replacement')
+          replacementPanel?.scrollIntoView({ block: 'start' })
+          replacementPanel?.focus({ preventScroll: true })
+        },
+      })
+    }
     const navigateTo = (view: string) => (onNavigate ? () => onNavigate(view) : undefined)
     const hasUrgentIncident = incidentAlerts.some((item) => item.severity === 'critical' || item.isPanic)
 
@@ -379,7 +394,7 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions,
     return items
       .sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority])
       .slice(0, 6)
-  }, [activeIncidents, incidentAlerts, onNavigate, summary.expiringGuardPermits, summary.guardsAbsentToday, summary.overdueFirearmReturns, summary.pendingGuardApprovals, summary.vehiclesInMaintenance])
+  }, [activeIncidents, displayShifts, incidentAlerts, onNavigate, summary.expiringGuardPermits, summary.guardsAbsentToday, summary.overdueFirearmReturns, summary.pendingGuardApprovals, summary.vehiclesInMaintenance])
 
   if (isBootstrapping) {
     return (
@@ -405,7 +420,7 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions,
         ) : null}
         <AttentionQueue
           items={attentionItems}
-          isDegraded={summaryState.degraded || Boolean(incidentsState.error)}
+          isDegraded={summaryState.degraded || Boolean(incidentsState.error || shiftsState.error)}
         />
 
         <SystemStatusBanner
@@ -510,11 +525,11 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions,
             lastUpdated={guardAbsencePredictionState.lastUpdated || staleNote}
           />
           <ReplacementSuggestionPanel
-            postName={replacementSuggestionsState.postName}
-            suggestions={displayReplacementSuggestions}
-            loading={replacementSuggestionsState.loading}
-            error={replacementSuggestionsState.error}
-            lastUpdated={replacementSuggestionsState.lastUpdated || staleNote}
+            shifts={displayShifts}
+            loading={shiftsState.loading}
+            error={shiftsState.error}
+            canAssign={can(user?.role, 'manage_schedules')}
+            onAssigned={async () => { await Promise.allSettled([shiftsState.refresh(), summaryState.refresh()]) }}
           />
         </div>
       </SectionPanel>

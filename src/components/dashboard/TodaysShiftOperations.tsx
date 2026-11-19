@@ -1,7 +1,8 @@
 import { FC } from 'react'
+import type { OpsShift } from '../../hooks/useOpsShifts'
 
 interface TodaysShiftOperationsProps {
-  shifts: any[]
+  shifts: OpsShift[]
   loading?: boolean
   error?: string
   lastUpdated?: string
@@ -16,6 +17,7 @@ const statusTone: Record<string, string> = {
 }
 
 const normalizeStatus = (value: string | undefined): string => (value || 'scheduled').toLowerCase()
+const manilaDate = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Manila' })
 
 const TodaysShiftOperations: FC<TodaysShiftOperationsProps> = ({
   shifts,
@@ -23,15 +25,16 @@ const TodaysShiftOperations: FC<TodaysShiftOperationsProps> = ({
   error = '',
   lastUpdated,
 }) => {
+  const today = manilaDate.format(new Date())
   const todaysShifts = shifts
     .filter((shift) => {
-      const source = shift.start_time || shift.startTime || shift.date || shift.created_at
-      if (!source) return true
-      const shiftDate = new Date(source)
-      if (Number.isNaN(shiftDate.getTime())) return true
-      const now = new Date()
-      return shiftDate.toDateString() === now.toDateString()
+      const start = new Date(shift.start_time || shift.startTime || '')
+      const end = new Date(shift.end_time || '')
+      if (!Number.isFinite(start.getTime())) return false
+      const startDate = manilaDate.format(start)
+      return startDate === today || (startDate < today && Number.isFinite(end.getTime()) && manilaDate.format(end) >= today)
     })
+    .sort((left, right) => Number(Boolean(right.missed_check_in)) - Number(Boolean(left.missed_check_in)))
     .slice(0, 8)
 
   return (
@@ -63,10 +66,11 @@ const TodaysShiftOperations: FC<TodaysShiftOperationsProps> = ({
               const guardName = shift.guard_name || shift.guard_username || 'Unassigned guard'
               const siteName = shift.client_site || shift.site_name || 'Unassigned site'
               const status = normalizeStatus(shift.status)
-              const tone = statusTone[status] || statusTone.scheduled
+              const statusLabel = shift.missed_check_in ? 'Missed check-in' : status.replace('_', ' ')
+              const tone = shift.missed_check_in ? 'soc-status-warning' : statusTone[status] || statusTone.scheduled
               const startSource = shift.start_time || shift.startTime
               const timeLabel = startSource
-                ? new Date(startSource).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                ? new Date(startSource).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Manila' })
                 : 'TBD'
 
               return (
@@ -78,7 +82,7 @@ const TodaysShiftOperations: FC<TodaysShiftOperationsProps> = ({
                     </div>
                     <div className="text-right">
                       <span className={`inline-flex rounded-full border px-2 py-0.5 font-mono text-[11px] uppercase ${tone}`}>
-                        {status.replace('_', ' ')}
+                        {statusLabel}
                       </span>
                       <p className="mt-1 font-mono text-[11px] text-(--color-muted-text)">Start {timeLabel}</p>
                     </div>

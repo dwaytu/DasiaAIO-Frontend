@@ -3,7 +3,8 @@ import { expect, test } from '@playwright/test'
 test.use({ serviceWorkers: 'block' })
 
 test('issues and returns a firearm through the saved allocation register', async ({ page }) => {
-  const guard = { id: 'guard-a', fullName: 'Fixture Guard' }
+  const guard = { id: 'guard-a', fullName: 'Fixture Guard', guardCode: 'G-0142' }
+  const otherGuard = { id: 'guard-b', fullName: 'Another Guard', guardCode: 'G-0077' }
   const firearm = { id: 'inert-fixture', serialNumber: 'INERT-ONLY', model: 'Fixture' }
   const allocationId = 'new-allocation'
   let allocationStatus: 'active' | 'returned' | null = null
@@ -21,12 +22,12 @@ test('issues and returns a firearm through the saved allocation register', async
         token: 'browser-fixture-token', refreshToken: 'browser-fixture-refresh',
         user: { id: 'admin-fixture', username: 'admin-fixture', role: 'superadmin', legalConsentAccepted: true },
       } })
-      case '/api/firearm-allocations/eligible-guards': return route.fulfill({ json: { guards: [guard] } })
+      case '/api/firearm-allocations/eligible-guards': return route.fulfill({ json: { guards: [guard, otherGuard] } })
       case '/api/firearms': return route.fulfill({ json: {
         firearms: [{ ...firearm, status: allocationStatus === 'active' ? 'allocated' : 'available' }],
       } })
       case '/api/firearm-allocations/summary': return route.fulfill({ json: {
-        eligibleGuards: 1,
+        eligibleGuards: 2,
         availableFirearms: allocationStatus === 'active' ? 0 : 1,
         activeCustody: allocationStatus === 'active' ? 1 : 0,
         custodyReviewFirearms: 0,
@@ -65,16 +66,43 @@ test('issues and returns a firearm through the saved allocation register', async
   await expect(page.getByRole('group', { name: 'Allocation register views' })).toHaveCount(0)
   await page.getByRole('button', { name: 'Allocate firearm', exact: true }).click()
   const issueDialog = page.getByRole('dialog', { name: 'Allocate firearm' })
-  await issueDialog.getByLabel('Eligible guard').selectOption(guard.id)
-  await issueDialog.getByLabel('Available firearm').selectOption(firearm.id)
-  await issueDialog.getByRole('button', { name: 'Allocate firearm', exact: true }).click()
+  const guardPicker = issueDialog.getByRole('combobox', { name: 'Eligible guard' })
+  const guardResults = issueDialog.getByRole('listbox', { name: 'Eligible guard results' })
+  const firearmPicker = issueDialog.getByLabel('Available firearm')
+  const allocate = issueDialog.getByRole('button', { name: 'Allocate firearm', exact: true })
+  await guardPicker.pressSequentially('xture')
+  await expect(guardResults.getByRole('option', { name: /Fixture Guard/ })).toBeVisible()
+  await expect(guardResults.getByRole('option', { name: /Another Guard/ })).toHaveCount(0)
+  await guardPicker.press('Tab')
+  await expect(firearmPicker).toBeFocused()
+  await expect(guardResults).toHaveCount(0)
+  await guardPicker.pressSequentially('xture')
+  await guardPicker.press('ArrowDown')
+  await guardPicker.press('Enter')
+  await expect(guardPicker).toHaveValue('G-0142 - Fixture Guard')
+
+  await firearmPicker.selectOption(firearm.id)
+  await page.setViewportSize({ width: 390, height: 844 })
+  await guardPicker.pressSequentially('unmatched guard')
+  await expect(guardPicker).toHaveValue('unmatched guard')
+  await expect(guardResults.getByRole('option')).toHaveCount(0)
+  await guardPicker.press('Enter')
+  expect(custodyWrites).toHaveLength(0)
+  await expect(allocate).toBeDisabled()
+  await guardPicker.press('Escape')
+  await expect(issueDialog).toBeVisible()
+  await expect(guardPicker).toHaveAttribute('aria-expanded', 'false')
+  await guardPicker.fill('g0142')
+  await expect(guardResults.getByRole('option', { name: /Fixture Guard/ })).toBeInViewport()
+  await guardPicker.press('ArrowDown')
+  await guardPicker.press('Enter')
+  await allocate.click()
 
   const row = table.getByRole('row', { name: /Fixture Guard/ })
   await expect(row.getByText('Active', { exact: true })).toBeVisible()
   await page.reload()
   await expect(row.getByText('Active', { exact: true })).toBeVisible()
 
-  await page.setViewportSize({ width: 390, height: 844 })
   await row.getByRole('button', { name: 'Return', exact: true }).click()
   const returnDialog = page.getByRole('dialog', { name: 'Return firearm' })
   await returnDialog.getByRole('button', { name: 'Return firearm', exact: true }).click()

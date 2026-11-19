@@ -1,141 +1,47 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { API_BASE_URL } from '../config'
 import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
-import { can } from '../utils/permissions'
-
-interface ClientSite {
-  id: string
-  name: string
-}
-
-interface ClientSitesResponse {
-  sites: ClientSite[]
-}
 
 export interface ReplacementSuggestion {
   guardId: string
   guardName: string
   reliabilityScore: number
   distanceKm: number
+  distanceKnown?: boolean
   availability: boolean
-  coverage: 'unarmed'
-  distanceScore: number
-  replacementScore: number
-  formula: string
-  generatedAt: string
 }
 
-interface UseReplacementSuggestionsState {
-  postId: string
-  postName: string
-  suggestions: ReplacementSuggestion[]
-  loading: boolean
-  error: string
-  lastUpdated: string
-  refresh: () => Promise<void>
-}
-
-export function useReplacementSuggestions(): UseReplacementSuggestionsState {
-  const [postId, setPostId] = useState('')
-  const [postName, setPostName] = useState('')
-  const [suggestions, setSuggestions] = useState<ReplacementSuggestion[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [lastUpdated, setLastUpdated] = useState('')
-  const hasLoadedOnceRef = useRef(false)
-
-  const refresh = useCallback(async (signal?: AbortSignal) => {
-    try {
-      if (!hasLoadedOnceRef.current) {
-        setLoading(true)
-      }
-
-      const rawUser = localStorage.getItem('user')
-      if (!rawUser) {
-        setSuggestions([])
-        setError('')
-        return
-      }
-
-      let role: unknown
-      try {
-        const parsedUser = JSON.parse(rawUser)
-        role = parsedUser?.role
-      } catch {
-        setSuggestions([])
-        setError('')
-        return
-      }
-
-      if (!can(role, 'view_analytics')) {
-        setSuggestions([])
-        setError('')
-        return
-      }
-
-      const headers = getAuthHeaders()
-
-      let resolvedPostId = postId
-      let resolvedPostName = postName
-
-      if (!resolvedPostId) {
-        const sitesResponse = await fetchJsonOrThrow<ClientSite[] | ClientSitesResponse>(
-          `${API_BASE_URL}/api/tracking/client-sites`,
-          { headers, signal },
-          'Failed to load client sites for replacement suggestions',
-        )
-
-        const sites = Array.isArray(sitesResponse)
-          ? sitesResponse
-          : Array.isArray((sitesResponse as ClientSitesResponse)?.sites)
-            ? (sitesResponse as ClientSitesResponse).sites
-            : []
-
-        if (!Array.isArray(sites) || sites.length === 0) {
-          setSuggestions([])
-          setError('No active client sites available for replacement suggestions')
-          return
-        }
-
-        resolvedPostId = sites[0].id
-        resolvedPostName = sites[0].name
-        setPostId(resolvedPostId)
-        setPostName(resolvedPostName)
-      }
-
-      const data = await fetchJsonOrThrow<ReplacementSuggestion[]>(
-        `${API_BASE_URL}/api/analytics/replacement-suggestions?post_id=${encodeURIComponent(resolvedPostId)}`,
-        { headers, signal },
-        'Failed to load smart guard replacement suggestions',
-      )
-
-      setSuggestions(Array.isArray(data) ? data : [])
-      setError('')
-      setLastUpdated(new Date().toLocaleTimeString())
-    } catch (err) {
-      if (signal?.aborted) return
-      setError(err instanceof Error ? err.message : 'Failed to load smart guard replacement suggestions')
-    } finally {
-      if (!signal?.aborted) {
-        setLoading(false)
-        hasLoadedOnceRef.current = true
-      }
-    }
-  }, [postId, postName])
+export function useReplacementSuggestions(postId?: string | null, shiftId?: string, shiftVersion?: string) {
+  const key = postId && shiftId && shiftVersion ? [postId, shiftId, shiftVersion].join(':') : ''
+  const [result, setResult] = useState({ key: '', suggestions: [] as ReplacementSuggestion[], error: '', lastUpdated: '' })
 
   useEffect(() => {
-    const controller = new AbortController()
-    void refresh(controller.signal)
-    return () => controller.abort()
-  }, [refresh])
+    if (!key || !postId || !shiftId) return
 
-  return {
-    postId,
-    postName,
-    suggestions,
-    loading,
-    error,
-    lastUpdated,
-    refresh,
-  }
+    let request: AbortController | undefined
+    const refresh = async () => {
+      request?.abort()
+      const controller = new AbortController()
+      request = controller
+      try {
+        const params = new URLSearchParams({ post_id: postId, shift_id: shiftId })
+        const suggestions = await fetchJsonOrThrow<ReplacementSuggestion[]>(
+          `${API_BASE_URL}/api/analytics/replacement-suggestions?${params}`,
+          { headers: getAuthHeaders(), signal: controller.signal, cache: 'no-store' },
+          'Failed to load replacement suggestions',
+        )
+        if (!controller.signal.aborted) setResult({ key, suggestions, error: '', lastUpdated: new Date().toLocaleTimeString() })
+      } catch (err) {
+        if (!controller.signal.aborted) setResult({ key, suggestions: [], error: err instanceof Error ? err.message : 'Failed to load replacement suggestions', lastUpdated: '' })
+      }
+    }
+    void refresh()
+    const interval = window.setInterval(refresh, 15000)
+    return () => {
+      window.clearInterval(interval)
+      request?.abort()
+    }
+  }, [key, postId, shiftId])
+
+  return result.key === key ? { ...result, loading: false } : { suggestions: [], error: '', lastUpdated: '', loading: Boolean(key) }
 }

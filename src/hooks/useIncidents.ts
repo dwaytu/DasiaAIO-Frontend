@@ -36,7 +36,8 @@ export function useIncidents() {
   const [incidents, setIncidents] = useState<Incident[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [lastUpdated, setLastUpdated] = useState('')
+  const [receivedAt, setReceivedAt] = useState<number | null>(null)
+  const [activeTotal, setActiveTotal] = useState<number | undefined>()
   const hasLoadedOnceRef = useRef(false)
 
   const refresh = useCallback(async (signal?: AbortSignal) => {
@@ -55,8 +56,9 @@ export function useIncidents() {
           ? data.incidents
           : []
       setIncidents(normalized)
+      setActiveTotal(Array.isArray(data) ? undefined : data?.total)
       setError('')
-      setLastUpdated(new Date().toLocaleTimeString())
+      setReceivedAt(Date.now())
     } catch (err) {
       if (signal?.aborted) return
       setError(err instanceof Error ? err.message : 'Failed to load incidents')
@@ -106,9 +108,13 @@ export function useIncidents() {
     return () => controller.abort()
   }, [refresh])
 
-  const activeCount = incidents.filter(
+  const activeCount = activeTotal ?? incidents.filter(
     (i) => i.status === 'open' || i.status === 'investigating',
   ).length
 
-  return { incidents, activeCount, loading, error, lastUpdated, refresh, reportIncident, updateStatus }
+  return {
+    incidents, activeCount, loading, error, receivedAt,
+    lastUpdated: receivedAt === null ? '' : new Date(receivedAt).toLocaleTimeString(),
+    refresh, reportIncident, updateStatus,
+  }
 }

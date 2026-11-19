@@ -10,6 +10,7 @@ export interface ServiceHealthResult {
   vehicleTelemetry: BinaryServiceStatus
   authenticationService: BinaryServiceStatus
   lastChecked: string
+  checkedAt: number | null
 }
 
 interface ProbeResult {
@@ -24,20 +25,22 @@ const initialState: ServiceHealthResult = {
   vehicleTelemetry: 'offline',
   authenticationService: 'offline',
   lastChecked: '--',
+  checkedAt: null,
 }
 
-async function probe(url: string, headers: Record<string, string> = {}): Promise<ProbeResult> {
-  try {
-    const controller = new AbortController()
-    const timeout = window.setTimeout(() => controller.abort(), 5000)
+async function probe(url: string, signal?: AbortSignal): Promise<ProbeResult> {
+  if (signal?.aborted) return { reachable: false }
 
+  const controller = new AbortController()
+  const abort = () => controller.abort()
+  const timeout = window.setTimeout(abort, 5000)
+  signal?.addEventListener('abort', abort, { once: true })
+
+  try {
     const response = await fetch(url, {
       method: 'GET',
-      headers,
       signal: controller.signal,
     })
-
-    window.clearTimeout(timeout)
 
     if (response.status >= 500) {
       return { reachable: false }
@@ -53,18 +56,23 @@ async function probe(url: string, headers: Record<string, string> = {}): Promise
     return { reachable: true, payload }
   } catch {
     return { reachable: false }
+  } finally {
+    window.clearTimeout(timeout)
+    signal?.removeEventListener('abort', abort)
   }
 }
 
 export function useServiceHealth() {
   const [services, setServices] = useState<ServiceHealthResult>(initialState)
 
-  const refresh = useCallback(async () => {
-    const healthProbe = await probe(`${API_BASE_URL}/api/health/system`)
-    const servicesPayload = healthProbe.payload?.services || {}
+  const refresh = useCallback(async (signal?: AbortSignal) => {
+    const healthProbe = await probe(`${API_BASE_URL}/api/health/system`, signal)
+    if (signal?.aborted) return
+    const servicesPayload = healthProbe.payload?.services
     const databaseOnline = servicesPayload?.database === 'up'
     const apiOnline = servicesPayload?.api === 'up'
     const websocketOnline = servicesPayload?.websocket?.status === 'up'
+    const checkedAt = Date.now()
 
     setServices({
       database: healthProbe.reachable && databaseOnline ? 'online' : 'offline',
@@ -72,14 +80,19 @@ export function useServiceHealth() {
       monitoringNodes: healthProbe.reachable && websocketOnline ? 'online' : 'offline',
       vehicleTelemetry: healthProbe.reachable && websocketOnline ? 'online' : 'offline',
       authenticationService: healthProbe.reachable && apiOnline ? 'online' : 'offline',
-      lastChecked: new Date().toLocaleTimeString(),
+      lastChecked: new Date(checkedAt).toLocaleTimeString(),
+      checkedAt: healthProbe.reachable && servicesPayload ? checkedAt : null,
     })
   }, [])
 
   useEffect(() => {
-    refresh()
-    const id = window.setInterval(refresh, 15000)
-    return () => window.clearInterval(id)
+    const controller = new AbortController()
+    void refresh(controller.signal)
+    const id = window.setInterval(() => void refresh(controller.signal), 15000)
+    return () => {
+      controller.abort()
+      window.clearInterval(id)
+    }
   }, [refresh])
 
   return { services, refresh }

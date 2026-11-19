@@ -48,7 +48,6 @@ const IncidentAlertFeed: FC<IncidentAlertFeedProps> = ({ alerts, onUpdateStatus 
               ? (Date.now() - new Date(alert.createdAt).getTime()) / 60000
               : 0
             const isOverdue = ageMinutes > 15
-            const isEscalate = ageMinutes > 30
 
             return (
               <div
@@ -67,14 +66,7 @@ const IncidentAlertFeed: FC<IncidentAlertFeedProps> = ({ alerts, onUpdateStatus 
                 aria-pressed={selectedEventId === (alert.incidentId ?? alert.id)}
               >
                 <div className="flex flex-wrap items-start gap-x-3 gap-y-1">
-                  <div className="flex items-center gap-2">
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em]">Severity: {alert.severity}</p>
-                    {isEscalate && (
-                      <span className="soc-status-danger rounded px-1.5 py-0.5 text-[10px]">
-                        Escalate
-                      </span>
-                    )}
-                  </div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em]">Severity: {alert.severity}</p>
                   <EventTimestamp timestamp={alert.createdAt} label="Reported" showSeconds />
                 </div>
                 <p className="mt-1 text-sm font-semibold text-text-primary">{alert.title}</p>

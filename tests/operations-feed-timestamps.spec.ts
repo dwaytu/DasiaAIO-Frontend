@@ -51,6 +51,8 @@ test('shows each feed event date and time from its source record', async ({ page
 
   for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 900 })
+    await expect(alert.getByText('Escalate', { exact: true })).toHaveCount(0)
+    await expect(alert.getByRole('button', { name: 'Resolve Fixture incident' })).toBeVisible()
     for (const card of [scheduled, alert]) {
       await expect(card.locator('time')).toBeVisible()
       expect(await card.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)

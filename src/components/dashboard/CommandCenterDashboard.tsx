@@ -29,6 +29,7 @@ import { useOpsShifts } from '../../hooks/useOpsShifts'
 import { useOpsAssets } from '../../hooks/useOpsAssets'
 import { useServiceHealth } from '../../hooks/useServiceHealth'
 import { useIncidents } from '../../hooks/useIncidents'
+import { useMetricHistory } from '../../hooks/useMetricHistory'
 import { usePredictiveAlerts } from '../../hooks/usePredictiveAlerts'
 import { useGuardAbsencePrediction } from '../../hooks/useGuardAbsencePrediction'
 import { useAuth } from '../../hooks/useAuth'
@@ -135,6 +136,9 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions,
   ]
   const onlineServices = serviceStatuses.filter((status) => status === 'online').length
   const totalServices = serviceStatuses.length
+  const serviceHistory = useMetricHistory(serviceState.services.checkedAt, onlineServices)
+  const alertHistory = useMetricHistory(summaryState.alertsCheckedAt, alerts.length)
+  const incidentHistory = useMetricHistory(incidentsState.error ? null : incidentsState.receivedAt, incidentsState.activeCount)
   const systemStatus = alerts.some((alert) => alert.severity === 'critical')
     ? 'Critical'
     : alerts.some((alert) => alert.severity === 'warning') || onlineServices < totalServices
@@ -445,7 +449,11 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions,
             value={systemStatus}
             tone="analytics"
             hint={staleNote}
-            trendData={[96, 98, 97, 99, 98, 99, 100]}
+            history={{
+              readings: serviceHistory,
+              formatValue: (value) => formatRatioLabel(value, totalServices, 'services online'),
+              explanation: 'Each point counts the service indicators online after a database, API and WebSocket health check.',
+            }}
             meter={{
               value: onlineServices,
               max: totalServices,
@@ -457,19 +465,29 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions,
             value={threatLevel}
             tone={threatLevel === 'High' ? 'maintenance' : threatLevel === 'Medium' ? 'vehicle' : 'guard'}
             hint={`${formatCompactNumber(alerts.length)} active alerts`}
-            trendData={[2, 3, 2, 4, 3, 2, alerts.length]}
+            history={{
+              readings: alertHistory,
+              formatValue: (value) => `${value} active ${value === 1 ? 'alert' : 'alerts'}`,
+              explanation: 'Each point counts active operational alerts. A guard absence or at least three alerts raises the threat level to High.',
+            }}
           />
           <MetricStatCard
             label="Incidents"
-            value={formatCompactNumber(activeIncidents)}
+            value={incidentsState.receivedAt === null
+              ? (incidentsState.loading ? 'Loading' : 'Unavailable')
+              : formatCompactNumber(incidentsState.activeCount)}
             tone="mission"
             hint="Open or active incident threads"
-            trendData={[2, 4, 3, 5, 4, 3, activeIncidents]}
-            meter={{
-              value: activeIncidents,
+            history={{
+              readings: incidentHistory,
+              formatValue: (value) => `${value} active ${value === 1 ? 'incident' : 'incidents'}`,
+              explanation: 'Each point counts incident reports that are open or under investigation.',
+            }}
+            meter={incidentsState.receivedAt !== null ? {
+              value: incidentsState.activeCount,
               max: Math.max(summary.activeGuardsOnDuty, 1),
               label: `${formatCompactNumber(summary.activeGuardsOnDuty)} active guards covering the field`,
-            }}
+            } : undefined}
           />
           <MetricStatCard
             label="Clock"

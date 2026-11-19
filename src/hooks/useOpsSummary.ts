@@ -35,6 +35,7 @@ export function useOpsSummary() {
   const [error, setError] = useState('')
   const [degradedSources, setDegradedSources] = useState<string[]>([])
   const [lastUpdated, setLastUpdated] = useState('')
+  const [alertsCheckedAt, setAlertsCheckedAt] = useState<number | null>(null)
   const hasLoadedOnceRef = useRef(false)
 
   const refresh = useCallback(async (signal?: AbortSignal) => {
@@ -119,9 +120,14 @@ export function useOpsSummary() {
       setError(failedSources.length > 0
         ? `Operational summary is incomplete: ${failedSources.join(', ')}`
         : '')
-      setLastUpdated(new Date().toLocaleTimeString())
+      const checkedAt = Date.now()
+      setLastUpdated(new Date(checkedAt).toLocaleTimeString())
+      setAlertsCheckedAt(shiftsResult.status === 'fulfilled' && approvalsResult.status === 'fulfilled' && overdueResult.status === 'fulfilled'
+        ? checkedAt
+        : null)
     } catch (err) {
       if (signal?.aborted) return
+      setAlertsCheckedAt(null)
       setDegradedSources(['operational summary'])
       setError(err instanceof Error ? err.message : 'Failed to load command summary')
     } finally {
@@ -145,6 +151,7 @@ export function useOpsSummary() {
     degraded: degradedSources.length > 0,
     degradedSources,
     lastUpdated,
+    alertsCheckedAt,
     refresh,
   }
 }

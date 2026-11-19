@@ -32,6 +32,28 @@ interface Firearm {
   status: string
 }
 
+interface FirearmPage {
+  total?: number
+  firearms?: Firearm[]
+}
+
+async function loadFirearmInventory(headers: HeadersInit, signal?: AbortSignal): Promise<Firearm[]> {
+  const firearms: Firearm[] = []
+
+  for (let page = 1; ; page += 1) {
+    const params = new URLSearchParams({ page: String(page), page_size: '200' })
+    const response = await fetchJsonOrThrow<Firearm[] | FirearmPage>(
+      `${API_BASE_URL}/api/firearms?${params}`,
+      { headers, signal },
+      'Unable to load firearm inventory',
+    )
+    const batch = Array.isArray(response) ? response : response.firearms ?? []
+    firearms.push(...batch)
+    if (Array.isArray(response) || response.total === undefined || firearms.length >= response.total) return firearms
+    if (batch.length === 0) throw new Error('Firearm inventory changed while loading. Refresh and try again.')
+  }
+}
+
 interface Props {
   user: any
   onLogout: () => void
@@ -94,6 +116,7 @@ const FirearmMaintenance: FC<Props> = ({ user, onLogout, onViewChange, activeVie
   const [maintenances, setMaintenances] = useState<Maintenance[]>([])
   const [firearms, setFirearms] = useState<Firearm[]>([])
   const [loading, setLoading] = useState(true)
+  const [dataAvailable, setDataAvailable] = useState(false)
   const [submitting, setSubmitting] = useState<'schedule' | 'complete' | null>(null)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [showScheduleForm, setShowScheduleForm] = useState(false)
@@ -114,19 +137,17 @@ const FirearmMaintenance: FC<Props> = ({ user, onLogout, onViewChange, activeVie
           { headers, signal },
           'Unable to load firearm maintenance records',
         ),
-        fetchJsonOrThrow<Firearm[] | { firearms?: Firearm[] }>(
-          `${API_BASE_URL}/api/firearms`,
-          { headers, signal },
-          'Unable to load firearm inventory',
-        ),
+        loadFirearmInventory(headers, signal),
       ])
 
       if (signal?.aborted) return
       setMaintenances(maintenanceResponse.maintenances || [])
-      setFirearms(Array.isArray(firearmResponse) ? firearmResponse : firearmResponse.firearms || [])
+      setFirearms(firearmResponse)
+      setDataAvailable(true)
       setError('')
     } catch (err) {
       if (signal?.aborted) return
+      setDataAvailable(false)
       setError(err instanceof Error ? err.message : 'Unable to load firearm maintenance records')
     } finally {
       if (!signal?.aborted) setLoading(false)
@@ -140,7 +161,7 @@ const FirearmMaintenance: FC<Props> = ({ user, onLogout, onViewChange, activeVie
   }, [loadData])
 
   const availableFirearms = useMemo(
-    () => firearms.filter((firearm) => firearm.status.toLowerCase() === 'available'),
+    () => firearms.filter((firearm) => firearm.status.trim().toLowerCase() === 'available'),
     [firearms],
   )
   const maintenanceSummary = useMemo(() => {
@@ -152,6 +173,10 @@ const FirearmMaintenance: FC<Props> = ({ user, onLogout, onViewChange, activeVie
       completed: countStatus('completed'),
     }
   }, [maintenances])
+  const inventoryInMaintenance = firearms.filter((firearm) => firearm.status.trim().toLowerCase() === 'maintenance')
+  const openJobFirearmIds = new Set(maintenances.filter(({ status }) => ['pending', 'in_progress'].includes(status.toLowerCase())).map(({ firearmId }) => firearmId))
+  const maintenanceWithoutOpenJob = inventoryInMaintenance.filter(({ id }) => !openJobFirearmIds.has(id)).length
+  const openJobCount = maintenanceSummary.pending + maintenanceSummary.inProgress
 
   const firearmLabel = useCallback((firearmId: string) => {
     const firearm = firearms.find((item) => item.id === firearmId)
@@ -264,9 +289,9 @@ const FirearmMaintenance: FC<Props> = ({ user, onLogout, onViewChange, activeVie
               description="Schedule service and close completed maintenance records from one operational view."
               icon={Wrench}
               status={(
-                <span className={`soc-chip ${maintenanceSummary.pending + maintenanceSummary.inProgress > 0 ? 'status-warning' : 'status-success'}`}>
-                  {maintenanceSummary.pending + maintenanceSummary.inProgress > 0
-                    ? `${maintenanceSummary.pending + maintenanceSummary.inProgress} records need follow-up`
+                <span className={`soc-chip ${!dataAvailable || openJobCount > 0 || maintenanceWithoutOpenJob > 0 ? 'status-warning' : 'status-success'}`}>
+                  {!dataAvailable ? 'Maintenance overview unavailable' : openJobCount > 0
+                    ? `${openJobCount} open maintenance ${openJobCount === 1 ? 'record' : 'records'}`
                     : 'No open maintenance records'}
                 </span>
               )}
@@ -290,34 +315,40 @@ const FirearmMaintenance: FC<Props> = ({ user, onLogout, onViewChange, activeVie
             items={[
               {
                 label: 'Pending',
-                value: maintenanceSummary.pending,
-                detail: maintenanceSummary.pending > 0 ? 'Awaiting service' : 'Queue clear',
+                value: dataAvailable ? maintenanceSummary.pending : 'Unavailable',
+                detail: 'Awaiting service',
                 tone: maintenanceSummary.pending > 0 ? 'warning' : 'neutral',
                 icon: Clock3,
               },
               {
                 label: 'In progress',
-                value: maintenanceSummary.inProgress,
-                detail: maintenanceSummary.inProgress > 0 ? 'Service underway' : 'None active',
+                value: dataAvailable ? maintenanceSummary.inProgress : 'Unavailable',
+                detail: 'Service underway',
                 tone: maintenanceSummary.inProgress > 0 ? 'info' : 'neutral',
                 icon: Wrench,
               },
               {
                 label: 'Completed',
-                value: maintenanceSummary.completed,
+                value: dataAvailable ? maintenanceSummary.completed : 'Unavailable',
                 detail: 'Closed records',
                 tone: 'success',
                 icon: CheckCircle2,
               },
               {
                 label: 'Available firearms',
-                value: availableFirearms.length,
-                detail: 'Ready for allocation',
-                tone: availableFirearms.length > 0 ? 'success' : 'danger',
+                value: dataAvailable ? availableFirearms.length : 'Unavailable',
+                detail: 'Inventory status',
+                tone: !dataAvailable ? 'neutral' : availableFirearms.length > 0 ? 'success' : 'danger',
                 icon: PackageCheck,
               },
             ]}
           />
+
+          {dataAvailable && maintenanceWithoutOpenJob > 0 ? (
+            <p className="rounded border border-warning-border bg-warning-bg p-3 text-sm text-warning-text" role="status">
+              {maintenanceWithoutOpenJob} {maintenanceWithoutOpenJob === 1 ? 'firearm is' : 'firearms are'} marked Maintenance in Inventory without an open maintenance record.
+            </p>
+          ) : null}
 
           {showScheduleForm ? (
             <section className="table-glass rounded p-4 md:p-6">
@@ -396,7 +427,7 @@ const FirearmMaintenance: FC<Props> = ({ user, onLogout, onViewChange, activeVie
             <div className="mb-4 flex items-center gap-3">
               <ClipboardCheck size={18} className="text-info-text" aria-hidden="true" />
               <div>
-                <h3 className="text-lg font-bold text-text-primary">Maintenance records ({maintenances.length})</h3>
+                <h3 className="text-lg font-bold text-text-primary">Maintenance records{dataAvailable ? ` (${maintenances.length})` : ''}</h3>
                 <p className="text-sm text-text-secondary">Pending records can be completed from this table.</p>
               </div>
             </div>
@@ -427,7 +458,7 @@ const FirearmMaintenance: FC<Props> = ({ user, onLogout, onViewChange, activeVie
                   </tbody>
                 </table>
               </div>
-            ) : <p className="py-8 text-center text-text-secondary">No firearm maintenance records found.</p>}
+            ) : <p className="py-8 text-center text-text-secondary">{dataAvailable ? 'No firearm maintenance records found.' : 'Maintenance records are unavailable.'}</p>}
           </section>
         </div>
       )}

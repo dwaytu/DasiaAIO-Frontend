@@ -568,7 +568,7 @@ const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onVie
     {
       label: 'Missions this month',
       value: formatCompactNumber(analytics.mission_stats.total_missions_this_month),
-      detail: `${completedPercent}% completed`,
+      detail: analytics.mission_stats.total_missions_this_month > 0 ? `${completedPercent}% completed` : 'No missions recorded',
       tone: missionTrendTone,
       icon: ClipboardCheck,
     },
@@ -605,7 +605,7 @@ const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onVie
   const evaluationSummary: OperationalSummaryItem[] = [
     {
       label: 'Average rating',
-      value: `${evaluationAnalytics.average_rating.toFixed(1)}/5`,
+      value: evaluationAnalytics.total_evaluations > 0 ? `${evaluationAnalytics.average_rating.toFixed(1)}/5` : 'No ratings',
       detail: `${formatCompactNumber(evaluationAnalytics.total_evaluations)} evaluation${evaluationAnalytics.total_evaluations === 1 ? '' : 's'}`,
       tone: 'info',
     },
@@ -703,7 +703,7 @@ const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onVie
           </span>
           <div className="min-w-0">
             <label htmlFor="analytics-date-range" className="block text-sm font-semibold text-text-primary">Reporting period</label>
-            <p className="text-xs text-text-secondary">Choose the time range for the charts and summaries below.</p>
+            <p className="text-xs text-text-secondary">Choose the time range for attendance and guard evaluations.</p>
           </div>
         </div>
         <div className="w-full sm:w-auto">
@@ -724,6 +724,7 @@ const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onVie
       <section aria-label="Analytics charts">
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
           <DashboardCard title="Resource Availability">
+            <p className="mb-3 text-xs text-text-secondary">Current snapshot</p>
             <AvailabilityComparison rows={resourceAvailabilityRows} />
           </DashboardCard>
           <DashboardCard title="Guard Evaluation Trend">
@@ -747,7 +748,9 @@ const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onVie
           <DashboardCard title="Guard Attendance Breakdown">
             <SimpleBarChart data={attendanceBreakdownData} height={220} barColor="var(--color-success-text)" />
             <p className="mt-2 text-center text-xs text-text-secondary">
-              {analytics.attendance_analytics.attendance_rate.toFixed(1)}% attendance rate over the last {analytics.attendance_analytics.period_days} days
+              {analytics.attendance_analytics.total_scheduled_shifts > 0
+                ? `${analytics.attendance_analytics.attendance_rate.toFixed(1)}% attendance rate over the last ${analytics.attendance_analytics.period_days} days`
+                : 'No scheduled shifts for the selected period.'}
             </p>
           </DashboardCard>
           <DashboardCard title="Guard Attendance Trend">

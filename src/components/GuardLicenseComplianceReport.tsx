@@ -110,7 +110,7 @@ const GuardLicenseComplianceReport: FC<Props> = ({ user, onLogout, onViewChange,
   const today = new Date()
   const totalPages = Math.max(1, Math.ceil((report?.total ?? 0) / (report?.pageSize ?? 50)))
   const summaryCards = useMemo(() => [
-    ['Total guards', report?.summary.totalGuards ?? 0],
+    ['Guards reviewed', report?.summary.totalGuards ?? 0],
     ['Expired', report?.summary.expired ?? 0],
     ['Expiring soon', report?.summary.expiringSoon ?? 0],
     ['No license', report?.summary.noLicense ?? 0],
@@ -181,7 +181,7 @@ const GuardLicenseComplianceReport: FC<Props> = ({ user, onLogout, onViewChange,
             <OperationalPageHeader
               eyebrow="Personnel governance"
               title="Guard Documents"
-              description="Review guard license records and identify documents that are expired or nearing expiry."
+              description="Review license records for approved, verified guards and identify documents that are expired or nearing expiry."
               icon={ShieldCheck}
               actions={
                 <>

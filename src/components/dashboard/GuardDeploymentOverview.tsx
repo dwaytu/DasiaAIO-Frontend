@@ -13,7 +13,7 @@ const GuardDeploymentOverview: FC<GuardDeploymentOverviewProps> = ({ shifts }) =
     <section className="command-panel soc-panel-pad" aria-label="Guard deployment overview">
       <div className="mb-4 border-b border-border-subtle pb-3">
         <h3 className="text-base font-bold uppercase tracking-wide text-text-primary">Guard Deployment Overview</h3>
-        <p className="text-xs uppercase tracking-[0.16em] text-text-tertiary">Current field allocation and readiness snapshot</p>
+        <p className="text-xs uppercase tracking-[0.16em] text-text-tertiary">Current shift assignments and callout availability</p>
       </div>
 
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -39,7 +39,6 @@ const GuardDeploymentOverview: FC<GuardDeploymentOverviewProps> = ({ shifts }) =
               <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.16em] text-text-tertiary">Site</th>
               <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.16em] text-text-tertiary">Status</th>
               <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.16em] text-text-tertiary">Callout</th>
-              <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.16em] text-text-tertiary">Readiness</th>
             </tr>
           </thead>
           <tbody>
@@ -52,14 +51,11 @@ const GuardDeploymentOverview: FC<GuardDeploymentOverviewProps> = ({ shifts }) =
                   {shift.availability_available === undefined ? 'Not reported'
                     : shift.availability_available === false ? 'Unavailable' : 'Available'}
                 </td>
-                <td className="px-3 py-2 text-sm text-text-primary">
-                  {shift.readiness_ready == null ? 'Not submitted' : shift.readiness_ready ? 'Ready' : 'Incomplete'}
-                </td>
               </tr>
             ))}
             {shifts.length === 0 && (
               <tr>
-                <td className="px-3 py-4 text-sm text-text-secondary" colSpan={5}>No deployment records available.</td>
+                <td className="px-3 py-4 text-sm text-text-secondary" colSpan={4}>No deployment records available.</td>
               </tr>
             )}
           </tbody>

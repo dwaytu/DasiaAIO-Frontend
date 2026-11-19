@@ -11,6 +11,7 @@ it('shows guards as available by default and distinguishes opt-outs from missing
 
   render(<GuardDeploymentOverview shifts={shifts} />)
 
+  expect(screen.getAllByRole('columnheader').map((header) => header.textContent)).toEqual(['Guard', 'Site', 'Status', 'Callout'])
   expect(within(screen.getByRole('row', { name: /Default Guard/ })).getByText('Available')).toBeInTheDocument()
   expect(within(screen.getByRole('row', { name: /Opted In Guard/ })).getByText('Available')).toBeInTheDocument()
   expect(within(screen.getByRole('row', { name: /Opted Out Guard/ })).getByText('Unavailable')).toBeInTheDocument()

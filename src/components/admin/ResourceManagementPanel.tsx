@@ -455,11 +455,11 @@ const GuardsTab: FC<{
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-text-tertiary">Personnel</p>
-            <span className="soc-chip border border-info-border bg-info-bg text-info-text">{guards.length} registered</span>
+            <span className="soc-chip border border-info-border bg-info-bg text-info-text">{guards.length} guard {guards.length === 1 ? 'account' : 'accounts'}</span>
           </div>
           <h2 className="mt-1 text-xl font-bold text-text-primary">Guard roster</h2>
           <p className="mt-1 max-w-2xl text-sm text-text-secondary">
-            Approved field personnel and their contact and license records.
+            Contact and license records for registered guards, including accounts awaiting approval.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -522,7 +522,7 @@ const GuardsTab: FC<{
         )}
 
         {guards.length === 0 ? (
-          <EmptyState icon={Users} title="No guards registered" subtitle="Guards will appear here once approved" />
+          <EmptyState icon={Users} title="No guards registered" subtitle="New accounts appear here as soon as they are registered." />
         ) : filteredGuards.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-3 py-12 text-center">
             <Search size={28} className="text-text-tertiary" aria-hidden="true" />

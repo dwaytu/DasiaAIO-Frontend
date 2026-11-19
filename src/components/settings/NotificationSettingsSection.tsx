@@ -118,7 +118,7 @@ export const NotificationSettingsSection: FC<NotificationSettingsSectionProps> =
       <div className="mt-3 flex flex-col gap-3 rounded border border-border bg-surface p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <p className="font-semibold text-text-primary">Emergency Audio Beacon</p>
-          <p className="mt-1 text-sm leading-5 text-text-secondary">Play a subtle synthetic chime when this device receives a new critical SOS alert. This preference is stored on this device only.</p>
+          <p className="mt-1 text-sm leading-5 text-text-secondary">Play a brief chime when this device receives a new critical SOS alert. This preference is stored on this device only.</p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <button type="button" onClick={() => void testAudioBeacon()} disabled={!audioBeaconEnabled || testingAudio} className="soc-btn soc-btn-secondary min-h-11 px-3 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-50">

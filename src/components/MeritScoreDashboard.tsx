@@ -517,24 +517,30 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
 
                   {evaluations.length > 0 ? (
                     <div className="space-y-4">
-                      {evaluations.map((evaluation) => (
-                        <article key={evaluation.id} className="border-l-4 border-info py-2 pl-4">
-                          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                            <div>
-                              <p className="font-semibold text-text-primary">{evaluation.evaluatorName}</p>
-                              <p className="text-xs uppercase tracking-wide text-text-tertiary">
-                                {evaluation.evaluatorRole || 'authorized evaluator'}
-                              </p>
-                              <p className="text-sm text-text-secondary">{new Date(evaluation.createdAt).toLocaleDateString()}</p>
+                      {evaluations.map((evaluation) => {
+                        const hasPlaceholderEvaluator = evaluation.evaluatorName === 'Capstone presentation evaluation'
+                          && evaluation.evaluatorRole === 'presentation scenario'
+                        return (
+                          <article key={evaluation.id} className="border-l-4 border-info py-2 pl-4">
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                              <div>
+                                <p className="font-semibold text-text-primary">{hasPlaceholderEvaluator ? 'Evaluator not identified' : evaluation.evaluatorName}</p>
+                                {!hasPlaceholderEvaluator && (
+                                  <p className="text-xs uppercase tracking-wide text-text-tertiary">
+                                    {evaluation.evaluatorRole || 'authorized evaluator'}
+                                  </p>
+                                )}
+                                <p className="text-sm text-text-secondary">{new Date(evaluation.createdAt).toLocaleDateString()}</p>
+                              </div>
+                              <span className="flex items-center gap-1 text-sm font-bold text-warning-text">
+                                <Star className="h-4 w-4 fill-current" aria-hidden="true" />
+                                {evaluation.rating.toFixed(1)} / 5
+                              </span>
                             </div>
-                            <span className="flex items-center gap-1 text-sm font-bold text-warning-text">
-                              <Star className="h-4 w-4 fill-current" aria-hidden="true" />
-                              {evaluation.rating.toFixed(1)} / 5
-                            </span>
-                          </div>
-                          {evaluation.comment && <p className="text-text-primary mt-2">{evaluation.comment}</p>}
-                        </article>
-                      ))}
+                            {evaluation.comment && <p className="text-text-primary mt-2">{evaluation.comment}</p>}
+                          </article>
+                        )
+                      })}
                     </div>
                   ) : (
                     <p className="py-4 text-center text-text-tertiary">No evaluations have been recorded for this guard. Add an evaluation when an authorized review is available.</p>

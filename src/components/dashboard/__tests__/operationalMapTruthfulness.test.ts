@@ -3,8 +3,18 @@ import {
   isCurrentUserTrackingPoint,
   shouldShowClientSiteDraftMarker,
 } from '../operationalMapTruthfulness'
+import { withoutSampleCheckpoints } from '../../../utils/trackingTimeline'
 
 describe('operationalMapTruthfulness', () => {
+  it('keeps recorded field points while excluding explicitly tagged sample checkpoints', () => {
+    const points = [
+      { id: 'field', status: 'active' },
+      { id: 'scenario', status: ' presentation_checkpoint ' },
+      { id: 'legacy', status: undefined },
+    ]
+    expect(withoutSampleCheckpoints(points).map((point) => point.id)).toEqual(['field', 'legacy'])
+  })
+
   describe('shouldShowClientSiteDraftMarker', () => {
     it('shows draft marker only for elevated users in add/edit pick mode', () => {
       expect(shouldShowClientSiteDraftMarker(true, 'idle')).toBe(false)

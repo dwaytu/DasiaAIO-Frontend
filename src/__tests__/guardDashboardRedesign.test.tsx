@@ -8,6 +8,7 @@ import { ThemeProvider } from '../context/ThemeProvider'
 jest.mock('../config', () => ({
   API_BASE_URL: 'https://example.test',
   detectRuntimePlatform: () => 'web',
+  isAllocationPresentationEnabled: () => false,
 }))
 
 jest.mock('../utils/logger', () => ({

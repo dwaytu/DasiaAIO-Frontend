@@ -44,7 +44,7 @@ const scorecard = {
 
 const evaluations = [
   { id: 'eval-1', guardId: 'guard-1', rating: 4, comment: 'Reliable', evaluatorName: 'Supervisor One', createdAt: '2026-09-01T08:00:00.000Z' },
-  { id: 'eval-2', guardId: 'guard-1', rating: 5, comment: 'Excellent', evaluatorName: 'Supervisor Two', createdAt: '2026-09-10T08:00:00.000Z' },
+  { id: 'eval-2', guardId: 'guard-1', rating: 5, comment: 'Excellent', evaluatorName: 'Capstone presentation evaluation', evaluatorRole: 'presentation scenario', createdAt: '2026-09-10T08:00:00.000Z' },
 ]
 
 function mockMeritFetch({ rankingStatus = 200, rankingItems = rankings }: { rankingStatus?: number; rankingItems?: typeof rankings } = {}) {
@@ -94,6 +94,8 @@ describe('MeritScoreDashboard', () => {
     expect(screen.getByRole('heading', { name: 'Performance activity' })).toBeInTheDocument()
     expect(screen.getByRole('img', { name: /Score trend from/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Add evaluation' })).toBeInTheDocument()
+    expect(await screen.findByText('Evaluator not identified')).toBeInTheDocument()
+    expect(screen.getByText('Supervisor One')).toBeInTheDocument()
 
     await interactions.click(screen.getByRole('button', { name: 'Back to rankings' }))
     expect(screen.getByRole('heading', { name: 'Guard evaluations' })).toBeInTheDocument()

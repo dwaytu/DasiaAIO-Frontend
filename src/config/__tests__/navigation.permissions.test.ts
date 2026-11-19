@@ -12,3 +12,8 @@ describe('supervisor management access', () => {
     expect(can('supervisor', 'manage_users')).toBe(false)
   })
 })
+
+it.each(['admin', 'supervisor'])('includes every %s sidebar destination for superadmins', (role) => {
+  expect(getSidebarNav('superadmin').map(({ view }) => view))
+    .toEqual(expect.arrayContaining(getSidebarNav(role).map(({ view }) => view)))
+})

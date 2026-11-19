@@ -99,6 +99,13 @@ function errorText(error: unknown): string {
   return sanitizeErrorMessage(error instanceof Error ? error.message : String(error))
 }
 
+function requestNoteLabel(note: string): string {
+  if (note === 'Presentation scenario: the requested temporary relief was not available for the stated period.') {
+    return 'The requested temporary relief was not available for the stated period.'
+  }
+  return note
+}
+
 function resourceLabel(resource: RequestResource): string {
   const detail = resource.serialNumber || resource.caliber
   return `${resource.resourceType === 'firearm_allocation' ? 'Firearm' : 'Equipment'}: ${resource.label}${detail ? ` (${detail})` : ''}`
@@ -139,7 +146,7 @@ export default function OperationalRequestsPanel({ user }: OperationalRequestsPa
   const needsResource = form.requestType === 'deposit' || form.requestType === 'return'
   const role = normalizeRole(user.role)
   const guardForm = role === 'guard'
-  const canCreateRequest = role === 'guard' || role === 'supervisor'
+  const canCreateRequest = role === 'guard' || role === 'supervisor' || role === 'superadmin'
   const canReviewAllRequests = role === 'admin' || role === 'superadmin'
   const ownCorrection = canCreateRequest && selected?.status === 'needs_correction' && selected.requesterId === user.id
 
@@ -373,7 +380,7 @@ export default function OperationalRequestsPanel({ user }: OperationalRequestsPa
               className="soc-btn soc-btn-primary min-h-11"
             >
               {showForm ? <X className="h-4 w-4" aria-hidden="true" /> : <Plus className="h-4 w-4" aria-hidden="true" />}
-              {showForm ? (guardForm ? 'Sirad-i' : 'Close') : (guardForm ? 'Bag-ong hangyo' : 'New Request')}
+              {showForm ? 'Close' : 'New Request'}
             </button>
           ) : null}
           </>
@@ -570,7 +577,7 @@ export default function OperationalRequestsPanel({ user }: OperationalRequestsPa
                 {selected.resourceId ? <div><dt className="text-xs font-semibold uppercase text-text-tertiary">Resource</dt><dd className="mt-1 break-all text-text-primary">{selected.resourceType?.replace('_', ' ')} · {selected.resourceId}</dd></div> : null}
                 {selected.clientSiteId ? <div><dt className="text-xs font-semibold uppercase text-text-tertiary">Client site</dt><dd className="mt-1 break-words text-text-primary">{selected.clientSiteName?.trim() || 'Site details unavailable'}</dd></div> : null}
                 {selected.shiftId ? <div><dt className="text-xs font-semibold uppercase text-text-tertiary">Related shift</dt><dd className="mt-1 break-words text-text-primary">{relatedShiftLabel(selected)}</dd></div> : null}
-                {selected.decisionReason ? <div><dt className="text-xs font-semibold uppercase text-text-tertiary">Decision note</dt><dd className="mt-1 whitespace-pre-wrap text-text-primary">{selected.decisionReason}</dd></div> : null}
+                {selected.decisionReason ? <div><dt className="text-xs font-semibold uppercase text-text-tertiary">Decision note</dt><dd className="mt-1 whitespace-pre-wrap text-text-primary">{requestNoteLabel(selected.decisionReason)}</dd></div> : null}
               </dl>
 
               {ownCorrection ? (
@@ -622,7 +629,7 @@ export default function OperationalRequestsPanel({ user }: OperationalRequestsPa
                       <li key={entry.id} className="border-l-2 border-info pl-3 text-sm">
                         <p className="font-medium text-text-primary">{REQUEST_STATUS_LABELS[entry.toStatus]}</p>
                         <p className="text-xs text-text-tertiary">{entry.actorName ?? 'System'} · {new Date(entry.createdAt).toLocaleString()}</p>
-                        {entry.comment ? <p className="mt-1 whitespace-pre-wrap text-text-secondary">{entry.comment}</p> : null}
+                        {entry.comment ? <p className="mt-1 whitespace-pre-wrap text-text-secondary">{requestNoteLabel(entry.comment)}</p> : null}
                       </li>
                     ))}
                   </ol>

@@ -208,7 +208,7 @@ export const appRoutes: RouteObject[] = [
         ],
       },
 
-      // Feedback submission (guards, supervisors, admins)
+      // Feedback submission for all authenticated roles
       {
         element: <RoleGuard roles={FEEDBACK_SUBMIT_ROLES} />,
         children: [

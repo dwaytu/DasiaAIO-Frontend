@@ -22,6 +22,8 @@ const SUPERADMIN_NAV: NavItem[] = [
   { view: 'requests', label: 'Requests', group: 'Core', permission: 'manage_requests' },
   { view: 'schedule', label: 'Schedule', group: 'Core' },
   { view: 'calendar', label: 'Calendar', group: 'Core' },
+  { view: 'missions', label: 'Missions', group: 'Field' },
+  { view: 'trips', label: 'Trip Management', group: 'Field' },
   { view: 'allocation', label: 'Assign Equipment', group: 'Operations', permission: 'manage_allocations' },
   { view: 'feedback-dashboard', label: 'Feedback', group: 'Intelligence' },
   { view: 'analytics', label: 'Analytics', group: 'Intelligence', permission: 'view_analytics' },

@@ -92,6 +92,12 @@ function resolveApiBaseUrl(): string {
 
 export const API_BASE_URL = resolveApiBaseUrl()
 
+export function isAllocationPresentationEnabled(location: Pick<Location, 'hostname' | 'protocol'>): boolean {
+  return (location.protocol === 'https:' && location.hostname === 'dasiasentinel.xyz')
+    || (import.meta.env.DEV && isTruthyEnvFlag(import.meta.env.VITE_PRESENTATION_ALLOCATION)
+      && ['localhost', '127.0.0.1'].includes(location.hostname))
+}
+
 export const APP_VERSION = (import.meta.env.VITE_APP_VERSION || 'dev').toString().trim()
 export const APP_WHATS_NEW = (import.meta.env.VITE_WHATS_NEW || '').toString().trim()
 export const LATEST_RELEASE_API_URL = (

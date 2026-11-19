@@ -23,6 +23,7 @@ import { CalendarPlus, ClipboardX, CalendarX2, Target } from 'lucide-react'
 import OperationalShell from '../layout/OperationalShell'
 import { ROUTES, VIEW_TO_ROUTE } from '../../router/routes'
 import { fetchJsonOrThrow, getAuthHeaders } from '../../utils/api'
+import { formatVehicleIdentifier } from '../../utils/vehicleIdentifier'
 import { can } from '../../utils/permissions'
 import {
   getPersonRecencyMinutes,
@@ -1863,7 +1864,10 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                   onChange={setSelectedVehicles}
                   placeholder="-- Select a vehicle --"
                   emptyMessage="No available vehicles are currently ready."
-                  options={availableVehicles.map((vehicle) => ({ value: vehicle.id, label: `${vehicle.model} - ${vehicle.license_plate}` }))}
+                  options={availableVehicles.map((vehicle) => ({
+                    value: vehicle.id,
+                    label: formatVehicleIdentifier(vehicle.license_plate, vehicle.plate_number),
+                  }))}
                 />
 
                 <div>
@@ -1950,15 +1954,13 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                   title="Mission History"
                   subtitle="Loading assignments, priorities, and field status."
                   rows={5}
-                  columns={7}
+                  columns={5}
                 />
               ) : missions.length > 0 ? (
                 <div className="overflow-auto">
                   <table className="w-full border-collapse min-w-[600px]">
                     <thead className="h-11 border-b border-border-subtle bg-surface-elevated/50 text-xs font-semibold uppercase tracking-wider text-text-tertiary">
                       <tr>
-                        <th className="px-4 py-3.5 text-left">ID</th>
-                        <th className="px-4 py-3.5 text-left">Destination</th>
                         <th className="px-4 py-3.5 text-left">Date</th>
                         <th className="px-4 py-3.5 text-left">Time</th>
                         <th className="px-4 py-3.5 text-left">Vehicle</th>
@@ -1969,15 +1971,15 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                     <tbody>
                       {missions.map((mission: any) => (
                         <tr key={mission.id} className="border-b border-border-subtle/80 transition-colors hover:bg-surface-hover/50">
-                          <td className="px-4 py-3.5 align-middle text-xs font-mono text-text-primary">{mission.id.substring(0, 8)}...</td>
-                          <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{mission.destination || 'N/A'}</td>
                           <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{mission.start_time ? new Date(mission.start_time).toLocaleDateString() : 'N/A'}</td>
                           <td className="px-4 py-3.5 align-middle text-sm text-text-primary">
                             {mission.start_time && mission.end_time 
                               ? `${new Date(mission.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${new Date(mission.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` 
                               : 'N/A'}
                           </td>
-                          <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{mission.vehicle_model || 'N/A'}</td>
+                          <td className="px-4 py-3.5 align-middle text-sm text-text-primary">
+                            {formatVehicleIdentifier(mission.vehicle_fleet_number, mission.vehicle_plate_number) || 'N/A'}
+                          </td>
                           <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{mission.driver_name || 'N/A'}</td>
                           <td className="px-4 py-3.5 align-middle text-sm text-text-primary">
                             <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium ${

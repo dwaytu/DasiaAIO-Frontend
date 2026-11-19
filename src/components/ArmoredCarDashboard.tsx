@@ -4,12 +4,14 @@ import type { User } from '../context/AuthContext'
 import { API_BASE_URL } from '../config'
 import { fetchJsonOrThrow, parseResponseBody, getAuthHeaders } from '../utils/api'
 import { logError } from '../utils/logger'
+import { formatVehicleIdentifier } from '../utils/vehicleIdentifier'
 import OperationalShell from './layout/OperationalShell'
 import EmptyState from './shared/EmptyState'
 import LoadingSkeleton from './shared/LoadingSkeleton'
 import { getSidebarNav } from '../config/navigation'
 import OperationalPageHeader from './shared/OperationalPageHeader'
 import OperationalSummaryBand from './shared/OperationalSummaryBand'
+import SentinelModal from './shared/SentinelModal'
 
 interface ArmoredCar {
   id: string
@@ -120,6 +122,9 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
   const [writeBlockReason, setWriteBlockReason] = useState<string>('')
   const [selectedDriverByCar, setSelectedDriverByCar] = useState<Record<string, string>>({})
   const [driverActionCarId, setDriverActionCarId] = useState<string>('')
+  const [returningAllocation, setReturningAllocation] = useState<CarAllocation | null>(null)
+  const [returnPending, setReturnPending] = useState(false)
+  const [returnError, setReturnError] = useState('')
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false)
 
   // Form states
@@ -344,6 +349,37 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
     }
   }
 
+  const vehicleLabel = (carId: string) => {
+    const car = cars.find(({ id }) => id === carId)
+    return car?.plate_number || car?.license_plate || carId
+  }
+
+  const confirmReturn = async () => {
+    if (!returningAllocation || returnPending) return
+    const { id, car_id: carId } = returningAllocation
+    setReturnPending(true)
+    setReturnError('')
+    try {
+      await fetchJsonOrThrow(
+        `${API_BASE_URL}/api/car-allocation/return`,
+        {
+          method: 'POST',
+          headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ allocationId: id }),
+        },
+        'Failed to record the vehicle return',
+      )
+      setAllocations((items) => items.filter((item) => item.id !== id))
+      setReturningAllocation(null)
+      setSuccess(`Return recorded for ${vehicleLabel(carId)}.`)
+      await Promise.all([fetchAllocations(), fetchCars()])
+    } catch (err) {
+      setReturnError(err instanceof Error ? err.message : 'Failed to record the vehicle return')
+    } finally {
+      setReturnPending(false)
+    }
+  }
+
   const issueAllocation = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -469,7 +505,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
           </div>
         )}
         {success && (
-          <div className="soc-alert-success mx-8 my-4 font-medium flex items-center justify-between">
+          <div role="status" className="soc-alert-success mx-8 my-4 font-medium flex items-center justify-between">
             <span>{success}</span>
             <button
               className="opacity-80 hover:opacity-100"
@@ -630,8 +666,9 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                 <h2 className="text-lg md:text-xl font-bold text-text-primary mb-4 md:mb-6 pb-3 border-b border-border">Allocate Vehicle</h2>
                 <form onSubmit={issueAllocation} className="space-y-3 md:space-y-4">
                   <div>
-                    <label className="block text-xs md:text-sm font-semibold text-text-primary mb-1 md:mb-2">Select Vehicle</label>
+                    <label htmlFor="allocation-vehicle" className="block text-xs md:text-sm font-semibold text-text-primary mb-1 md:mb-2">Select Vehicle</label>
                     <select
+                      id="allocation-vehicle"
                       value={newAllocation.car_id}
                       onChange={(e) => setNewAllocation({ ...newAllocation, car_id: e.target.value })}
                       required
@@ -642,7 +679,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                         .filter((c) => c.status === 'available')
                         .map((car) => (
                           <option key={car.id} value={car.id}>
-                            {car.license_plate} - {car.model}
+                            {formatVehicleIdentifier(car.license_plate, car.plate_number)}
                           </option>
                         ))}
                     </select>
@@ -714,18 +751,35 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                           <th className="hidden px-4 py-3.5 text-left sm:table-cell">Client Site</th>
                           <th className="hidden px-4 py-3.5 text-left md:table-cell">Alloc. Date</th>
                           <th className="px-4 py-3.5 text-left">Status</th>
+                          <th className="px-4 py-3.5 text-left">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
                         {allocations.map((alloc) => (
                           <tr key={alloc.id} className="border-b border-border-subtle/80 transition-colors hover:bg-surface-hover/50">
-                            <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{alloc.car_id}</td>
+                            <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{vehicleLabel(alloc.car_id)}</td>
                             <td className="hidden px-4 py-3.5 align-middle text-sm text-text-primary sm:table-cell">{alloc.client_id}</td>
                             <td className="hidden px-4 py-3.5 align-middle text-sm text-text-primary md:table-cell">{new Date(alloc.allocation_date).toLocaleDateString()}</td>
                             <td className="px-4 py-3.5 align-middle text-sm text-text-primary">
                               <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${getStatusColor(alloc.status)}`}>
                                 {alloc.status}
                               </span>
+                            </td>
+                            <td className="px-4 py-3.5 align-middle">
+                              {alloc.status === 'active' && (
+                                <button
+                                  type="button"
+                                  className="soc-btn soc-btn-neutral min-h-11 whitespace-nowrap"
+                                  aria-label={`Return vehicle ${vehicleLabel(alloc.car_id)}`}
+                                  disabled={returnPending}
+                                  onClick={() => {
+                                    setReturnError('')
+                                    setReturningAllocation(alloc)
+                                  }}
+                                >
+                                  Return Vehicle
+                                </button>
+                              )}
                             </td>
                           </tr>
                         ))}
@@ -745,8 +799,9 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                 <h2 className="text-lg md:text-xl font-bold text-text-primary mb-4 md:mb-6 pb-3 border-b border-border">Schedule Maintenance</h2>
                 <form onSubmit={scheduleMaintenance} className="space-y-3 md:space-y-4">
                   <div>
-                    <label className="block text-xs md:text-sm font-semibold text-text-primary mb-1 md:mb-2">Select Vehicle</label>
+                    <label htmlFor="maintenance-vehicle" className="block text-xs md:text-sm font-semibold text-text-primary mb-1 md:mb-2">Select Vehicle</label>
                     <select
+                      id="maintenance-vehicle"
                       value={newMaintenance.car_id}
                       onChange={(e) => setNewMaintenance({ ...newMaintenance, car_id: e.target.value })}
                       required
@@ -755,7 +810,7 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
                       <option value="">Choose a vehicle...</option>
                       {cars.map((car) => (
                         <option key={car.id} value={car.id}>
-                          {car.license_plate} - {car.model}
+                          {formatVehicleIdentifier(car.license_plate, car.plate_number)}
                         </option>
                       ))}
                     </select>
@@ -892,6 +947,25 @@ const ArmoredCarDashboard: React.FC<ArmoredCarDashboardProps> = ({ user, onLogou
             </div>
           )}
         </div>
+      <SentinelModal
+        open={Boolean(returningAllocation)}
+        onClose={() => setReturningAllocation(null)}
+        title="Return Vehicle"
+        subtitle={returningAllocation ? `Vehicle ${vehicleLabel(returningAllocation.car_id)}` : undefined}
+        dismissible={!returnPending}
+        size="sm"
+      >
+        <p className="text-sm text-text-secondary">
+          Confirm the vehicle has been returned to close its active allocation.
+        </p>
+        {returnError && <p role="alert" className="mt-3 text-sm text-danger-text">{returnError}</p>}
+        <div className="mt-5 flex flex-wrap justify-end gap-2">
+          <button type="button" className="soc-btn soc-btn-neutral min-h-11" disabled={returnPending} onClick={() => setReturningAllocation(null)}>Cancel</button>
+          <button type="button" className="soc-btn-primary min-h-11" disabled={returnPending} onClick={() => void confirmReturn()}>
+            {returnPending ? 'Recording return…' : 'Confirm Return'}
+          </button>
+        </div>
+      </SentinelModal>
     </OperationalShell>
   )
 }

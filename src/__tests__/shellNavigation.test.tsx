@@ -42,7 +42,9 @@ describe('shell navigation chrome', () => {
     expect(labels).toContain('Firearm Documents')
     expect(labels).toContain('Guard Documents')
     expect(labels).toContain('Requests')
-    expect(labels).toHaveLength(20)
+    expect(labels).toContain('Missions')
+    expect(labels).toContain('Trip Management')
+    expect(labels).toHaveLength(22)
   })
 
   it('returns supervisor nav without guard approvals', () => {

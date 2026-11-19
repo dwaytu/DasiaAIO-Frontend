@@ -1,12 +1,14 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import FirearmAllocation from '../FirearmAllocation'
 import FirearmInventory from '../FirearmInventory'
 import FirearmMaintenance from '../FirearmMaintenance'
 import { fetchJsonOrThrow } from '../../utils/api'
+import { isAllocationPresentationEnabled } from '../../config'
 
 jest.mock('../../config', () => ({
   API_BASE_URL: 'http://localhost:5000',
+  isAllocationPresentationEnabled: jest.fn(() => false),
 }))
 
 jest.mock('../layout/OperationalShell', () => ({
@@ -28,8 +30,121 @@ const user = { id: 'admin-1', username: 'admin', role: 'admin' }
 
 describe('operational resource hierarchy', () => {
   afterEach(() => {
+    jest.mocked(isAllocationPresentationEnabled).mockReturnValue(false)
     jest.clearAllMocks()
     jest.restoreAllMocks()
+  })
+
+  it('allocates and returns within the presentation session using only read requests', async () => {
+    jest.mocked(isAllocationPresentationEnabled).mockReturnValue(true)
+    const roster = Array.from({ length: 149 }, (_, index) => ({
+      id: 'guard-' + index, role: 'guard', full_name: 'Guard ' + index,
+      license_number: 'L-' + index, license_expiry_date: '2099-12-31T00:00:00Z',
+    }))
+    roster.push({ id: 'expired', role: 'guard', full_name: 'Expired Guard', license_number: 'OLD', license_expiry_date: '2000-01-01' })
+    fetchJsonOrThrowMock.mockImplementation(async (input) => {
+      const url = String(input)
+      if (url.includes('/api/users?')) return { users: roster, total: roster.length } as never
+      if (url.includes('/api/firearm-allocations/summary')) return { eligibleGuards: null, availableFirearms: 1 } as never
+      if (url.includes('/api/firearms?')) return {
+        firearms: [{ id: 'fixture-asset', serialNumber: 'TRAINING-ONLY', model: 'Inert fixture', status: 'available' }],
+      } as never
+      return { allocations: [], total: 0 } as never
+    })
+    const operator = userEvent.setup()
+    render(<FirearmAllocation user={user} onLogout={jest.fn()} />)
+    expect((await screen.findByText('Guards with current licenses')).parentElement).toHaveTextContent('149')
+    await operator.click(screen.getByRole('button', { name: 'Allocate firearm' }))
+    const form = within(screen.getByRole('dialog', { name: 'Allocate firearm' }))
+    expect(form.getByText('Select a guard and firearm for the demo.')).toBeInTheDocument()
+    expect(form.queryByRole('option', { name: 'Expired Guard' })).not.toBeInTheDocument()
+    await operator.selectOptions(form.getByLabelText('Eligible guard'), 'guard-148')
+    await operator.selectOptions(form.getByLabelText('Available firearm'), 'fixture-asset')
+    await operator.click(form.getByRole('button', { name: 'Allocate firearm' }))
+
+    expect(screen.getByText('Demo allocation added.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Allocate firearm' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /^Allocations$/ })).toHaveAttribute('aria-pressed', 'true')
+    const table = within(screen.getByRole('table', { name: 'Allocation register' }))
+    const session = within(table.getByRole('row', { name: /Guard 148/ }))
+    expect(session.getByText('Guard 148')).toBeInTheDocument()
+    expect(session.getByText('Active')).toBeInTheDocument()
+    await operator.click(session.getByRole('button', { name: 'Return' }))
+    await operator.click(within(screen.getByRole('dialog', { name: 'Return firearm' })).getByRole('button', { name: 'Return firearm' }))
+    expect(session.getByText('Returned')).toBeInTheDocument()
+    expect(session.queryByRole('button', { name: 'Return' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Allocate firearm' })).toBeEnabled()
+    expect(fetchJsonOrThrowMock.mock.calls.some(([, options]) => options?.method === 'POST')).toBe(false)
+  })
+
+  it('returns active saved records through the API when the session tab is available', async () => {
+    jest.mocked(isAllocationPresentationEnabled).mockReturnValue(true)
+    const errorLog = jest.spyOn(console, 'error').mockImplementation(() => {})
+    const allocation = {
+      id: 'saved-allocation',
+      guardId: 'fixture-guard',
+      firearmId: 'fixture-asset',
+      guardName: 'Fixture Guard',
+      firearmSerialNumber: 'TRAINING-ONLY',
+      allocationDate: '2026-11-18T08:00:00Z',
+      status: 'active',
+      recordOrigin: 'unknown',
+    }
+    fetchJsonOrThrowMock.mockImplementation(async (input) => {
+      const url = String(input)
+      if (url.endsWith('/api/firearm-allocation/return')) {
+        allocation.status = 'returned'
+        return {} as never
+      }
+      if (url.includes('/api/firearm-allocations?')) return { allocations: [{ ...allocation }], total: 1 } as never
+      if (url.endsWith('/api/firearm-allocations/summary')) {
+        if (allocation.status === 'returned') throw new Error('Summary refresh failed')
+        return { eligibleGuards: null, availableFirearms: 0 } as never
+      }
+      return { users: [], firearms: [], total: 0 } as never
+    })
+
+    const operator = userEvent.setup()
+    render(<FirearmAllocation user={user} onLogout={jest.fn()} />)
+    const row = await screen.findByRole('row', { name: /Fixture Guard/ })
+    expect(within(row).getByText('Active', { exact: true })).toBeInTheDocument()
+    expect(within(row).queryByText(/unknown origin|documentation unverified/i)).not.toBeInTheDocument()
+    await operator.click(within(row).getByRole('button', { name: 'Return' }))
+    const dialog = within(screen.getByRole('dialog', { name: 'Return firearm' }))
+    expect(dialog.getByText(/Confirm you received the firearm back/)).toBeInTheDocument()
+    await operator.click(dialog.getByRole('button', { name: 'Return firearm' }))
+
+    expect(fetchJsonOrThrowMock).toHaveBeenCalledWith(
+      'http://localhost:5000/api/firearm-allocation/return',
+      expect.objectContaining({ method: 'POST', body: JSON.stringify({ allocationId: allocation.id }) }),
+      'Unable to return firearm',
+    )
+    const returnedRow = within(await screen.findByRole('row', { name: /Fixture Guard.*Returned/ }))
+    expect(returnedRow.queryByRole('button', { name: 'Return' })).not.toBeInTheDocument()
+    expect(screen.getByText('Firearm returned successfully and is now available.')).toBeInTheDocument()
+    expect(screen.queryByText('Summary refresh failed')).not.toBeInTheDocument()
+    expect(errorLog).toHaveBeenCalledWith('Error refreshing firearm counts after return:', expect.any(Error))
+  })
+
+  it('shows saved allocation and inventory counts when eligibility is unavailable', async () => {
+    fetchJsonOrThrowMock.mockImplementation(async (input) => {
+      const url = String(input)
+      if (url.endsWith('/api/firearm-allocations/summary')) {
+        return { eligibleGuards: null, availableFirearms: 3, totalAllocationRecords: 42 } as never
+      }
+      if (url.includes('/api/firearm-allocations?')) return { allocations: [], total: 0 } as never
+      if (url.includes('/api/firearms?')) return { firearms: [] } as never
+      throw new Error(`Unexpected request: ${url}`)
+    })
+
+    render(<FirearmAllocation user={user} onLogout={jest.fn()} />)
+
+    expect(await screen.findByText('Issuance eligibility is unavailable.')).toBeInTheDocument()
+    expect(screen.getByText('Eligible for new issuance').parentElement).toHaveTextContent('Unavailable')
+    expect(screen.getByText('Available firearms').parentElement).toHaveTextContent('3')
+    expect(screen.getByText('Allocation records').parentElement).toHaveTextContent('42')
+    expect(screen.getByRole('heading', { name: 'Allocation register' })).toBeInTheDocument()
+    expect(fetchJsonOrThrowMock.mock.calls.some(([input]) => String(input).includes('/eligible-guards'))).toBe(false)
   })
 
   it('summarizes firearm maintenance workload before the records table', async () => {
@@ -72,7 +187,13 @@ describe('operational resource hierarchy', () => {
           totalFirearms: 110,
           availableFirearms: 3,
           activeCustody: 1,
+          verifiedActiveCustody: null,
           returnedAllocations: 1,
+          importedOrUnverifiedAllocations: 1,
+          registerBreakdown: [
+            { origin: 'imported', active: 1, returned: 0, unverified: 0 },
+            { origin: 'presentation', active: 0, returned: 1, unverified: 0 },
+          ],
           totalAllocationRecords: 2,
           eligibleGuards: 1,
           custodyReviewFirearms: 47,
@@ -82,8 +203,8 @@ describe('operational resource hierarchy', () => {
           ? { total: 1, guards: [{ id: 'g-1', fullName: 'Guard One', guardCode: 'G-001' }] }
           : url.includes('/api/firearm-allocations?')
             ? { total: 16, page: 1, pageSize: 15, allocations: [
-              { id: 'a-1', guardId: 'g-1', firearmId: 'f-1', guardName: 'Guard One', firearmSerialNumber: 'SN-001', firearmModel: 'Model A', allocationDate: '2026-09-19T08:00:00.000Z', issueDateSource: 'mdr_import_recorded', status: 'active' },
-              { id: 'a-2', guardId: 'g-1', firearmId: 'f-2', guardName: 'Guard One', firearmSerialNumber: 'SN-002', firearmModel: 'Model B', allocationDate: '2026-09-18T08:00:00.000Z', status: 'returned' },
+              { id: 'a-1', guardId: 'g-1', firearmId: 'f-1', guardName: 'Guard One', firearmSerialNumber: 'SN-001', firearmModel: 'Model A', allocationDate: '2026-09-19T08:00:00.000Z', issueDateSource: 'mdr_import_recorded', recordOrigin: 'imported', status: 'active' },
+              { id: 'a-2', guardId: 'g-1', firearmId: 'f-2', guardName: 'Guard One', firearmSerialNumber: 'SN-002', firearmModel: 'Model B', allocationDate: '2026-09-18T08:00:00.000Z', issueDateSource: 'presentation_recorded', recordOrigin: 'presentation', status: 'returned' },
             ] }
             : { total: 110, firearms: [
               { id: 'f-1', serialNumber: 'SN-001', model: 'Model A', status: 'allocated' },
@@ -96,15 +217,18 @@ describe('operational resource hierarchy', () => {
     render(<FirearmAllocation user={user} onLogout={jest.fn()} />)
 
     expect(await screen.findByRole('heading', { name: 'Firearm allocations' })).toBeInTheDocument()
-    expect(screen.getAllByText('Active custody')[0].parentElement?.parentElement).toHaveTextContent('1')
-    expect(screen.getByText('Eligible guards').parentElement?.parentElement).toHaveTextContent('1')
+    expect(screen.queryByText('Verified active custody')).not.toBeInTheDocument()
+    expect(screen.getByText('Eligible for new issuance').parentElement).toHaveTextContent('1')
     expect(screen.getByText('Available firearms').parentElement?.parentElement).toHaveTextContent('3')
     expect(screen.getByText('Allocation records').parentElement?.parentElement).toHaveTextContent('2')
     expect(screen.getByText('Custody review').parentElement?.parentElement).toHaveTextContent('47')
     expect(screen.getByText('Maintenance').parentElement?.parentElement).toHaveTextContent('8')
     expect(screen.getByRole('heading', { name: 'Allocation register' })).toBeInTheDocument()
-    expect(screen.getByText('Issue date not verified')).toBeInTheDocument()
-    expect(screen.getByText(/MDR record imported/i)).toBeInTheDocument()
+    expect(screen.queryByRole('columnheader', { name: /^Issued$/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: /^Returned$/ })).toBeInTheDocument()
+    expect(screen.getByText('Imported', { exact: true })).toBeInTheDocument()
+    expect(screen.queryByRole('table', { name: 'Register by origin and status' })).not.toBeInTheDocument()
+    expect(screen.queryByText('Presentation / test')).not.toBeInTheDocument()
     expect(screen.getAllByText('Returned').length).toBeGreaterThan(0)
 
     await operator.click(screen.getByRole('button', { name: 'Next allocation page' }))
@@ -137,6 +261,7 @@ describe('operational resource hierarchy', () => {
           maintenanceFirearms: 8,
           activeCustody: 64,
           custodyReviewFirearms: 35,
+          eligibleGuards: null,
         } as never
       }
 

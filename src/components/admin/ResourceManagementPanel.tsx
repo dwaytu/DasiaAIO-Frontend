@@ -10,6 +10,7 @@ import EmptyState from '../shared/EmptyState'
 import ConfirmationDialog from '../shared/ConfirmationDialog'
 import LoadingSkeleton from '../shared/LoadingSkeleton'
 import SentinelModal from '../shared/SentinelModal'
+import FirearmCustodyReviewAction from '../shared/FirearmCustodyReviewAction'
 import EditUserModal from '../EditUserModal'
 import CreateGuardAccountModal from './CreateGuardAccountModal'
 import GuardPasswordModal from './GuardPasswordModal'
@@ -32,6 +33,8 @@ interface Firearm {
   caliber: string
   status: string
   custodyReview?: boolean
+  custodyReviewApprovedAt?: string | null
+  updatedAt?: string
   activeCustody?: boolean
   licenseExpiryDate?: string | null
   lastMaintenance?: string
@@ -909,6 +912,7 @@ const GuardsTab: FC<{
 }
 
 const FirearmsTab: FC = () => {
+  const { user: currentUser } = useAuth()
   const [firearms, setFirearms] = useState<Firearm[]>([])
   const [totalFirearms, setTotalFirearms] = useState(0)
   const [firearmSummary, setFirearmSummary] = useState<FirearmAllocationSummary | null>(null)
@@ -1192,7 +1196,13 @@ const FirearmsTab: FC = () => {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <div className="flex justify-end gap-2">
+                    <div className="flex flex-wrap justify-end gap-2">
+                      {f.custodyReview ? (
+                        <FirearmCustodyReviewAction firearm={f} viewerRole={currentUser?.role} onApproved={(approvedAt) => {
+                          setFirearms((items) => items.map((item) => item.id === f.id && item.updatedAt === f.updatedAt
+                            ? { ...item, custodyReviewApprovedAt: approvedAt } : item))
+                        }} />
+                      ) : null}
                       <button type="button" onClick={() => openFirearmEditor(f)} className="soc-btn soc-btn-neutral">
                         <Pencil size={15} aria-hidden="true" />
                         Edit

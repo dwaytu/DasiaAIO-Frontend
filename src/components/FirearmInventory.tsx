@@ -9,6 +9,7 @@ import LoadingSkeleton from './shared/LoadingSkeleton'
 import { getSidebarNav } from '../config/navigation'
 import OperationalPageHeader from './shared/OperationalPageHeader'
 import OperationalSummaryBand from './shared/OperationalSummaryBand'
+import FirearmCustodyReviewAction from './shared/FirearmCustodyReviewAction'
 
 interface Firearm {
   id: string
@@ -21,6 +22,8 @@ interface Firearm {
   lastMaintenance?: string
   activeCustody?: boolean
   custodyReview?: boolean
+  custodyReviewApprovedAt?: string | null
+  updatedAt?: string
   mdrBatchId?: string | null
   mdrRowRef?: string | null
   sourceGuardText?: string | null
@@ -237,7 +240,19 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
                             </span>
                           </td>
                           <td className="px-4 py-3.5 align-middle text-sm text-text-primary">
-                            {f.custodyReview ? <div><p className="font-medium text-warning-text">No verified active custody record</p><p className="mt-1 text-xs">Imported status: {f.status}. Active custody: No.</p><p className="mt-1 text-xs">MDR source: {f.mdrRowRef || 'Not linked'}{f.sourceGuardText ? `; source guard: ${f.sourceGuardText}` : ''}. Direct guard match: {f.directGuardMatch ? 'Yes' : 'No'}.</p></div> : f.activeCustody ? 'Verified active custody' : 'No active custody'}
+                            {f.custodyReview ? (
+                              <div>
+                                <p className="font-medium text-warning-text">No verified active custody record</p>
+                                <p className="mt-1 text-xs">Imported status: {f.status}. Active custody: No.</p>
+                                <p className="mt-1 text-xs">MDR source: {f.mdrRowRef || 'Not linked'}{f.sourceGuardText ? `; source guard: ${f.sourceGuardText}` : ''}. Direct guard match: {f.directGuardMatch ? 'Yes' : 'No'}.</p>
+                                <div className="mt-2">
+                                  <FirearmCustodyReviewAction firearm={f} viewerRole={user.role} onApproved={(approvedAt) => {
+                                    setFirearms((items) => items.map((item) => item.id === f.id && item.updatedAt === f.updatedAt
+                                      ? { ...item, custodyReviewApprovedAt: approvedAt } : item))
+                                  }} />
+                                </div>
+                              </div>
+                            ) : f.activeCustody ? 'Verified active custody' : 'No active custody'}
                           </td>
                           <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{f.lastMaintenance ? new Date(f.lastMaintenance).toLocaleDateString() : 'N/A'}</td>
                         </tr>

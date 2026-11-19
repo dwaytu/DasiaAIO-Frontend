@@ -1,4 +1,5 @@
-import { FC } from 'react'
+import { FC, useState } from 'react'
+import type { DemoFirearmAllocation } from '../../utils/demoFirearmAllocations'
 import DashboardCard from './ui/DashboardCard'
 import SectionHeader from './ui/SectionHeader'
 import StatCard from './ui/StatCard'
@@ -24,9 +25,10 @@ interface PermitItem {
 interface GuardResourcesTabProps {
   firearmItems: AllocationItem[]
   permitItems: PermitItem[]
+  demoAllocations?: DemoFirearmAllocation[]
 }
 
-const GuardResourcesTab: FC<GuardResourcesTabProps> = ({ firearmItems, permitItems }) => {
+const SavedGuardResources: FC<Omit<GuardResourcesTabProps, 'demoAllocations'>> = ({ firearmItems, permitItems }) => {
   const activePermits = permitItems.filter((item) => item.status.toLowerCase() === 'active').length
   const expiringSoonCount = permitItems.filter((item) => {
     const expiry = new Date(item.expiryDate).getTime()
@@ -129,6 +131,43 @@ const GuardResourcesTab: FC<GuardResourcesTabProps> = ({ firearmItems, permitIte
         </p>
       </DashboardCard>
     </section>
+  )
+}
+
+const GuardResourcesTab: FC<GuardResourcesTabProps> = ({ firearmItems, permitItems, demoAllocations = [] }) => {
+  const [view, setView] = useState<'saved' | 'demo'>(() => demoAllocations.length ? 'demo' : 'saved')
+
+  if (!demoAllocations.length) {
+    return <SavedGuardResources firearmItems={firearmItems} permitItems={permitItems} />
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Resource views">
+        <button type="button" aria-pressed={view === 'saved'} className={`soc-btn ${view === 'saved' ? 'soc-btn-primary' : 'soc-btn-neutral'}`} onClick={() => setView('saved')}>
+          Saved records
+        </button>
+        <button type="button" aria-pressed={view === 'demo'} className={`soc-btn ${view === 'demo' ? 'soc-btn-primary' : 'soc-btn-neutral'}`} onClick={() => setView('demo')}>
+          Allocations
+        </button>
+      </div>
+      {view === 'saved' ? (
+        <SavedGuardResources firearmItems={firearmItems} permitItems={permitItems} />
+      ) : (
+        <ul className="space-y-2" aria-label="Demo allocations">
+          {demoAllocations.map((row) => (
+            <li key={row.id} className="flex flex-wrap items-start justify-between gap-2 rounded border border-border-subtle bg-surface-elevated p-3">
+              <p className="break-words text-sm font-semibold text-text-primary">
+                {[row.firearmSerialNumber, row.firearmModel].filter(Boolean).join(' - ')}
+              </p>
+              <span className={`soc-chip ${row.status === 'active' ? 'status-info' : 'status-success'}`}>
+                {row.status === 'active' ? 'Active' : 'Returned'}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   )
 }
 

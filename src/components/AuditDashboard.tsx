@@ -156,8 +156,11 @@ const metadataString = (metadata?: Record<string, unknown> | null) => {
 
 const relatedRecordLabel = (metadata?: Record<string, unknown> | null) => {
   const label = metadata?.related_record_label
+  if (label === 'Capstone presentation schedule batch') return 'Schedule scenario'
   return typeof label === 'string' && label.trim() ? label : ''
 }
+
+const auditSourceLabel = (source?: string | null) => source === 'capstone_seed' ? 'Scenario activity' : source || 'Runtime'
 
 export default function AuditDashboard({ user, onLogout, onViewChange, activeView }: AuditDashboardProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -536,7 +539,7 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
                 >
                   <option value="all">All sources</option>
                   <option value="runtime">Runtime</option>
-                  <option value="capstone_seed">Presentation records</option>
+                  <option value="capstone_seed">{auditSourceLabel('capstone_seed')}</option>
                 </select>
               </label>
 
@@ -707,7 +710,7 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
                                 </div>
                                 <div>
                                   <p className="text-text-tertiary font-semibold uppercase tracking-wide">Record source</p>
-                                  <p className="text-text-primary mt-0.5">{log.source === 'capstone_seed' ? 'Presentation record' : log.source || 'Runtime'}</p>
+                                  <p className="text-text-primary mt-0.5">{auditSourceLabel(log.source)}</p>
                                 </div>
                                 <div>
                                   <p className="text-text-tertiary font-semibold uppercase tracking-wide">Scenario time</p>
@@ -806,7 +809,7 @@ export default function AuditDashboard({ user, onLogout, onViewChange, activeVie
                           </div>
                           <div>
                             <p className="text-text-tertiary font-semibold uppercase tracking-wide">Record source</p>
-                            <p className="text-text-primary mt-0.5">{log.source === 'capstone_seed' ? 'Presentation record' : log.source || 'Runtime'}</p>
+                            <p className="text-text-primary mt-0.5">{auditSourceLabel(log.source)}</p>
                           </div>
                           <div>
                             <p className="text-text-tertiary font-semibold uppercase tracking-wide">Scenario time</p>

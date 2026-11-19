@@ -1,9 +1,10 @@
 import { FC, FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ClipboardList, LifeBuoy, MapPinned, PackageCheck, Target, type LucideIcon } from 'lucide-react'
-import { API_BASE_URL, detectRuntimePlatform } from '../../config'
+import { API_BASE_URL, detectRuntimePlatform, isAllocationPresentationEnabled } from '../../config'
 import { EMERGENCY_CONTACTS, phoneToTelHref } from '../../constants/emergencyContacts'
 import type { User as AppUser } from '../../context/AuthContext'
 import { logError } from '../../utils/logger'
+import { getGuardDemoFirearmAllocations } from '../../utils/demoFirearmAllocations'
 import { sanitizeErrorMessage } from '../../utils/sanitize'
 import { fetchJsonOrThrow, getAuthToken, isOfflineRequestError } from '../../utils/api'
 import {
@@ -852,7 +853,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
       return {
         key: 'paused',
         title: 'Location heartbeat paused',
-        message: 'A recent location sample failed. Retry now to resume heartbeat updates.',
+        message: 'A recent location update failed. Retry now to resume heartbeat updates.',
         action: 'retry-location' as const,
         actionLabel: 'Retry Location',
       }
@@ -1287,7 +1288,14 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
           ) : null}
 
           {!isInitialLoading && activeSection === 'resources' ? (
-            <GuardResourcesTab firearmItems={firearmItems} permitItems={permitItems} />
+            <GuardResourcesTab
+              key={user.id}
+              firearmItems={firearmItems}
+              permitItems={permitItems}
+              demoAllocations={user.role === 'guard' && isAllocationPresentationEnabled(window.location)
+                ? getGuardDemoFirearmAllocations(user.id)
+                : undefined}
+            />
           ) : null}
 
           {!isInitialLoading && activeSection === 'support' ? (

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { API_BASE_URL } from '../config'
 import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
-import { normalizeRole } from '../types/auth'
+import { can } from '../utils/permissions'
 
 interface ClientSite {
   id: string
@@ -18,7 +18,7 @@ export interface ReplacementSuggestion {
   reliabilityScore: number
   distanceKm: number
   availability: boolean
-  permitValid: boolean
+  coverage: 'unarmed'
   distanceScore: number
   replacementScore: number
   formula: string
@@ -57,18 +57,17 @@ export function useReplacementSuggestions(): UseReplacementSuggestionsState {
         return
       }
 
-      let role: ReturnType<typeof normalizeRole> = null
+      let role: unknown
       try {
         const parsedUser = JSON.parse(rawUser)
-        role = normalizeRole(parsedUser?.role)
+        role = parsedUser?.role
       } catch {
         setSuggestions([])
         setError('')
         return
       }
 
-      const hasTrackingAccess = role === 'supervisor' || role === 'guard'
-      if (!hasTrackingAccess) {
+      if (!can(role, 'view_analytics')) {
         setSuggestions([])
         setError('')
         return

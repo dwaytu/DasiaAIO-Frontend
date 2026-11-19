@@ -1,5 +1,7 @@
 import { expect, test, type Page, type Route } from '@playwright/test'
 
+test.use({ serviceWorkers: 'block' })
+
 type RequestRecord = {
   id: string
   requestType: string
@@ -20,11 +22,11 @@ type RequestRecord = {
   shiftEndTime?: string
 }
 
-function installSession(page: Page, role: 'guard' | 'admin') {
+function installSession(page: Page, role: 'guard' | 'admin' | 'superadmin') {
   return page.addInitScript((sessionRole) => {
     localStorage.setItem('token', 'phase-4-browser-token')
     localStorage.setItem('user', JSON.stringify({
-      id: sessionRole === 'guard' ? 'guard-1' : 'admin-1',
+      id: `${sessionRole}-1`,
       email: `${sessionRole}@example.com`,
       username: sessionRole,
       fullName: sessionRole === 'guard' ? 'Test Guard' : 'Test Administrator',
@@ -40,7 +42,7 @@ async function fulfillJson(route: Route, body: unknown, status = 200) {
   await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
 }
 
-function installRequestApi(page: Page, initial: RequestRecord[] = []) {
+function installRequestApi(page: Page, initial: RequestRecord[] = [], requesterId = 'guard-1') {
   const requests = [...initial]
   const events = new Map<string, Array<Record<string, unknown>>>()
 
@@ -75,8 +77,8 @@ function installRequestApi(page: Page, initial: RequestRecord[] = []) {
         id: `request-${requests.length + 1}`,
         requestType: payload.requestType,
         status: 'pending',
-        requesterId: 'guard-1',
-        requesterName: 'Test Guard',
+        requesterId,
+        requesterName: requesterId === 'guard-1' ? 'Test Guard' : 'Test Administrator',
         subject: payload.subject,
         reason: payload.reason,
         details: payload.details,
@@ -88,8 +90,8 @@ function installRequestApi(page: Page, initial: RequestRecord[] = []) {
       events.set(created.id, [{
         id: `event-${created.id}-1`,
         requestId: created.id,
-        actorUserId: 'guard-1',
-        actorName: 'Test Guard',
+        actorUserId: requesterId,
+        actorName: created.requesterName,
         fromStatus: null,
         toStatus: 'pending',
         comment: created.reason,
@@ -144,6 +146,20 @@ function installRequestApi(page: Page, initial: RequestRecord[] = []) {
   })
 }
 
+test('superadmin can submit a service request for independent review', async ({ page }) => {
+  await installSession(page, 'superadmin')
+  await installRequestApi(page, [], 'superadmin-1')
+  await page.goto('/requests')
+  await page.getByRole('button', { name: 'New Request' }).click()
+  await page.getByLabel('Subject').fill('Update staff contact list')
+  await page.getByLabel('Reason and purpose').fill('The site contact list needs a correction.')
+  await page.getByRole('button', { name: 'Submit for Review' }).click()
+  await page.getByRole('button', { name: /Update staff contact list/ }).click()
+  const details = page.getByRole('region', { name: 'Selected request details' })
+  await expect(details.getByRole('button', { name: 'Cancel Request', exact: true })).toBeVisible()
+  await expect(details.getByRole('button', { name: 'Approve', exact: true })).toHaveCount(0)
+})
+
 test('guard submits a service request from the guard workspace', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await installSession(page, 'guard')
@@ -151,7 +167,7 @@ test('guard submits a service request from the guard workspace', async ({ page }
   await page.goto('/requests')
 
   await expect(page.getByRole('heading', { name: 'Operational Requests' })).toBeVisible()
-  await page.getByRole('button', { name: 'Bag-ong hangyo' }).click()
+  await page.getByRole('button', { name: 'New Request' }).click()
   await expect(page.getByLabel('Matang sa hangyo')).toContainText('Hangyo og tabang')
   await page.getByLabel('Hilisgutan').fill('Hangyo og relibo')
   await page.getByLabel('Rason sa hangyo').fill('Kinahanglan og relibo sa sunod nga duty.')
@@ -174,6 +190,7 @@ test('administrator reviews a pending request and sees its history', async ({ pa
     requesterName: 'Test Guard',
     subject: 'Escort service request',
     reason: 'Client requested an additional escort.',
+    decisionReason: 'Presentation scenario: the requested temporary relief was not available for the stated period.',
     priority: 'high',
     clientSiteId: 'internal-site-id',
     clientSiteName: 'North Gate',
@@ -188,6 +205,7 @@ test('administrator reviews a pending request and sees its history', async ({ pa
   const details = page.getByRole('region', { name: 'Selected request details' })
   await expect(details.getByText('Escort service request')).toBeVisible()
   await expect(details.getByText('North Gate')).toBeVisible()
+  await expect(details.getByText('The requested temporary relief was not available for the stated period.')).toBeVisible()
   await expect(details.getByText(/10:00 PM.*6:00 AM.*PH time/i)).toBeVisible()
   await expect(details).not.toContainText(/internal-(site|shift)-id/)
   await page.getByRole('button', { name: 'Approve' }).click()
@@ -238,7 +256,7 @@ test('new request does not resubmit the selected correction request', async ({ p
   }])
   await page.goto('/requests')
   await page.getByRole('button', { name: /Original request/ }).click()
-  await page.getByRole('button', { name: 'Bag-ong hangyo' }).click()
+  await page.getByRole('button', { name: 'New Request' }).click()
   await expect(page.getByRole('heading', { name: 'Paghimo og hangyo' })).toBeVisible()
   await page.getByLabel('Hilisgutan').fill('Separate service request')
   await page.getByLabel('Rason sa hangyo').fill('This is a different request.')

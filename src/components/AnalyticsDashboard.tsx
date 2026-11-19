@@ -646,7 +646,7 @@ const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onVie
       <div className="hidden analytics-print-heading">
         <p className="soc-label">SENTINEL Operational Analytics</p>
         <h2 className="soc-page-title">Analytics Report</h2>
-        <p className="mt-1 text-sm">Period: last {dateRange} days | Generated {new Date(lastRefreshAt).toLocaleString()}</p>
+        <p className="mt-1 text-sm">Period: last {dateRange} days | Report created {new Date(lastRefreshAt).toLocaleString()}</p>
       </div>
       {/* ── Hero Zone ──────────────────────────────────── */}
       <div className="analytics-screen-hero">

@@ -31,7 +31,13 @@ async function installFixtures(page: Page) {
       await route.fulfill({ json: { anomalies: [{ type: 'failed_burst', severity: 'high', actorName: 'Fixture actor', failedCount: 12 }] } })
     } else if (path === '/api/firearm-allocations/summary') {
       await route.fulfill({ json: {
-        totalFirearms: 3, totalAllocationRecords: 5, activeCustody: 1, returnedAllocations: 2, importedAllocations: 2,
+        totalFirearms: 3, totalAllocationRecords: 5, activeCustody: 1, returnedAllocations: 2,
+        verifiedActiveCustody: null, importedOrUnverifiedAllocations: 4,
+        registerBreakdown: [
+          { origin: 'application', active: 1, returned: 0, unverified: 0 },
+          { origin: 'presentation', active: 0, returned: 1, unverified: 0 },
+          { origin: 'imported', active: 0, returned: 1, unverified: 2 },
+        ],
         availableFirearms: 1, custodyReviewFirearms: 1, eligibleGuards: 0, activeApprovedGuards: 2,
         guardsWithActivePermit: 1, guardsWithValidFirearmsTraining: 1,
       } })
@@ -105,15 +111,18 @@ test('audit keeps the activity view while hiding anomaly signal details', async 
   await expect(page.getByRole('heading', { name: 'Activity Heatmap (Hour of Day)' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Anomaly Signals' })).toHaveCount(0)
   await expect(page.getByText('Fixture actor')).toHaveCount(0)
+  await page.getByRole('button', { name: /^Filters/ }).click()
+  await expect(page.getByRole('option', { name: 'Scenario activity' })).toHaveAttribute('value', 'capstone_seed')
 })
 
 test('the allocation register explains why historical records do not imply new issuance eligibility', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await installFixtures(page)
   await page.goto('/allocation')
-  await expect(page.getByText('All register entries, including active and returned')).toBeVisible()
-  await expect(page.getByText('Register entries without confirmed custody')).toBeVisible()
-  await expect(page.getByText('Guards eligible for a new issuance')).toBeVisible()
+  await expect(page.getByText('Eligible for new issuance', { exact: true })).toBeVisible()
+  await expect(page.getByText('Imported or unverified records', { exact: true })).toHaveCount(0)
+  await expect(page.getByText('Verified active custody', { exact: true })).toHaveCount(0)
+  await expect(page.getByRole('table', { name: 'Register by origin and status' })).toHaveCount(0)
   await expect(page.getByText('No guards currently meet the issuance requirements.', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Allocate firearm' })).toBeDisabled()
   await page.getByLabel('Filter allocations by status').selectOption('imported')

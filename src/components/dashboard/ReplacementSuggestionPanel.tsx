@@ -16,19 +16,16 @@ const availabilityClass: Record<string, string> = {
 
 const getRecommendationReason = (item: ReplacementSuggestion): string => {
   if (!item.availability) return 'Candidate currently unavailable despite score profile.'
-  if (!item.permitValid) return 'Permit check failed; candidate should not be deployed.'
-  if (item.distanceKm <= 2) return 'Close proximity and strong reliability make this candidate deployable quickly.'
-  return 'Balanced reliability and route distance support this replacement recommendation.'
+  return 'Ranked by availability, reliability, and distance.'
 }
 
 const getSuggestedAction = (item: ReplacementSuggestion): string => {
   if (!item.availability) return 'Keep as reserve and continue searching for active alternatives.'
-  if (!item.permitValid) return 'Request permit renewal verification before assignment.'
-  return 'Contact this guard first for immediate replacement confirmation.'
+  return 'Confirm availability with the guard for unarmed coverage.'
 }
 
 const getRiskLevel = (item: ReplacementSuggestion): 'LOW' | 'MEDIUM' | 'HIGH' => {
-  if (!item.availability || !item.permitValid) return 'HIGH'
+  if (!item.availability) return 'HIGH'
   if (item.replacementScore < 80 || item.distanceKm > 8) return 'MEDIUM'
   return 'LOW'
 }
@@ -54,7 +51,7 @@ const ReplacementSuggestionPanel: FC<ReplacementSuggestionPanelProps> = ({
         <div>
           <p className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-(--color-text)">Smart Guard Replacement</p>
           <p className="font-mono text-[11px] text-(--color-muted-text)">
-            {postName ? `Top recommendations for ${postName}` : 'Top recommendations for active post'}
+            {postName ? `Unarmed coverage for ${postName}` : 'Unarmed coverage recommendations'}
           </p>
         </div>
         {lastUpdated && <span className="font-mono text-[11px] text-(--color-muted-text)">{lastUpdated}</span>}
@@ -101,9 +98,6 @@ const ReplacementSuggestionPanel: FC<ReplacementSuggestionPanelProps> = ({
                     <span className={`inline-flex rounded-full border px-2 py-0.5 font-mono text-[11px] ${badge}`}>
                       {item.availability ? 'Available' : 'Unavailable'}
                     </span>
-                    <span className="inline-flex rounded-full border border-info-border bg-info-bg px-2 py-0.5 font-mono text-[11px] text-info-text">
-                      Permit {item.permitValid ? 'Valid' : 'Invalid'}
-                    </span>
                     <span className="inline-flex rounded-full border border-(--color-border) px-2 py-0.5 font-mono text-[11px] text-(--color-muted-text)">
                       Rank #{index + 1}
                     </span>
@@ -112,24 +106,6 @@ const ReplacementSuggestionPanel: FC<ReplacementSuggestionPanelProps> = ({
                   <p className="mt-1 font-mono text-[11px] text-(--color-muted-text)">Risk level: {getRiskLevel(item)}</p>
                   <p className="mt-2 font-mono text-[11px] text-(--color-muted-text)">Suggested action: {getSuggestedAction(item)}</p>
                   <p className="mt-1 font-mono text-[11px] text-(--color-muted-text)">Confidence: {(getConfidence(item) * 100).toFixed(0)}%</p>
-                  {index === 0 && item.availability && item.permitValid && (
-                    <div className="mt-2 flex gap-1">
-                      <button
-                        type="button"
-                        onClick={() => alert(`Assign ${item.guardName} as replacement`)}
-                        className="rounded border border-success-border bg-success-bg px-2 py-1 font-mono text-[11px] font-semibold text-success-text transition-colors hover:bg-success-bg focus-visible:outline-2 focus-visible:outline-(--color-success)"
-                      >
-                        Assign Now
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => alert(`Contact ${item.guardName} for confirmation`)}
-                        className="rounded border border-info-border bg-info-bg px-2 py-1 font-mono text-[11px] text-info-text transition-colors hover:bg-info-bg focus-visible:outline-2 focus-visible:outline-(--color-info)"
-                      >
-                        Contact Guard
-                      </button>
-                    </div>
-                  )}
                   {index !== 0 && !item.availability && (
                     <div className="mt-2">
                       <span className="soc-status-neutral">

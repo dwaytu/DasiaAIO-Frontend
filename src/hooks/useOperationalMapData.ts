@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { API_BASE_URL } from '../config'
 import { fetchJsonOrThrow, getAuthHeaders, getAuthToken } from '../utils/api'
+import { withoutSampleCheckpoints } from '../utils/trackingTimeline'
 import {
   canProduceTrackingHeartbeat,
   canManageTrackingSites,
@@ -116,10 +117,6 @@ interface MapDataResponse {
 
 interface GuardHistoryResponse {
   points?: GuardHistoryPoint[]
-}
-
-interface GuardPathResponse {
-  coordinates?: GuardHistoryPoint[]
 }
 
 interface ActiveGuardsResponse {
@@ -263,7 +260,7 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
 
   const applySnapshot = useCallback((data: MapDataResponse) => {
     setClientSites(Array.isArray(data.clientSites) ? data.clientSites : [])
-    setTrackingPoints(Array.isArray(data.trackingPoints) ? data.trackingPoints : [])
+    setTrackingPoints(Array.isArray(data.trackingPoints) ? withoutSampleCheckpoints(data.trackingPoints) : [])
     setGeofenceAlerts(Array.isArray(data.geofenceAlerts) ? data.geofenceAlerts : [])
     setLastUpdated(new Date().toLocaleTimeString())
   }, [])
@@ -450,20 +447,13 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
       'Failed to load guard movement history',
     )
 
-    return Array.isArray(data.points) ? data.points : []
+    return Array.isArray(data.points) ? withoutSampleCheckpoints(data.points) : []
   }, [hasTrackingAccess])
 
   const fetchGuardPath = useCallback(async (guardId: string, limit = 1000) => {
-    if (!hasTrackingAccess) return []
-
-    const data = await fetchJsonOrThrow<GuardPathResponse>(
-      `${API_BASE_URL}/api/tracking/guard-path/${encodeURIComponent(guardId)}?limit=${Math.max(30, Math.min(limit, 2000))}`,
-      { headers: getAuthHeaders() },
-      'Failed to load guard path telemetry',
-    )
-
-    return Array.isArray(data.coordinates) ? data.coordinates : []
-  }, [hasTrackingAccess])
+    // History includes each point's status, which is needed to exclude sample checkpoints.
+    return fetchGuardHistory(guardId, Math.max(30, limit))
+  }, [fetchGuardHistory])
 
   const fetchActiveGuards = useCallback(async (windowMinutes = 15) => {
     if (!hasTrackingAccess) return []

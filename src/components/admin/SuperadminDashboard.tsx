@@ -302,7 +302,6 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
     date: '',
     start_time: '',
     end_time: '',
-    destination: '',
     priority: 'medium',
     special_requirements: ''
   })
@@ -664,7 +663,6 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
         date: '',
         start_time: '',
         end_time: '',
-        destination: '',
         priority: 'medium',
         special_requirements: ''
       })
@@ -1802,7 +1800,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                 </div>
               )}
               <form onSubmit={handleMissionSubmit} className="grid grid-cols-1 gap-5 md:grid-cols-2">
-                <div>
+                <div className="md:col-span-2">
                   <label className="soc-form-label" htmlFor="mission-name">Mission Name</label>
                   <input
                     id="mission-name"
@@ -1811,19 +1809,6 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                     value={missionFormData.mission_name}
                     onChange={(e) => setMissionFormData({...missionFormData, mission_name: e.target.value})}
                     placeholder="Enter mission name"
-                    className="soc-form-control w-full"
-                  />
-                </div>
-
-                <div>
-                  <label className="soc-form-label" htmlFor="mission-destination">Destination</label>
-                  <input
-                    id="mission-destination"
-                    type="text"
-                    required
-                    value={missionFormData.destination}
-                    onChange={(e) => setMissionFormData({...missionFormData, destination: e.target.value})}
-                    placeholder="Enter destination"
                     className="soc-form-control w-full"
                   />
                 </div>

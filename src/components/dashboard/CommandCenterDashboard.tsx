@@ -152,8 +152,6 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions,
       : 'Low'
   const systemTone = systemStatus === 'Critical' ? 'danger' : systemStatus === 'Warning' ? 'warning' : 'success'
   const threatTone = threatLevel === 'High' ? 'danger' : threatLevel === 'Medium' ? 'warning' : 'info'
-  const formatTime = (value: Date | string) =>
-    new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 
   const displayShifts = shiftsState.shifts
   const displayIncidents = incidentsState.incidents
@@ -200,14 +198,14 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions,
         items.push({
           id: `shift-in-${shift.id || index}`,
           category: 'guard',
-          timestamp: formatTime(shift.updated_at || clock),
+          timestamp: shift.updated_at,
           description: `${guardName} is currently deployed at ${site}.`,
         })
       } else if (status === 'scheduled') {
         items.push({
           id: `shift-sch-${shift.id || index}`,
           category: 'guard',
-          timestamp: formatTime(shift.start_time || clock),
+          timestamp: shift.start_time || shift.startTime,
           description: `${guardName} scheduled for ${site}.`,
         })
       }
@@ -220,7 +218,6 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions,
         items.push({
           id: `veh-active-${vehicle.id || index}`,
           category: 'vehicle',
-          timestamp: formatTime(clock),
           description: `Armored vehicle ${plate} is active in field operations.`,
         })
       }
@@ -230,7 +227,7 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions,
       items.push({
         id: `incident-${incident.id}`,
         category: incident.status === 'resolved' ? 'system' : 'mission',
-        timestamp: formatTime(incident.created_at),
+        timestamp: incident.created_at,
         description: `${incident.title} reported at ${resolveIncidentSiteName(incident, displayShifts)}.`,
       })
     })
@@ -240,14 +237,13 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions,
         items.push({
           id: `firearm-issued-${firearm.id || index}`,
           category: 'equipment',
-          timestamp: formatTime(clock),
           description: `Firearm ${firearm.serial_number || firearm.id || 'asset'} is currently issued.`,
         })
       }
     })
 
     return items.slice(0, 12)
-  }, [assetsState.firearms, assetsState.vehicles, clock, displayIncidents, displayShifts])
+  }, [assetsState.firearms, assetsState.vehicles, displayIncidents, displayShifts])
 
   const visibleLiveOperationsItems = useMemo(
     () => liveOperationsItems.filter((item) => !dismissedFeedIds.has(item.id)),
@@ -547,7 +543,6 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions,
           />
           <IncidentAlertFeed
             alerts={incidentAlerts}
-            nowLabel={clock.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
             onUpdateStatus={handleIncidentStatusUpdate}
           />
         </div>

@@ -1,5 +1,6 @@
 import { render, screen, within } from '@testing-library/react'
 import GuardLicenseComplianceReport from '../GuardLicenseComplianceReport'
+import FirearmComplianceReport from '../FirearmComplianceReport'
 import { fetchJsonOrThrow } from '../../utils/api'
 
 jest.mock('../../config', () => ({ API_BASE_URL: 'http://localhost:5000' }))
@@ -56,4 +57,29 @@ it('shows calendar time remaining beside the expiry date and omits the issued co
   }
   expect(table.getByRole('cell', { name: `${longExpiry.toLocaleDateString()} (1 year, 8 months)` })).toBeInTheDocument()
   expect(table.queryByText(/607d/)).not.toBeInTheDocument()
+})
+
+it('shows firearm permit expiry in calendar years and months and labels expired licences', async () => {
+  jest.useFakeTimers({ now: new Date(2026, 10, 19, 12) })
+  jest.mocked(fetchJsonOrThrow).mockResolvedValue({
+    total: 3,
+    page: 1,
+    pageSize: 50,
+    summary: { totalFirearms: 3, compliant: 1, expired: 1, noPermit: 1, expiringSoon: 0, maintenance: 0 },
+    items: [
+      { firearmId: 'future', serialNumber: 'FUTURE', permitType: 'Firearm license', permitExpiryDate: '2033-05-24', permitDaysRemaining: 2378, complianceStatus: 'compliant' },
+      { firearmId: 'expired', serialNumber: 'PAST', permitType: 'Firearm license', permitExpiryDate: '2025-11-10', permitDaysRemaining: -374, complianceStatus: 'expired' },
+      { firearmId: 'missing', serialNumber: 'MISSING', complianceStatus: 'no_permit' },
+    ],
+  })
+
+  render(<FirearmComplianceReport user={{ role: 'admin' }} onLogout={jest.fn()} />)
+
+  const table = within(await screen.findByRole('table'))
+  const future = within(table.getByRole('row', { name: /FUTURE/ }))
+  const past = within(table.getByRole('row', { name: /PAST/ }))
+  expect(future.getByText(`${new Date(2033, 4, 24).toLocaleDateString()} (6 years, 6 months)`)).toBeInTheDocument()
+  expect(past.getByText(`${new Date(2025, 10, 10).toLocaleDateString()} (Expired)`)).toBeInTheDocument()
+  expect(within(table.getByRole('row', { name: /MISSING/ })).getByText('No permit')).toBeInTheDocument()
+  expect(table.queryByText(/2378d|-374d/)).not.toBeInTheDocument()
 })

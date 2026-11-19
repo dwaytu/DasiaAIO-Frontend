@@ -1,13 +1,14 @@
 import { FC } from 'react'
 import { Check, CheckCircle2, X } from 'lucide-react'
 import { useOperationalEvent } from '../../context/OperationalEventContext'
+import EventTimestamp from './EventTimestamp'
 
 export type FeedCategory = 'guard' | 'vehicle' | 'mission' | 'equipment' | 'system'
 
 export interface LiveFeedItem {
   id: string
   category: FeedCategory
-  timestamp: string
+  timestamp?: string
   description: string
 }
 
@@ -108,13 +109,13 @@ const LiveOperationsFeed: FC<LiveOperationsFeedProps> = ({ items, onDismiss, onU
                 style={{ animationDelay: `${index * 70}ms` }}
                 aria-pressed={selectedEventId === item.id}
               >
-                <div className="flex items-start justify-between gap-3">
+                <div className="flex flex-wrap items-start gap-x-3 gap-y-1">
                   <div className="flex items-center gap-2">
                     <span className="mt-0.5">{categoryIcon[item.category]}</span>
                     <p className="text-[11px] font-semibold uppercase tracking-[0.16em]">{categoryLabel[item.category]}</p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <time className="text-[11px] font-semibold uppercase tracking-wide opacity-90">{item.timestamp}</time>
+                  <div className="ml-auto flex items-center gap-2">
+                    <EventTimestamp timestamp={item.timestamp} />
                     {!isIncidentItem && onDismiss && (
                       <button
                         type="button"

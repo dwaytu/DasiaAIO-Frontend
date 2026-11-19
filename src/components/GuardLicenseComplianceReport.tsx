@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type FC } from 'react'
 import { Bell, Download, Filter, Printer, RefreshCw, ShieldCheck } from 'lucide-react'
 import { API_BASE_URL } from '../config'
 import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
+import { formatLicenseExpiry } from '../utils/formatLicenseExpiry'
 import OperationalShell from './layout/OperationalShell'
 import EmptyState from './shared/EmptyState'
 import LoadingSkeleton from './shared/LoadingSkeleton'
@@ -55,36 +56,6 @@ function formatDate(value?: string | null): string {
   if (!value) return '-'
   const date = new Date(value)
   return Number.isNaN(date.getTime()) ? '-' : date.toLocaleDateString()
-}
-
-function formatLicenseExpiry(value: string | null | undefined, today: Date): string {
-  if (!value) return 'Not provided'
-  const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(value)
-  const expiry = new Date(dateOnly ? `${value}T00:00:00` : value)
-  if (Number.isNaN(expiry.getTime())) return 'Not provided'
-
-  const dateLabel = expiry.toLocaleDateString()
-  const expiryDay = expiry.getDate()
-  const todayDay = today.getDate()
-  const monthDifference = (expiry.getFullYear() - today.getFullYear()) * 12 + expiry.getMonth() - today.getMonth()
-  const expired = dateOnly
-    ? monthDifference < 0 || (monthDifference === 0 && expiryDay < todayDay)
-    : expiry <= today
-  if (expired) return `${dateLabel} (Expired)`
-  if (monthDifference === 0 && expiryDay === todayDay) return `${dateLabel} (Expires today)`
-
-  const lastDayOfExpiryMonth = new Date(expiry.getFullYear(), expiry.getMonth() + 1, 0).getDate()
-  const anniversaryDay = Math.min(todayDay, lastDayOfExpiryMonth)
-  const wholeMonths = monthDifference - Number(expiryDay < anniversaryDay)
-  if (wholeMonths < 1) return `${dateLabel} (Less than 1 month)`
-
-  const years = Math.floor(wholeMonths / 12)
-  const months = wholeMonths % 12
-  const duration = [
-    years ? `${years} ${years === 1 ? 'year' : 'years'}` : '',
-    months ? `${months} ${months === 1 ? 'month' : 'months'}` : '',
-  ].filter(Boolean).join(', ')
-  return `${dateLabel} (${duration})`
 }
 
 function escapeCsv(value: unknown): string {
@@ -256,7 +227,7 @@ const GuardLicenseComplianceReport: FC<Props> = ({ user, onLogout, onViewChange,
                   <tbody>{report.items.map((item) => <tr key={item.guardId} className="border-b border-border-subtle/80 transition-colors hover:bg-surface-hover/50">
                     <td className="px-4 py-3.5 align-middle text-sm text-text-primary"><p className="font-semibold text-text-primary">{item.guardName}</p><p className="text-xs text-text-secondary">{item.guardNumber ? `Guard #${item.guardNumber}` : 'Guard number not provided'}</p></td>
                     <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{item.licenseNumber || 'Not provided'}</td>
-                    <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{formatLicenseExpiry(item.licenseExpiryDate, today)}</td>
+                    <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{formatLicenseExpiry(item.licenseExpiryDate, today) ?? 'Not provided'}</td>
                     <td className="px-4 py-3.5 align-middle text-sm text-text-primary"><span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium ${statusClass(item.complianceStatus)}`}>{item.complianceStatus.replace('_', ' ')}</span></td>
                   </tr>)}</tbody>
                 </table>

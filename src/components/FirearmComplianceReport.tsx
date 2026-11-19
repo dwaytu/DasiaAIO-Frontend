@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type FC } from 'react'
 import { Bell, Download, Filter, Printer, RefreshCw, ShieldCheck } from 'lucide-react'
 import { API_BASE_URL } from '../config'
 import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
+import { formatLicenseExpiry } from '../utils/formatLicenseExpiry'
 import OperationalShell from './layout/OperationalShell'
 import EmptyState from './shared/EmptyState'
 import LoadingSkeleton from './shared/LoadingSkeleton'
@@ -24,7 +25,6 @@ interface ComplianceItem {
   permitType?: string | null
   permitExpiryDate?: string | null
   permitStatus?: string | null
-  permitDaysRemaining?: number | null
   maintenanceId?: string | null
   maintenanceType?: string | null
   maintenanceDate?: string | null
@@ -113,6 +113,7 @@ const FirearmComplianceReport: FC<Props> = ({ user, onLogout, onViewChange, acti
     return () => controller.abort()
   }, [appliedFilters, page, refreshKey])
 
+  const today = new Date()
   const totalPages = Math.max(1, Math.ceil((report?.total ?? 0) / (report?.pageSize ?? 50)))
   const summaryCards = useMemo<OperationalSummaryItem[]>(() => {
     const expired = report?.summary.expired ?? 0
@@ -240,7 +241,7 @@ const FirearmComplianceReport: FC<Props> = ({ user, onLogout, onViewChange, acti
                   <tbody>{report.items.map((item) => <tr key={item.firearmId} className="border-b border-border-subtle/80 transition-colors hover:bg-surface-hover/50">
                     <td className="px-4 py-3.5 align-middle text-sm text-text-primary"><p className="font-semibold text-text-primary">{item.serialNumber}</p><p className="text-xs text-text-secondary">{item.model} · {item.caliber}</p><p className="text-xs text-text-secondary">Status: {item.firearmStatus}</p></td>
                     <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{item.holderName || item.holderId || 'Unallocated'}<p className="text-xs text-text-secondary">{item.expectedReturnDate ? `Return ${formatDate(item.expectedReturnDate)}` : 'No return date'}</p></td>
-                    <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{item.permitType || 'No permit'}<p className="text-xs text-text-secondary">{item.permitExpiryDate ? `${formatDate(item.permitExpiryDate)} (${item.permitDaysRemaining ?? 0}d)` : '—'}</p></td>
+                    <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{item.permitType || 'No permit'}<p className="text-xs text-text-secondary">{formatLicenseExpiry(item.permitExpiryDate, today) ?? '—'}</p></td>
                     <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{item.maintenanceType || 'None'}<p className="text-xs text-text-secondary">{item.maintenanceDate ? formatDate(item.maintenanceDate) : '—'}</p></td>
                     <td className="px-4 py-3.5 align-middle text-sm text-text-primary"><span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium ${statusClass(item.complianceStatus)}`}>{item.complianceStatus.replace('_', ' ')}</span></td>
                   </tr>)}</tbody>

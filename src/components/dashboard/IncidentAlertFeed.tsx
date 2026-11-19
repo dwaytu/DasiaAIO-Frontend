@@ -2,10 +2,10 @@ import { FC } from 'react'
 import { Check, CheckCircle2 } from 'lucide-react'
 import { OpsAlert } from './OpsAlertFeed'
 import { useOperationalEvent } from '../../context/OperationalEventContext'
+import EventTimestamp from './EventTimestamp'
 
 interface IncidentAlertFeedProps {
   alerts: OpsAlert[]
-  nowLabel: string
   onUpdateStatus?: (incidentId: string, status: 'investigating' | 'resolved') => Promise<void>
 }
 
@@ -15,7 +15,7 @@ const toneClass: Record<OpsAlert['severity'], string> = {
   info: 'status-bar-info border-info-border bg-info-bg text-info-text',
 }
 
-const IncidentAlertFeed: FC<IncidentAlertFeedProps> = ({ alerts, nowLabel, onUpdateStatus }) => {
+const IncidentAlertFeed: FC<IncidentAlertFeedProps> = ({ alerts, onUpdateStatus }) => {
   const { selectedEventId, selectEvent } = useOperationalEvent()
   const criticalCount = alerts.filter((a) => a.severity === 'critical').length
 
@@ -66,7 +66,7 @@ const IncidentAlertFeed: FC<IncidentAlertFeedProps> = ({ alerts, nowLabel, onUpd
                 style={{ animationDelay: `${index * 60}ms` }}
                 aria-pressed={selectedEventId === (alert.incidentId ?? alert.id)}
               >
-                <div className="flex items-start justify-between gap-3">
+                <div className="flex flex-wrap items-start gap-x-3 gap-y-1">
                   <div className="flex items-center gap-2">
                     <p className="text-xs font-semibold uppercase tracking-[0.16em]">Severity: {alert.severity}</p>
                     {isEscalate && (
@@ -75,7 +75,7 @@ const IncidentAlertFeed: FC<IncidentAlertFeedProps> = ({ alerts, nowLabel, onUpd
                       </span>
                     )}
                   </div>
-                  <span className="text-[11px] font-semibold uppercase tracking-wide opacity-90">Observed {nowLabel}</span>
+                  <EventTimestamp timestamp={alert.createdAt} label="Reported" showSeconds />
                 </div>
                 <p className="mt-1 text-sm font-semibold text-text-primary">{alert.title}</p>
                 <p className="mt-1 text-xs opacity-90">{alert.detail}</p>

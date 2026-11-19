@@ -138,19 +138,96 @@ async function dismissLocationConsentIfPresent(page: Page): Promise<void> {
   await expect(consentDialog).not.toBeVisible()
 }
 
-async function bootstrapGuard(page: Page): Promise<void> {
+async function bootstrapGuard(page: Page, mockApi = mockGuardDashboardApi): Promise<void> {
   await page.addInitScript((user) => {
     localStorage.setItem('token', 'test-token')
     localStorage.setItem('user', JSON.stringify(user))
     localStorage.setItem('sentinel-theme', 'dark')
   }, guardUser)
 
-  await page.route('**/api/**', mockGuardDashboardApi)
+  await page.route('**/api/**', mockApi)
   await page.goto('/')
   await page.waitForLoadState('networkidle')
   await dismissLocationConsentIfPresent(page)
   await expect(page.locator('main, [role="main"]')).toBeVisible()
 }
+
+test('keeps an earlier open shift available for checkout and hides check-in on closed records', async ({ page }) => {
+  const now = new Date(2026, 10, 20, 11)
+  await page.clock.setFixedTime(now)
+  const previousShift = {
+    id: 'previous-shift',
+    client_site: 'Previous post',
+    start_time: new Date(2026, 10, 19, 16).toISOString(),
+    end_time: new Date(2026, 10, 19, 23).toISOString(),
+    status: 'scheduled',
+  }
+  const todayShift = {
+    id: 'today-shift',
+    client_site: 'Current post',
+    start_time: new Date(2026, 10, 20, 8).toISOString(),
+    end_time: new Date(2026, 10, 20, 14).toISOString(),
+    status: 'scheduled',
+  }
+  let previousCheckedOut = false
+  await bootstrapGuard(page, async (route) => {
+    const path = new URL(route.request().url()).pathname
+    if (path === '/api/guard-replacement/attendance/check-out') {
+      expect(route.request().postDataJSON()).toEqual({ attendanceId: 'previous-attendance' })
+      previousCheckedOut = true
+      await route.fulfill({ json: { message: 'Check-out recorded successfully' } })
+    } else if (path === '/api/attendance/guard-001') {
+      await route.fulfill({ json: { attendance: [
+        {
+          id: 'today-attendance',
+          shift_id: todayShift.id,
+          check_in_time: todayShift.start_time,
+          check_out_time: now.toISOString(),
+          status: 'checked_out',
+        },
+        {
+          id: 'previous-attendance',
+          shift_id: previousShift.id,
+          check_in_time: previousShift.start_time,
+          check_out_time: previousCheckedOut ? now.toISOString() : null,
+          status: previousCheckedOut ? 'checked_out' : 'checked_in',
+        },
+      ] } })
+    } else if (path === '/api/guard-replacement/guard/guard-001/shifts') {
+      await route.fulfill({ json: { shifts: [todayShift, previousShift] } })
+    } else {
+      await mockGuardDashboardApi(route)
+    }
+  })
+
+  await expect(page.getByRole('region', { name: 'Current duty status' })).toContainText('Previous post')
+  await page.getByRole('button', { name: /Check Out.*End Shift/i }).click()
+  await expect(page.getByText('Checked out successfully.')).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Current duty status' })).toContainText('Completed', { ignoreCase: true })
+  await expect(page.getByRole('button', { name: /Check In.*Start Shift/i })).toHaveCount(0)
+})
+
+test('uses the server attendance record after check-in', async ({ page }) => {
+  const now = new Date(2026, 10, 20, 11)
+  await page.clock.setFixedTime(now)
+  let checkedIn = false
+  await bootstrapGuard(page, async (route) => {
+    const path = new URL(route.request().url()).pathname
+    if (path === '/api/guard-replacement/attendance/check-in') {
+      expect(route.request().postDataJSON()).toEqual({ guardId: guardUser.id, shiftId: 'shift-1' })
+      checkedIn = true
+      await route.fulfill({ status: 201, json: { message: 'Check-in recorded successfully', attendanceId: 'att-1' } })
+    } else if (path === '/api/attendance/guard-001' && !checkedIn) {
+      await route.fulfill({ json: { attendance: [] } })
+    } else {
+      await mockGuardDashboardApi(route)
+    }
+  })
+
+  await page.getByRole('button', { name: /Check In.*Start Shift/i }).click()
+  await expect(page.getByText('Check-in recorded successfully')).toBeVisible()
+  await expect(page.getByRole('button', { name: /Check Out.*End Shift/i })).toBeVisible()
+})
 
 test.describe('Guard Dashboard UX Regression', () => {
   test.beforeEach(async ({ page }) => {

@@ -499,7 +499,11 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
     return shiftsOverlappingLocalDay(scheduleItems, today)
   }, [scheduleItems])
 
+  const recordedShiftIds = useMemo(() => new Set(attendance.map((record) => record.shift_id)), [attendance])
+
   const currentShift = useMemo(() => {
+    const checkedInShift = scheduleItems.find((shift) => checkInStatus[shift.id] === 'checked_in')
+    if (checkedInShift) return checkedInShift
     if (activeShifts.length === 0) return null
 
     const now = Date.now()
@@ -515,13 +519,19 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
     if (upcoming) return upcoming
 
     return activeShifts[0]
-  }, [activeShifts])
+  }, [activeShifts, checkInStatus, scheduleItems])
+
+  const canCheckIn = (shift: ShiftItem) =>
+    !recordedShiftIds.has(shift.id) &&
+    !['completed', 'cancelled', 'canceled', 'absent'].includes(shift.status.toLowerCase()) &&
+    Date.now() < new Date(shift.end_time).getTime()
 
   const dutyStatus = useMemo(() => {
     if (!currentShift) return 'Off Duty'
 
     const shiftState = checkInStatus[currentShift.id]
     if (shiftState === 'checked_in') return 'On Post'
+    if (attendance.some((record) => record.shift_id === currentShift.id && record.check_out_time)) return 'Completed'
 
     const now = Date.now()
     const start = new Date(currentShift.start_time).getTime()
@@ -531,7 +541,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
     if (now > end) return 'Completed'
 
     return 'Awaiting Check In'
-  }, [checkInStatus, currentShift])
+  }, [attendance, checkInStatus, currentShift])
 
   const dutyStatusConfig = useMemo(() => {
     switch (dutyStatus) {
@@ -555,12 +565,16 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
 
   const handleCheckIn = async (shift: ShiftItem) => {
     if (!user?.id) return
+    if (!canCheckIn(shift)) {
+      setActionStatus(recordedShiftIds.has(shift.id) ? 'Attendance is already recorded for this shift.' : 'This shift is closed for check-in.')
+      return
+    }
 
     setActionStatus('')
     setCheckInSubmitting((previous) => ({ ...previous, [shift.id]: true }))
 
     try {
-      await fetchJsonOrThrow<any>(
+      const result = await fetchJsonOrThrow<{ message: string }>(
         `${API_BASE_URL}/api/guard-replacement/attendance/check-in`,
         {
           method: 'POST',
@@ -570,10 +584,8 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
         'Check-in failed',
       )
 
-      setCheckInStatus((previous) => ({ ...previous, [shift.id]: 'checked_in' }))
-      setCheckInTimes((previous) => ({ ...previous, [shift.id]: new Date() }))
-      setActionStatus('Checked in successfully.')
-      await refreshData(false)
+      setActionStatus(result.message)
+      await refreshAttendance()
     } catch (error) {
       if (isOfflineRequestError(error)) {
         await enqueueOfflineAction({
@@ -785,6 +797,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
   const missionShiftTime = currentShift ? formatTimeWindow(currentShift.start_time, currentShift.end_time) : 'No shift today'
   const missionElapsed = currentShift ? elapsedTime[currentShift.id] || '0h 0m' : '0h 0m'
   const currentShiftCheckedIn = currentShift ? checkInStatus[currentShift.id] === 'checked_in' : false
+  const currentShiftCanCheckIn = currentShift ? canCheckIn(currentShift) : false
   const dutyProgress = currentShift ? Math.max(0, Math.min(100, ((Date.now() - new Date(currentShift.start_time).getTime()) / Math.max(new Date(currentShift.end_time).getTime() - new Date(currentShift.start_time).getTime(), 1)) * 100)) : 0
   const dutyDurationHours = currentShift ? Math.max(1, Math.round((new Date(currentShift.end_time).getTime() - new Date(currentShift.start_time).getTime()) / 3600000)) : 0
   const isTrackingActiveWithoutSchedule = !currentShift && locationHeartbeatStatus === 'active'
@@ -1161,7 +1174,11 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                         <p className="mt-1 text-sm font-semibold text-text-primary">
                           {currentShiftCheckedIn
                             ? 'Stay on post and check out only after handoff or shift completion.'
-                            : 'Arrive at the assigned post, then check in to start this shift.'}
+                            : currentShiftCanCheckIn
+                              ? 'Arrive at the assigned post, then check in to start this shift.'
+                              : recordedShiftIds.has(currentShift.id)
+                                ? 'Attendance is already recorded for this shift.'
+                                : 'This shift is closed for check-in.'}
                         </p>
                       </div>
                     </div>
@@ -1172,7 +1189,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                     <p className="mt-1 text-sm font-semibold text-text-primary">No active shift. Stand by or contact your supervisor.</p>
                   </section>
                 )}
-                {currentShift ? (
+                {currentShift && (currentShiftCheckedIn || currentShiftCanCheckIn) ? (
                   <button
                     type="button"
                     onClick={() => { void handlePrimaryCheckAction() }}
@@ -1244,9 +1261,9 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                               </div>
                               {isCurrentShift ? (
                                 <span className={`text-xs font-semibold ${checkedIn ? 'text-success-text' : 'text-text-secondary'}`}>
-                                  {checkedIn ? 'Checked in' : 'Use mission action above'}
+                                  {checkedIn ? 'Checked in' : canCheckIn(shift) ? 'Use mission action above' : 'Closed for check-in'}
                                 </span>
-                              ) : (
+                              ) : checkedIn || canCheckIn(shift) ? (
                                 <button
                                   type="button"
                                   disabled={checkInSubmitting[shift.id]}
@@ -1269,6 +1286,8 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
                                       ? 'Check Out'
                                       : 'Check In'}
                                 </button>
+                              ) : (
+                                <span className="text-xs font-semibold text-text-secondary">Closed for check-in</span>
                               )}
                             </div>
                           </li>

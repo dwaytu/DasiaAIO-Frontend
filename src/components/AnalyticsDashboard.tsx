@@ -173,7 +173,7 @@ function SimpleBarChart({ data, height = 200, barColor = 'var(--color-info-borde
   )
 }
 
-interface LineChartData { label: string; value: number }
+interface LineChartData { date: string; label: string; value: number; detail?: string }
 
 function SimpleLineChart({
   data,
@@ -199,15 +199,23 @@ function SimpleLineChart({
   const innerW = chartWidth - padding.left - padding.right
   const innerH = chartHeight - padding.top - padding.bottom
 
-  const points = data.map((d, i) => ({
-    x: padding.left + (data.length > 1 ? (i / (data.length - 1)) * innerW : innerW / 2),
-    y: padding.top + innerH - ((d.value - minVal) / range) * innerH,
-  }))
+  const dates = data.map(({ date }) => Date.parse(date))
+  const firstDate = dates[0]
+  const dateSpan = dates[dates.length - 1] - firstDate
+  const rightEdge = padding.left + innerW
+  let lastLabelX = padding.left
+  const points = data.map((d, index) => {
+    const x = padding.left + (dateSpan > 0 ? ((dates[index] - firstDate) / dateSpan) * innerW : innerW / 2)
+    const showLabel = index === 0 || index === data.length - 1 || (x - lastLabelX >= 44 && rightEdge - x >= 44)
+    if (showLabel) lastLabelX = x
+    return { x, y: padding.top + innerH - ((d.value - minVal) / range) * innerH, showLabel }
+  })
 
   const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ')
   const areaPath = `${linePath} L ${points[points.length - 1].x} ${padding.top + innerH} L ${points[0].x} ${padding.top + innerH} Z`
 
-  const description = `Line chart showing: ${data.map(d => `${d.label}: ${d.value}${suffix}`).join(', ')}`
+  const pointLabels = data.map((point) => `${point.label} · ${point.value}${suffix}${point.detail ? ` · ${point.detail}` : ''}`)
+  const description = `Line chart showing ${pointLabels.join(', ')}`
 
   return (
     <svg
@@ -227,19 +235,19 @@ function SimpleLineChart({
       <path d={areaPath} fill={`url(#${gradientId})`} />
       <path d={linePath} fill="none" stroke={lineColor} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
       {points.map((p, i) => (
-        <g key={data[i].label}>
+        <g key={data[i].date}>
           <circle cx={p.x} cy={p.y} r={4} fill={lineColor} stroke="var(--color-surface)" strokeWidth={2}>
-            <title>{`${data[i].label}: ${data[i].value}${suffix}`}</title>
+            <title>{pointLabels[i]}</title>
           </circle>
-          <text
+          {p.showLabel ? <text
             x={p.x}
             y={chartHeight - 8}
-            textAnchor="middle"
+            textAnchor={data.length === 1 ? 'middle' : i === 0 ? 'start' : i === data.length - 1 ? 'end' : 'middle'}
             fill="var(--color-text-secondary)"
             style={{ fontSize: '10px' }}
           >
             {data[i].label}
-          </text>
+          </text> : null}
         </g>
       ))}
       <line
@@ -544,8 +552,8 @@ const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onVie
   ]
 
   const attendanceTrendData: LineChartData[] = analytics.attendance_trend
-    .filter((_, index, trend) => trend.length <= 14 || index % Math.ceil(trend.length / 14) === 0)
     .map((point) => ({
+      date: point.date,
       label: new Date(`${point.date}T00:00:00`).toLocaleDateString([], { month: 'short', day: 'numeric' }),
       value: point.scheduled_shifts > 0 ? (point.attended_shifts / point.scheduled_shifts) * 100 : 0,
     }))
@@ -554,10 +562,11 @@ const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onVie
     .map((bucket) => ({ label: `${bucket.rating} Star`, value: bucket.count }))
 
   const evaluationTrendData: LineChartData[] = (analytics.evaluation_trend ?? [])
-    .filter((_, index, trend) => trend.length <= 14 || index % Math.ceil(trend.length / 14) === 0)
     .map((point) => ({
+      date: point.date,
       label: new Date(`${point.date}T00:00:00`).toLocaleDateString([], { month: 'short', day: 'numeric' }),
       value: point.average_rating,
+      detail: `${point.evaluation_count} evaluation${point.evaluation_count === 1 ? '' : 's'}`,
     }))
 
   const completedPercent = analytics.mission_stats.total_missions_this_month > 0
@@ -739,6 +748,7 @@ const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onVie
             ) : (
               <p className="py-20 text-center text-sm text-text-secondary">No guard evaluations for the selected period.</p>
             )}
+            {evaluationTrendData.length > 0 ? <p className="mt-2 text-center text-xs text-text-secondary">Daily average on dates with recorded evaluations</p> : null}
           </DashboardCard>
         </div>
       </section>

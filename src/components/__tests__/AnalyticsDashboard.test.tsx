@@ -78,7 +78,11 @@ jest.mock('../../utils/api', () => ({
       low_rating_count: 0,
       rating_distribution: [1, 2, 3, 4, 5].map(rating => ({ rating, count: rating === 4 ? 1 : 0 })),
     },
-    evaluation_trend: [{ date: '2026-09-17', average_rating: 4, evaluation_count: 1 }],
+    evaluation_trend: [
+      { date: '2026-09-01', average_rating: 4.36, evaluation_count: 11 },
+      { date: '2026-09-02', average_rating: 4.38, evaluation_count: 13 },
+      { date: '2026-09-18', average_rating: 5, evaluation_count: 1 },
+    ],
   })),
   getAuthHeaders: jest.fn(() => ({ Authorization: 'Bearer test-token' })),
 }))
@@ -127,6 +131,10 @@ describe('AnalyticsDashboard printing', () => {
     expect(screen.getByRole('button', { name: 'Print analytics report' })).toHaveClass('min-h-11')
     expect(screen.getByText('Resource Availability')).toBeInTheDocument()
     expect(document.querySelector('.analytics-print-heading')).toHaveTextContent('SENTINEL Operational Analytics')
+
+    const evaluationChart = screen.getByRole('img', { name: /4\.36\/5 · 11 evaluations/ })
+    const [first, second, third] = Array.from(evaluationChart.querySelectorAll('circle'), (point) => Number(point.getAttribute('cx')))
+    expect(third - second).toBeCloseTo(16 * (second - first))
   })
 
   it('gives a live-service recovery hint instead of a local development port', async () => {

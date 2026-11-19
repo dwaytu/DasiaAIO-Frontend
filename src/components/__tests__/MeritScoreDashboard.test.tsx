@@ -27,8 +27,8 @@ jest.mock('../../utils/permissions', () => ({
 const user = { id: 'admin-1', username: 'admin', email: 'admin@example.test', role: 'admin' as const }
 
 const rankings = [
-  { rank: 1, guardId: 'guard-1', guardName: 'Guard One', overallScore: 91.5, meritRank: 'Gold', onTimePercentage: 96, clientRating: 90 },
-  { rank: 2, guardId: 'guard-2', guardName: 'Guard Two', overallScore: 0, meritRank: 'Not evaluated', onTimePercentage: 0, clientRating: 0 },
+  { rank: 1, guardId: 'guard-1', guardName: 'Guard One', overallScore: 91.5, meritRank: 'Gold', onTimePercentage: 96, clientRating: 90, evaluationCount: 2 },
+  { rank: 2, guardId: 'guard-2', guardName: 'Guard Two', overallScore: 100, meritRank: 'Excellent', onTimePercentage: 100, clientRating: 0, evaluationCount: 0 },
 ]
 
 const scorecard = {
@@ -78,7 +78,8 @@ describe('MeritScoreDashboard', () => {
     expect(screen.getByText('Eligible guards').parentElement).toHaveTextContent('2')
     expect(screen.getByText('Evaluated').parentElement).toHaveTextContent('1')
     expect(screen.getByText('Awaiting evaluation').parentElement).toHaveTextContent('1')
-    expect(screen.getByRole('heading', { name: 'Guard evaluations' })).toBeInTheDocument()
+    expect(screen.getByText('No evaluations')).toBeInTheDocument()
+    expect(screen.getByText('Capstone snapshot')).toBeInTheDocument()
   })
 
   it('opens a scorecard with drivers, trend, and evaluation controls', async () => {
@@ -111,6 +112,7 @@ describe('MeritScoreDashboard', () => {
       meritRank: 'Gold',
       onTimePercentage: 95,
       clientRating: 90,
+      evaluationCount: 1,
     }))
     mockMeritFetch({ rankingItems })
 

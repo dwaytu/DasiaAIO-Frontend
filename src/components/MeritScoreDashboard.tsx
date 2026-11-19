@@ -27,6 +27,7 @@ interface RankedGuard {
   meritRank: string
   onTimePercentage: number
   clientRating: number
+  evaluationCount?: number
 }
 
 interface MeritScore {
@@ -58,6 +59,11 @@ interface Evaluation {
 }
 
 const RANKINGS_PAGE_SIZE = 12
+
+// The capstone score generator uses these ranks for its attendance and punctuality snapshots.
+function isCapstoneSnapshot(rank: string): boolean {
+  return ['Excellent', 'Good', 'For review'].includes(rank)
+}
 
 function buildScoreHistory(evals: Evaluation[]): { label: string; score: number }[] {
   const sorted = [...evals].sort(
@@ -310,9 +316,11 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
   }, [rankingSearch, rankings])
   const rankingPageCount = Math.max(1, Math.ceil(filteredRankings.length / RANKINGS_PAGE_SIZE))
   const visibleRankings = filteredRankings.slice((rankingPage - 1) * RANKINGS_PAGE_SIZE, rankingPage * RANKINGS_PAGE_SIZE)
-  const evaluatedRankings = rankings.filter((guard) => guard.meritRank.toLowerCase() !== 'not evaluated')
-  const averageScore = evaluatedRankings.length > 0
-    ? evaluatedRankings.reduce((total, guard) => total + guard.overallScore, 0) / evaluatedRankings.length
+  const coverageAvailable = rankings.every((guard) => guard.evaluationCount !== undefined)
+  const evaluatedCount = rankings.filter((guard) => (guard.evaluationCount ?? 0) > 0).length
+  const scoredRankings = rankings.filter((guard) => guard.meritRank.toLowerCase() !== 'not evaluated')
+  const averageScore = scoredRankings.length > 0
+    ? scoredRankings.reduce((total, guard) => total + guard.overallScore, 0) / scoredRankings.length
     : 0
 
   useEffect(() => {
@@ -322,23 +330,23 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
     { label: 'Eligible guards', value: rankings.length, detail: 'Shown in the ranking register', tone: 'neutral', icon: Users },
     {
       label: 'Evaluated',
-      value: evaluatedRankings.length,
-      detail: rankings.length > 0 ? `${Math.round((evaluatedRankings.length / rankings.length) * 100)}% coverage` : 'No eligible guards yet',
+      value: coverageAvailable ? evaluatedCount : 'Unavailable',
+      detail: coverageAvailable && rankings.length > 0 ? `${Math.round((evaluatedCount / rankings.length) * 100)}% with recorded reviews` : 'Recorded reviews',
       tone: 'success',
       icon: ClipboardCheck,
     },
     {
       label: 'Average score',
-      value: evaluatedRankings.length > 0 ? averageScore.toFixed(1) : 'N/A',
-      detail: 'Across evaluated guards',
-      tone: evaluatedRankings.length > 0 ? getScoreTone(averageScore) : 'neutral',
+      value: scoredRankings.length > 0 ? averageScore.toFixed(1) : 'N/A',
+      detail: 'Across guards with saved scores',
+      tone: scoredRankings.length > 0 ? getScoreTone(averageScore) : 'neutral',
       icon: Trophy,
     },
     {
       label: 'Awaiting evaluation',
-      value: rankings.length - evaluatedRankings.length,
+      value: coverageAvailable ? rankings.length - evaluatedCount : 'Unavailable',
       detail: 'Needs supervisor or admin input',
-      tone: rankings.length - evaluatedRankings.length > 0 ? 'warning' : 'success',
+      tone: coverageAvailable && rankings.length > evaluatedCount ? 'warning' : 'neutral',
       icon: Clock3,
     },
   ]
@@ -408,10 +416,10 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
                   </div>
                   <OperationalSummaryBand
                     items={[
-                      { label: 'Overall score', value: selectedGuard.overallScore.toFixed(1), detail: 'Current merit score', tone: getScoreTone(selectedGuard.overallScore), icon: Award },
+                      { label: 'Overall score', value: selectedGuard.overallScore.toFixed(1), detail: isCapstoneSnapshot(selectedGuard.rank) ? 'Capstone snapshot based on attendance and punctuality' : 'Last calculated merit score', tone: getScoreTone(selectedGuard.overallScore), icon: Award },
                       { label: 'Attendance', value: selectedGuard.attendanceScore.toFixed(1), detail: 'Attendance contribution', tone: 'success', icon: CalendarCheck2 },
                       { label: 'Punctuality', value: selectedGuard.punctualityScore.toFixed(1), detail: 'Timekeeping contribution', tone: 'info', icon: Clock3 },
-                      { label: 'Evaluator rating', value: `${(selectedGuard.clientRating / 20).toFixed(1)} / 5`, detail: 'Average submitted rating', tone: 'warning', icon: Star },
+                      { label: 'Evaluator rating', value: selectedGuard.stats.evaluations > 0 ? `${selectedGuard.stats.averageRating.toFixed(1)} / 5` : 'No evaluations', detail: 'Average submitted rating', tone: 'warning', icon: Star },
                     ]}
                   />
                 </section>
@@ -612,6 +620,7 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
                               <span className={`font-bold text-lg ${getScoreColor(guard.overallScore)}`}>
                                 {guard.overallScore.toFixed(1)}
                               </span>
+                              {isCapstoneSnapshot(guard.meritRank) ? <p className="text-xs text-text-secondary">Capstone snapshot</p> : null}
                             </td>
                             <td className="px-4 py-3.5 align-middle text-sm text-text-primary">
                               <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getMeritRankColor(guard.meritRank)}`}>
@@ -630,7 +639,9 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
                               </div>
                             </td>
                             <td className="hidden px-4 py-3.5 align-middle text-center text-lg font-bold text-warning-text lg:table-cell">
-                              {(guard.clientRating / 20).toFixed(1)} ★
+                              {guard.evaluationCount === undefined ? <span className="text-sm font-normal text-text-secondary">Unavailable</span>
+                                : guard.evaluationCount > 0 ? `${(guard.clientRating / 20).toFixed(1)} ★`
+                                : <span className="text-sm font-normal text-text-secondary">No evaluations</span>}
                             </td>
                             <td className="px-4 py-3.5 align-middle text-sm text-text-primary">
                               <button

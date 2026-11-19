@@ -135,6 +135,7 @@ describe('AnalyticsDashboard printing', () => {
     const evaluationChart = screen.getByRole('img', { name: /4\.36\/5 · 11 evaluations/ })
     const [first, second, third] = Array.from(evaluationChart.querySelectorAll('circle'), (point) => Number(point.getAttribute('cx')))
     expect(third - second).toBeCloseTo(16 * (second - first))
+    expect(screen.getByRole('img', { name: /1 attended · 2 scheduled/ })).toBeInTheDocument()
   })
 
   it('gives a live-service recovery hint instead of a local development port', async () => {

@@ -180,20 +180,22 @@ function SimpleLineChart({
   height = 200,
   lineColor = 'var(--color-success-text)',
   maxValue,
-  suffix = '%',
+  suffix = '',
+  showValueAxis = false,
 }: {
   data: LineChartData[]
   height?: number
   lineColor?: string
   maxValue?: number
   suffix?: string
+  showValueAxis?: boolean
 }) {
   const gradientId = useId()
   if (data.length === 0) return null
   const maxVal = Math.max(maxValue ?? 0, ...data.map(d => d.value), 1)
   const minVal = Math.min(...data.map(d => d.value), 0)
   const range = maxVal - minVal || 1
-  const padding = { top: 20, right: 16, bottom: 36, left: 16 }
+  const padding = { top: 20, right: 16, bottom: 36, left: showValueAxis ? 38 : 16 }
   const chartWidth = 400
   const chartHeight = height
   const innerW = chartWidth - padding.left - padding.right
@@ -203,6 +205,7 @@ function SimpleLineChart({
   const firstDate = dates[0]
   const dateSpan = dates[dates.length - 1] - firstDate
   const rightEdge = padding.left + innerW
+  const valueTicks = maxVal > 1 ? [minVal, Math.floor(maxVal / 2), maxVal] : [minVal, maxVal]
   let lastLabelX = padding.left
   const points = data.map((d, index) => {
     const x = padding.left + (dateSpan > 0 ? ((dates[index] - firstDate) / dateSpan) * innerW : innerW / 2)
@@ -232,6 +235,17 @@ function SimpleLineChart({
           <stop offset="100%" stopColor={lineColor} stopOpacity={0.02} />
         </linearGradient>
       </defs>
+      {showValueAxis ? valueTicks.map((value) => {
+        const y = padding.top + innerH - ((value - minVal) / range) * innerH
+        return (
+          <g key={value}>
+            <line x1={padding.left} x2={rightEdge} y1={y} y2={y} stroke="var(--color-border-elevated)" />
+            <text x={padding.left - 8} y={y} textAnchor="end" dominantBaseline="middle" fill="var(--color-text-secondary)" fontSize={10}>
+              {value}
+            </text>
+          </g>
+        )
+      }) : null}
       <path d={areaPath} fill={`url(#${gradientId})`} />
       <path d={linePath} fill="none" stroke={lineColor} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
       {points.map((p, i) => (
@@ -555,7 +569,8 @@ const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onVie
     .map((point) => ({
       date: point.date,
       label: new Date(`${point.date}T00:00:00`).toLocaleDateString([], { month: 'short', day: 'numeric' }),
-      value: point.scheduled_shifts > 0 ? (point.attended_shifts / point.scheduled_shifts) * 100 : 0,
+      value: point.attended_shifts,
+      detail: `${point.scheduled_shifts} scheduled`,
     }))
 
   const evaluationDistributionData: BarChartData[] = evaluationAnalytics.rating_distribution
@@ -765,11 +780,11 @@ const AnalyticsDashboard: FC<AnalyticsDashboardProps> = ({ user, onLogout, onVie
           </DashboardCard>
           <DashboardCard title="Guard Attendance Trend">
             {attendanceTrendData.length > 0 ? (
-              <SimpleLineChart data={attendanceTrendData} height={220} lineColor="var(--color-success-text)" maxValue={100} />
+              <SimpleLineChart data={attendanceTrendData} height={220} lineColor="var(--color-success-text)" suffix=" attended" showValueAxis />
             ) : (
               <p className="py-20 text-center text-sm text-text-secondary">No attendance records for the selected period.</p>
             )}
-            <p className="mt-2 text-center text-xs text-text-secondary">Daily attended shifts as a percentage of scheduled shifts</p>
+            <p className="mt-2 text-center text-xs text-text-secondary">Attended shifts per day</p>
           </DashboardCard>
         </div>
       </section>

@@ -53,6 +53,11 @@ const humanizeStatus = (status: string): string => {
   return map[status?.toLowerCase()] || status
 }
 
+function eventSortTime(timestamp?: string): number {
+  const time = Date.parse(timestamp ?? '')
+  return Number.isFinite(time) ? time : Number.MAX_SAFE_INTEGER
+}
+
 const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions, onNavigate }) => {
   const { user } = useAuth()
   const summaryState = useOpsSummary()
@@ -250,7 +255,9 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions,
   }, [assetsState.firearms, assetsState.vehicles, displayIncidents, displayShifts])
 
   const visibleLiveOperationsItems = useMemo(
-    () => liveOperationsItems.filter((item) => !dismissedFeedIds.has(item.id)),
+    () => liveOperationsItems
+      .filter((item) => !dismissedFeedIds.has(item.id))
+      .sort((a, b) => eventSortTime(a.timestamp) - eventSortTime(b.timestamp)),
     [dismissedFeedIds, liveOperationsItems],
   )
 
@@ -286,6 +293,11 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions,
 
     return combined.slice(0, 25)
   }, [alerts, displayIncidents, displayShifts])
+
+  const chronologicalIncidentAlerts = useMemo(
+    () => [...incidentAlerts].sort((a, b) => eventSortTime(a.createdAt) - eventSortTime(b.createdAt)),
+    [incidentAlerts],
+  )
 
   useEffect(() => {
     const active = Boolean(sosIncident) || incidentAlerts.some((incident) => incident.severity === 'critical' || incident.isPanic)
@@ -560,7 +572,7 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions,
             onUpdateIncidentStatus={handleIncidentStatusUpdate}
           />
           <IncidentAlertFeed
-            alerts={incidentAlerts}
+            alerts={chronologicalIncidentAlerts}
             onUpdateStatus={handleIncidentStatusUpdate}
           />
         </div>

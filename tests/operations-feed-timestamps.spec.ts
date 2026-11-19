@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 
 test.use({ serviceWorkers: 'block', timezoneId: 'Asia/Manila' })
 
-test('shows each feed event date and time from its source record', async ({ page }) => {
+test('shows source timestamps in chronological order in both feeds', async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-11-19T20:00:00+08:00'))
   await page.addInitScript(() => {
     localStorage.setItem('token', 'fixture-token')
@@ -19,13 +19,17 @@ test('shows each feed event date and time from its source record', async ({ page
     id: 'incident', title: 'Fixture incident', location: 'Fixture Post', status: 'open',
     priority: 'critical', created_at: '2026-11-18T17:24:31Z',
   }
+  const earlierIncident = {
+    ...incident, id: 'earlier-incident', title: 'Earlier operations report', priority: 'low',
+    created_at: '2026-10-02T16:28:00Z',
+  }
 
   await page.route('**/api/**', async (route) => {
     switch (new URL(route.request().url()).pathname) {
       case '/api/guard-replacement/shifts':
         return route.fulfill({ json: [shift, { ...shift, id: 'absence', status: 'absent' }] })
       case '/api/incidents/active':
-        return route.fulfill({ json: [incident] })
+        return route.fulfill({ json: [incident, earlierIncident] })
       case '/api/armored-cars':
         return route.fulfill({ json: [{ id: 'vehicle', license_plate: 'QA-123', status: 'active' }] })
       default:
@@ -48,6 +52,10 @@ test('shows each feed event date and time from its source record', async ({ page
   await expect(vehicle.locator('time')).toHaveCount(0)
   await expect(absence).toBeVisible()
   await expect(absence.locator('time')).toHaveCount(0)
+  await expect(operations.locator('time')).toHaveText(['Oct 3, 12:28 AM', 'Nov 19, 01:24 AM', 'Nov 19, 07:55 PM'])
+  await expect(alerts.locator('time')).toHaveText(['Reported Oct 3, 12:28:00 AM', 'Reported Nov 19, 01:24:31 AM'])
+  await expect(operations.locator('article').last()).toContainText('Armored vehicle QA-123 is active')
+  await expect(alerts.locator('[aria-pressed]').last()).toContainText('Guards absent today')
 
   for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 900 })

@@ -76,7 +76,7 @@ const LiveOperationsFeed: FC<LiveOperationsFeedProps> = ({ items, onDismiss, onU
       <div className="mb-4 flex items-center justify-between gap-3 border-b border-border-subtle pb-3">
         <div>
           <h3 className="text-base font-bold uppercase tracking-wide text-text-primary">Live Operations Feed</h3>
-          <p className="text-xs uppercase tracking-[0.16em] text-text-tertiary">Newest events on top</p>
+          <p className="text-xs uppercase tracking-[0.16em] text-text-tertiary">Earliest events on top</p>
         </div>
       </div>
 

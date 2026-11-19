@@ -134,7 +134,7 @@ const PanicButton: FC<PanicButtonProps> = ({ userId, userDisplayName, siteName }
         onKeyDown={(event) => { if ((event.key === 'Enter' || event.key === ' ') && !event.repeat) { event.preventDefault(); beginHold() } }}
         onKeyUp={(event) => { if (event.key === 'Enter' || event.key === ' ') cancelHold() }}
         disabled={state === 'sending'}
-        aria-label="Emergency SOS — tap to send distress signal"
+        aria-label="Emergency SOS — hold to send distress signal"
         className="soc-btn soc-btn-emergency relative h-16 w-16 min-h-16 min-w-16 rounded-full p-0 text-lg font-black shadow-lg transition-transform active:scale-95"
       >
         {state === 'idle' && 'SOS'}
@@ -145,13 +145,13 @@ const PanicButton: FC<PanicButtonProps> = ({ userId, userDisplayName, siteName }
         {(state === 'sent' || state === 'queued') && '\u2713'}
         {state === 'failed' && '!'}
       </button>
-      {state === 'arming' ? <p className="whitespace-nowrap rounded-md border border-danger-border bg-danger-bg px-2 py-1 text-xs font-bold text-danger-text" role="status">Hold to send SOS</p> : null}
-      <p className="max-w-64 text-center text-[10px] font-semibold text-text-secondary" aria-live="polite">{gpsStatus}</p>
+      {state === 'arming' ? <p className="text-center rounded-md border border-danger-border bg-danger-bg px-2 py-1 text-xs font-bold text-danger-text" role="status">Hold to send SOS</p> : null}
+      <p className="text-center text-[10px] font-semibold text-text-secondary" aria-live="polite">{gpsStatus}</p>
       {state === 'sent' && (
         <div
           role="status"
           aria-live="assertive"
-          className="soc-status-success mt-1 whitespace-nowrap rounded-md px-2 py-0.5 text-xs shadow"
+          className="soc-status-success mt-1 text-center rounded-md px-2 py-0.5 text-xs shadow"
         >
           SOS Sent ✓
         </div>
@@ -160,7 +160,7 @@ const PanicButton: FC<PanicButtonProps> = ({ userId, userDisplayName, siteName }
         <div
           role="status"
           aria-live="assertive"
-          className="mt-1 whitespace-nowrap rounded-md bg-warning-bg px-2 py-0.5 text-xs font-bold text-warning-text shadow"
+          className="mt-1 text-center rounded-md bg-warning-bg px-2 py-0.5 text-xs font-bold text-warning-text shadow"
         >
           SOS queued offline
         </div>

@@ -192,31 +192,10 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
 
   const [profileModalOpen, setProfileModalOpen] = useState<boolean>(false)
   const profileTriggerRef = useRef<HTMLButtonElement | null>(null)
-  const guardStickyRegionRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     incidentSubmittingRef.current = incidentSubmitting
   }, [incidentSubmitting])
-
-  useEffect(() => {
-    const stickyRegion = guardStickyRegionRef.current
-    if (!stickyRegion || typeof ResizeObserver === 'undefined') return
-
-    const root = document.documentElement
-    const updateStickyRegionHeight = () => {
-      const height = Math.ceil(stickyRegion.getBoundingClientRect().height)
-      if (height > 0) root.style.setProperty('--guard-sticky-region-height', `${height}px`)
-    }
-
-    const observer = new ResizeObserver(updateStickyRegionHeight)
-    observer.observe(stickyRegion)
-    updateStickyRegionHeight()
-
-    return () => {
-      observer.disconnect()
-      root.style.removeProperty('--guard-sticky-region-height')
-    }
-  }, [])
 
   useEffect(() => {
     setActiveSection(resolveSectionFromView(activeView))
@@ -935,10 +914,10 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
   ) : null
 
   return (
-    <div className="relative flex h-dvh w-full flex-col overflow-hidden bg-background font-sans">
+    <div className="relative flex h-full w-full flex-col overflow-hidden bg-background font-sans">
       <a href="#maincontent" className="skip-link">Skip to main content</a>
 
-      <header className="sticky top-0 z-(--z-header) shrink-0 border-b border-border bg-surface/95 px-4 py-3 backdrop-blur" style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top, 0px))' }}>
+      <header className="sticky top-0 z-(--z-header) shrink-0 border-b border-border bg-surface/95 px-4 py-3 backdrop-blur">
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-tertiary">Field Operations</p>
@@ -1319,7 +1298,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout, onViewChange, a
         </section>
       </main>
 
-      <div ref={guardStickyRegionRef} className="guard-sticky-region" data-testid="guard-sticky-region">
+      <div className="guard-sticky-region" data-testid="guard-sticky-region">
         <EmergencyContactsBar />
         <PanicButton
           userId={user.id}

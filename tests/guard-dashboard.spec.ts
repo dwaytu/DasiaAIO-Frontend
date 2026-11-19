@@ -113,6 +113,12 @@ async function mockGuardDashboardApi(route: Route): Promise<void> {
     return
   }
 
+  if (url.includes('/api/operational-requests')) {
+    const data = url.endsWith('/resources/mine') ? { firearms: [], vehicles: [] } : { items: [], total: 0 }
+    await route.fulfill({ json: data })
+    return
+  }
+
   if (url.includes('/api/shifts/swap-requests')) {
     await route.fulfill({
       status: 200,
@@ -150,6 +156,39 @@ async function bootstrapGuard(page: Page): Promise<void> {
   await page.waitForLoadState('networkidle')
   await dismissLocationConsentIfPresent(page)
   await expect(page.locator('main, [role="main"]')).toBeVisible()
+}
+
+for (const viewport of [{ width: 320, height: 568 }, { width: 393, height: 820 }]) {
+  test('phone layout keeps header, SOS and navigation clear of Requests at ' + viewport.width + 'px', async ({ page }) => {
+    await page.setViewportSize(viewport)
+    await page.addInitScript(() => {
+      Object.defineProperty(window, 'Capacitor', { value: { isNativePlatform: () => true } })
+    })
+    await bootstrapGuard(page)
+    await expect(page.locator('body')).toHaveAttribute('data-platform', 'capacitor')
+
+    const navigation = page.getByRole('navigation', { name: 'Guard primary navigation' })
+    const footer = page.getByTestId('guard-sticky-region')
+    const sos = footer.getByRole('button', { name: /Emergency SOS/ })
+    const content = page.locator('#maincontent')
+    await navigation.getByRole('button', { name: 'Requests' }).click()
+
+    const headerBox = await page.getByRole('banner').boundingBox()
+    const contentBox = await content.boundingBox()
+    const footerBox = await footer.boundingBox()
+    const sosBox = await sos.boundingBox()
+    const navigationBox = await navigation.boundingBox()
+    expect(headerBox?.y).toBe(0)
+    expect(contentBox!.y).toBeGreaterThanOrEqual(headerBox!.y + headerBox!.height)
+    expect(sosBox!.y).toBeGreaterThanOrEqual(footerBox!.y)
+    expect(navigationBox!.y + navigationBox!.height).toBeLessThanOrEqual(viewport.height)
+    expect(sosBox!.width).toBeGreaterThanOrEqual(64)
+    expect(sosBox!.height).toBeGreaterThanOrEqual(64)
+
+    await page.getByRole('button', { name: 'New Request' }).click()
+    await expect(page.getByRole('heading', { name: 'Paghimo og hangyo' })).toBeVisible()
+    await expect(navigation).toBeInViewport({ ratio: 1 })
+  })
 }
 
 test.describe('Guard Dashboard UX Regression', () => {

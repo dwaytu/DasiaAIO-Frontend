@@ -57,6 +57,36 @@ function formatDate(value?: string | null): string {
   return Number.isNaN(date.getTime()) ? '-' : date.toLocaleDateString()
 }
 
+function formatLicenseExpiry(value: string | null | undefined, today: Date): string {
+  if (!value) return 'Not provided'
+  const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(value)
+  const expiry = new Date(dateOnly ? `${value}T00:00:00` : value)
+  if (Number.isNaN(expiry.getTime())) return 'Not provided'
+
+  const dateLabel = expiry.toLocaleDateString()
+  const expiryDay = expiry.getDate()
+  const todayDay = today.getDate()
+  const monthDifference = (expiry.getFullYear() - today.getFullYear()) * 12 + expiry.getMonth() - today.getMonth()
+  const expired = dateOnly
+    ? monthDifference < 0 || (monthDifference === 0 && expiryDay < todayDay)
+    : expiry <= today
+  if (expired) return `${dateLabel} (Expired)`
+  if (monthDifference === 0 && expiryDay === todayDay) return `${dateLabel} (Expires today)`
+
+  const lastDayOfExpiryMonth = new Date(expiry.getFullYear(), expiry.getMonth() + 1, 0).getDate()
+  const anniversaryDay = Math.min(todayDay, lastDayOfExpiryMonth)
+  const wholeMonths = monthDifference - Number(expiryDay < anniversaryDay)
+  if (wholeMonths < 1) return `${dateLabel} (Less than 1 month)`
+
+  const years = Math.floor(wholeMonths / 12)
+  const months = wholeMonths % 12
+  const duration = [
+    years ? `${years} ${years === 1 ? 'year' : 'years'}` : '',
+    months ? `${months} ${months === 1 ? 'month' : 'months'}` : '',
+  ].filter(Boolean).join(', ')
+  return `${dateLabel} (${duration})`
+}
+
 function escapeCsv(value: unknown): string {
   const text = String(value ?? '')
   return `"${text.replace(/"/g, '""')}"`
@@ -106,6 +136,7 @@ const GuardLicenseComplianceReport: FC<Props> = ({ user, onLogout, onViewChange,
     return () => controller.abort()
   }, [appliedFilters, page, refreshKey])
 
+  const today = new Date()
   const totalPages = Math.max(1, Math.ceil((report?.total ?? 0) / (report?.pageSize ?? 50)))
   const summaryCards = useMemo(() => [
     ['Total guards', report?.summary.totalGuards ?? 0],
@@ -221,12 +252,11 @@ const GuardLicenseComplianceReport: FC<Props> = ({ user, onLogout, onViewChange,
             {report?.items.length ? (
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[900px] border-collapse text-sm">
-                  <thead className="sticky top-0 z-10 h-11 border-b border-border-subtle bg-surface-elevated/60 text-xs font-semibold uppercase tracking-wider text-text-tertiary backdrop-blur-xs"><tr>{['Guard', 'License number', 'Issued', 'Expiry', 'Compliance'].map((heading) => <th key={heading} scope="col" className="px-4 py-3.5 text-left">{heading}</th>)}</tr></thead>
+                  <thead className="sticky top-0 z-10 h-11 border-b border-border-subtle bg-surface-elevated/60 text-xs font-semibold uppercase tracking-wider text-text-tertiary backdrop-blur-xs"><tr>{['Guard', 'License number', 'Expiry', 'Compliance'].map((heading) => <th key={heading} scope="col" className="px-4 py-3.5 text-left">{heading}</th>)}</tr></thead>
                   <tbody>{report.items.map((item) => <tr key={item.guardId} className="border-b border-border-subtle/80 transition-colors hover:bg-surface-hover/50">
                     <td className="px-4 py-3.5 align-middle text-sm text-text-primary"><p className="font-semibold text-text-primary">{item.guardName}</p><p className="text-xs text-text-secondary">{item.guardNumber ? `Guard #${item.guardNumber}` : 'Guard number not provided'}</p></td>
                     <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{item.licenseNumber || 'Not provided'}</td>
-                    <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{formatDate(item.licenseIssuedDate)}</td>
-                    <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{item.licenseExpiryDate ? `${formatDate(item.licenseExpiryDate)} (${item.licenseDaysRemaining ?? 0}d)` : 'Not provided'}</td>
+                    <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{formatLicenseExpiry(item.licenseExpiryDate, today)}</td>
                     <td className="px-4 py-3.5 align-middle text-sm text-text-primary"><span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium ${statusClass(item.complianceStatus)}`}>{item.complianceStatus.replace('_', ' ')}</span></td>
                   </tr>)}</tbody>
                 </table>

@@ -49,7 +49,8 @@ const GuardDeploymentOverview: FC<GuardDeploymentOverviewProps> = ({ shifts }) =
                 <td className="px-3 py-2 text-sm text-text-primary">{shift.client_site || 'Unassigned site'}</td>
                 <td className="px-3 py-2 text-sm text-text-primary uppercase">{shift.status || 'scheduled'}</td>
                 <td className="px-3 py-2 text-sm text-text-primary">
-                  {shift.availability_available == null ? 'Not reported' : shift.availability_available ? 'Available' : 'Unavailable'}
+                  {shift.availability_available === undefined ? 'Not reported'
+                    : shift.availability_available === false ? 'Unavailable' : 'Available'}
                 </td>
                 <td className="px-3 py-2 text-sm text-text-primary">
                   {shift.readiness_ready == null ? 'Not submitted' : shift.readiness_ready ? 'Ready' : 'Incomplete'}

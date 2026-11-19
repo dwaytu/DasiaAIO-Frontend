@@ -38,6 +38,8 @@ describe('operational resource hierarchy', () => {
   it('issues a saved allocation through the API even when the presentation flag is enabled', async () => {
     jest.mocked(isAllocationPresentationEnabled).mockReturnValue(true)
     let issued = false
+    const existingAllocation = { id: 'prior-allocation', guardName: 'Previous Guard', status: 'returned', recordOrigin: 'application' }
+    const newAllocation = { id: 'saved-allocation', guardName: 'Fixture Guard', status: 'active', recordOrigin: 'application' }
     fetchJsonOrThrowMock.mockImplementation(async (input) => {
       const url = String(input)
       if (url.endsWith('/api/firearm-allocation/issue')) {
@@ -54,14 +56,16 @@ describe('operational resource hierarchy', () => {
         firearms: [{ id: 'fixture-asset', serialNumber: 'TRAINING-ONLY', model: 'Inert fixture', status: issued ? 'allocated' : 'available' }],
       } as never
       if (url.includes('/api/firearm-allocations?')) return {
-        allocations: issued ? [{ id: 'saved-allocation', guardName: 'Fixture Guard', status: 'active' }] : [],
-        total: issued ? 1 : 0,
+        allocations: issued ? [newAllocation, existingAllocation] : [existingAllocation],
+        total: issued ? 2 : 1,
       } as never
       throw new Error(`Unexpected request: ${url}`)
     })
     const operator = userEvent.setup()
     render(<FirearmAllocation user={user} onLogout={jest.fn()} />)
     expect((await screen.findByText('Eligible for new issuance')).parentElement).toHaveTextContent('1')
+    expect(await screen.findByRole('row', { name: /Previous Guard.*Returned/ })).toBeInTheDocument()
+    expect(screen.queryByText('Application-recorded')).not.toBeInTheDocument()
     await operator.click(screen.getByRole('button', { name: 'Allocate firearm' }))
     const form = within(screen.getByRole('dialog', { name: 'Allocate firearm' }))
     await operator.selectOptions(form.getByLabelText('Eligible guard'), 'guard-1')
@@ -75,6 +79,7 @@ describe('operational resource hierarchy', () => {
     )
     expect(await screen.findByText('Firearm allocated successfully.')).toBeInTheDocument()
     expect(await screen.findByRole('row', { name: /Fixture Guard.*Active/ })).toBeInTheDocument()
+    expect(screen.queryByText('Application-recorded')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Allocate firearm' })).toBeDisabled()
     expect(screen.queryByRole('group', { name: 'Allocation register views' })).not.toBeInTheDocument()
   })

@@ -11,7 +11,7 @@ import SentinelModal from './shared/SentinelModal'
 
 const PAGE_SIZE = 15
 const ORIGIN_LABELS = {
-  application: 'Application-recorded',
+  application: '',
   imported: 'Imported',
   presentation: '',
   unknown: '',

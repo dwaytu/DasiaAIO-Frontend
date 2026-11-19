@@ -153,12 +153,12 @@ describe('CalendarDashboard', () => {
 
   it('uses local schedule dates for same-day, overnight, and invalid shifts', () => {
     const sameDay: Pick<ShiftEvent, 'startTime' | 'endTime'> = {
-      startTime: '2026-10-27T10:00:00+08:00',
-      endTime: '2026-10-27T18:00:00+08:00',
+      startTime: new Date(2026, 9, 27, 10).toISOString(),
+      endTime: new Date(2026, 9, 27, 18).toISOString(),
     }
     const overnight: Pick<ShiftEvent, 'startTime' | 'endTime'> = {
-      startTime: '2026-10-27T22:00:00+08:00',
-      endTime: '2026-10-28T06:00:00+08:00',
+      startTime: new Date(2026, 9, 27, 22).toISOString(),
+      endTime: new Date(2026, 9, 28, 6).toISOString(),
     }
     const invalid: Pick<ShiftEvent, 'startTime' | 'endTime'> = {
       startTime: 'not-a-time',
@@ -195,8 +195,8 @@ describe('CalendarDashboard', () => {
             pageSize: 200,
             shifts: [{
               id: 'night-shift',
-              start_time: '2026-10-27T22:00:00+08:00',
-              end_time: '2026-10-28T06:00:00+08:00',
+              start_time: new Date(2026, 9, 27, 22).toISOString(),
+              end_time: new Date(2026, 9, 28, 6).toISOString(),
               client_site: 'North Gate',
               status: 'scheduled',
             }],

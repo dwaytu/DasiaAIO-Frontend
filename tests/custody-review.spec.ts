@@ -37,7 +37,7 @@ async function installInventory(page: Page, role: 'admin' | 'supervisor' | 'supe
     if (path === '/api/firearm-allocations/summary') {
       return route.fulfill({ json: {
         totalFirearms: 2, availableFirearms: 0, allocatedFirearms: 0,
-        activeCustody: 0, custodyReviewFirearms: 1, maintenanceFirearms: 1,
+        activeCustody: 0, custodyReviewFirearms: 1, pendingCustodyReviewFirearms: approved ? 0 : 1, maintenanceFirearms: 1,
       } })
     }
     return route.fulfill({ json: [] })
@@ -51,6 +51,8 @@ test('admin approves a documented review without changing custody or inventory',
   await page.goto('/firearms')
   const row = page.getByRole('row').filter({ hasText: 'REVIEW-1' })
   const approve = row.getByRole('button', { name: 'Approve custody review for serial REVIEW-1' })
+  const pendingReviews = page.getByText('Pending custody reviews', { exact: true }).locator('..')
+  await expect(pendingReviews.getByText('1', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: /Approve custody review for serial/ })).toHaveCount(1)
   await approve.focus()
   await page.keyboard.press('Enter')
@@ -71,6 +73,7 @@ test('admin approves a documented review without changing custody or inventory',
   await expect(dialog.getByRole('alert')).toContainText('The source record changed.')
   await expect(dialog).toBeVisible()
   await expect(reference).toHaveValue('  Base log 123  ')
+  await expect(pendingReviews.getByText('1', { exact: true })).toBeVisible()
   await dialog.getByRole('button', { name: 'Cancel' }).click()
   await expect(approve).toBeFocused()
   await page.reload()
@@ -81,11 +84,14 @@ test('admin approves a documented review without changing custody or inventory',
   await expect(row.getByText('Review approved on', { exact: false })).toBeFocused()
   await expect(row.getByText('Review approved on', { exact: false })).toBeVisible()
   await expect(row.getByText('No verified active custody record')).toBeVisible()
+  await expect(pendingReviews.getByText('0', { exact: true })).toBeVisible()
+  await expect(page.getByRole('status').filter({ hasText: /1 imported firearm record/ })).toBeVisible()
   await expect(approve).toHaveCount(0)
   expect(approvals).toEqual(Array(2).fill({ sourceReference: 'Base log 123', inventoryUpdatedAt }))
   await page.reload()
   await expect(row.getByText('Review approved on', { exact: false })).toBeVisible()
   await expect(row.getByText('No verified active custody record')).toBeVisible()
+  await expect(pendingReviews.getByText('0', { exact: true })).toBeVisible()
 })
 
 for (const role of ['supervisor', 'superadmin'] as const) {
@@ -125,5 +131,12 @@ for (const width of [1440, 390]) {
     await page.keyboard.press('Escape')
     await expect(approve).toBeFocused()
     expect(approvals).toHaveLength(0)
+
+    await expect(page.getByText('1 pending custody review', { exact: false })).toBeVisible()
+    await approve.click()
+    await dialog.getByLabel('Source document reference').fill('Base log 123')
+    await dialog.getByRole('button', { name: 'Approve review' }).click()
+    await expect(page.getByText('0 pending custody review', { exact: false })).toBeVisible()
+    await expect(row.getByText('Review approved on', { exact: false })).toBeFocused()
   })
 }

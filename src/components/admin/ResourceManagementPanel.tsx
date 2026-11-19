@@ -5,6 +5,7 @@ import { fetchJsonOrThrow, getAuthHeaders } from '../../utils/api'
 import { logError } from '../../utils/logger'
 import { useOperationalMapData, ClientSiteInput } from '../../hooks/useOperationalMapData'
 import { useAuth } from '../../hooks/useAuth'
+import { useFirearmInventorySummary } from '../../hooks/useFirearmInventorySummary'
 import { normalizeRole, Role } from '../../types/auth'
 import EmptyState from '../shared/EmptyState'
 import ConfirmationDialog from '../shared/ConfirmationDialog'
@@ -45,15 +46,6 @@ interface FirearmListResponse {
   page?: number
   pageSize?: number
   firearms?: Firearm[]
-}
-
-interface FirearmAllocationSummary {
-  totalFirearms: number
-  availableFirearms: number
-  allocatedFirearms: number
-  maintenanceFirearms: number
-  activeCustody: number
-  custodyReviewFirearms: number
 }
 
 interface ArmoredCar {
@@ -915,7 +907,8 @@ const FirearmsTab: FC = () => {
   const { user: currentUser } = useAuth()
   const [firearms, setFirearms] = useState<Firearm[]>([])
   const [totalFirearms, setTotalFirearms] = useState(0)
-  const [firearmSummary, setFirearmSummary] = useState<FirearmAllocationSummary | null>(null)
+  const { summary: firearmSummary, pendingReviewCount, refreshSummary } = useFirearmInventorySummary()
+  const listRequest = useRef<AbortController | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [stateFilter, setStateFilter] = useState('')
   const [searchInput, setSearchInput] = useState('')
@@ -931,30 +924,33 @@ const FirearmsTab: FC = () => {
   const [firearmEdit, setFirearmEdit] = useState({ serialNumber: '', model: '', caliber: '', licenseExpiryDate: '', status: 'available' })
 
   const fetchFirearms = async (page = currentPage) => {
+    listRequest.current?.abort()
+    const controller = new AbortController()
+    listRequest.current = controller
     try {
       setLoading(true)
-      const [response, summaryResponse] = await Promise.all([
-        fetch(`${API_BASE_URL}/api/firearms?${new URLSearchParams({ page: String(page), page_size: String(FIREARM_PAGE_SIZE), ...(stateFilter ? { state: stateFilter } : {}), ...(search ? { search } : {}) }).toString()}`, { headers: getAuthHeaders() }),
-        fetch(`${API_BASE_URL}/api/firearm-allocations/summary`, { headers: getAuthHeaders() }),
+      const [response] = await Promise.all([
+        fetch(`${API_BASE_URL}/api/firearms?${new URLSearchParams({ page: String(page), page_size: String(FIREARM_PAGE_SIZE), ...(stateFilter ? { state: stateFilter } : {}), ...(search ? { search } : {}) }).toString()}`, { headers: getAuthHeaders(), signal: controller.signal }),
+        refreshSummary(),
       ])
-      if (response.ok) {
+      if (response.ok && !controller.signal.aborted) {
         const data = await response.json() as Firearm[] | FirearmListResponse
+        if (controller.signal.aborted) return
         const pageItems = Array.isArray(data) ? data : (data.firearms || [])
         setFirearms(pageItems)
         setTotalFirearms(Array.isArray(data) ? pageItems.length : (data.total ?? pageItems.length))
       }
-      if (summaryResponse.ok) {
-        setFirearmSummary(await summaryResponse.json() as FirearmAllocationSummary)
-      }
     } catch (err) {
-      logError('Error fetching firearms:', err)
+      if (!controller.signal.aborted) logError('Error fetching firearms:', err)
     } finally {
-      setLoading(false)
+      if (!controller.signal.aborted) setLoading(false)
+      if (listRequest.current === controller) listRequest.current = null
     }
   }
 
   useEffect(() => {
     void fetchFirearms(currentPage)
+    return () => listRequest.current?.abort()
   }, [currentPage, search, stateFilter])
 
   const pageCount = Math.max(1, Math.ceil(totalFirearms / FIREARM_PAGE_SIZE))
@@ -1063,7 +1059,17 @@ const FirearmsTab: FC = () => {
           </div>
           <h2 className="mt-1 text-xl font-bold text-text-primary">Firearm inventory</h2>
           <p className="mt-1 text-sm text-text-secondary">Registered firearms, verified custody, and equipment availability.</p>
-          {firearmSummary ? <div className="mt-3 flex flex-wrap gap-2 text-xs"><span className="soc-chip status-success">{firearmSummary.availableFirearms} available</span><span className="soc-chip status-info">{firearmSummary.activeCustody} verified custody</span><span className="soc-chip border border-warning-border bg-warning-bg text-warning-text">{firearmSummary.custodyReviewFirearms} custody review</span><span className="soc-chip border border-warning-border bg-warning-bg text-warning-text">{firearmSummary.maintenanceFirearms} maintenance</span></div> : null}
+          <div className="mt-3 flex flex-wrap gap-2 text-xs">
+            {firearmSummary ? <>
+              <span className="soc-chip status-success">{firearmSummary.availableFirearms} available</span>
+              <span className="soc-chip status-info">{firearmSummary.activeCustody} verified custody</span>
+              <span className="soc-chip border border-warning-border bg-warning-bg text-warning-text">{firearmSummary.custodyReviewFirearms} unverified custody record{firearmSummary.custodyReviewFirearms === 1 ? '' : 's'}</span>
+            </> : null}
+            <span className="soc-chip border border-warning-border bg-warning-bg text-warning-text">
+              {pendingReviewCount === undefined ? 'Pending custody reviews unavailable' : `${pendingReviewCount} pending custody review${pendingReviewCount === 1 ? '' : 's'}`}
+            </span>
+            {firearmSummary ? <span className="soc-chip border border-warning-border bg-warning-bg text-warning-text">{firearmSummary.maintenanceFirearms} maintenance</span> : null}
+          </div>
         </div>
         <button
           type="button"
@@ -1201,6 +1207,7 @@ const FirearmsTab: FC = () => {
                         <FirearmCustodyReviewAction firearm={f} viewerRole={currentUser?.role} onApproved={(approvedAt) => {
                           setFirearms((items) => items.map((item) => item.id === f.id && item.updatedAt === f.updatedAt
                             ? { ...item, custodyReviewApprovedAt: approvedAt } : item))
+                          void refreshSummary()
                         }} />
                       ) : null}
                       <button type="button" onClick={() => openFirearmEditor(f)} className="soc-btn soc-btn-neutral">

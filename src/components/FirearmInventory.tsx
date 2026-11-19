@@ -10,6 +10,7 @@ import { getSidebarNav } from '../config/navigation'
 import OperationalPageHeader from './shared/OperationalPageHeader'
 import OperationalSummaryBand from './shared/OperationalSummaryBand'
 import FirearmCustodyReviewAction from './shared/FirearmCustodyReviewAction'
+import { useFirearmInventorySummary } from '../hooks/useFirearmInventorySummary'
 
 interface Firearm {
   id: string
@@ -31,15 +32,6 @@ interface Firearm {
   [key: string]: any
 }
 
-interface FirearmSummary {
-  totalFirearms: number
-  availableFirearms: number
-  allocatedFirearms: number
-  maintenanceFirearms: number
-  activeCustody: number
-  custodyReviewFirearms: number
-}
-
 const normalizeManufacturer = (value?: string | null) => {
   const normalized = value?.trim().toLowerCase()
   if (!normalized) return 'Not specified'
@@ -57,7 +49,7 @@ interface Props {
 
 const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView }) => {
   const [firearms, setFirearms] = useState<Firearm[]>([])
-  const [summary, setSummary] = useState<FirearmSummary | null>(null)
+  const { summary, pendingReviewCount, summaryUnavailable, refreshSummary } = useFirearmInventorySummary()
   const [loading, setLoading] = useState<boolean>(true)
   const [readWarning, setReadWarning] = useState<string>('')
   const [stateFilter, setStateFilter] = useState('')
@@ -71,32 +63,27 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
   useEffect(() => {
     const controller = new AbortController()
     void fetchFirearms(controller.signal)
+    void refreshSummary()
     return () => controller.abort()
-  }, [currentPage, search, stateFilter])
+  }, [currentPage, search, stateFilter, refreshSummary])
 
   const fetchFirearms = async (signal?: AbortSignal) => {
     try {
       setLoading(true)
-      const [data, summaryData] = await Promise.all([
-        fetchJsonOrThrow<any>(`${API_BASE_URL}/api/firearms?${new URLSearchParams({
-          page: String(currentPage),
-          page_size: '25',
-          ...(stateFilter ? { state: stateFilter } : {}),
-          ...(search ? { search } : {}),
-        }).toString()}`, {
-          headers: getAuthHeaders(),
-          signal,
-        }, 'Unable to load firearm inventory'),
-        fetchJsonOrThrow<FirearmSummary>(`${API_BASE_URL}/api/firearm-allocations/summary`, {
-          headers: getAuthHeaders(),
-          signal,
-        }, 'Unable to load firearm inventory summary'),
-      ])
+      const params = new URLSearchParams({
+        page: String(currentPage),
+        page_size: '25',
+        ...(stateFilter ? { state: stateFilter } : {}),
+        ...(search ? { search } : {}),
+      })
+      const data = await fetchJsonOrThrow<any>(`${API_BASE_URL}/api/firearms?${params.toString()}`, {
+        headers: getAuthHeaders(),
+        signal,
+      }, 'Unable to load firearm inventory')
       if (signal?.aborted) return
       const firearmsList = Array.isArray(data) ? data : (data.firearms || [])
       setFirearms(firearmsList)
       setTotal(typeof data?.total === 'number' ? data.total : firearmsList.length)
-      setSummary(summaryData)
       setReadWarning('')
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return
@@ -141,7 +128,6 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
   const totalCount = summary?.totalFirearms ?? firearms.length
   const availableCount = summary?.availableFirearms ?? firearms.filter((firearm) => firearm.status?.toLowerCase() === 'available').length
   const activeCustodyCount = summary?.activeCustody ?? firearms.filter((firearm) => firearm.activeCustody).length
-  const custodyReviewCount = summary?.custodyReviewFirearms ?? firearms.filter((firearm) => firearm.custodyReview).length
   const maintenanceCount = summary?.maintenanceFirearms ?? firearms.filter((firearm) => firearm.status?.toLowerCase() === 'maintenance').length
 
   return (
@@ -178,6 +164,9 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
                   {readWarning}
                 </div>
               ) : null}
+              {summaryUnavailable ? (
+                <p className="mt-4 text-sm text-warning-text" role="status">Firearm inventory totals could not be refreshed.</p>
+              ) : null}
 
               <div className="mt-4">
                 <OperationalSummaryBand
@@ -185,7 +174,7 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
                     { label: 'Total firearms', value: totalCount, detail: 'In this inventory', tone: 'info', icon: Shield },
                     { label: 'Available', value: availableCount, detail: 'Ready to assign', tone: 'success', icon: CircleCheck },
                     { label: 'Active custody', value: activeCustodyCount, detail: 'Verified current firearm issues', tone: 'info', icon: ClipboardCheck },
-                    { label: 'Custody review', value: custodyReviewCount, detail: 'No verified active custody record', tone: custodyReviewCount > 0 ? 'warning' : 'neutral', icon: Search },
+                    { label: 'Pending custody reviews', value: pendingReviewCount ?? 'Unavailable', detail: 'Documentation approvals remaining', tone: (pendingReviewCount ?? 0) > 0 ? 'warning' : 'neutral', icon: Search },
                     { label: 'Maintenance', value: maintenanceCount, detail: 'Unavailable for assignment', tone: maintenanceCount > 0 ? 'warning' : 'neutral', icon: Wrench },
                   ]}
                 />
@@ -193,7 +182,7 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
 
               {summary?.custodyReviewFirearms ? (
                 <div className="mt-4 rounded border border-warning-border bg-warning-bg p-3 text-sm text-warning-text" role="status">
-                  {summary.custodyReviewFirearms} imported firearm record{summary.custodyReviewFirearms === 1 ? '' : 's'} have no verified active custody record. They are not included in active custody.
+                  {summary.custodyReviewFirearms} imported firearm {summary.custodyReviewFirearms === 1 ? 'record has' : 'records have'} no verified active custody record.
                 </div>
               ) : null}
 
@@ -249,6 +238,7 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
                                   <FirearmCustodyReviewAction firearm={f} viewerRole={user.role} onApproved={(approvedAt) => {
                                     setFirearms((items) => items.map((item) => item.id === f.id && item.updatedAt === f.updatedAt
                                       ? { ...item, custodyReviewApprovedAt: approvedAt } : item))
+                                    void refreshSummary()
                                   }} />
                                 </div>
                               </div>

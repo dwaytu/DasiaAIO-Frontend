@@ -268,6 +268,7 @@ describe('operational resource hierarchy', () => {
           maintenanceFirearms: 8,
           activeCustody: 64,
           custodyReviewFirearms: 35,
+          pendingCustodyReviewFirearms: 33,
           eligibleGuards: null,
         } as never
       }
@@ -294,7 +295,8 @@ describe('operational resource hierarchy', () => {
     render(<FirearmInventory user={user} onLogout={jest.fn()} />)
 
     expect((await screen.findAllByText('Custody review')).length).toBeGreaterThan(1)
-    expect(screen.getByText('35')).toBeInTheDocument()
+    expect(screen.getByText('Pending custody reviews').parentElement).toHaveTextContent('33')
+    expect(screen.getByText(/35 imported firearm records/)).toBeInTheDocument()
     expect(screen.getAllByText(/No verified active custody record/i)).not.toHaveLength(0)
     expect(screen.getByText(/MDR source: MDR row 14; source guard: Guard One/i)).toBeInTheDocument()
     expect(screen.queryByText('Verified active custody')).not.toBeInTheDocument()
@@ -305,5 +307,19 @@ describe('operational resource hierarchy', () => {
       expect.objectContaining({ headers: expect.anything(), signal: expect.anything() }),
       'Unable to load firearm inventory',
     ))
+  })
+
+  it('shows the pending review count as unavailable when the server provides only the unverified total', async () => {
+    fetchJsonOrThrowMock.mockImplementation(async (input) => {
+      if (String(input).endsWith('/api/firearm-allocations/summary')) {
+        return { totalFirearms: 1, activeCustody: 0, custodyReviewFirearms: 1 } as never
+      }
+      return { firearms: [], total: 0 } as never
+    })
+
+    render(<FirearmInventory user={user} onLogout={jest.fn()} />)
+
+    expect((await screen.findByText('Pending custody reviews')).parentElement).toHaveTextContent('Unavailable')
+    expect(screen.getByText(/1 imported firearm record/)).toBeInTheDocument()
   })
 })

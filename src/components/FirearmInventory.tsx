@@ -1,4 +1,4 @@
-import { useState, useEffect, FC } from 'react'
+import { useState, useEffect, useRef, FC } from 'react'
 import { Shield, Wrench, CircleCheck, ClipboardCheck, Search, ChevronLeft, ChevronRight } from 'lucide-react'
 import { API_BASE_URL } from '../config'
 import { logError } from '../utils/logger'
@@ -9,7 +9,7 @@ import LoadingSkeleton from './shared/LoadingSkeleton'
 import { getSidebarNav } from '../config/navigation'
 import OperationalPageHeader from './shared/OperationalPageHeader'
 import OperationalSummaryBand from './shared/OperationalSummaryBand'
-import FirearmCustodyReviewAction from './shared/FirearmCustodyReviewAction'
+import FirearmCustodyReviewAction, { applyFirearmCustodyReview } from './shared/FirearmCustodyReviewAction'
 import { useFirearmInventorySummary } from '../hooks/useFirearmInventorySummary'
 
 interface Firearm {
@@ -32,6 +32,8 @@ interface Firearm {
   [key: string]: any
 }
 
+const PAGE_SIZE = 25
+
 const normalizeManufacturer = (value?: string | null) => {
   const normalized = value?.trim().toLowerCase()
   if (!normalized) return 'Not specified'
@@ -52,6 +54,9 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
   const { summary, pendingReviewCount, summaryUnavailable, refreshSummary } = useFirearmInventorySummary()
   const [loading, setLoading] = useState<boolean>(true)
   const [readWarning, setReadWarning] = useState<string>('')
+  const [stockConfirmation, setStockConfirmation] = useState('')
+  const stockConfirmationRef = useRef<HTMLParagraphElement>(null)
+  const [inventoryRevision, setInventoryRevision] = useState(0)
   const [stateFilter, setStateFilter] = useState('')
   const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
@@ -65,25 +70,32 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
     void fetchFirearms(controller.signal)
     void refreshSummary()
     return () => controller.abort()
-  }, [currentPage, search, stateFilter, refreshSummary])
+  }, [currentPage, search, stateFilter, refreshSummary, inventoryRevision])
+
+  useEffect(() => {
+    if (stockConfirmation) stockConfirmationRef.current?.focus()
+  }, [stockConfirmation, inventoryRevision])
 
   const fetchFirearms = async (signal?: AbortSignal) => {
     try {
       setLoading(true)
       const params = new URLSearchParams({
         page: String(currentPage),
-        page_size: '25',
+        page_size: String(PAGE_SIZE),
         ...(stateFilter ? { state: stateFilter } : {}),
         ...(search ? { search } : {}),
       })
       const data = await fetchJsonOrThrow<any>(`${API_BASE_URL}/api/firearms?${params.toString()}`, {
         headers: getAuthHeaders(),
         signal,
+        cache: 'no-store',
       }, 'Unable to load firearm inventory')
       if (signal?.aborted) return
       const firearmsList = Array.isArray(data) ? data : (data.firearms || [])
+      const matchingTotal = typeof data?.total === 'number' ? data.total : firearmsList.length
       setFirearms(firearmsList)
-      setTotal(typeof data?.total === 'number' ? data.total : firearmsList.length)
+      setTotal(matchingTotal)
+      setCurrentPage((page) => Math.min(page, Math.max(1, Math.ceil(matchingTotal / PAGE_SIZE))))
       setReadWarning('')
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return
@@ -108,10 +120,11 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
   const statusLabel = (firearm: Firearm) => {
     if (firearm.custodyReview) return 'Custody review'
     if (firearm.activeCustody) return 'Active custody'
+    if (firearm.status === 'available') return 'Available'
     return firearm.status
   }
 
-  const pageCount = Math.max(1, Math.ceil(total / 25))
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE))
   const applySearch = (event: React.FormEvent) => {
     event.preventDefault()
     setCurrentPage(1)
@@ -143,7 +156,7 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
       onMenuClose={() => setMobileMenuOpen(false)}
       onLogoClick={() => onViewChange?.('dashboard')}
     >
-        {loading ? (
+        {loading && !stockConfirmation ? (
           <div className="flex-1 p-4 md:p-8">
             <LoadingSkeleton variant="table" />
           </div>
@@ -159,6 +172,11 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
                 status={<span className="soc-status-neutral">{totalCount} registered firearm{totalCount === 1 ? '' : 's'}</span>}
               />
 
+              {stockConfirmation ? (
+                <p ref={stockConfirmationRef} tabIndex={-1} role="status" className="mt-4 rounded border border-success-border bg-success-bg p-3 text-sm text-success-text">
+                  {stockConfirmation}
+                </p>
+              ) : null}
               {readWarning ? (
                 <div className="mt-4 rounded border border-warning-border bg-warning-bg p-3 text-sm text-warning-text" role="status">
                   {readWarning}
@@ -199,7 +217,9 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
                 <button type="button" onClick={clearFilters} className="soc-btn soc-btn-neutral">Clear</button>
               </form>
 
-              {firearms.length > 0 ? (
+              {loading ? (
+                <div className="mt-5"><LoadingSkeleton variant="table" /></div>
+              ) : firearms.length > 0 ? (
                 <div className="mt-5 overflow-x-auto" aria-label="Firearm inventory register">
                   <table className="w-full min-w-[760px] border-collapse">
                     <caption className="sr-only">Registered firearms and their current operational status.</caption>
@@ -235,10 +255,14 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
                                 <p className="mt-1 text-xs">Imported status: {f.status}. Active custody: No.</p>
                                 <p className="mt-1 text-xs">MDR source: {f.mdrRowRef || 'Not linked'}{f.sourceGuardText ? `; source guard: ${f.sourceGuardText}` : ''}. Direct guard match: {f.directGuardMatch ? 'Yes' : 'No'}.</p>
                                 <div className="mt-2">
-                                  <FirearmCustodyReviewAction firearm={f} viewerRole={user.role} onApproved={(approvedAt) => {
-                                    setFirearms((items) => items.map((item) => item.id === f.id && item.updatedAt === f.updatedAt
-                                      ? { ...item, custodyReviewApprovedAt: approvedAt } : item))
-                                    void refreshSummary()
+                                  <FirearmCustodyReviewAction firearm={f} viewerRole={user.role} onApproved={(result) => {
+                                    setFirearms((items) => applyFirearmCustodyReview(items, f, result, stateFilter === 'custody_review'))
+                                    if (result.returnedToStock) {
+                                      setStockConfirmation(`Firearm ${f.serialNumber} confirmed in stock and marked available.`)
+                                      setInventoryRevision((revision) => revision + 1)
+                                    } else {
+                                      void refreshSummary()
+                                    }
                                   }} />
                                 </div>
                               </div>
@@ -255,7 +279,7 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
                   <EmptyState icon={Shield} title={search || stateFilter ? 'No firearms match the selected filters' : 'No firearms registered'} subtitle={search || stateFilter ? 'Try a different search or inventory state.' : 'Use the Management panel to register firearms'} />
                 </div>
               )}
-              {total > 0 ? <div className="mt-4 flex flex-col gap-3 border-t border-border-subtle pt-4 text-sm text-text-secondary sm:flex-row sm:items-center sm:justify-between"><p>Showing {((currentPage - 1) * 25) + 1}-{Math.min(currentPage * 25, total)} of {total} firearms</p><div className="flex items-center gap-2"><button type="button" onClick={() => setCurrentPage((page) => Math.max(1, page - 1))} disabled={currentPage === 1} className="soc-btn soc-btn-neutral" aria-label="Previous firearm page"><ChevronLeft size={16} aria-hidden="true" />Previous</button><span className="min-w-24 text-center font-semibold text-text-primary" aria-live="polite">Page {currentPage} of {pageCount}</span><button type="button" onClick={() => setCurrentPage((page) => Math.min(pageCount, page + 1))} disabled={currentPage === pageCount} className="soc-btn soc-btn-neutral" aria-label="Next firearm page">Next<ChevronRight size={16} aria-hidden="true" /></button></div></div> : null}
+              {!loading && total > 0 ? <div className="mt-4 flex flex-col gap-3 border-t border-border-subtle pt-4 text-sm text-text-secondary sm:flex-row sm:items-center sm:justify-between"><p>Showing {((currentPage - 1) * PAGE_SIZE) + 1}-{Math.min(currentPage * PAGE_SIZE, total)} of {total} firearms</p><div className="flex items-center gap-2"><button type="button" onClick={() => setCurrentPage((page) => Math.max(1, page - 1))} disabled={currentPage === 1} className="soc-btn soc-btn-neutral" aria-label="Previous firearm page"><ChevronLeft size={16} aria-hidden="true" />Previous</button><span className="min-w-24 text-center font-semibold text-text-primary" aria-live="polite">Page {currentPage} of {pageCount}</span><button type="button" onClick={() => setCurrentPage((page) => Math.min(pageCount, page + 1))} disabled={currentPage === pageCount} className="soc-btn soc-btn-neutral" aria-label="Next firearm page">Next<ChevronRight size={16} aria-hidden="true" /></button></div></div> : null}
             </section>
           </div>
         )}

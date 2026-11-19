@@ -11,7 +11,7 @@ import EmptyState from '../shared/EmptyState'
 import ConfirmationDialog from '../shared/ConfirmationDialog'
 import LoadingSkeleton from '../shared/LoadingSkeleton'
 import SentinelModal from '../shared/SentinelModal'
-import FirearmCustodyReviewAction from '../shared/FirearmCustodyReviewAction'
+import FirearmCustodyReviewAction, { applyFirearmCustodyReview } from '../shared/FirearmCustodyReviewAction'
 import EditUserModal from '../EditUserModal'
 import CreateGuardAccountModal from './CreateGuardAccountModal'
 import GuardPasswordModal from './GuardPasswordModal'
@@ -907,8 +907,12 @@ const FirearmsTab: FC = () => {
   const { user: currentUser } = useAuth()
   const [firearms, setFirearms] = useState<Firearm[]>([])
   const [totalFirearms, setTotalFirearms] = useState(0)
-  const { summary: firearmSummary, pendingReviewCount, refreshSummary } = useFirearmInventorySummary()
+  const { summary: firearmSummary, pendingReviewCount, summaryUnavailable, refreshSummary } = useFirearmInventorySummary()
   const listRequest = useRef<AbortController | null>(null)
+  const [listUnavailable, setListUnavailable] = useState(false)
+  const [stockConfirmation, setStockConfirmation] = useState('')
+  const stockConfirmationRef = useRef<HTMLParagraphElement>(null)
+  const [inventoryRevision, setInventoryRevision] = useState(0)
   const [currentPage, setCurrentPage] = useState(1)
   const [stateFilter, setStateFilter] = useState('')
   const [searchInput, setSearchInput] = useState('')
@@ -930,18 +934,24 @@ const FirearmsTab: FC = () => {
     try {
       setLoading(true)
       const [response] = await Promise.all([
-        fetch(`${API_BASE_URL}/api/firearms?${new URLSearchParams({ page: String(page), page_size: String(FIREARM_PAGE_SIZE), ...(stateFilter ? { state: stateFilter } : {}), ...(search ? { search } : {}) }).toString()}`, { headers: getAuthHeaders(), signal: controller.signal }),
+        fetch(`${API_BASE_URL}/api/firearms?${new URLSearchParams({ page: String(page), page_size: String(FIREARM_PAGE_SIZE), ...(stateFilter ? { state: stateFilter } : {}), ...(search ? { search } : {}) }).toString()}`, { headers: getAuthHeaders(), signal: controller.signal, cache: 'no-store' }),
         refreshSummary(),
       ])
-      if (response.ok && !controller.signal.aborted) {
-        const data = await response.json() as Firearm[] | FirearmListResponse
-        if (controller.signal.aborted) return
-        const pageItems = Array.isArray(data) ? data : (data.firearms || [])
-        setFirearms(pageItems)
-        setTotalFirearms(Array.isArray(data) ? pageItems.length : (data.total ?? pageItems.length))
-      }
+      if (controller.signal.aborted) return
+      if (!response.ok) throw new Error('Unable to load firearm inventory')
+      const data = await response.json() as Firearm[] | FirearmListResponse
+      if (controller.signal.aborted) return
+      const pageItems = Array.isArray(data) ? data : (data.firearms || [])
+      const matchingTotal = Array.isArray(data) ? pageItems.length : (data.total ?? pageItems.length)
+      setFirearms(pageItems)
+      setTotalFirearms(matchingTotal)
+      setCurrentPage((current) => Math.min(current, Math.max(1, Math.ceil(matchingTotal / FIREARM_PAGE_SIZE))))
+      setListUnavailable(false)
     } catch (err) {
-      if (!controller.signal.aborted) logError('Error fetching firearms:', err)
+      if (!controller.signal.aborted) {
+        logError('Error fetching firearms:', err)
+        setListUnavailable(true)
+      }
     } finally {
       if (!controller.signal.aborted) setLoading(false)
       if (listRequest.current === controller) listRequest.current = null
@@ -951,7 +961,11 @@ const FirearmsTab: FC = () => {
   useEffect(() => {
     void fetchFirearms(currentPage)
     return () => listRequest.current?.abort()
-  }, [currentPage, search, stateFilter])
+  }, [currentPage, search, stateFilter, inventoryRevision])
+
+  useEffect(() => {
+    if (stockConfirmation) stockConfirmationRef.current?.focus()
+  }, [stockConfirmation, inventoryRevision])
 
   const pageCount = Math.max(1, Math.ceil(totalFirearms / FIREARM_PAGE_SIZE))
   const firstVisibleFirearm = totalFirearms === 0 ? 0 : ((currentPage - 1) * FIREARM_PAGE_SIZE) + 1
@@ -1047,7 +1061,7 @@ const FirearmsTab: FC = () => {
     }
   }
 
-  if (loading) return <LoadingSkeleton variant="table" />
+  if (loading && !stockConfirmation) return <LoadingSkeleton variant="table" />
 
   return (
     <section className="table-glass rounded p-4 md:p-6 space-y-4">
@@ -1083,6 +1097,16 @@ const FirearmsTab: FC = () => {
 
       {error && <div className="p-3 bg-danger-bg border border-danger-border rounded text-danger-text text-sm">{error}</div>}
       {success && <div className="p-3 bg-success-bg border border-success-border rounded text-success-text text-sm">{success}</div>}
+      {stockConfirmation ? (
+        <p ref={stockConfirmationRef} tabIndex={-1} role="status" className="p-3 bg-success-bg border border-success-border rounded text-success-text text-sm">
+          {stockConfirmation}
+        </p>
+      ) : null}
+      {listUnavailable || summaryUnavailable ? (
+        <p className="text-sm text-warning-text" role="status">
+          {listUnavailable ? 'Firearm inventory could not be refreshed.' : 'Firearm inventory totals could not be refreshed.'}
+        </p>
+      ) : null}
 
       <form onSubmit={(event) => { event.preventDefault(); setCurrentPage(1); setSearch(searchInput.trim()) }} className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_190px_auto_auto]" role="search">
         <label className="relative"><span className="sr-only">Search firearm inventory</span><Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary" aria-hidden="true" /><input value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder="Serial, manufacturer, or model" className="soc-form-control w-full pl-10" /></label>
@@ -1168,8 +1192,10 @@ const FirearmsTab: FC = () => {
         </form>
       </SentinelModal>
 
-      {firearms.length === 0 ? (
-        <EmptyState icon={Shield} title="No firearms registered" subtitle="Add firearms to the inventory to get started" />
+      {loading ? (
+        <LoadingSkeleton variant="table" />
+      ) : firearms.length === 0 ? (
+        <EmptyState icon={Shield} title={search || stateFilter ? 'No firearms match the selected filters' : 'No firearms registered'} subtitle={search || stateFilter ? 'Try a different search or inventory state.' : 'Add firearms to the inventory to get started'} />
       ) : (
         <>
           <div className="overflow-x-auto">
@@ -1198,16 +1224,20 @@ const FirearmsTab: FC = () => {
                       f.status === 'maintenance' ? 'bg-warning-bg text-warning-text ring-1 ring-warning-border' :
                       'soc-status-neutral'
                     }`}>
-                      {f.custodyReview ? 'Custody review' : f.activeCustody ? 'Active custody' : f.status}
+                      {f.custodyReview ? 'Custody review' : f.activeCustody ? 'Active custody' : f.status === 'available' ? 'Available' : f.status}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex flex-wrap justify-end gap-2">
                       {f.custodyReview ? (
-                        <FirearmCustodyReviewAction firearm={f} viewerRole={currentUser?.role} onApproved={(approvedAt) => {
-                          setFirearms((items) => items.map((item) => item.id === f.id && item.updatedAt === f.updatedAt
-                            ? { ...item, custodyReviewApprovedAt: approvedAt } : item))
-                          void refreshSummary()
+                        <FirearmCustodyReviewAction firearm={f} viewerRole={currentUser?.role} onApproved={(result) => {
+                          setFirearms((items) => applyFirearmCustodyReview(items, f, result, stateFilter === 'custody_review'))
+                          if (result.returnedToStock) {
+                            setStockConfirmation(`Firearm ${f.serialNumber} confirmed in stock and marked available.`)
+                            setInventoryRevision((revision) => revision + 1)
+                          } else {
+                            void refreshSummary()
+                          }
                         }} />
                       ) : null}
                       <button type="button" onClick={() => openFirearmEditor(f)} className="soc-btn soc-btn-neutral">

@@ -1855,7 +1855,9 @@
   .dtr-print-report,
   .dtr-print-report *,
   .analytics-print-report,
-  .analytics-print-report * {
+  .analytics-print-report *,
+  .documents-print-report,
+  .documents-print-report * {
     visibility: visible !important;
   }
 
@@ -1865,10 +1867,10 @@
   }
 
   /* Give the report normal page flow, independent of screen scroll containers. */
-  html:has(.dtr-print-report),
-  body:has(.dtr-print-report),
-  #root:has(.dtr-print-report),
-  #root :has(.dtr-print-report) {
+  html:has(:is(.dtr-print-report, .documents-print-report)),
+  body:has(:is(.dtr-print-report, .documents-print-report)),
+  #root:has(:is(.dtr-print-report, .documents-print-report)),
+  #root :has(:is(.dtr-print-report, .documents-print-report)) {
     display: block !important;
     position: static !important;
     width: auto !important;
@@ -1887,6 +1889,19 @@
   #root:has(.dtr-print-report) > :not(.dtr-print-report, :has(.dtr-print-report)),
   #root :has(.dtr-print-report) > :not(.dtr-print-report, :has(.dtr-print-report)) {
     display: none !important;
+  }
+
+  body:has(.documents-print-report) > :not(:has(.documents-print-report)),
+  #root:has(.documents-print-report) > :not(.documents-print-report, :has(.documents-print-report)),
+  #root :has(.documents-print-report) > :not(.documents-print-report, :has(.documents-print-report)) {
+    display: none !important;
+  }
+
+  .documents-print-report,
+  .documents-print-report * {
+    background: white !important;
+    color: black !important;
+    box-shadow: none !important;
   }
 
   .dtr-print-report {

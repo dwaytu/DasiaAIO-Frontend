@@ -3,7 +3,7 @@ import { createBrowserRouter, Navigate, useNavigate, useLocation, type RouteObje
 import { useAuth } from '../hooks/useAuth'
 import { getAuthToken, getRefreshToken } from '../utils/api'
 import { RoleGuard } from './guards'
-import { ROUTES, VIEW_TO_ROUTE } from './routes'
+import { FIREARM_DOCUMENTS_URL, ROUTES, VIEW_TO_ROUTE } from './routes'
 import AppShell from '../components/layout/AppShell'
 
 const LoginPage = lazy(() => import('../components/LoginPage'))
@@ -16,8 +16,7 @@ const PerformanceDashboard = lazy(() => import('../components/PerformanceDashboa
 const DtrReport = lazy(() => import('../components/DtrReport'))
 const MeritScoreDashboard = lazy(() => import('../components/MeritScoreDashboard'))
 const FirearmInventory = lazy(() => import('../components/FirearmInventory'))
-const FirearmComplianceReport = lazy(() => import('../components/FirearmComplianceReport'))
-const GuardLicenseComplianceReport = lazy(() => import('../components/GuardLicenseComplianceReport'))
+const DocumentsDashboard = lazy(() => import('../components/DocumentsDashboard'))
 const FirearmAllocation = lazy(() => import('../components/FirearmAllocation'))
 const GuardFirearmPermits = lazy(() => import('../components/GuardFirearmPermits'))
 const FirearmMaintenance = lazy(() => import('../components/FirearmMaintenance'))
@@ -224,8 +223,9 @@ export const appRoutes: RouteObject[] = [
           { path: ROUTES.DTR, element: <LegacyPage Component={DtrReport} /> },
           { path: ROUTES.MERIT, element: <LegacyPage Component={MeritScoreDashboard} /> },
           { path: ROUTES.FIREARMS, element: <LegacyPage Component={FirearmInventory} /> },
-          { path: ROUTES.FIREARM_COMPLIANCE, element: <LegacyPage Component={FirearmComplianceReport} /> },
-          { path: ROUTES.GUARD_COMPLIANCE, element: <LegacyPage Component={GuardLicenseComplianceReport} /> },
+          { path: ROUTES.DOCUMENTS, element: <LegacyPage Component={DocumentsDashboard} /> },
+          { path: ROUTES.FIREARM_COMPLIANCE, element: <Navigate to={FIREARM_DOCUMENTS_URL} replace /> },
+          { path: ROUTES.GUARD_COMPLIANCE, element: <Navigate to={ROUTES.DOCUMENTS} replace /> },
           { path: ROUTES.ALLOCATION, element: <LegacyPage Component={FirearmAllocation} /> },
           { path: ROUTES.MAINTENANCE, element: <LegacyPage Component={FirearmMaintenance} /> },
           { path: ROUTES.ARMORED_CARS, element: <LegacyPage Component={ArmoredCarDashboard} /> },

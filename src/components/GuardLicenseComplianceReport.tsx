@@ -1,14 +1,11 @@
-import { useEffect, useMemo, useState, type FC } from 'react'
-import { Bell, Download, Filter, Printer, RefreshCw, ShieldCheck } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { ShieldCheck } from 'lucide-react'
 import { API_BASE_URL } from '../config'
 import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
 import { formatLicenseExpiry } from '../utils/formatLicenseExpiry'
-import OperationalShell from './layout/OperationalShell'
+import DocumentReportLayout from './shared/DocumentReportLayout'
 import EmptyState from './shared/EmptyState'
 import LoadingSkeleton from './shared/LoadingSkeleton'
-import OperationalPageHeader from './shared/OperationalPageHeader'
-import OperationalSummaryBand from './shared/OperationalSummaryBand'
-import { getSidebarNav } from '../config/navigation'
 
 interface ComplianceItem {
   guardId: string
@@ -37,13 +34,6 @@ interface ComplianceResponse {
   items: ComplianceItem[]
 }
 
-interface Props {
-  user: any
-  onLogout: () => void
-  onViewChange?: (view: string) => void
-  activeView?: string
-}
-
 const STATUS_OPTIONS = [
   ['all', 'All records'],
   ['expired', 'Expired'],
@@ -69,7 +59,7 @@ function statusClass(status: string): string {
   return 'border-success-border bg-success-bg text-success-text'
 }
 
-const GuardLicenseComplianceReport: FC<Props> = ({ user, onLogout, onViewChange, activeView }) => {
+export default function GuardLicenseComplianceReport() {
   const [filters, setFilters] = useState({ status: 'all', windowDays: '30' })
   const [appliedFilters, setAppliedFilters] = useState(filters)
   const [page, setPage] = useState(1)
@@ -78,7 +68,6 @@ const GuardLicenseComplianceReport: FC<Props> = ({ user, onLogout, onViewChange,
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -96,7 +85,9 @@ const GuardLicenseComplianceReport: FC<Props> = ({ user, onLogout, onViewChange,
       { headers: getAuthHeaders(), signal: controller.signal },
       'Unable to load guard license compliance report',
     )
-      .then(setReport)
+      .then((result) => {
+        if (!controller.signal.aborted) setReport(result)
+      })
       .catch((err: unknown) => {
         if (!controller.signal.aborted) setError(err instanceof Error ? err.message : 'Unable to load guard license compliance report')
       })
@@ -109,13 +100,13 @@ const GuardLicenseComplianceReport: FC<Props> = ({ user, onLogout, onViewChange,
 
   const today = new Date()
   const totalPages = Math.max(1, Math.ceil((report?.total ?? 0) / (report?.pageSize ?? 50)))
-  const summaryCards = useMemo(() => [
-    ['Guards reviewed', report?.summary.totalGuards ?? 0],
-    ['Expired', report?.summary.expired ?? 0],
-    ['Expiring soon', report?.summary.expiringSoon ?? 0],
-    ['No license', report?.summary.noLicense ?? 0],
-    ['Compliant', report?.summary.compliant ?? 0],
-  ], [report])
+  const summary = [
+    { label: 'Guards reviewed', value: report?.summary.totalGuards ?? 0 },
+    { label: 'Expired', value: report?.summary.expired ?? 0 },
+    { label: 'Expiring soon', value: report?.summary.expiringSoon ?? 0 },
+    { label: 'No license', value: report?.summary.noLicense ?? 0 },
+    { label: 'Compliant', value: report?.summary.compliant ?? 0 },
+  ]
 
   const applyFilters = () => {
     setPage(1)
@@ -160,85 +151,45 @@ const GuardLicenseComplianceReport: FC<Props> = ({ user, onLogout, onViewChange,
     }
   }
 
+  if (loading && !report) return <LoadingSkeleton variant="table" />
+
   return (
-    <OperationalShell
-      user={user}
-      title="Guard Documents"
-      navItems={getSidebarNav(user.role)}
-      activeView={activeView || 'guard-compliance'}
-      onNavigate={(view) => onViewChange?.(view)}
-      onLogout={onLogout}
-      mobileMenuOpen={mobileMenuOpen}
-      onMenuOpen={() => setMobileMenuOpen(true)}
-      onMenuClose={() => setMobileMenuOpen(false)}
-      onLogoClick={() => onViewChange?.('dashboard')}
+    <DocumentReportLayout
+      title="Guard license records"
+      summary={summary}
+      total={report?.total ?? 0}
+      page={page}
+      totalPages={totalPages}
+      statusOptions={STATUS_OPTIONS}
+      filters={filters}
+      notice={notice}
+      error={error}
+      onFilterChange={setFilters}
+      onApply={applyFilters}
+      onClear={() => {
+        const defaults = { status: 'all', windowDays: '30' }
+        setFilters(defaults)
+        setAppliedFilters(defaults)
+        setPage(1)
+      }}
+      onExport={exportCsv}
+      onSyncAlerts={() => void syncNotifications()}
+      onRefresh={() => setRefreshKey((value) => value + 1)}
+      onPageChange={setPage}
     >
-      {loading && !report ? (
-        <div className="flex-1 p-4 md:p-8"><LoadingSkeleton variant="table" /></div>
-      ) : (
-        <div className="flex-1 space-y-5 overflow-y-auto p-4 md:p-8 print:p-0">
-          <section className="table-glass rounded p-4 md:p-6 print:hidden">
-            <OperationalPageHeader
-              eyebrow="Personnel governance"
-              title="Guard Documents"
-              description="Review license records for approved, verified guards and identify documents that are expired or nearing expiry."
-              icon={ShieldCheck}
-              actions={
-                <>
-                <button type="button" onClick={() => window.print()} className="soc-btn inline-flex min-h-10 items-center gap-2 px-3" title="Print guard license compliance report"><Printer size={16} /> Print</button>
-                <button type="button" onClick={exportCsv} className="soc-btn inline-flex min-h-10 items-center gap-2 px-3" title="Export guard license compliance report as CSV"><Download size={16} /> CSV</button>
-                <button type="button" onClick={() => void syncNotifications()} className="soc-btn-primary inline-flex min-h-10 items-center gap-2 px-3" title="Notify supervisors and administrators"><Bell size={16} /> Sync alerts</button>
-                </>
-              }
-            />
-            {notice ? <p className="mt-4 rounded border border-success-border bg-success-bg p-3 text-sm text-success-text">{notice}</p> : null}
-            {error ? <p role="alert" className="mt-4 rounded border border-danger-border bg-danger-bg p-3 text-sm text-danger-text">{error}</p> : null}
-            <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_auto]">
-              <label className="text-xs font-semibold text-text-secondary">Compliance status
-                <select value={filters.status} onChange={(event) => setFilters({ ...filters, status: event.target.value })} className="mt-1 min-h-10 w-full rounded border border-border bg-surface px-3 text-sm text-text-primary">
-                  {STATUS_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-                </select>
-              </label>
-              <label className="text-xs font-semibold text-text-secondary">Expiration window (days)
-                <input type="number" min="1" max="365" value={filters.windowDays} onChange={(event) => setFilters({ ...filters, windowDays: event.target.value })} className="mt-1 min-h-10 w-full rounded border border-border bg-surface px-3 text-sm text-text-primary" />
-              </label>
-              <div className="flex items-end gap-2">
-                <button type="button" onClick={applyFilters} className="soc-btn-primary inline-flex min-h-10 flex-1 items-center justify-center gap-2 px-3"><Filter size={16} /> Apply</button>
-                <button type="button" onClick={() => { setFilters({ status: 'all', windowDays: '30' }); setPage(1); setAppliedFilters({ status: 'all', windowDays: '30' }) }} className="soc-btn min-h-10 px-3">Clear</button>
-              </div>
-            </div>
-          </section>
-
-          <section className="print:hidden">
-            <OperationalSummaryBand
-              items={summaryCards.map(([label, value]) => ({ label: String(label), value, tone: label === 'Expired' || label === 'No license' ? 'danger' : label === 'Expiring soon' ? 'warning' : label === 'Compliant' ? 'success' : 'neutral' }))}
-            />
-          </section>
-
-          <section className="table-glass rounded p-4 md:p-6">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div><p className="soc-kicker">COMPLIANCE REGISTER</p><h3 className="text-lg font-bold text-text-primary">Guard license records</h3><p className="text-sm text-text-secondary">{report?.total ?? 0} matching record{report?.total === 1 ? '' : 's'}</p></div>
-              <button type="button" onClick={() => setRefreshKey((value) => value + 1)} className="soc-btn inline-flex min-h-10 items-center gap-2 px-3 print:hidden" title="Refresh guard license compliance report"><RefreshCw size={16} /> Refresh</button>
-            </div>
-            {report?.items.length ? (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[900px] border-collapse text-sm">
-                  <thead className="sticky top-0 z-10 h-11 border-b border-border-subtle bg-surface-elevated/60 text-xs font-semibold uppercase tracking-wider text-text-tertiary backdrop-blur-xs"><tr>{['Guard', 'License number', 'Expiry', 'Compliance'].map((heading) => <th key={heading} scope="col" className="px-4 py-3.5 text-left">{heading}</th>)}</tr></thead>
-                  <tbody>{report.items.map((item) => <tr key={item.guardId} className="border-b border-border-subtle/80 transition-colors hover:bg-surface-hover/50">
-                    <td className="px-4 py-3.5 align-middle text-sm text-text-primary"><p className="font-semibold text-text-primary">{item.guardName}</p><p className="text-xs text-text-secondary">{item.guardNumber ? `Guard #${item.guardNumber}` : 'Guard number not provided'}</p></td>
-                    <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{item.licenseNumber || 'Not provided'}</td>
-                    <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{formatLicenseExpiry(item.licenseExpiryDate, today) ?? 'Not provided'}</td>
-                    <td className="px-4 py-3.5 align-middle text-sm text-text-primary"><span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium ${statusClass(item.complianceStatus)}`}>{item.complianceStatus.replace('_', ' ')}</span></td>
-                  </tr>)}</tbody>
-                </table>
-              </div>
-            ) : <EmptyState icon={ShieldCheck} title="No guard license records" subtitle="No guards match the selected compliance filters." />}
-            <div className="mt-5 flex items-center justify-end gap-3 print:hidden"><button type="button" disabled={page <= 1} onClick={() => setPage((value) => value - 1)} className="soc-btn min-h-10 px-3 disabled:opacity-50">Previous</button><span className="text-sm text-text-secondary">Page {page} of {totalPages}</span><button type="button" disabled={page >= totalPages} onClick={() => setPage((value) => value + 1)} className="soc-btn min-h-10 px-3 disabled:opacity-50">Next</button></div>
-          </section>
+      {report?.items.length ? (
+        <div className="overflow-x-auto print:overflow-visible" tabIndex={0} role="region" aria-label="Guard license records table">
+        <table className="w-full min-w-[37rem] print:min-w-0 border-collapse text-sm">
+          <thead className="sticky top-0 z-10 h-11 border-b border-border-subtle bg-surface-elevated/60 text-xs font-semibold uppercase tracking-wider text-text-tertiary backdrop-blur-xs"><tr>{['Guard', 'License number', 'Expiry', 'Compliance'].map((heading) => <th key={heading} scope="col" className="px-4 py-3.5 text-left">{heading}</th>)}</tr></thead>
+          <tbody>{report.items.map((item) => <tr key={item.guardId} className="border-b border-border-subtle/80 transition-colors hover:bg-surface-hover/50">
+            <td className="px-4 py-3.5 align-middle text-sm text-text-primary"><p className="font-semibold text-text-primary">{item.guardName}</p><p className="text-xs text-text-secondary">{item.guardNumber ? `Guard #${item.guardNumber}` : 'Guard number not provided'}</p></td>
+            <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{item.licenseNumber || 'Not provided'}</td>
+            <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{formatLicenseExpiry(item.licenseExpiryDate, today) ?? 'Not provided'}</td>
+            <td className="px-4 py-3.5 align-middle text-sm text-text-primary"><span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium ${statusClass(item.complianceStatus)}`}>{item.complianceStatus.replace('_', ' ')}</span></td>
+          </tr>)}</tbody>
+        </table>
         </div>
-      )}
-    </OperationalShell>
+      ) : <EmptyState icon={ShieldCheck} title="No guard license records" subtitle="No guards match the selected compliance filters." />}
+    </DocumentReportLayout>
   )
 }
-
-export default GuardLicenseComplianceReport

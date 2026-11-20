@@ -4,12 +4,7 @@ import FirearmComplianceReport from '../FirearmComplianceReport'
 import { fetchJsonOrThrow } from '../../utils/api'
 
 jest.mock('../../config', () => ({ API_BASE_URL: 'http://localhost:5000' }))
-jest.mock('../../config/navigation', () => ({ getSidebarNav: () => [] }))
 jest.mock('../../utils/api', () => ({ fetchJsonOrThrow: jest.fn(), getAuthHeaders: () => ({}) }))
-jest.mock('../layout/OperationalShell', () => ({
-  __esModule: true,
-  default: ({ children }: { children: React.ReactNode }) => <main>{children}</main>,
-}))
 
 afterEach(() => {
   jest.useRealTimers()
@@ -44,7 +39,7 @@ it('shows calendar time remaining beside the expiry date and omits the issued co
     })),
   })
 
-  render(<GuardLicenseComplianceReport user={{ role: 'admin' }} onLogout={jest.fn()} />)
+  render(<GuardLicenseComplianceReport />)
 
   const table = within(await screen.findByRole('table'))
   expect(table.getAllByRole('columnheader').map((header) => header.textContent)).toEqual([
@@ -73,7 +68,7 @@ it('shows firearm permit expiry in calendar years and months and labels expired 
     ],
   })
 
-  render(<FirearmComplianceReport user={{ role: 'admin' }} onLogout={jest.fn()} />)
+  render(<FirearmComplianceReport />)
 
   const table = within(await screen.findByRole('table'))
   const future = within(table.getByRole('row', { name: /FUTURE/ }))

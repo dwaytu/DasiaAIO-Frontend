@@ -16,10 +16,9 @@ describe('shell navigation chrome', () => {
     expect(labels).not.toContain('Activity History')
     expect(labels).toContain('Attendance & Time Records (DTR)')
     expect(labels).toContain('Guard Evaluations')
-    expect(labels).toContain('Firearm Documents')
-    expect(labels).toContain('Guard Documents')
+    expect(labels).toContain('Documents')
     expect(labels).toEqual(expect.arrayContaining(['Missions', 'Trip Management']))
-    expect(labels).toHaveLength(19)
+    expect(labels).toHaveLength(18)
   })
 
   it('returns empty sidebar for guard (uses bottom nav)', () => {
@@ -40,12 +39,11 @@ describe('shell navigation chrome', () => {
     expect(labels).toContain('Attendance & Time Records (DTR)')
     expect(labels).toContain('Guard Evaluations')
     expect(labels).toContain('Maintenance')
-    expect(labels).toContain('Firearm Documents')
-    expect(labels).toContain('Guard Documents')
+    expect(labels).toContain('Documents')
     expect(labels).toContain('Requests')
     expect(labels).toContain('Missions')
     expect(labels).toContain('Trip Management')
-    expect(labels).toHaveLength(22)
+    expect(labels).toHaveLength(21)
   })
 
   it('returns supervisor nav without guard approvals', () => {
@@ -61,11 +59,10 @@ describe('shell navigation chrome', () => {
     expect(labels).toContain('Attendance & Time Records (DTR)')
     expect(labels).toContain('Guard Evaluations')
     expect(labels).toContain('Maintenance')
-    expect(labels).toContain('Firearm Documents')
-    expect(labels).toContain('Guard Documents')
+    expect(labels).toContain('Documents')
     expect(labels).toContain('People & Resources')
     expect(labels).toEqual(expect.arrayContaining(['Missions', 'Trip Management']))
-    expect(labels).toHaveLength(15)
+    expect(labels).toHaveLength(14)
   })
 
   it('removes approval from elevated mobile navigation when unavailable', () => {

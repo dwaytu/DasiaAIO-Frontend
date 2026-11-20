@@ -9,6 +9,7 @@ export const ROUTES = {
   DTR: '/dtr',
   MERIT: '/merit',
   FIREARMS: '/firearms',
+  DOCUMENTS: '/documents',
   FIREARM_COMPLIANCE: '/firearms/compliance',
   GUARD_COMPLIANCE: '/guards/compliance',
   ALLOCATION: '/allocation',
@@ -33,6 +34,8 @@ export const ROUTES = {
   OPERATIONS_MAP: '/operations-map',
 } as const
 
+export const FIREARM_DOCUMENTS_URL = `${ROUTES.DOCUMENTS}?report=firearms`
+
 export type RoutePath = (typeof ROUTES)[keyof typeof ROUTES]
 
 /**
@@ -53,6 +56,7 @@ export const VIEW_TO_ROUTE: Record<string, RoutePath> = {
   'dtr': ROUTES.DTR,
   'merit': ROUTES.MERIT,
   'firearms': ROUTES.FIREARMS,
+  'documents': ROUTES.DOCUMENTS,
   'firearm-compliance': ROUTES.FIREARM_COMPLIANCE,
   'guard-compliance': ROUTES.GUARD_COMPLIANCE,
   'allocation': ROUTES.ALLOCATION,

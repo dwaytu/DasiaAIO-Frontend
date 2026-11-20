@@ -92,7 +92,7 @@ const GuardFirearmPermits: FC<Props> = ({ user, onLogout, onViewChange, activeVi
             ) : null}
             <section className="flex flex-col flex-1 min-h-0 rounded overflow-hidden table-glass">
               <div className="shrink-0 px-6 py-5 border-b border-border-subtle">
-                <h2 className="text-xl font-bold text-text-primary">Active Permits ({permits.length})</h2>
+                <h2 className="text-xl font-bold text-text-primary">Permit records ({permits.length})</h2>
               </div>
               {permits.length > 0 ? (
                 <div className="soc-scroll-area flex-1 min-h-0 overflow-auto">

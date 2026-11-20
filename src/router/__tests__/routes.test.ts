@@ -73,10 +73,8 @@ describe('VIEW_TO_ROUTE', () => {
 describe('ELEVATED_URL_ONLY_ROUTES', () => {
   it('documents URL-accessible routes intentionally excluded from elevated sidebar navigation', () => {
     expect(ELEVATED_URL_ONLY_ROUTES).toEqual([
-      ROUTES.PERMITS,
       ROUTES.INBOX,
       ROUTES.PROFILE,
-      ROUTES.SUPPORT,
       ROUTES.SHIFT_SWAPS,
       ROUTES.NOTIFICATIONS,
     ])

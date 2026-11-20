@@ -34,6 +34,11 @@ jest.mock('../../components/guards/UserDashboard', () => ({
   ),
 }))
 
+jest.mock('../../components/ElevatedSupportPage', () => ({
+  __esModule: true,
+  default: () => <div>Staff Support Tickets</div>,
+}))
+
 import type { AuthContextValue } from '../../context/AuthContext'
 import { AuthContext } from '../../context/AuthContext'
 import { appRoutes } from '../index'
@@ -101,15 +106,23 @@ describe('router deep-link behavior', () => {
     expect(await screen.findByTestId('elevated-inbox')).toBeInTheDocument()
   })
 
-  it('redirects elevated /support deep-link to elevated inbox destination', async () => {
+  it.each(['admin', 'supervisor'] as const)('opens support tickets for %s', async (role) => {
     renderRoute(
       ROUTES.SUPPORT,
       makeAuthValue({
-        user: { id: 'admin-1', email: 'admin@example.test', username: 'admin', role: 'admin' },
+        user: { id: 'staff-1', email: 'staff@example.test', username: 'staff', role },
       }),
     )
 
-    expect(await screen.findByTestId('elevated-inbox')).toBeInTheDocument()
+    expect(await screen.findByText('Staff Support Tickets')).toBeInTheDocument()
+  })
+
+  it.each([ROUTES.MDR_IMPORT, `${ROUTES.MDR_IMPORT}/fixture-batch`])('guards the MDR route %s from supervisors', async (route) => {
+    renderRoute(route, makeAuthValue({
+      user: { id: 'supervisor-1', email: 'supervisor@example.test', username: 'supervisor', role: 'supervisor' },
+    }))
+
+    expect(await screen.findByRole('heading', { name: 'Access Denied' })).toBeInTheDocument()
   })
 
   it('routes legacy /notifications deep-link to inbox destination for guards', async () => {

@@ -29,6 +29,7 @@ interface CreateTicketResponse {
 
 interface SupportTicketsProps {
   userId: string
+  canCreate?: boolean
 }
 
 const CATEGORIES = ['Equipment', 'Schedule', 'Safety', 'General', 'Other'] as const
@@ -106,7 +107,7 @@ function StatusTimeline({ status }: { status: string }) {
   )
 }
 
-const SupportTickets: FC<SupportTicketsProps> = ({ userId }) => {
+const SupportTickets: FC<SupportTicketsProps> = ({ userId, canCreate = true }) => {
   const [tickets, setTickets] = useState<SupportTicket[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -160,7 +161,7 @@ const SupportTickets: FC<SupportTicketsProps> = ({ userId }) => {
     e.preventDefault()
     setTouched({ category: true, subject: true, description: true })
 
-    if (!category || !subject.trim() || description.trim().length < 10) return
+    if (!canCreate || !category || !subject.trim() || description.trim().length < 10) return
 
     setSubmitting(true)
     setSubmitError('')
@@ -219,9 +220,9 @@ const SupportTickets: FC<SupportTicketsProps> = ({ userId }) => {
     <div className="guard-section-frame">
       <SectionHeader
         title="Support Tickets"
-        subtitle="Submit and track support requests"
+        subtitle={canCreate ? 'Submit and track support requests' : 'Tickets submitted by the selected guard'}
         actions={
-          view === 'list' ? (
+          view === 'list' ? canCreate && (
             <button
               type="button"
               onClick={switchToCreate}
@@ -323,9 +324,9 @@ const SupportTickets: FC<SupportTicketsProps> = ({ userId }) => {
             <EmptyState
               icon={MessageSquare}
               title="No support tickets"
-              subtitle="Need help? Create a ticket below."
-              actionLabel="Create Ticket"
-              onAction={switchToCreate}
+              subtitle={canCreate ? 'Need help? Create a ticket below.' : 'This guard has no recorded tickets.'}
+              actionLabel={canCreate ? 'Create Ticket' : undefined}
+              onAction={canCreate ? switchToCreate : undefined}
             />
           ) : (
             <ul className="space-y-3" role="list">

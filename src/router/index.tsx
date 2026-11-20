@@ -26,6 +26,7 @@ const SettingsView = lazy(() => import('../components/settings/SettingsView'))
 const AnalyticsDashboard = lazy(() => import('../components/AnalyticsDashboard'))
 const AuditDashboard = lazy(() => import('../components/AuditDashboard'))
 const MdrImportPage = lazy(() => import('../components/mdr/MdrImportPage'))
+const ElevatedSupportPage = lazy(() => import('../components/ElevatedSupportPage'))
 
 function LazyFallback() {
   return (
@@ -128,7 +129,7 @@ function SupportRouteWrapper() {
   const { user } = useAuth()
   if (!user) return null
   if (user.role === 'guard') return <GuardSectionWrapper section="support" />
-  return <Navigate to={ROUTES.INBOX} replace />
+  return <LegacyPage Component={ElevatedSupportPage} />
 }
 
 function RequestsRouteWrapper() {
@@ -170,16 +171,16 @@ export const appRoutes: RouteObject[] = [
           { path: ROUTES.TRIPS, element: <LegacyPage Component={SuperadminDashboard} /> },
           { path: ROUTES.MANAGE, element: <LegacyPage Component={SuperadminDashboard} /> },
           { path: ROUTES.OPERATIONS_MAP, element: <LegacyPage Component={SuperadminDashboard} /> },
-          { path: ROUTES.MDR_IMPORT, element: <LegacyPage Component={MdrImportPage} /> },
-          { path: '/mdr-import/:batchId', element: <LegacyPage Component={MdrImportPage} /> },
         ],
       },
 
-      // Guard account approvals are intentionally limited to admin and superadmin reviewers.
+      // Guard approvals and agency-record imports require administrator access.
       {
         element: <RoleGuard roles={APPROVAL_ROLES} />,
         children: [
           { path: ROUTES.APPROVALS, element: <LegacyPage Component={SuperadminDashboard} /> },
+          { path: ROUTES.MDR_IMPORT, element: <LegacyPage Component={MdrImportPage} /> },
+          { path: '/mdr-import/:batchId', element: <LegacyPage Component={MdrImportPage} /> },
         ],
       },
 

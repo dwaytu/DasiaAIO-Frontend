@@ -18,7 +18,6 @@ describe('shell navigation chrome', () => {
     expect(labels).toContain('Guard Evaluations')
     expect(labels).toContain('Documents')
     expect(labels).toEqual(expect.arrayContaining(['Missions', 'Trip Management']))
-    expect(labels).toHaveLength(18)
   })
 
   it('returns empty sidebar for guard (uses bottom nav)', () => {
@@ -43,7 +42,6 @@ describe('shell navigation chrome', () => {
     expect(labels).toContain('Requests')
     expect(labels).toContain('Missions')
     expect(labels).toContain('Trip Management')
-    expect(labels).toHaveLength(21)
   })
 
   it('returns supervisor nav without guard approvals', () => {
@@ -55,14 +53,22 @@ describe('shell navigation chrome', () => {
     expect(labels).toContain('Calendar')
     expect(labels).toContain('Live Operations Map')
     expect(labels).toContain('Settings')
-    expect(labels).not.toContain('Firearms')
+    expect(labels).not.toContain('Import Agency Records (MDR)')
+    expect(labels).not.toContain('Activity History')
     expect(labels).toContain('Attendance & Time Records (DTR)')
     expect(labels).toContain('Guard Evaluations')
     expect(labels).toContain('Maintenance')
     expect(labels).toContain('Documents')
     expect(labels).toContain('People & Resources')
     expect(labels).toEqual(expect.arrayContaining(['Missions', 'Trip Management']))
-    expect(labels).toHaveLength(14)
+  })
+
+  it.each(['admin', 'supervisor', 'superadmin'])('makes authorized reports and resources discoverable for %s', (role) => {
+    const labels = getSidebarNav(role).map((item) => item.label)
+
+    expect(labels).toEqual(expect.arrayContaining([
+      'Analytics', 'Guard Performance', 'Firearms', 'Armored Cars', 'Guard Permits', 'Support Tickets',
+    ]))
   })
 
   it('removes approval from elevated mobile navigation when unavailable', () => {

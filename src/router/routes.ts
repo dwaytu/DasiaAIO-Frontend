@@ -86,10 +86,8 @@ export const VIEW_TO_ROUTE: Record<string, RoutePath> = {
  * These paths are surfaced through header actions, role-specific deep links, or alias redirects.
  */
 export const ELEVATED_URL_ONLY_ROUTES: RoutePath[] = [
-  ROUTES.PERMITS,
   ROUTES.INBOX,
   ROUTES.PROFILE,
-  ROUTES.SUPPORT,
   ROUTES.SHIFT_SWAPS,
   ROUTES.NOTIFICATIONS,
 ]

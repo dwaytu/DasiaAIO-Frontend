@@ -27,6 +27,7 @@ const SUPERADMIN_NAV: NavItem[] = [
   { view: 'allocation', label: 'Assign Equipment', group: 'Operations', permission: 'manage_allocations' },
   { view: 'feedback-dashboard', label: 'Feedback', group: 'Intelligence' },
   { view: 'analytics', label: 'Analytics', group: 'Intelligence', permission: 'view_analytics' },
+  { view: 'performance', label: 'Guard Performance', group: 'Intelligence', permission: 'view_analytics' },
   { view: 'dtr', label: 'Attendance & Time Records (DTR)', group: 'Intelligence', permission: 'view_analytics' },
   { view: 'merit', label: 'Guard Evaluations', group: 'Intelligence', permission: 'manage_evaluations' },
   { view: 'audit', label: 'Activity History', group: 'Intelligence', permission: 'view_audit_logs' },
@@ -35,9 +36,11 @@ const SUPERADMIN_NAV: NavItem[] = [
   { view: 'operations-map', label: 'Live Operations Map', group: 'Operations' },
   { view: 'firearms', label: 'Firearms', group: 'Resources', permission: 'manage_firearms' },
   { view: 'documents', label: 'Documents', group: 'Resources' },
+  { view: 'permits', label: 'Guard Permits', group: 'Resources', permission: 'manage_permits' },
   { view: 'maintenance', label: 'Maintenance', group: 'Resources', permission: 'manage_maintenance' },
   { view: 'armored-cars', label: 'Armored Cars', group: 'Resources', permission: 'manage_armored_cars' },
   { view: 'settings', label: 'Settings', group: 'System' },
+  { view: 'support', label: 'Support Tickets', group: 'System' },
 ]
 
 const ADMIN_NAV: NavItem[] = [
@@ -49,16 +52,20 @@ const ADMIN_NAV: NavItem[] = [
   { view: 'missions', label: 'Missions', group: 'Field' },
   { view: 'trips', label: 'Trip Management', group: 'Field' },
   { view: 'allocation', label: 'Assign Equipment', group: 'Operations', permission: 'manage_allocations' },
-  { view: 'dtr', label: 'Attendance & Time Records (DTR)', group: 'Operations', permission: 'view_analytics' },
-  { view: 'merit', label: 'Guard Evaluations', group: 'Operations', permission: 'manage_evaluations' },
+  { view: 'analytics', label: 'Analytics', group: 'Intelligence', permission: 'view_analytics' },
+  { view: 'performance', label: 'Guard Performance', group: 'Intelligence', permission: 'view_analytics' },
+  { view: 'dtr', label: 'Attendance & Time Records (DTR)', group: 'Intelligence', permission: 'view_analytics' },
+  { view: 'merit', label: 'Guard Evaluations', group: 'Intelligence', permission: 'manage_evaluations' },
   { view: 'manage', label: 'People & Resources', group: 'Operations' },
   { view: 'mdr-import', label: 'Import Agency Records (MDR)', group: 'Operations' },
   { view: 'operations-map', label: 'Live Operations Map', group: 'Operations' },
   { view: 'firearms', label: 'Firearms', group: 'Resources', permission: 'manage_firearms' },
   { view: 'documents', label: 'Documents', group: 'Resources' },
+  { view: 'permits', label: 'Guard Permits', group: 'Resources', permission: 'manage_permits' },
   { view: 'armored-cars', label: 'Armored Cars', group: 'Resources', permission: 'manage_armored_cars' },
   { view: 'maintenance', label: 'Maintenance', group: 'Resources', permission: 'manage_maintenance' },
   { view: 'settings', label: 'Settings', group: 'System' },
+  { view: 'support', label: 'Support Tickets', group: 'System' },
 ]
 
 const SUPERVISOR_NAV: NavItem[] = [
@@ -69,13 +76,19 @@ const SUPERVISOR_NAV: NavItem[] = [
   { view: 'trips', label: 'Trip Management', group: 'Field' },
   { view: 'requests', label: 'Requests', group: 'Operations', permission: 'manage_requests' },
   { view: 'allocation', label: 'Assign Equipment', group: 'Operations', permission: 'manage_allocations' },
-  { view: 'dtr', label: 'Attendance & Time Records (DTR)', group: 'Operations', permission: 'view_analytics' },
-  { view: 'merit', label: 'Guard Evaluations', group: 'Operations', permission: 'manage_evaluations' },
+  { view: 'analytics', label: 'Analytics', group: 'Intelligence', permission: 'view_analytics' },
+  { view: 'performance', label: 'Guard Performance', group: 'Intelligence', permission: 'view_analytics' },
+  { view: 'dtr', label: 'Attendance & Time Records (DTR)', group: 'Intelligence', permission: 'view_analytics' },
+  { view: 'merit', label: 'Guard Evaluations', group: 'Intelligence', permission: 'manage_evaluations' },
   { view: 'manage', label: 'People & Resources', group: 'Operations' },
+  { view: 'firearms', label: 'Firearms', group: 'Resources', permission: 'manage_firearms' },
   { view: 'maintenance', label: 'Maintenance', group: 'Resources', permission: 'manage_maintenance' },
   { view: 'documents', label: 'Documents', group: 'Resources' },
+  { view: 'permits', label: 'Guard Permits', group: 'Resources', permission: 'manage_permits' },
+  { view: 'armored-cars', label: 'Armored Cars', group: 'Resources', permission: 'manage_armored_cars' },
   { view: 'operations-map', label: 'Live Operations Map', group: 'Operations' },
   { view: 'settings', label: 'Settings', group: 'System' },
+  { view: 'support', label: 'Support Tickets', group: 'System' },
 ]
 
 interface NavOptions {

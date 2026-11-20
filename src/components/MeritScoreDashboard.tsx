@@ -11,7 +11,7 @@ import { getSidebarNav } from '../config/navigation'
 import { logError } from '../utils/logger'
 import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
 import { can } from '../utils/permissions'
-import GuardPerformanceHistory, { type GuardHistoryCategory } from './guards/GuardPerformanceHistory'
+import GuardPerformanceHistory, { type GuardEvaluationDraft, type GuardHistoryCategory } from './guards/GuardPerformanceHistory'
 
 interface Props {
   user: User
@@ -140,24 +140,18 @@ const RatingTrendChart: FC<{ evaluations: Evaluation[] }> = ({ evaluations }) =>
 const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeView }) => {
   const [rankings, setRankings] = useState<RankedGuard[]>([])
   const [selectedGuard, setSelectedGuard] = useState<MeritScore | null>(null)
-  const [historyCategory, setHistoryCategory] = useState<GuardHistoryCategory | null>(null)
+  const [openHistory, setOpenHistory] = useState<{ category: GuardHistoryCategory; addEvaluation?: boolean } | null>(null)
   const [evaluations, setEvaluations] = useState<Evaluation[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string>('')
   const [detailError, setDetailError] = useState<string>('')
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false)
-  const [showEvaluationForm, setShowEvaluationForm] = useState<boolean>(false)
-  const [evaluationStatus, setEvaluationStatus] = useState<string>('')
-  const [submittingEvaluation, setSubmittingEvaluation] = useState<boolean>(false)
   const [rankingSearch, setRankingSearch] = useState('')
   const [rankingPage, setRankingPage] = useState(1)
-  const [evaluationData, setEvaluationData] = useState({
-    rating: 5,
-    comment: '',
-  })
 
   const currentView = activeView || 'merit'
   const canEvaluate = can(user.role, 'manage_evaluations')
+  const setHistoryCategory = (category: GuardHistoryCategory) => setOpenHistory({ category })
 
   useEffect(() => {
     const controller = new AbortController()
@@ -165,9 +159,9 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
     return () => controller.abort()
   }, [])
 
-  const fetchRankings = async (signal?: AbortSignal) => {
+  const fetchRankings = async (signal?: AbortSignal, background = false) => {
     try {
-      setLoading(true)
+      if (!background) setLoading(true)
       const response = await fetch(`${API_BASE_URL}/api/merit/rankings/all`, {
         headers: getAuthHeaders(),
         signal,
@@ -184,7 +178,7 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
       setError('Unable to load merit rankings. Check your connection and try again.')
       logError('Error fetching rankings:', err)
     } finally {
-      setLoading(false)
+      if (!background) setLoading(false)
     }
   }
 
@@ -224,59 +218,37 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
     }
   }
 
-  const handleSubmitEvaluation = async () => {
-    if (!selectedGuard) return
+  const handleSubmitEvaluation = async ({ rating, comment }: GuardEvaluationDraft) => {
+    if (!selectedGuard || !canEvaluate) throw new Error('Evaluation permission is required.')
+    const { guardId } = selectedGuard
+    await fetchJsonOrThrow(
+      `${API_BASE_URL}/api/merit/evaluations/submit`,
+      {
+        method: 'POST',
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ guardId, rating, comment }),
+      },
+      'Unable to submit the evaluation. Try again.',
+    )
 
+    let successMessage = 'Evaluation saved and merit score recalculated.'
     try {
-      setSubmittingEvaluation(true)
-      setEvaluationStatus('')
       await fetchJsonOrThrow(
-        `${API_BASE_URL}/api/merit/evaluations/submit`,
+        `${API_BASE_URL}/api/merit/calculate`,
         {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...getAuthHeaders(),
-          },
-          body: JSON.stringify({
-            guardId: selectedGuard.guardId,
-            rating: evaluationData.rating,
-            comment: evaluationData.comment,
-          }),
+          headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ guardId }),
         },
-        'Failed to submit evaluation',
+        'Merit recalculation failed',
       )
-
-      let successMessage = 'Evaluation saved and merit score recalculated.'
-      try {
-        await fetchJsonOrThrow(
-          `${API_BASE_URL}/api/merit/calculate`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              ...getAuthHeaders(),
-            },
-            body: JSON.stringify({ guardId: selectedGuard.guardId }),
-          },
-          'Merit recalculation failed',
-        )
-      } catch (recalculationError) {
-        logError('Error recalculating merit score:', recalculationError)
-        successMessage = 'Evaluation saved. Merit score will update after recalculation.'
-      }
-
-      setShowEvaluationForm(false)
-      setEvaluationData({ rating: 5, comment: '' })
-      setEvaluationStatus(successMessage)
-      await fetchGuardDetails(selectedGuard.guardId)
-      await fetchRankings()
-    } catch (err) {
-      logError('Error submitting evaluation:', err)
-      setEvaluationStatus('Unable to submit the evaluation. Review the form and try again.')
-    } finally {
-      setSubmittingEvaluation(false)
+    } catch (recalculationError) {
+      logError('Error recalculating merit score:', recalculationError)
+      successMessage = 'Evaluation saved. Merit score will update after recalculation.'
     }
+
+    await Promise.all([fetchGuardDetails(guardId), fetchRankings(undefined, true)])
+    return successMessage
   }
 
   const getMeritRankColor = (rank: string) => {
@@ -392,7 +364,7 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
                   type="button"
                   onClick={() => {
                     setSelectedGuard(null)
-                    setHistoryCategory(null)
+                    setOpenHistory(null)
                     setDetailError('')
                   }}
                   className="soc-btn soc-btn-neutral min-h-11"
@@ -439,13 +411,15 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
                   </div>
                 </section>
 
-                {historyCategory ? (
+                {openHistory ? (
                   <GuardPerformanceHistory
-                    key={`${selectedGuard.guardId}:${historyCategory}`}
+                    key={`${selectedGuard.guardId}:${openHistory.category}`}
                     guardId={selectedGuard.guardId}
                     guardName={selectedGuard.guardName}
-                    category={historyCategory}
-                    onClose={() => setHistoryCategory(null)}
+                    category={openHistory.category}
+                    onClose={() => setOpenHistory(null)}
+                    onSaveEvaluation={canEvaluate ? handleSubmitEvaluation : undefined}
+                    startEvaluationOpen={openHistory.addEvaluation}
                   />
                 ) : null}
 
@@ -470,67 +444,15 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
                     {canEvaluate ? (
                       <button
                         type="button"
-                        onClick={() => setShowEvaluationForm((visible) => !visible)}
+                        onClick={() => setOpenHistory({ category: 'evaluations', addEvaluation: true })}
                         className="soc-btn min-h-11 w-full sm:w-auto"
                       >
-                        {showEvaluationForm ? 'Cancel' : 'Add evaluation'}
+                        Add evaluation
                       </button>
                     ) : (
                       <span className="text-sm text-text-tertiary">Read-only evaluation history</span>
                     )}
                   </div>
-
-                  {evaluationStatus ? (
-                    <div className="mb-4 rounded border border-info-border bg-info-bg px-3 py-2 text-sm text-info-text" role="status">
-                      {evaluationStatus}
-                    </div>
-                  ) : null}
-
-                  {showEvaluationForm && canEvaluate && (
-                    <div className="mb-6 border border-border-subtle bg-surface p-4 md:p-5">
-                      <div className="space-y-4">
-                        <p className="text-sm text-text-secondary">Your supervisor or administrator identity is recorded with this evaluation.</p>
-
-                        <div>
-                          <label className="mb-2 block text-sm font-semibold text-text-primary" htmlFor="merit-rating">Rating (1-5 stars)</label>
-                          <select
-                            id="merit-rating"
-                            value={evaluationData.rating}
-                            onChange={(event) => setEvaluationData({ ...evaluationData, rating: parseInt(event.target.value, 10) })}
-                            className="w-full rounded border border-border bg-surface px-4 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-info-border"
-                          >
-                            <option value="1">1 star - Poor</option>
-                            <option value="2">2 stars - Fair</option>
-                            <option value="3">3 stars - Good</option>
-                            <option value="4">4 stars - Very good</option>
-                            <option value="5">5 stars - Excellent</option>
-                          </select>
-                        </div>
-
-                        <div>
-                          <label className="mb-2 block text-sm font-semibold text-text-primary" htmlFor="merit-comments">Comments <span className="font-normal text-text-tertiary">(optional)</span></label>
-                          <textarea
-                            id="merit-comments"
-                            value={evaluationData.comment}
-                            onChange={(e) => setEvaluationData({ ...evaluationData, comment: e.target.value })}
-                            placeholder="Add factual feedback to support this rating"
-                            rows={3}
-                            maxLength={2000}
-                            className="w-full rounded border border-border bg-surface px-4 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-info-border"
-                          />
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={handleSubmitEvaluation}
-                          disabled={submittingEvaluation}
-                          className="w-full soc-btn disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          {submittingEvaluation ? 'Submitting...' : 'Submit evaluation'}
-                        </button>
-                      </div>
-                    </div>
-                  )}
 
                   {evaluations.length > 0 ? (
                     <div className="space-y-4">

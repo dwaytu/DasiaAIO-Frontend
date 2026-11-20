@@ -21,10 +21,6 @@ jest.mock('../../utils/api', () => ({
   getAuthHeaders: jest.fn(() => ({ Authorization: 'Bearer test-token' })),
 }))
 
-jest.mock('../../utils/permissions', () => ({
-  can: jest.fn(() => true),
-}))
-
 const user = { id: 'admin-1', username: 'admin', email: 'admin@example.test', role: 'admin' as const }
 
 const rankings = [
@@ -140,6 +136,61 @@ describe('MeritScoreDashboard', () => {
 
     await interactions.click(screen.getByRole('button', { name: 'Back to rankings' }))
     expect(screen.getByRole('heading', { name: 'Guard evaluations' })).toBeInTheDocument()
+  })
+
+  it('lets a supervisor add an evaluation from history and keeps the earlier review', async () => {
+    const interactions = userEvent.setup()
+    mockMeritFetch()
+    const previousReview = {
+      id: 'review-1', kind: 'evaluation', status: null, site: 'Fixture Post', minutes_late: null,
+      occurred_at: '2026-09-01T08:00:00.000Z', check_in_time: null, check_out_time: null,
+      rating: 4, comment: 'Previous review', evaluator_name: 'Supervisor One',
+    }
+    let items = [previousReview]
+    const request = jest.mocked(fetchJsonOrThrow)
+    request.mockImplementation(async (input, init) => {
+      const url = String(input)
+      if (url.includes('/api/merit/history/guard-1?category=evaluations&page=1')) {
+        return { total: items.length, pageSize: 20, items }
+      }
+      if (url.endsWith('/api/merit/evaluations/submit') && init?.method === 'POST') {
+        const { rating, comment } = JSON.parse(String(init.body))
+        items = [{ ...previousReview, id: 'review-2', rating, comment }, ...items]
+        return {}
+      }
+      if (url.endsWith('/api/merit/calculate') && init?.method === 'POST') return {}
+      throw new Error(`Unexpected request: ${url}`)
+    })
+
+    render(<MeritScoreDashboard user={{ ...user, role: 'supervisor' }} onLogout={jest.fn()} />)
+
+    await interactions.click(await screen.findByRole('button', { name: 'View details for Guard One' }))
+    const card = await screen.findByRole('button', { name: 'View evaluations history' })
+    await interactions.click(card)
+    const dialog = within(screen.getByRole('dialog', { name: 'Evaluation history' }))
+    expect(await dialog.findByText('Previous review')).toBeInTheDocument()
+    await interactions.click(dialog.getByRole('button', { name: 'Add evaluation' }))
+    const rating = dialog.getByLabelText(/Rating/)
+    expect(rating).toHaveFocus()
+    await interactions.selectOptions(rating, '3')
+    await interactions.type(dialog.getByLabelText(/Comments/), 'New supervisor review')
+    await interactions.click(dialog.getByRole('button', { name: 'Submit evaluation' }))
+
+    expect(request).toHaveBeenCalledWith(
+      expect.stringContaining('/api/merit/evaluations/submit'),
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ guardId: 'guard-1', rating: 3, comment: 'New supervisor review' }),
+      }),
+      expect.any(String),
+    )
+    expect(await dialog.findByText('New supervisor review')).toBeInTheDocument()
+    expect(dialog.getByText('Previous review')).toBeInTheDocument()
+    expect(dialog.getByText('2 recorded entries')).toBeInTheDocument()
+    expect(dialog.getByText(/Evaluation saved/)).toBeInTheDocument()
+    await interactions.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(card).toHaveFocus()
   })
 
   it('searches by guard name or ID and keeps the ranking page valid after the result set changes', async () => {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import { API_BASE_URL } from '../../config'
 import { fetchJsonOrThrow, getAuthHeaders } from '../../utils/api'
 import SentinelModal from '../shared/SentinelModal'
@@ -14,6 +14,10 @@ const historyTitles = {
 }
 
 export type GuardHistoryCategory = keyof typeof historyTitles
+export interface GuardEvaluationDraft {
+  rating: number
+  comment: string
+}
 
 interface HistoryRecord {
   id: string
@@ -84,17 +88,36 @@ function HistoryEntry({ record }: { record: HistoryRecord }) {
   )
 }
 
-export default function GuardPerformanceHistory({ guardId, guardName, category, onClose }: {
+export default function GuardPerformanceHistory({
+  guardId, guardName, category, onClose, onSaveEvaluation, startEvaluationOpen = false,
+}: {
   guardId: string
   guardName: string
   category: GuardHistoryCategory
   onClose: () => void
+  onSaveEvaluation?: (evaluation: GuardEvaluationDraft) => Promise<string>
+  startEvaluationOpen?: boolean
 }) {
   const [page, setPage] = useState(1)
   const [revision, setRevision] = useState(0)
   const [history, setHistory] = useState<HistoryPage | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
+  const [addingEvaluation, setAddingEvaluation] = useState(startEvaluationOpen)
+  const [evaluationDraft, setEvaluationDraft] = useState<GuardEvaluationDraft>({ rating: 5, comment: '' })
+  const [savingEvaluation, setSavingEvaluation] = useState(false)
+  const [evaluationStatus, setEvaluationStatus] = useState<{ message: string; failed: boolean } | null>(null)
+  const formId = useId()
+  const ratingRef = useRef<HTMLSelectElement>(null)
+  const addEvaluationRef = useRef<HTMLButtonElement>(null)
+  const canAddEvaluation = category === 'evaluations' && Boolean(onSaveEvaluation)
+
+  useEffect(() => {
+    if (canAddEvaluation) {
+      const target = addingEvaluation ? ratingRef : addEvaluationRef
+      target.current?.focus()
+    }
+  }, [addingEvaluation, canAddEvaluation])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -117,8 +140,71 @@ export default function GuardPerformanceHistory({ guardId, guardName, category, 
 
   const lastPage = history ? Math.max(1, Math.ceil(history.total / history.pageSize)) : 1
 
+  const submitEvaluation = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!onSaveEvaluation || savingEvaluation) return
+    setEvaluationStatus(null)
+    setSavingEvaluation(true)
+    try {
+      const message = await onSaveEvaluation(evaluationDraft)
+      setEvaluationDraft({ rating: 5, comment: '' })
+      setAddingEvaluation(false)
+      setEvaluationStatus({ message, failed: false })
+      setPage(1)
+      setRevision((value) => value + 1)
+    } catch (error) {
+      setEvaluationStatus({
+        message: error instanceof Error ? error.message : 'Unable to submit the evaluation. Try again.',
+        failed: true,
+      })
+    } finally {
+      setSavingEvaluation(false)
+    }
+  }
+
   return (
-    <SentinelModal open onClose={onClose} title={historyTitles[category]} subtitle={guardName} size="lg">
+    <SentinelModal open onClose={onClose} title={historyTitles[category]} subtitle={guardName} size="lg" closeDisabled={savingEvaluation}>
+      {canAddEvaluation ? (
+        <div className="mb-4 space-y-3">
+          {evaluationStatus ? (
+            <p role={evaluationStatus.failed ? 'alert' : 'status'} className={`rounded-md border px-3 py-2 text-sm ${
+              evaluationStatus.failed ? 'border-danger-border bg-danger-bg text-danger-text' : 'border-success-border bg-success-bg text-success-text'
+            }`}>{evaluationStatus.message}</p>
+          ) : null}
+          {addingEvaluation ? (
+            <form onSubmit={submitEvaluation} className="space-y-4 rounded-lg border border-border-subtle bg-surface p-4">
+              <h3 className="font-semibold text-text-primary">Add evaluation</h3>
+              <div>
+                <label className="soc-form-label" htmlFor={`${formId}-rating`}>Rating (1–5 stars)</label>
+                <select id={`${formId}-rating`} ref={ratingRef} className="soc-form-control min-h-11 w-full" value={evaluationDraft.rating}
+                  disabled={savingEvaluation} onChange={(event) => setEvaluationDraft({ ...evaluationDraft, rating: Number(event.target.value) })}>
+                  <option value="1">1 star – Poor</option>
+                  <option value="2">2 stars – Fair</option>
+                  <option value="3">3 stars – Good</option>
+                  <option value="4">4 stars – Very good</option>
+                  <option value="5">5 stars – Excellent</option>
+                </select>
+              </div>
+              <div>
+                <label className="soc-form-label" htmlFor={`${formId}-comment`}>Comments (optional)</label>
+                <textarea id={`${formId}-comment`} className="soc-form-control w-full" rows={3} maxLength={2000}
+                  disabled={savingEvaluation} value={evaluationDraft.comment}
+                  onChange={(event) => setEvaluationDraft({ ...evaluationDraft, comment: event.target.value })} />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button type="submit" className="soc-btn soc-btn-primary min-h-11" disabled={savingEvaluation}>
+                  {savingEvaluation ? 'Saving…' : 'Submit evaluation'}
+                </button>
+                <button type="button" className="soc-btn soc-btn-neutral min-h-11" disabled={savingEvaluation}
+                  onClick={() => { setAddingEvaluation(false); setEvaluationStatus(null) }}>Cancel</button>
+              </div>
+            </form>
+          ) : (
+            <button type="button" ref={addEvaluationRef} className="soc-btn soc-btn-primary min-h-11"
+              onClick={() => { setAddingEvaluation(true); setEvaluationStatus(null) }}>Add evaluation</button>
+          )}
+        </div>
+      ) : null}
       {category === 'concerns' ? (
         <p className="mb-4 text-sm text-text-secondary">Recorded late check-ins, absences, and evaluations below 3 out of 5.</p>
       ) : null}

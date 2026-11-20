@@ -12,6 +12,7 @@ interface SentinelModalProps {
   children: ReactNode
   size?: SentinelModalSize
   dismissible?: boolean
+  closeDisabled?: boolean
 }
 
 const SIZE_CLASS: Record<SentinelModalSize, string> = {
@@ -31,6 +32,7 @@ const SentinelModal = ({
   children,
   size = 'md',
   dismissible = true,
+  closeDisabled = false,
 }: SentinelModalProps) => {
   const titleId = useId()
   const subtitleId = useId()
@@ -38,10 +40,13 @@ const SentinelModal = ({
   const closeButtonRef = useRef<HTMLButtonElement | null>(null)
   const previousActiveElementRef = useRef<HTMLElement | null>(null)
   const onCloseRef = useRef(onClose)
-
   useEffect(() => {
-    onCloseRef.current = onClose
-  }, [onClose])
+    onCloseRef.current = () => {
+      if (!closeDisabled) onClose()
+    }
+  }, [onClose, closeDisabled])
+
+  const requestClose = () => onCloseRef.current()
 
   useEffect(() => {
     if (!open) return
@@ -118,7 +123,7 @@ const SentinelModal = ({
   }
 
   return createPortal(
-    <div className="soc-modal-backdrop" onClick={dismissible ? onClose : undefined}>
+    <div className="soc-modal-backdrop" onClick={dismissible ? requestClose : undefined}>
       <div
         ref={panelRef}
         tabIndex={-1}
@@ -138,8 +143,9 @@ const SentinelModal = ({
             <button
               type="button"
               ref={closeButtonRef}
-              className="flex min-h-11 min-w-11 items-center justify-center rounded-md text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
-              onClick={onClose}
+              className="flex min-h-11 min-w-11 items-center justify-center rounded-md text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring) disabled:opacity-50"
+              onClick={requestClose}
+              disabled={closeDisabled}
               aria-label="Close dialog"
             >
               <X className="h-5 w-5" aria-hidden="true" />

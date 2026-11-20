@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, FC } from 'react'
 import { API_BASE_URL } from '../config'
 import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
+import { isTripInProgress, saveTripStatus } from '../utils/tripManagement'
 
 interface Trip {
   id: string
@@ -98,16 +99,9 @@ const TripManagement: FC = () => {
     }
   }
 
-  const updateTripStatus = async (tripId: string, status: string) => {
+  const updateTripStatus = async (tripId: string, status: 'in_progress' | 'completed', expectedStatus: string) => {
     try {
-      await fetchJsonOrThrow(`${API_BASE_URL}/api/trip-management/${tripId}/status`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          ...getAuthHeaders()
-        },
-        body: JSON.stringify({ status })
-      }, 'Failed to update trip status')
+      await saveTripStatus(tripId, status, expectedStatus)
       
       await fetchActiveTrips()
       if (selectedTrip && selectedTrip.id === tripId) {
@@ -119,11 +113,17 @@ const TripManagement: FC = () => {
     }
   }
 
+  const completeTrip = (trip: Trip) => {
+    if (isTripInProgress(trip.status)) void updateTripStatus(trip.id, 'completed', trip.status)
+  }
+
   const getStatusColor = (status?: string) => {
     switch (status) {
       case 'completed':
         return 'soc-status-success'
       case 'in_progress':
+      case 'in_transit':
+      case 'active':
         return 'soc-status-info'
       case 'scheduled':
         return 'soc-status-warning'
@@ -197,15 +197,15 @@ const TripManagement: FC = () => {
                       </button>
                       {trip.status === 'scheduled' && (
                         <button
-                          onClick={() => updateTripStatus(trip.id, 'in_progress')}
+                          onClick={() => updateTripStatus(trip.id, 'in_progress', 'scheduled')}
                           className="soc-btn"
                         >
                           Start
                         </button>
                       )}
-                      {trip.status === 'in_progress' && (
+                      {isTripInProgress(trip.status) && (
                         <button
-                          onClick={() => updateTripStatus(trip.id, 'completed')}
+                          onClick={() => completeTrip(trip)}
                           className="soc-btn soc-btn-success"
                         >
                           Complete
@@ -320,7 +320,7 @@ const TripManagement: FC = () => {
                 {selectedTrip.status === 'scheduled' && (
                   <button
                     onClick={() => {
-                      updateTripStatus(selectedTrip.id, 'in_progress')
+                      updateTripStatus(selectedTrip.id, 'in_progress', 'scheduled')
                       setSelectedTrip(null)
                     }}
                     className="soc-btn flex-1"
@@ -328,10 +328,10 @@ const TripManagement: FC = () => {
                     Start Trip
                   </button>
                 )}
-                {selectedTrip.status === 'in_progress' && (
+                {isTripInProgress(selectedTrip.status) && (
                   <button
                     onClick={() => {
-                      updateTripStatus(selectedTrip.id, 'completed')
+                      completeTrip(selectedTrip)
                       setSelectedTrip(null)
                     }}
                     className="soc-btn soc-btn-success flex-1"

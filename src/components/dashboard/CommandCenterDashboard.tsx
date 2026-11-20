@@ -83,6 +83,7 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions,
 
   const summary = summaryState.summary
   const alerts = useMemo(() => getOpsAlerts(summary), [summary])
+  const operationalAlertCount = alerts.filter((alert) => alert.severity !== 'info').length
   const now = summaryState.lastUpdated || '--'
   const staleNote = `Last updated ${now}`
   const isBootstrapping =
@@ -142,7 +143,7 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions,
   const onlineServices = serviceStatuses.filter((status) => status === 'online').length
   const totalServices = serviceStatuses.length
   const serviceHistory = useMetricHistory(serviceState.services.checkedAt, onlineServices)
-  const alertHistory = useMetricHistory(summaryState.alertsCheckedAt, alerts.length)
+  const alertHistory = useMetricHistory(summaryState.alertsCheckedAt, operationalAlertCount)
   const incidentHistory = useMetricHistory(incidentsState.error ? null : incidentsState.receivedAt, incidentsState.activeCount)
   const systemStatus = alerts.some((alert) => alert.severity === 'critical')
     ? 'Critical'
@@ -154,9 +155,9 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions,
     ? incidentsState.activeCount
     : alerts.filter((alert) => alert.severity === 'critical' || alert.severity === 'warning').length
   const guardsCapacity = summary.totalApprovedGuards
-  const threatLevel = alerts.length >= 3 || summary.guardsAbsentToday > 0
+  const threatLevel = operationalAlertCount >= 3 || summary.guardsAbsentToday > 0
     ? 'High'
-    : alerts.length > 0 || summary.pendingGuardApprovals > 0
+    : operationalAlertCount > 0
       ? 'Medium'
       : 'Low'
   const systemTone = systemStatus === 'Critical' ? 'danger' : systemStatus === 'Warning' ? 'warning' : 'success'
@@ -476,7 +477,7 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions,
             label="Threat"
             value={threatLevel}
             tone={threatLevel === 'High' ? 'maintenance' : threatLevel === 'Medium' ? 'vehicle' : 'guard'}
-            hint={`${formatCompactNumber(alerts.length)} active alerts`}
+            hint={`${formatCompactNumber(operationalAlertCount)} active alerts`}
             history={{
               readings: alertHistory,
               formatValue: (value) => `${value} active ${value === 1 ? 'alert' : 'alerts'}`,
@@ -523,7 +524,7 @@ const CommandCenterDashboard: FC<CommandCenterDashboardProps> = ({ quickActions,
             metrics={[
               { label: 'Active Guards', value: summary.activeGuardsOnDuty, tone: 'success', hint: staleNote },
               { label: 'Active Missions', value: summary.activeArmoredCarTrips, tone: 'info', hint: staleNote },
-              { label: 'Alert Count', value: alerts.length, tone: alerts.length > 0 ? 'warning' : 'neutral', hint: staleNote },
+              { label: 'Alert Count', value: operationalAlertCount, tone: operationalAlertCount > 0 ? 'warning' : 'neutral', hint: staleNote },
             ]}
           />
         </div>

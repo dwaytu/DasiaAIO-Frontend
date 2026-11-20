@@ -25,6 +25,7 @@ import { ROUTES, VIEW_TO_ROUTE } from '../../router/routes'
 import { fetchJsonOrThrow, getAuthHeaders } from '../../utils/api'
 import { formatVehicleIdentifier } from '../../utils/vehicleIdentifier'
 import { can } from '../../utils/permissions'
+import { isTripInProgress, saveTripStatus } from '../../utils/tripManagement'
 import {
   getPersonRecencyMinutes,
   getTrackingAccuracyMode,
@@ -291,6 +292,9 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   const [shiftsLoading, setShiftsLoading] = useState<boolean>(false)
   const [missions, setMissions] = useState<any[]>([])
   const [missionsLoading, setMissionsLoading] = useState<boolean>(false)
+  const [missionStatusBusy, setMissionStatusBusy] = useState(false)
+  const [missionStatusError, setMissionStatusError] = useState('')
+  const [assignmentResourcesError, setAssignmentResourcesError] = useState('')
   const [pendingApprovals, setPendingApprovals] = useState<PendingApprovalUser[]>([])
   const [selectedApproval, setSelectedApproval] = useState<PendingApprovalUser | null>(null)
   const [rejectionApproval, setRejectionApproval] = useState<PendingApprovalUser | null>(null)
@@ -422,18 +426,17 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
         guards: 0,
       })
     }
-    fetchGuardsAndFirearms()
     if (activeSection === 'dashboard') {
       if (canApproveGuards) fetchPendingApprovals()
-      fetchShifts()
-      fetchMissions()
     } else if (activeSection === 'approvals') {
       if (canApproveGuards) fetchPendingApprovals()
     } else if (activeSection === 'schedule') {
+      void fetchAssignmentResources(false, controller.signal)
       fetchShifts()
       fetchClientSites()
     } else if (activeSection === 'missions') {
-      fetchMissions()
+      void fetchAssignmentResources(true, controller.signal)
+      void fetchMissions(controller.signal)
     }
 
     return () => controller.abort()
@@ -510,20 +513,34 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
     }
   }
 
-  const fetchMissions = async () => {
+  const fetchMissions = async (signal?: AbortSignal) => {
     try {
       setMissionsLoading(true)
       const data = await fetchJsonOrThrow<any>(
         `${API_BASE_URL}/api/missions`,
-        { headers: getAuthHeaders() },
+        { headers: getAuthHeaders(), signal, cache: 'no-store' },
         'Failed to fetch missions',
       )
+      if (signal?.aborted) return
       setMissions(data.missions || [])
       setError('')
     } catch (err) {
-      setError('Error loading missions: ' + (err instanceof Error ? err.message : String(err)))
+      if (!signal?.aborted) setError('Error loading missions: ' + (err instanceof Error ? err.message : String(err)))
     } finally {
-      setMissionsLoading(false)
+      if (!signal?.aborted) setMissionsLoading(false)
+    }
+  }
+
+  const handleMissionStatus = async (missionId: string, status: 'in_progress' | 'completed', expectedStatus: string) => {
+    setMissionStatusBusy(true)
+    setMissionStatusError('')
+    try {
+      await saveTripStatus(missionId, status, expectedStatus)
+      await fetchMissions()
+    } catch (err) {
+      setMissionStatusError(err instanceof Error ? err.message : 'Failed to update mission status')
+    } finally {
+      setMissionStatusBusy(false)
     }
   }
 
@@ -574,30 +591,37 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
     }
   }
 
-  const fetchGuardsAndFirearms = async () => {
+  const fetchAssignmentResources = async (includeEquipment: boolean, signal?: AbortSignal) => {
     try {
-      const [guardsData, firearmsData, vehiclesData] = await Promise.all([
-        fetchJsonOrThrow<any>(
-          `${API_BASE_URL}/api/guards`,
-          { headers: getAuthHeaders() },
-          'Failed to fetch guards',
-        ),
-        fetchJsonOrThrow<any>(
-          `${API_BASE_URL}/api/firearms`,
-          { headers: getAuthHeaders() },
-          'Failed to fetch firearms',
-        ),
-        fetchJsonOrThrow<any>(
-          `${API_BASE_URL}/api/armored-cars`,
-          { headers: getAuthHeaders() },
-          'Failed to fetch armored cars',
-        ),
-      ])
-
+      setAssignmentResourcesError('')
+      const options = { headers: getAuthHeaders(), signal, cache: 'no-store' as const }
+      const guardsData = await fetchJsonOrThrow<any>(`${API_BASE_URL}/api/guards`, options, 'Failed to fetch guards')
+      if (signal?.aborted) return
       const guards = Array.isArray(guardsData) ? guardsData : (guardsData?.guards || [])
       setAvailableGuards(guards)
+      if (!includeEquipment) return
 
-      const firearms = Array.isArray(firearmsData) ? firearmsData : (firearmsData?.firearms || [])
+      const fetchAvailableFirearms = async () => {
+        const firearms: any[] = []
+        let page = 1
+        while (!signal?.aborted) {
+          const params = new URLSearchParams({ state: 'available', page: String(page), page_size: '200' })
+          const data = await fetchJsonOrThrow<{ firearms?: any[]; total?: number } | any[]>(
+            `${API_BASE_URL}/api/firearms?${params}`, options, 'Failed to fetch available firearms',
+          )
+          const batch = Array.isArray(data) ? data : (data.firearms || [])
+          firearms.push(...batch)
+          if (Array.isArray(data) || !data.total || firearms.length >= data.total || !batch.length) break
+          page += 1
+        }
+        return firearms
+      }
+
+      const [firearms, vehiclesData] = await Promise.all([
+        fetchAvailableFirearms(),
+        fetchJsonOrThrow<any>(`${API_BASE_URL}/api/armored-cars`, options, 'Failed to fetch armored cars'),
+      ])
+      if (signal?.aborted) return
       setAvailableFirearms(firearms.filter((f: any) => {
         const expiry = f.licenseExpiryDate || f.license_expiry_date
         return f.status === 'available' && expiry && new Date(expiry).getTime() > Date.now()
@@ -608,7 +632,8 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
         : (vehiclesData?.armored_cars || vehiclesData?.vehicles || [])
       setAvailableVehicles(vehicles.filter((v: any) => ['available', 'operational'].includes(String(v.status).toLowerCase())))
     } catch (err) {
-      logError('Error fetching assignment resources:', err)
+      if (signal?.aborted) return
+      setAssignmentResourcesError(err instanceof Error ? err.message : 'Failed to load assignment resources')
     }
   }
 
@@ -671,7 +696,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
       setSelectedVehicles('')
 
       // Refresh missions list
-      await fetchMissions()
+      await Promise.all([fetchMissions(), fetchAssignmentResources(true)])
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to assign mission'
       setError(message)
@@ -980,8 +1005,8 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
       setRefreshing(true)
       const tasks: Promise<any>[] = [fetchData()]
       if (canApproveGuards && (activeSection === 'dashboard' || activeSection === 'approvals')) tasks.push(fetchPendingApprovals())
-      if (activeSection === 'dashboard' || activeSection === 'schedule') tasks.push(fetchShifts())
-      if (activeSection === 'dashboard' || activeSection === 'missions') tasks.push(fetchMissions())
+      if (activeSection === 'schedule') tasks.push(fetchShifts(), fetchAssignmentResources(false))
+      if (activeSection === 'missions') tasks.push(fetchMissions(), fetchAssignmentResources(true))
       await Promise.all(tasks)
     } finally {
       window.setTimeout(() => setRefreshing(false), 500)
@@ -1779,6 +1804,14 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                   {error}
                 </div>
               )}
+              {assignmentResourcesError && (
+                <div role="alert" className="mb-4 rounded border border-danger-border bg-danger-bg p-3 text-sm text-danger-text">
+                  <p>{assignmentResourcesError}</p>
+                  <button type="button" className="soc-btn soc-btn-neutral mt-2" onClick={() => void fetchAssignmentResources(true)}>
+                    Retry resources
+                  </button>
+                </div>
+              )}
               {missionResponse && (
                 <div className="mb-4 p-4 bg-success-bg border border-success-border rounded">
                   <h3 className="font-bold text-success-text mb-2">Mission Assigned Successfully!</h3>
@@ -1921,7 +1954,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                 <div className="md:col-span-2">
                   <button
                     type="submit"
-                    disabled={missionsLoading}
+                    disabled={missionsLoading || missionStatusBusy || Boolean(assignmentResourcesError)}
                     className="soc-btn-primary w-full min-h-12 gap-2 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <Target size={18} aria-hidden="true" />
@@ -1934,12 +1967,21 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
             {/* Mission History */}
             <section className="w-full table-glass rounded p-6 md:p-8">
               <h2 className="text-2xl font-bold text-text-primary mb-6">Mission History</h2>
+              {missionStatusError && (
+                <div role="alert" className="mb-4 rounded border border-danger-border bg-danger-bg p-3 text-sm text-danger-text">
+                  <p>{missionStatusError}</p>
+                  <button type="button" className="soc-btn soc-btn-neutral mt-2" onClick={() => {
+                    setMissionStatusError('')
+                    void fetchMissions()
+                  }}>Refresh missions</button>
+                </div>
+              )}
               {missionsLoading ? (
                 <TableLoadingState
                   title="Mission History"
                   subtitle="Loading assignments, priorities, and field status."
                   rows={5}
-                  columns={5}
+                  columns={6}
                 />
               ) : missions.length > 0 ? (
                 <div className="overflow-auto">
@@ -1951,6 +1993,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                         <th className="px-4 py-3.5 text-left">Vehicle</th>
                         <th className="px-4 py-3.5 text-left">Driver</th>
                         <th className="px-4 py-3.5 text-left">Status</th>
+                        <th className="px-4 py-3.5 text-left">Action</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1970,11 +2013,24 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                             <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium ${
                               mission.status === 'completed' ? 'border-(--color-success-border) bg-(--color-success-bg) text-(--color-success-text)' :
                               mission.status === 'scheduled' ? 'border-(--color-info-border) bg-(--color-info-bg) text-(--color-info-text)' :
-                              mission.status === 'in_progress' ? 'border-(--color-warning-border) bg-(--color-warning-bg) text-(--color-warning-text)' :
+                              isTripInProgress(mission.status) ? 'border-(--color-warning-border) bg-(--color-warning-bg) text-(--color-warning-text)' :
                               'border-(--color-border-elevated) bg-(--color-surface-elevated) text-text-secondary'
                             }`}>
-                              {mission.status || 'unknown'}
+                              {mission.status?.replaceAll('_', ' ') || 'unknown'}
                             </span>
+                          </td>
+                          <td className="px-4 py-3.5 align-middle">
+                            {mission.status === 'scheduled' ? (
+                              <button type="button" className="soc-btn soc-btn-primary min-h-11 whitespace-nowrap" disabled={missionStatusBusy}
+                                onClick={() => void handleMissionStatus(mission.id, 'in_progress', 'scheduled')}>
+                                Start Mission
+                              </button>
+                            ) : isTripInProgress(mission.status) ? (
+                              <button type="button" className="soc-btn soc-btn-success min-h-11 whitespace-nowrap" disabled={missionStatusBusy}
+                                onClick={() => void handleMissionStatus(mission.id, 'completed', mission.status)}>
+                                End Mission
+                              </button>
+                            ) : null}
                           </td>
                         </tr>
                       ))}

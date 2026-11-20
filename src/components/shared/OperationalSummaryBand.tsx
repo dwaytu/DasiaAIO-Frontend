@@ -1,4 +1,5 @@
 import { FC } from 'react'
+import { ChevronRight } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
 type SummaryTone = 'neutral' | 'success' | 'info' | 'warning' | 'danger'
@@ -9,6 +10,7 @@ export interface OperationalSummaryItem {
   detail?: string
   tone?: SummaryTone
   icon?: LucideIcon
+  onSelect?: () => void
 }
 
 interface OperationalSummaryBandProps {
@@ -30,21 +32,36 @@ const OperationalSummaryBand: FC<OperationalSummaryBandProps> = ({ items }) => {
         const style = toneStyles[item.tone || 'neutral']
         const Icon = item.icon
 
-        return (
-          <div key={item.label} className="rounded-lg border border-border-subtle bg-surface p-4 shadow-sm transition-all hover:shadow-md">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">{item.label}</p>
-                <p className="mt-2 text-2xl font-bold tracking-tight text-text-primary">{item.value}</p>
-                {item.detail ? <p className="mt-1 text-xs text-text-secondary">{item.detail}</p> : null}
-              </div>
+        const cardClass = 'rounded-lg border border-border-subtle bg-surface p-4 shadow-sm transition-all hover:shadow-md'
+        const content = (
+            <span className="flex items-start justify-between gap-3">
+              <span className="min-w-0 flex-1">
+                <span className="block text-xs font-semibold uppercase tracking-wider text-text-tertiary">{item.label}</span>
+                <span className="mt-2 block text-2xl font-bold tracking-tight text-text-primary">{item.value}</span>
+                {item.detail ? <span className="mt-1 block text-xs text-text-secondary">{item.detail}</span> : null}
+              </span>
               {Icon ? (
                 <span className={`inline-flex shrink-0 rounded-md p-2 ${style.icon}`}>
                   <Icon className="h-4 w-4" aria-hidden="true" />
                 </span>
               ) : null}
-            </div>
-          </div>
+              {item.onSelect ? <ChevronRight className="mt-2 h-4 w-4 shrink-0 text-text-secondary" aria-hidden="true" /> : null}
+            </span>
+        )
+
+        return item.onSelect ? (
+          <button
+            key={item.label}
+            type="button"
+            aria-haspopup="dialog"
+            aria-label={`View ${item.label.toLowerCase()} history`}
+            className={`${cardClass} flex h-full cursor-pointer flex-col text-left hover:border-info-border hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)`}
+            onClick={item.onSelect}
+          >
+            {content}
+          </button>
+        ) : (
+          <div key={item.label} className={cardClass}>{content}</div>
         )
       })}
     </section>

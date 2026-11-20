@@ -2,7 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { API_BASE_URL } from '../config'
 import { normalizeRole } from '../types/auth'
 import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
+import { isTripInProgress } from '../utils/tripManagement'
 import { useAuth } from './useAuth'
+import { fetchTodayOpsShifts } from './useOpsShifts'
 
 export interface OpsSummary {
   activeGuardsOnDuty: number
@@ -50,7 +52,7 @@ export function useOpsSummary() {
         : Promise.resolve({ users: [] })
 
       const [shiftsResult, approvalsResult, guardsResult, allocationsResult, overdueResult, tripsResult, vehiclesResult, permitsResult] = await Promise.allSettled([
-        fetchJsonOrThrow<any>(`${API_BASE_URL}/api/guard-replacement/shifts`, { headers, signal }, 'Failed to load shifts'),
+        fetchTodayOpsShifts(signal),
         approvalsRequest,
         fetchJsonOrThrow<any>(`${API_BASE_URL}/api/guards`, { headers, signal }, 'Failed to load approved guards'),
         fetchJsonOrThrow<any>(`${API_BASE_URL}/api/firearm-allocations/active`, { headers, signal }, 'Failed to load active allocations'),
@@ -62,7 +64,7 @@ export function useOpsSummary() {
 
       if (signal?.aborted) return
 
-      const shifts = shiftsResult.status === 'fulfilled' ? (shiftsResult.value.shifts || shiftsResult.value || []) : []
+      const shifts = shiftsResult.status === 'fulfilled' ? shiftsResult.value : []
       const approvals = approvalsResult.status === 'fulfilled' ? (approvalsResult.value.users || approvalsResult.value || []) : []
       const guards = guardsResult.status === 'fulfilled'
         ? (Array.isArray(guardsResult.value) ? guardsResult.value : guardsResult.value.guards || [])
@@ -90,11 +92,11 @@ export function useOpsSummary() {
 
       setSummary((previous) => ({
         activeGuardsOnDuty: shiftsResult.status === 'fulfilled'
-          ? shifts.filter((shift: any) => shift.status === 'in_progress').length
+          ? shifts.filter((shift) => shift.status === 'in_progress').length
           : previous.activeGuardsOnDuty,
         totalApprovedGuards: guardsResult.status === 'fulfilled' ? guards.length : previous.totalApprovedGuards,
         guardsAbsentToday: shiftsResult.status === 'fulfilled'
-          ? shifts.filter((shift: any) => shift.status === 'absent' || shift.status === 'no_show').length
+          ? shifts.filter((shift) => shift.status === 'absent' || shift.status === 'no_show').length
           : previous.guardsAbsentToday,
         pendingGuardApprovals: approvalsResult.status === 'fulfilled'
           ? approvals.length
@@ -106,7 +108,7 @@ export function useOpsSummary() {
           ? overdueAllocations.length
           : previous.overdueFirearmReturns,
         activeArmoredCarTrips: tripsResult.status === 'fulfilled'
-          ? trips.filter((trip: any) => trip.status === 'in_progress' || trip.status === 'active').length
+          ? trips.filter((trip: any) => isTripInProgress(trip.status)).length
           : previous.activeArmoredCarTrips,
         vehiclesInMaintenance: vehiclesResult.status === 'fulfilled'
           ? vehicles.filter((vehicle: any) => vehicle.status === 'maintenance').length
@@ -122,7 +124,7 @@ export function useOpsSummary() {
         : '')
       const checkedAt = Date.now()
       setLastUpdated(new Date(checkedAt).toLocaleTimeString())
-      setAlertsCheckedAt(shiftsResult.status === 'fulfilled' && approvalsResult.status === 'fulfilled' && overdueResult.status === 'fulfilled'
+      setAlertsCheckedAt(shiftsResult.status === 'fulfilled' && overdueResult.status === 'fulfilled'
         ? checkedAt
         : null)
     } catch (err) {

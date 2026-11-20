@@ -18,7 +18,8 @@ describe('shell navigation chrome', () => {
     expect(labels).toContain('Guard Evaluations')
     expect(labels).toContain('Firearm Documents')
     expect(labels).toContain('Guard Documents')
-    expect(labels).toHaveLength(17)
+    expect(labels).toEqual(expect.arrayContaining(['Missions', 'Trip Management']))
+    expect(labels).toHaveLength(19)
   })
 
   it('returns empty sidebar for guard (uses bottom nav)', () => {
@@ -63,7 +64,8 @@ describe('shell navigation chrome', () => {
     expect(labels).toContain('Firearm Documents')
     expect(labels).toContain('Guard Documents')
     expect(labels).toContain('People & Resources')
-    expect(labels).toHaveLength(14)
+    expect(labels).toEqual(expect.arrayContaining(['Missions', 'Trip Management']))
+    expect(labels).toHaveLength(15)
   })
 
   it('removes approval from elevated mobile navigation when unavailable', () => {

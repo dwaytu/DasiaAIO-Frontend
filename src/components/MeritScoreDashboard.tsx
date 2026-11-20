@@ -11,6 +11,7 @@ import { getSidebarNav } from '../config/navigation'
 import { logError } from '../utils/logger'
 import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
 import { can } from '../utils/permissions'
+import GuardPerformanceHistory, { type GuardHistoryCategory } from './guards/GuardPerformanceHistory'
 
 interface Props {
   user: User
@@ -59,11 +60,6 @@ interface Evaluation {
 }
 
 const RANKINGS_PAGE_SIZE = 12
-
-// The capstone score generator uses these ranks for its attendance and punctuality snapshots.
-function isCapstoneSnapshot(rank: string): boolean {
-  return ['Excellent', 'Good', 'For review'].includes(rank)
-}
 
 function buildScoreHistory(evals: Evaluation[]): { label: string; score: number }[] {
   const sorted = [...evals].sort(
@@ -144,6 +140,7 @@ const RatingTrendChart: FC<{ evaluations: Evaluation[] }> = ({ evaluations }) =>
 const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeView }) => {
   const [rankings, setRankings] = useState<RankedGuard[]>([])
   const [selectedGuard, setSelectedGuard] = useState<MeritScore | null>(null)
+  const [historyCategory, setHistoryCategory] = useState<GuardHistoryCategory | null>(null)
   const [evaluations, setEvaluations] = useState<Evaluation[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string>('')
@@ -395,6 +392,7 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
                   type="button"
                   onClick={() => {
                     setSelectedGuard(null)
+                    setHistoryCategory(null)
                     setDetailError('')
                   }}
                   className="soc-btn soc-btn-neutral min-h-11"
@@ -414,31 +412,42 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
                       {selectedGuard.rank}
                     </span>
                   </div>
-                  <OperationalSummaryBand
-                    items={[
-                      { label: 'Overall score', value: selectedGuard.overallScore.toFixed(1), detail: isCapstoneSnapshot(selectedGuard.rank) ? 'Capstone snapshot based on attendance and punctuality' : 'Last calculated merit score', tone: getScoreTone(selectedGuard.overallScore), icon: Award },
-                      { label: 'Attendance', value: selectedGuard.attendanceScore.toFixed(1), detail: 'Attendance contribution', tone: 'success', icon: CalendarCheck2 },
-                      { label: 'Punctuality', value: selectedGuard.punctualityScore.toFixed(1), detail: 'Timekeeping contribution', tone: 'info', icon: Clock3 },
-                      { label: 'Evaluator rating', value: selectedGuard.stats.evaluations > 0 ? `${selectedGuard.stats.averageRating.toFixed(1)} / 5` : 'No evaluations', detail: 'Average submitted rating', tone: 'warning', icon: Star },
-                    ]}
-                  />
+                  <div className="px-5 pb-5 md:px-6">
+                    <OperationalSummaryBand
+                      items={[
+                        { label: 'Overall score', value: selectedGuard.overallScore.toFixed(1), detail: 'Saved merit score', tone: getScoreTone(selectedGuard.overallScore), icon: Award, onSelect: () => setHistoryCategory('concerns') },
+                        { label: 'Attendance', value: selectedGuard.attendanceScore.toFixed(1), detail: 'Attendance contribution', tone: 'success', icon: CalendarCheck2, onSelect: () => setHistoryCategory('shifts') },
+                        { label: 'Punctuality', value: selectedGuard.punctualityScore.toFixed(1), detail: 'Timekeeping contribution', tone: 'info', icon: Clock3, onSelect: () => setHistoryCategory('punctuality') },
+                        { label: 'Evaluator rating', value: selectedGuard.stats.evaluations > 0 ? `${selectedGuard.stats.averageRating.toFixed(1)} / 5` : 'No evaluations', detail: 'Average submitted rating', tone: 'warning', icon: Star, onSelect: () => setHistoryCategory('evaluations') },
+                      ]}
+                    />
+                  </div>
                 </section>
 
                 <section className="soc-surface overflow-hidden">
-                  <div className="px-5 pt-5 md:px-6">
-                    <p className="soc-kicker">Score drivers</p>
-                    <h3 className="mt-1 text-lg font-bold text-text-primary">Performance activity</h3>
+                  <div className="px-5 py-5 md:px-6">
+                    <h3 className="mb-4 text-lg font-bold text-text-primary">Performance activity</h3>
+                    <OperationalSummaryBand
+                      items={[
+                        { label: 'Total shifts', value: selectedGuard.stats.totalShifts, detail: 'Recorded assignments', tone: 'neutral', icon: CalendarCheck2, onSelect: () => setHistoryCategory('shifts') },
+                        { label: 'On time', value: selectedGuard.stats.onTimeCount, detail: 'On-time check-ins', tone: 'success', icon: Clock3, onSelect: () => setHistoryCategory('on_time') },
+                        { label: 'Late', value: selectedGuard.stats.lateCount, detail: 'Late check-ins', tone: 'warning', icon: Clock3, onSelect: () => setHistoryCategory('late') },
+                        { label: 'No shows', value: selectedGuard.stats.noShowCount, detail: 'Recorded absences and no-shows', tone: 'danger', icon: Award, onSelect: () => setHistoryCategory('no_show') },
+                        { label: 'Evaluations', value: selectedGuard.stats.evaluations, detail: 'Recorded reviews', tone: 'info', icon: ClipboardCheck, onSelect: () => setHistoryCategory('evaluations') },
+                      ]}
+                    />
                   </div>
-                  <OperationalSummaryBand
-                    items={[
-                      { label: 'Total shifts', value: selectedGuard.stats.totalShifts, detail: 'Recorded shifts', tone: 'neutral', icon: CalendarCheck2 },
-                      { label: 'On time', value: selectedGuard.stats.onTimeCount, detail: 'On-time check-ins', tone: 'success', icon: Clock3 },
-                      { label: 'Late', value: selectedGuard.stats.lateCount, detail: 'Late check-ins', tone: 'warning', icon: Clock3 },
-                      { label: 'No shows', value: selectedGuard.stats.noShowCount, detail: 'Missed shifts', tone: 'danger', icon: Award },
-                      { label: 'Evaluations', value: selectedGuard.stats.evaluations, detail: 'Recorded reviews', tone: 'info', icon: ClipboardCheck },
-                    ]}
-                  />
                 </section>
+
+                {historyCategory ? (
+                  <GuardPerformanceHistory
+                    key={`${selectedGuard.guardId}:${historyCategory}`}
+                    guardId={selectedGuard.guardId}
+                    guardName={selectedGuard.guardName}
+                    category={historyCategory}
+                    onClose={() => setHistoryCategory(null)}
+                  />
+                ) : null}
 
                 {evaluations.length >= 2 ? <RatingTrendChart evaluations={evaluations} /> : (
                   <section className="soc-surface p-5 md:p-6">
@@ -620,7 +629,6 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
                               <span className={`font-bold text-lg ${getScoreColor(guard.overallScore)}`}>
                                 {guard.overallScore.toFixed(1)}
                               </span>
-                              {isCapstoneSnapshot(guard.meritRank) ? <p className="text-xs text-text-secondary">Capstone snapshot</p> : null}
                             </td>
                             <td className="px-4 py-3.5 align-middle text-sm text-text-primary">
                               <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getMeritRankColor(guard.meritRank)}`}>

@@ -25,6 +25,25 @@ interface OpsShiftPage {
   shifts?: OpsShift[]
 }
 
+export async function fetchTodayOpsShifts(signal?: AbortSignal): Promise<OpsShift[]> {
+  const shifts: OpsShift[] = []
+  const headers = getAuthHeaders()
+  let page = 1
+  while (!signal?.aborted) {
+    const params = new URLSearchParams({ scope: 'today', page: String(page), page_size: '200' })
+    const response = await fetchJsonOrThrow<OpsShift[] | OpsShiftPage>(
+      `${API_BASE_URL}/api/guard-replacement/shifts?${params}`,
+      { headers, signal, cache: 'no-store' },
+      'Failed to load shifts',
+    )
+    const batch = Array.isArray(response) ? response : (response.shifts || [])
+    shifts.push(...batch)
+    if (Array.isArray(response) || !response.total || shifts.length >= response.total || batch.length === 0) break
+    page += 1
+  }
+  return shifts
+}
+
 export function useOpsShifts() {
   const [shifts, setShifts] = useState<OpsShift[]>([])
   const [loading, setLoading] = useState(true)
@@ -40,21 +59,8 @@ export function useOpsShifts() {
     request.current = controller
     const { signal } = controller
     try {
-      const shifts: OpsShift[] = []
-      let page = 1
-      while (true) {
-        const params = new URLSearchParams({ scope: 'today', page: String(page), page_size: '200' })
-        const response = await fetchJsonOrThrow<OpsShift[] | OpsShiftPage>(
-          `${API_BASE_URL}/api/guard-replacement/shifts?${params}`,
-          { headers: getAuthHeaders(), signal, cache: 'no-store' },
-          'Failed to load shifts',
-        )
-        if (signal.aborted) return
-        const batch = Array.isArray(response) ? response : (response.shifts || [])
-        shifts.push(...batch)
-        if (Array.isArray(response) || !response.total || shifts.length >= response.total || batch.length === 0) break
-        page += 1
-      }
+      const shifts = await fetchTodayOpsShifts(signal)
+      if (signal.aborted) return
       setShifts(shifts)
       setError('')
       setLastUpdated(new Date().toLocaleTimeString())

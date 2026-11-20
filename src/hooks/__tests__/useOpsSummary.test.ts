@@ -43,4 +43,21 @@ describe('useOpsSummary', () => {
     expect(result.current.degradedSources).toContain('overdue firearm returns')
     expect(result.current.error).toContain('Operational summary is incomplete')
   })
+
+  it('counts all pages of the same attendance-aware shifts used in Today’s Shifts', async () => {
+    mockedFetchJsonOrThrow.mockImplementation(async (url) => {
+      const { pathname, searchParams } = new URL(String(url))
+      if (pathname !== '/api/guard-replacement/shifts') return []
+      expect(searchParams.get('scope')).toBe('today')
+      const shift = searchParams.get('page') === '1'
+        ? { id: 'on-duty', status: 'in_progress' }
+        : { id: 'absent', status: 'absent' }
+      return { total: 2, shifts: [shift] }
+    })
+
+    const { result } = renderHook(() => useOpsSummary())
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.summary.activeGuardsOnDuty).toBe(1)
+    expect(result.current.summary.guardsAbsentToday).toBe(1)
+  })
 })

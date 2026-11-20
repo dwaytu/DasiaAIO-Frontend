@@ -1,6 +1,7 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import MeritScoreDashboard from '../MeritScoreDashboard'
+import { fetchJsonOrThrow } from '../../utils/api'
 
 jest.mock('../../config', () => ({
   API_BASE_URL: 'http://localhost:5000',
@@ -79,7 +80,46 @@ describe('MeritScoreDashboard', () => {
     expect(screen.getByText('Evaluated').parentElement).toHaveTextContent('1')
     expect(screen.getByText('Awaiting evaluation').parentElement).toHaveTextContent('1')
     expect(screen.getByText('No evaluations')).toBeInTheDocument()
-    expect(screen.getByText('Capstone snapshot')).toBeInTheDocument()
+    expect(screen.queryByText(/Capstone snapshot/i)).not.toBeInTheDocument()
+  })
+
+  it('opens and pages recorded lateness for the selected guard, then restores focus', async () => {
+    const interactions = userEvent.setup()
+    mockMeritFetch()
+    const loadHistory = jest.mocked(fetchJsonOrThrow)
+    loadHistory.mockResolvedValueOnce({
+      total: 2, pageSize: 1,
+      items: [{
+        id: 'late-1', kind: 'punctuality', status: 'late', site: 'Fixture Post', minutes_late: 15,
+        occurred_at: '2026-09-01T08:00:00.000Z', check_in_time: null, check_out_time: null,
+        rating: null, comment: null, evaluator_name: null,
+      }],
+    }).mockResolvedValueOnce({
+      total: 2, pageSize: 1,
+      items: [{
+        id: 'late-2', kind: 'punctuality', status: 'late', site: 'Second Post', minutes_late: 8,
+        occurred_at: '2026-08-31T08:00:00.000Z', check_in_time: null, check_out_time: null,
+        rating: null, comment: null, evaluator_name: null,
+      }],
+    })
+    render(<MeritScoreDashboard user={user} onLogout={jest.fn()} />)
+
+    await interactions.click(await screen.findByRole('button', { name: 'View details for Guard One' }))
+    const card = await screen.findByRole('button', { name: 'View late history' })
+    await interactions.click(card)
+    const dialog = screen.getByRole('dialog', { name: 'Late check-ins' })
+    expect(await within(dialog).findByText('15 min late')).toBeInTheDocument()
+    expect(loadHistory).toHaveBeenCalledWith(
+      expect.stringContaining('/api/merit/history/guard-1?category=late&page=1'),
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      expect.any(String),
+    )
+
+    await interactions.click(within(dialog).getByRole('button', { name: 'Next' }))
+    expect(await within(dialog).findByText('8 min late')).toBeInTheDocument()
+    await interactions.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(card).toHaveFocus()
   })
 
   it('opens a scorecard with drivers, trend, and evaluation controls', async () => {

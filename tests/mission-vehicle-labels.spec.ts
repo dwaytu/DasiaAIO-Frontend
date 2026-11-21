@@ -18,6 +18,11 @@ test('Missions identifies vehicles by fleet and plate numbers', async ({ page })
           { id: 'vehicle-1', license_plate: '3003', plate_number: 'QA-123', model: 'Not provided', status: 'available' },
           { id: 'vehicle-2', license_plate: '6817', plate_number: null, model: 'Not provided', status: 'available' },
         ] })
+      case '/api/driver-assignments':
+        return route.fulfill({ json: [
+          { car_id: 'vehicle-1', guard_id: 'guard-1', guard_name: 'Driver One', status: 'active' },
+          { car_id: 'vehicle-2', guard_id: 'guard-2', guard_name: 'Driver Two', status: 'active' },
+        ] })
       case '/api/missions':
         return route.fulfill({ json: { missions: [
           { id: 'mission-1', vehicle_fleet_number: '3003', vehicle_plate_number: 'QA-123', vehicle_model: 'Not provided', status: 'completed' },
@@ -29,7 +34,7 @@ test('Missions identifies vehicles by fleet and plate numbers', async ({ page })
   })
   await page.goto('/missions')
   const picker = page.getByRole('combobox', { name: 'Select Vehicle' })
-  await expect(picker.getByRole('option')).toHaveText(['-- Select a vehicle --', '3003 - QA-123', '6817'])
+  await expect(picker.getByRole('option')).toHaveText(['-- Select a vehicle --', '3003 - QA-123 · Driver: Driver One', '6817 · Driver: Driver Two'])
   const history = page.locator('section')
     .filter({ has: page.getByRole('heading', { name: 'Mission History', exact: true }) })
     .getByRole('table')

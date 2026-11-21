@@ -324,7 +324,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
   const [availableClientSites, setAvailableClientSites] = useState<ClientSiteOption[]>([])
   const [availableFirearms, setAvailableFirearms] = useState<any[]>([])
   const [availableVehicles, setAvailableVehicles] = useState<any[]>([])
-  const [selectedGuards, setSelectedGuards] = useState<string>('')
+  const [selectedGuards, setSelectedGuards] = useState([''])
   const [selectedFirearms, setSelectedFirearms] = useState<string>('')
   const [selectedVehicles, setSelectedVehicles] = useState<string>('')
   const [showAddScheduleForm, setShowAddScheduleForm] = useState<boolean>(false)
@@ -618,9 +618,12 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
         return firearms
       }
 
-      const [firearms, vehiclesData] = await Promise.all([
+      const [firearms, vehiclesData, driverAssignments] = await Promise.all([
         fetchAvailableFirearms(),
         fetchJsonOrThrow<any>(`${API_BASE_URL}/api/armored-cars`, options, 'Failed to fetch armored cars'),
+        fetchJsonOrThrow<Array<{ car_id: string; guard_id: string; guard_name?: string; status: string }>>(
+          `${API_BASE_URL}/api/driver-assignments`, options, 'Failed to load vehicle drivers',
+        ),
       ])
       if (signal?.aborted) return
       setAvailableFirearms(firearms.filter((f: any) => {
@@ -631,7 +634,12 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
       const vehicles = Array.isArray(vehiclesData)
         ? vehiclesData
         : (vehiclesData?.armored_cars || vehiclesData?.vehicles || [])
-      setAvailableVehicles(vehicles.filter((v: any) => ['available', 'operational'].includes(String(v.status).toLowerCase())))
+      const drivers = new Map(driverAssignments.filter((driver) => driver.status === 'active').map((driver) => [driver.car_id, driver]))
+      const eligibleVehicles = vehicles
+        .filter((vehicle: any) => ['available', 'operational'].includes(String(vehicle.status).toLowerCase()) && drivers.has(vehicle.id))
+        .map((vehicle: any) => ({ ...vehicle, driverName: drivers.get(vehicle.id)?.guard_name || drivers.get(vehicle.id)?.guard_id }))
+      setAvailableVehicles(eligibleVehicles)
+      setSelectedVehicles((current) => eligibleVehicles.some((vehicle: { id: string }) => vehicle.id === current) ? current : '')
     } catch (err) {
       if (signal?.aborted) return
       setAssignmentResourcesError(err instanceof Error ? err.message : 'Failed to load assignment resources')
@@ -645,8 +653,8 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
       setError('')
       
       // Validate selections
-      if (!selectedGuards) {
-        addNotification('error', 'Validation Error', 'Please select a guard')
+      if (selectedGuards.some((guard) => !guard) || new Set(selectedGuards).size !== selectedGuards.length) {
+        addNotification('error', 'Validation Error', 'Select one to three different guards')
         setMissionsLoading(false)
         return
       }
@@ -655,8 +663,8 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
         setMissionsLoading(false)
         return
       }
-      if (!selectedVehicles) {
-        addNotification('error', 'Validation Error', 'Please select a vehicle')
+      if (!availableVehicles.some((vehicle) => vehicle.id === selectedVehicles)) {
+        addNotification('error', 'Validation Error', 'Select a vehicle with an assigned driver')
         setMissionsLoading(false)
         return
       }
@@ -666,10 +674,10 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
         headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           ...missionFormData,
-          guards_required: selectedGuards ? 1 : 0,
+          guards_required: selectedGuards.length,
           firearms_required: selectedFirearms ? 1 : 0,
           vehicles_required: selectedVehicles ? 1 : 0,
-          guard_id: selectedGuards,
+          guard_ids: selectedGuards,
           firearm_id: selectedFirearms,
           vehicle_id: selectedVehicles,
         })
@@ -692,7 +700,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
         priority: 'medium',
         special_requirements: ''
       })
-      setSelectedGuards('')
+      setSelectedGuards([''])
       setSelectedFirearms('')
       setSelectedVehicles('')
 
@@ -1804,17 +1812,37 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                   />
                 </div>
 
-                <AssignmentPicker
-                  id="mission-guard"
-                  label="Select Guard"
-                  required
-                  tone="teal"
-                  value={selectedGuards}
-                  onChange={setSelectedGuards}
-                  placeholder="-- Select a guard --"
-                  emptyMessage="No approved guards are currently available."
-                  options={availableGuards.map((guard) => ({ value: guard.id, label: guard.full_name || guard.username }))}
-                />
+                <fieldset className="min-w-0 space-y-3 md:col-span-2">
+                  <legend className="mb-2 text-sm font-semibold text-text-primary">Mission guards (1–3)</legend>
+                  <div className="grid gap-3 md:grid-cols-3">
+                    {selectedGuards.map((selected, index) => (
+                      <div key={index} className="min-w-0">
+                        <AssignmentPicker
+                          id={`mission-guard-${index + 1}`}
+                          label={`Guard ${index + 1}`}
+                          required
+                          tone="teal"
+                          value={selected}
+                          onChange={(value) => setSelectedGuards((guards) => guards.map((guard, slot) => slot === index ? value : guard))}
+                          placeholder="Select a guard"
+                          emptyMessage="No other approved guards are available."
+                          options={availableGuards.filter((guard) => guard.id === selected || !selectedGuards.includes(guard.id))
+                            .map((guard) => ({ value: guard.id, label: guard.full_name || guard.username }))}
+                        />
+                        {index > 0 && (
+                          <button type="button" className="soc-btn soc-btn-neutral mt-2" onClick={() => setSelectedGuards((guards) => guards.filter((_, slot) => slot !== index))}>
+                            Remove guard {index + 1}
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  {selectedGuards.length < 3 && (
+                    <button type="button" className="soc-btn soc-btn-neutral" onClick={() => setSelectedGuards((guards) => [...guards, ''])}>
+                      Add guard
+                    </button>
+                  )}
+                </fieldset>
 
                 <AssignmentPicker
                   id="mission-firearm"
@@ -1839,10 +1867,10 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                   value={selectedVehicles}
                   onChange={setSelectedVehicles}
                   placeholder="-- Select a vehicle --"
-                  emptyMessage="No available vehicles are currently ready."
+                  emptyMessage="No available vehicles have an assigned driver. Assign a driver in Armored Cars."
                   options={availableVehicles.map((vehicle) => ({
                     value: vehicle.id,
-                    label: formatVehicleIdentifier(vehicle.license_plate, vehicle.plate_number),
+                    label: `${formatVehicleIdentifier(vehicle.license_plate, vehicle.plate_number)} · Driver: ${vehicle.driverName}`,
                   }))}
                 />
 

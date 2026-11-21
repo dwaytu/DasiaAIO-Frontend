@@ -18,7 +18,11 @@ for (const role of ['admin', 'supervisor', 'superadmin']) {
         case '/api/users/pending-approvals':
           return route.fulfill({ json: { users: [{ id: 'approval-fixture' }] } })
         case '/api/guards':
-          return route.fulfill({ json: [{ id: 'guard', full_name: 'Fixture Guard' }] })
+          return route.fulfill({ json: [
+            { id: 'guard', full_name: 'Fixture Guard' },
+            { id: 'second', full_name: 'Second Guard' },
+            { id: 'third', full_name: 'Third Guard' },
+          ] })
         case '/api/firearms':
           return route.fulfill({ json: {
             total: 2,
@@ -27,7 +31,12 @@ for (const role of ['admin', 'supervisor', 'superadmin']) {
               : [{ id: 'expired-asset', status: 'available', licenseExpiryDate: '2000-01-01' }],
           } })
         case '/api/armored-cars':
-          return route.fulfill({ json: [{ id: 'vehicle', license_plate: '9999', plate_number: 'QA-123', status: 'available' }] })
+          return route.fulfill({ json: [
+            { id: 'vehicle', license_plate: '9999', plate_number: 'QA-123', status: 'available' },
+            { id: 'driverless', license_plate: '9998', plate_number: 'QA-124', status: 'available' },
+          ] })
+        case '/api/driver-assignments':
+          return route.fulfill({ json: [{ car_id: 'vehicle', guard_id: 'driver', guard_name: 'Fixture Driver', status: 'active' }] })
         case '/api/missions':
           return route.fulfill({ json: { missions: tripStatus ? [{
             id: 'fixture-trip', status: tripStatus, driver_name: 'Fixture Guard', vehicle_plate_number: 'QA-123',
@@ -59,9 +68,19 @@ for (const role of ['admin', 'supervisor', 'superadmin']) {
     await expect(page.getByText('Enter the mission date and times in Philippine time (UTC+8).')).toBeVisible()
     await expect(page.getByLabel('Destination', { exact: true })).toHaveCount(0)
     await page.getByLabel('Mission Name').fill('Fixture mission')
-    await page.getByLabel('Select Guard').selectOption('guard')
+    await page.getByLabel('Guard 1', { exact: true }).selectOption('guard')
+    const guards = role === 'admin' ? ['guard', 'second', 'third'] : ['guard']
+    for (const [index, id] of guards.entries()) {
+      if (index === 0) continue
+      await page.getByRole('button', { name: 'Add guard', exact: true }).click()
+      const picker = page.getByLabel(`Guard ${index + 1}`, { exact: true })
+      await expect(picker.getByRole('option', { name: 'Fixture Guard', exact: true })).toHaveCount(0)
+      await picker.selectOption(id)
+    }
+    if (guards.length === 3) await expect(page.getByRole('button', { name: 'Add guard', exact: true })).toHaveCount(0)
     await page.getByLabel('Select Firearm').selectOption('asset')
     await page.getByLabel('Select Vehicle').selectOption('vehicle')
+    await expect(page.getByLabel('Select Vehicle').getByRole('option', { name: /QA-124/ })).toHaveCount(0)
     await page.getByLabel('Date', { exact: true }).fill('2030-01-02')
     await page.getByLabel('Start Time').fill('08:00')
     await page.getByLabel('End Time').fill('09:00')
@@ -69,7 +88,7 @@ for (const role of ['admin', 'supervisor', 'superadmin']) {
 
     await expect(page.getByRole('heading', { name: 'Mission Assigned Successfully!' })).toBeVisible()
     expect(assignments).toHaveLength(1)
-    expect(assignments[0]).toMatchObject({ mission_name: 'Fixture mission', guard_id: 'guard', firearm_id: 'asset', vehicle_id: 'vehicle' })
+    expect(assignments[0]).toMatchObject({ mission_name: 'Fixture mission', guard_ids: guards, guards_required: guards.length, firearm_id: 'asset', vehicle_id: 'vehicle' })
     expect(assignments[0]).not.toHaveProperty('destination')
     await expect(page.getByRole('row', { name: /Fixture Guard/ })).toContainText(/08:00\s*am\s*-\s*09:00\s*am/i)
 

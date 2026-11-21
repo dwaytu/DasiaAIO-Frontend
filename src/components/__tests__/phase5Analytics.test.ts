@@ -28,7 +28,7 @@ describe('Phase 5 analytics presentation', () => {
     expect(csv).toContain('"Dela Cruz, Juan"')
     expect(csv).toContain('"Attendance Rate"')
     expect(csv).toContain('"Average Evaluator Rating"')
-    expect(csv).toContain('"Replacement Frequency"')
+    expect(csv).toContain('"Shifts Covered","Shifts Replaced"')
     expect(csv.split('\r\n')).toHaveLength(2)
   })
 })

@@ -41,6 +41,7 @@ interface GuardPerformanceRow {
   evaluationCount: number
   meritScore: number
   replacementFrequency: number
+  shiftsReplaced: number
 }
 
 interface GuardPerformanceSummary {
@@ -102,10 +103,6 @@ function formatRating(value: number): string {
   return value > 0 ? value.toFixed(1) : '0.0'
 }
 
-function truncateLabel(value: string, maxLength = 14): string {
-  return value.length > maxLength ? `${value.slice(0, maxLength - 1)}...` : value
-}
-
 function buildReportUrl(filters: DateFilters): string {
   const params = new URLSearchParams()
   if (filters.from) params.set('from', filters.from)
@@ -121,11 +118,18 @@ const VerticalBarChart: FC<{
   suffix?: string
   tone: 'info' | 'success'
 }> = ({ title, rows, metricKey, suffix = '', tone }) => {
+  const [hoveredId, setHoveredId] = useState<string | null>(null)
+  const [focusedId, setFocusedId] = useState<string | null>(null)
   const chartRows = rows.slice(0, 8)
   const maxValue = Math.max(1, ...chartRows.map((row) => Number(row[metricKey]) || 0))
+  const isPercentage = suffix === '%'
+  const tickStep = isPercentage ? 25 : Math.max(1, Math.ceil(maxValue / 4))
+  const axisMax = isPercentage ? 100 : Math.ceil(maxValue / tickStep) * tickStep
+  const ticks = Array.from({ length: axisMax / tickStep + 1 }, (_, index) => index * tickStep)
+  const activeRow = chartRows.find((row) => row.guardId === (hoveredId || focusedId))
   const width = 640
   const height = 240
-  const padding = { top: 24, right: 16, bottom: 46, left: 32 }
+  const padding = { top: 24, right: 16, bottom: 18, left: 32 }
   const plotWidth = width - padding.left - padding.right
   const plotHeight = height - padding.top - padding.bottom
   const barGap = 10
@@ -138,14 +142,22 @@ const VerticalBarChart: FC<{
     <section className="command-panel soc-panel-pad">
       <h3 className="text-lg font-bold text-text-primary">{title}</h3>
       {chartRows.length > 0 ? (
+        <>
+        <div className="mt-2 min-h-9 text-sm text-text-primary">
+          {activeRow && (
+            <span role="tooltip" className="inline-block rounded border border-border bg-surface-elevated px-2 py-1">
+              {activeRow.guardName} · {activeRow[metricKey]}{suffix}
+            </span>
+          )}
+        </div>
         <svg
           viewBox={`0 0 ${width} ${height}`}
-          className={`mt-4 h-72 w-full ${colorClass}`}
-          role="img"
+          className={`h-64 w-full ${colorClass}`}
+          role="group"
           aria-label={title}
         >
-          {[0, 25, 50, 75, 100].map((tick) => {
-            const y = padding.top + plotHeight - (tick / 100) * plotHeight
+          {ticks.map((tick) => {
+            const y = padding.top + plotHeight - (tick / axisMax) * plotHeight
             return (
               <g key={tick}>
                 <line
@@ -165,18 +177,22 @@ const VerticalBarChart: FC<{
           })}
           {chartRows.map((row, index) => {
             const rawValue = Number(row[metricKey]) || 0
-            const valueForHeight = metricKey === 'attendanceRate' || metricKey === 'meritScore'
-              ? Math.min(rawValue, 100)
-              : rawValue
-            const scaledValue = metricKey === 'attendanceRate' || metricKey === 'meritScore'
-              ? valueForHeight
-              : (valueForHeight / maxValue) * 100
-            const barHeight = (scaledValue / 100) * plotHeight
+            const barHeight = (Math.min(rawValue, axisMax) / axisMax) * plotHeight
             const x = padding.left + index * (barWidth + barGap)
             const y = padding.top + plotHeight - barHeight
 
             return (
-              <g key={row.guardId}>
+              <g
+                key={row.guardId}
+                tabIndex={0}
+                role="img"
+                aria-label={`${row.guardName}, ${rawValue}${suffix}`}
+                onPointerEnter={() => setHoveredId(row.guardId)}
+                onPointerLeave={() => setHoveredId(null)}
+                onFocus={() => setFocusedId(row.guardId)}
+                onBlur={() => setFocusedId(null)}
+              >
+                <rect x={x} y={padding.top} width={barWidth} height={plotHeight} fill="transparent" />
                 <rect
                   x={x}
                   y={y}
@@ -194,18 +210,11 @@ const VerticalBarChart: FC<{
                 >
                   {Math.round(rawValue)}{suffix}
                 </text>
-                <text
-                  x={x + barWidth / 2}
-                  y={height - 16}
-                  textAnchor="middle"
-                  className="fill-current text-[10px] text-text-secondary"
-                >
-                  {truncateLabel(row.guardName)}
-                </text>
               </g>
             )
           })}
         </svg>
+        </>
       ) : (
         <p className="mt-4 text-sm text-text-secondary">No chart data available for the selected period.</p>
       )}
@@ -491,7 +500,7 @@ const PerformanceDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeV
             <>
               <div className="mb-4 grid grid-cols-1 gap-4 xl:grid-cols-2">
                 <VerticalBarChart
-                  title="Top Guard Merit Scores"
+                  title="Top Reporting-Period Merit Scores"
                   rows={sortedByMerit}
                   metricKey="meritScore"
                   suffix="%"
@@ -509,7 +518,7 @@ const PerformanceDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeV
               <div className="mb-4 grid grid-cols-1 gap-4 xl:grid-cols-2">
                 <WorkloadBars rows={sortedByMerit} />
                 <VerticalBarChart
-                  title="Replacement Frequency"
+                  title="Confirmed Shifts Covered"
                   rows={[...report.guards].sort((a, b) => b.replacementFrequency - a.replacementFrequency)}
                   metricKey="replacementFrequency"
                   tone="info"
@@ -520,8 +529,9 @@ const PerformanceDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeV
                 <div className="border-b border-border-subtle px-4 py-4 md:px-6">
                   <h3 className="text-lg font-bold text-text-primary">Detailed Guard Metrics</h3>
                   <p className="text-sm text-text-secondary">
-                    Attendance, punctuality, completion, incident, guard evaluation, merit, and replacement activity.
+                    Attendance uses shifts that have started. No-shows are recorded absences. Incident reports count submissions by the guard.
                   </p>
+                  <p className="mt-1 text-sm text-text-secondary">Period merit uses attendance (30%), punctuality (35%), and evaluations (35%). Replacement counts show each guard’s role in accepted Smart Guard Replacement records.</p>
                   <label className="mt-4 block max-w-md text-sm font-semibold text-text-secondary" htmlFor="performance-guard-search">
                     Find a guard
                     <input
@@ -543,10 +553,11 @@ const PerformanceDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeV
                         <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-text-primary">Late</th>
                         <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-text-primary">Completed</th>
                         <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-text-primary">No-shows</th>
-                        <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-text-primary">Incidents</th>
+                        <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-text-primary">Reports filed</th>
                         <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-text-primary">Guard Eval</th>
-                        <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-text-primary">Merit</th>
-                        <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-text-primary">Replacements</th>
+                        <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-text-primary">Period merit</th>
+                        <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-text-primary">Shifts covered</th>
+                        <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-text-primary">Shifts replaced</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -562,11 +573,12 @@ const PerformanceDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeV
                           <td className="px-4 py-3 text-sm text-danger-text">{row.noShows}</td>
                           <td className="px-4 py-3 text-sm text-text-primary">{row.incidentReportsSubmitted}</td>
                           <td className="px-4 py-3 text-sm text-text-primary">
-                            {formatRating(row.averageClientRating)}
+                            {row.evaluationCount > 0 ? formatRating(row.averageClientRating) : '—'}
                             <span className="ml-2 text-xs text-text-secondary">({row.evaluationCount})</span>
                           </td>
                           <td className="px-4 py-3 text-sm font-semibold text-info-text">{formatPercent(row.meritScore)}</td>
                           <td className="px-4 py-3 text-sm text-text-primary">{row.replacementFrequency}</td>
+                          <td className="px-4 py-3 text-sm text-text-primary">{row.shiftsReplaced ?? '—'}</td>
                         </tr>
                       ))}
                     </tbody>

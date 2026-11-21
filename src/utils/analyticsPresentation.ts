@@ -11,6 +11,7 @@ export interface PerformanceCsvRow {
   evaluationCount: number
   meritScore: number
   replacementFrequency: number
+  shiftsReplaced?: number
 }
 
 export function resolveUnavailable(total: number, available: number, reported?: number): number {
@@ -27,7 +28,7 @@ function escapeCsv(value: string | number): string {
 
 export function buildPerformanceCsv(guards: PerformanceCsvRow[]): string {
   const rows = [
-    ['Guard', 'Attendance Rate', 'Attended Shifts', 'Total Shifts', 'Late Check-ins', 'Completed Shifts', 'No-shows', 'Incident Reports', 'Average Evaluator Rating', 'Evaluation Count', 'Merit Score', 'Replacement Frequency'],
+    ['Guard', 'Attendance Rate', 'Attended Shifts', 'Total Shifts', 'Late Check-ins', 'Completed Shifts', 'No-shows', 'Incident Reports Filed', 'Average Evaluator Rating', 'Evaluation Count', 'Period Merit Score', 'Shifts Covered', 'Shifts Replaced'],
     ...guards.map((guard) => [
       guard.guardName,
       guard.attendanceRate,
@@ -37,10 +38,11 @@ export function buildPerformanceCsv(guards: PerformanceCsvRow[]): string {
       guard.completedShifts,
       guard.noShows,
       guard.incidentReportsSubmitted,
-      guard.averageClientRating,
+      guard.evaluationCount > 0 ? guard.averageClientRating : '',
       guard.evaluationCount,
       guard.meritScore,
       guard.replacementFrequency,
+      guard.shiftsReplaced ?? '',
     ]),
   ]
 

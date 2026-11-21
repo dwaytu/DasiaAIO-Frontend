@@ -2,6 +2,7 @@ import { FC, FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { API_BASE_URL } from '../../config'
 import { Role } from '../../types/auth'
 import { fetchJsonOrThrow, getAuthHeaders } from '../../utils/api'
+import { formatSurnameFirstName, isValidMiddleInitial, normalizeNameParts, type PersonNameParts } from '../../utils/personName'
 import SentinelModal from '../shared/SentinelModal'
 
 interface CreateGuardAccountModalProps {
@@ -17,10 +18,7 @@ interface CreatedGuardAccount {
   requiresApproval: boolean
 }
 
-type FormState = {
-  firstName: string
-  middleInitial: string
-  lastName: string
+type FormState = PersonNameParts & {
   guardNumber: string
   username: string
   email: string
@@ -89,10 +87,8 @@ const CreateGuardAccountModal: FC<CreateGuardAccountModalProps> = ({
   const [usernameCustomized, setUsernameCustomized] = useState(false)
   const [emailCustomized, setEmailCustomized] = useState(false)
   const firstNameRef = useRef<HTMLInputElement>(null)
-  const firstName = form.firstName.trim().replace(/\s+/g, ' ')
-  const lastName = form.lastName.trim().replace(/\s+/g, ' ')
-  const middleInitial = form.middleInitial.trim().replace(/\.$/, '').toUpperCase()
-  const fullName = `${lastName}, ${firstName}${middleInitial ? ` ${middleInitial}.` : ''}`
+  const { firstName, middleInitial, lastName } = normalizeNameParts(form)
+  const fullName = formatSurnameFirstName(form)
   const loginName = [firstName, middleInitial, lastName].filter(Boolean).join(' ')
 
   const modalDescription = useMemo(() => {
@@ -142,7 +138,7 @@ const CreateGuardAccountModal: FC<CreateGuardAccountModalProps> = ({
 
     if (!firstName) nextErrors.firstName = 'First name is required.'
     if (!lastName) nextErrors.lastName = 'Last name is required.'
-    if (form.middleInitial.trim() && !/^\p{L}\.?$/u.test(form.middleInitial.trim())) {
+    if (!isValidMiddleInitial(form.middleInitial)) {
       nextErrors.middleInitial = 'Enter one letter for the middle initial.'
     }
     if (!form.username.trim()) nextErrors.username = 'Username is required.'

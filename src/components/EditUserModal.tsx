@@ -1,5 +1,6 @@
 import { useEffect, useState, FC } from 'react'
 import SentinelModal from './shared/SentinelModal'
+import { formatSurnameFirstName, isValidMiddleInitial, normalizeNameParts, parseSurnameFirstName } from '../utils/personName'
 
 interface User {
   id: string
@@ -26,40 +27,42 @@ const normalizeRole = (role?: string) => {
   return normalized === 'user' ? 'guard' : normalized
 }
 
+function editFormData(user: User | null) {
+  return {
+    email: user?.email || '',
+    username: user?.username || '',
+    ...(parseSurnameFirstName(user?.full_name) ?? { firstName: '', middleInitial: '', lastName: '' }),
+    phoneNumber: user?.phone_number || '',
+    licenseNumber: user?.license_number || '',
+    licenseIssuedDate: user?.license_issued_date?.split('T')[0] ?? '',
+    licenseExpiryDate: user?.license_expiry_date?.split('T')[0] ?? '',
+    address: user?.address || '',
+  }
+}
+
 const EditUserModal: FC<EditUserModalProps> = ({ user, viewerRole, onClose, onSave }) => {
   const normalizedViewerRole = normalizeRole(viewerRole)
   const normalizedTargetRole = normalizeRole(user?.role)
   const canEditCredentials =
     normalizedViewerRole === 'superadmin' ||
     ((normalizedViewerRole === 'admin' || normalizedViewerRole === 'supervisor') && normalizedTargetRole === 'guard')
-  const [formData, setFormData] = useState({
-    email: user?.email || '',
-    username: user?.username || '',
-    fullName: user?.full_name || '',
-    phoneNumber: user?.phone_number || '',
-    licenseNumber: user?.license_number || '',
-    licenseIssuedDate: user?.license_issued_date ? user.license_issued_date.split('T')[0] : '',
-    licenseExpiryDate: user?.license_expiry_date ? user.license_expiry_date.split('T')[0] : '',
-    address: user?.address || '',
-  })
+  const [formData, setFormData] = useState(() => editFormData(user))
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
-    setFormData({
-      email: user?.email || '',
-      username: user?.username || '',
-      fullName: user?.full_name || '',
-      phoneNumber: user?.phone_number || '',
-      licenseNumber: user?.license_number || '',
-      licenseIssuedDate: user?.license_issued_date ? user.license_issued_date.split('T')[0] : '',
-      licenseExpiryDate: user?.license_expiry_date ? user.license_expiry_date.split('T')[0] : '',
-      address: user?.address || '',
-    })
+    setFormData(editFormData(user))
     setError('')
   }, [user])
 
   if (!user) return null
+
+  const savedParts = parseSurnameFirstName(user.full_name)
+  const { firstName, lastName } = normalizeNameParts(formData)
+  const nameChanged = formData.firstName !== (savedParts?.firstName ?? '')
+    || formData.lastName !== (savedParts?.lastName ?? '')
+    || formData.middleInitial !== (savedParts?.middleInitial ?? '')
+  const validMiddleInitial = isValidMiddleInitial(formData.middleInitial)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -71,6 +74,13 @@ const EditUserModal: FC<EditUserModalProps> = ({ user, viewerRole, onClose, onSa
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (loading) return
+    if (nameChanged && (!firstName || !lastName || !validMiddleInitial)) {
+      setError(!firstName || !lastName
+        ? 'Enter both the first name and last name to update the name.'
+        : 'Enter one letter for the middle initial.')
+      return
+    }
     setLoading(true)
     setError('')
 
@@ -85,7 +95,7 @@ const EditUserModal: FC<EditUserModalProps> = ({ user, viewerRole, onClose, onSa
         email?: string
         username?: string
       } = {
-        fullName: formData.fullName,
+        ...(nameChanged ? { fullName: formatSurnameFirstName(formData) } : {}),
         phoneNumber: formData.phoneNumber,
         licenseNumber: formData.licenseNumber,
         licenseIssuedDate: formData.licenseIssuedDate,
@@ -115,7 +125,7 @@ const EditUserModal: FC<EditUserModalProps> = ({ user, viewerRole, onClose, onSa
       size="md"
     >
       {error && (
-        <div className="soc-alert-error mb-4 text-sm">
+        <div role="alert" className="soc-alert-error mb-4 text-sm">
           {error}
         </div>
       )}
@@ -156,18 +166,32 @@ const EditUserModal: FC<EditUserModalProps> = ({ user, viewerRole, onClose, onSa
           </p>
         ) : null}
 
-        <div>
-          <label htmlFor="fullName" className="mb-1 block text-sm font-semibold text-text-secondary">Full Name</label>
-          <input
-            type="text"
-            id="fullName"
-            name="fullName"
-            value={formData.fullName}
-            onChange={handleChange}
-            placeholder="Enter full name"
-            className="w-full rounded border border-border px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-info"
-          />
-        </div>
+        <fieldset className="min-w-0 space-y-2">
+          <legend className="mb-1 text-sm font-semibold text-text-secondary">Name</legend>
+          {!savedParts && user.full_name && (
+            <p className="text-xs text-text-secondary">Saved name: {user.full_name}. Enter the first and last name to update it.</p>
+          )}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="min-w-0 space-y-1 text-sm font-semibold text-text-secondary">
+              <span>First Name</span>
+              <input type="text" name="firstName" value={formData.firstName} onChange={handleChange}
+                autoComplete="given-name" disabled={loading} className="soc-field w-full" />
+            </label>
+            <label className="min-w-0 space-y-1 text-sm font-semibold text-text-secondary">
+              <span>Middle Initial (optional)</span>
+              <input type="text" name="middleInitial" value={formData.middleInitial} onChange={handleChange}
+                disabled={loading} className="soc-field w-full" />
+            </label>
+            <label className="min-w-0 space-y-1 text-sm font-semibold text-text-secondary sm:col-span-2">
+              <span>Last Name</span>
+              <input type="text" name="lastName" value={formData.lastName} onChange={handleChange}
+                autoComplete="family-name" disabled={loading} className="soc-field w-full" />
+            </label>
+          </div>
+          {firstName && lastName && validMiddleInitial && (
+            <p className="text-xs text-text-secondary">Roster display: {formatSurnameFirstName(formData)}</p>
+          )}
+        </fieldset>
 
         <div>
           <label htmlFor="phoneNumber" className="mb-1 block text-sm font-semibold text-text-secondary">Phone Number</label>

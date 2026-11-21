@@ -1,10 +1,18 @@
-import { useState, useEffect, FC } from 'react'
+import { useState, useEffect, FC, type FormEvent } from 'react'
+import { Link } from 'react-router'
 import { API_BASE_URL } from '../config'
 import { logError } from '../utils/logger'
 import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
 import OperationalShell from './layout/OperationalShell'
 import { getSidebarNav } from '../config/navigation'
 import { MANILA_TIME_ZONE } from '../utils/scheduleDateTime'
+import { ROUTES } from '../router/routes'
+import { can } from '../utils/permissions'
+import GuardSearchSelect, { type GuardSearchOption } from './shared/GuardSearchSelect'
+import SearchableSelect from './shared/SearchableSelect'
+import { loadFirearmInventory } from '../utils/firearmInventory'
+
+const PERMITS_PATH = '/api/guard-firearm-permits'
 
 interface Permit {
   id: string
@@ -30,6 +38,10 @@ const GuardFirearmPermits: FC<Props> = ({ user, onLogout, onViewChange, activeVi
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [showRecordForm, setShowRecordForm] = useState(false)
+  const [permitRevision, setPermitRevision] = useState(0)
+  const [recorded, setRecorded] = useState(false)
+  const canRecord = can(user.role, 'manage_permits')
 
   useEffect(() => {
     const controller = new AbortController()
@@ -37,8 +49,8 @@ const GuardFirearmPermits: FC<Props> = ({ user, onLogout, onViewChange, activeVi
     setReadWarning('')
     setPermits([])
     const permitsPath = user.role === 'guard'
-      ? `/api/guard-firearm-permits/${encodeURIComponent(user.id)}`
-      : '/api/guard-firearm-permits'
+      ? `${PERMITS_PATH}/${encodeURIComponent(user.id)}`
+      : PERMITS_PATH
     void fetchJsonOrThrow<{ permits: Permit[] }>(`${API_BASE_URL}${permitsPath}`, {
       headers: getAuthHeaders(), signal: controller.signal,
     }, 'Unable to load permit list').then((data) => {
@@ -51,7 +63,7 @@ const GuardFirearmPermits: FC<Props> = ({ user, onLogout, onViewChange, activeVi
       if (!controller.signal.aborted) setLoading(false)
     })
     return () => controller.abort()
-  }, [user.id, user.role])
+  }, [user.id, user.role, permitRevision])
 
   const searchTerm = search.trim().toLowerCase()
   const now = Date.now()
@@ -92,16 +104,32 @@ const GuardFirearmPermits: FC<Props> = ({ user, onLogout, onViewChange, activeVi
             <div className="text-info-text text-lg font-medium">Loading permits...</div>
           </div>
         ) : (
-          <div className="flex-1 flex flex-col p-4 md:p-8 overflow-hidden w-full animate-fade-in">
+          <div className="flex-1 space-y-4 p-4 md:p-8 overflow-y-auto w-full animate-fade-in">
             {readWarning ? (
               <div role="alert" className="mb-4 rounded border border-warning-border bg-warning-bg p-3 text-sm text-warning-text">
                 {readWarning}
               </div>
             ) : null}
-            <section className="flex flex-col flex-1 min-h-0 rounded overflow-hidden table-glass">
+            {recorded && <p role="status" className="rounded border border-success-border bg-success-bg p-3 text-sm text-success-text">Permit record saved.</p>}
+            <section className="rounded overflow-hidden table-glass">
               <div className="shrink-0 px-6 py-5 border-b border-border-subtle">
-                <h2 className="text-xl font-bold text-text-primary">Permit records</h2>
-                <p className="mt-1 text-sm text-text-secondary">Look up recorded permits and check their status and expiry dates.</p>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h2 className="text-xl font-bold text-text-primary">Guard firearm permits</h2>
+                    <p className="mt-1 text-sm text-text-secondary">Look up recorded permits and check their status and expiry dates.</p>
+                  </div>
+                  {canRecord && !readWarning && (
+                    <button
+                      type="button"
+                      aria-expanded={showRecordForm}
+                      aria-controls="record-permit"
+                      className="soc-btn-primary min-h-11 px-4"
+                      onClick={() => { setRecorded(false); setShowRecordForm((open) => !open) }}
+                    >
+                      {showRecordForm ? 'Close form' : 'Record issued permit'}
+                    </button>
+                  )}
+                </div>
                 {!readWarning && permits.length > 0 && (
                   <div className="mt-4 flex flex-wrap gap-3">
                     <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm text-text-primary">
@@ -119,6 +147,17 @@ const GuardFirearmPermits: FC<Props> = ({ user, onLogout, onViewChange, activeVi
                       </select>
                     </label>
                   </div>
+                )}
+              </div>
+              <div id="record-permit">
+                {showRecordForm && canRecord && (
+                  <RecordPermitForm onSaved={() => {
+                    setShowRecordForm(false)
+                    setRecorded(true)
+                    setSearch('')
+                    setStatusFilter('')
+                    setPermitRevision((revision) => revision + 1)
+                  }} />
                 )}
               </div>
               {readWarning ? null : matchingPermits.length > 0 ? (
@@ -155,12 +194,129 @@ const GuardFirearmPermits: FC<Props> = ({ user, onLogout, onViewChange, activeVi
                   </table>
                 </div>
               ) : (
-                <p className="text-center text-text-secondary py-8 italic">{permits.length ? 'No permits match these filters.' : 'No permits found.'}</p>
+                <div className="space-y-2 px-6 py-8 text-center text-sm text-text-secondary">
+                  <p>{permits.length ? 'No permits match these filters.' : 'No guard firearm permits have been recorded.'}</p>
+                  {!permits.length && canRecord && (
+                    <p>Security guard license records are available in <Link className="text-info-text underline" to={ROUTES.DOCUMENTS}>Guard Documents</Link>.</p>
+                  )}
+                </div>
               )}
             </section>
           </div>
         )}
     </OperationalShell>
+  )
+}
+
+function RecordPermitForm({ onSaved }: { onSaved: () => void }) {
+  const [options, setOptions] = useState<{
+    guards: GuardSearchOption[]
+    firearms: Array<{ id: string; value: string; label: string }>
+  } | null>(null)
+  const [form, setForm] = useState({ guardId: '', firearmId: '', type: '', issueDate: '', expiryDate: '', confirmed: false })
+  const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    const controller = new AbortController()
+    const headers = getAuthHeaders()
+    void Promise.all([
+      fetchJsonOrThrow<Array<{ id: string; full_name?: string; username?: string; guard_code?: string | null }>>(
+        `${API_BASE_URL}/api/guards`,
+        { headers, signal: controller.signal },
+        'Unable to load the guard roster.',
+      ),
+      loadFirearmInventory(headers, controller.signal),
+    ]).then(([guards, inventory]) => {
+      if (controller.signal.aborted) return
+      setOptions({
+        guards: guards.map(({ id, full_name, username, guard_code }) => ({ id, fullName: full_name, username, guardCode: guard_code })),
+        firearms: inventory.map(({ id, serialNumber, model }) => ({ id, value: id, label: `${serialNumber} - ${model}` })),
+      })
+    }).catch(() => {
+      if (!controller.signal.aborted) setError('Unable to load permit form options. Close and reopen the form to retry.')
+    })
+    return () => controller.abort()
+  }, [])
+
+  const save = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (saving || !options || !form.confirmed || !form.guardId) return
+    if (!form.type.trim() || !form.issueDate || !form.expiryDate || form.expiryDate < form.issueDate) {
+      setError('Enter the permit type and check the issue and expiry dates.')
+      return
+    }
+
+    const issued = new Date(`${form.issueDate}T00:00:00+08:00`)
+    const expiry = new Date(`${form.expiryDate}T23:59:59+08:00`)
+    setSaving(true)
+    setError('')
+    try {
+      await fetchJsonOrThrow(`${API_BASE_URL}${PERMITS_PATH}`, {
+        method: 'POST',
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({
+          guard_id: form.guardId,
+          firearm_id: form.firearmId || null,
+          permit_type: form.type.trim(),
+          issued_date: issued.toISOString(),
+          expiry_date: expiry.toISOString(),
+          status: expiry.getTime() <= Date.now() ? 'expired' : 'active',
+        }),
+      }, 'Unable to save the permit record.')
+      onSaved()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to save the permit record.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <form onSubmit={save} className="space-y-4 border-b border-border-subtle p-6">
+      <h3 className="text-lg font-bold text-text-primary">Record an issued permit</h3>
+      <p className="text-sm text-text-secondary">Enter the details from the issued permit. Dates are in Philippine time.</p>
+      {error && <p role="alert" className="text-sm text-danger-text">{error}</p>}
+      {!options && !error && <p role="status" className="text-sm text-text-secondary">Loading permit form options…</p>}
+      {options && (
+        <fieldset disabled={saving} className="grid min-w-0 gap-4 md:grid-cols-2">
+          <GuardSearchSelect id="permit-guard" label="Guard" guards={options.guards} value={form.guardId} onChange={(guardId) => setForm({ ...form, guardId })} required emptyMessage="No guards are available in the roster." />
+          <SearchableSelect
+            id="permit-firearm"
+            label="Firearm (optional)"
+            options={options.firearms}
+            value={form.firearmId}
+            onChange={(firearmId) => setForm({ ...form, firearmId })}
+            placeholder="Search by serial number or model"
+            helperText="Select a firearm if the permit identifies one."
+            emptyMessage="No firearms are available in the inventory register."
+            noResultsMessage={() => 'No firearms match this search.'}
+            clearSelectionOnEdit
+          />
+          <label className="grid gap-1 text-sm text-text-primary md:col-span-2">
+            Permit type
+            <input required className="soc-form-control min-h-11" value={form.type} onChange={(event) => setForm({ ...form, type: event.target.value })} />
+          </label>
+          <label className="grid gap-1 text-sm text-text-primary">
+            Issue date
+            <input required type="date" className="soc-form-control min-h-11" value={form.issueDate} onChange={(event) => setForm({ ...form, issueDate: event.target.value })} />
+          </label>
+          <label className="grid gap-1 text-sm text-text-primary">
+            Expiry date
+            <input required type="date" min={form.issueDate || undefined} className="soc-form-control min-h-11" value={form.expiryDate} onChange={(event) => setForm({ ...form, expiryDate: event.target.value })} />
+          </label>
+          <label className="flex min-h-11 items-center gap-2 text-sm text-text-primary md:col-span-2">
+            <input required type="checkbox" checked={form.confirmed} onChange={(event) => setForm({ ...form, confirmed: event.target.checked })} />
+            I verified these details against the issued permit.
+          </label>
+          <div className="md:col-span-2">
+            <button type="submit" className="soc-btn-primary min-h-11 px-4" disabled={!form.guardId || !form.confirmed || saving}>
+              {saving ? 'Saving…' : 'Save permit record'}
+            </button>
+          </div>
+        </fieldset>
+      )}
+    </form>
   )
 }
 

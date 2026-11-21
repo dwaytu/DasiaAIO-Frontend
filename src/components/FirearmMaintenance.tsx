@@ -10,6 +10,7 @@ import OperationalSummaryBand from './shared/OperationalSummaryBand'
 import { ROUTES, VEHICLE_MAINTENANCE_URL } from '../router/routes'
 import { formatVehicleIdentifier } from '../utils/vehicleIdentifier'
 import type { User } from '../context/AuthContext'
+import { loadFirearmInventory } from '../utils/firearmInventory'
 
 interface Maintenance {
   id: string
@@ -27,6 +28,7 @@ interface Maintenance {
 interface MaintenanceResponse {
   total: number
   maintenances: Array<Omit<Maintenance, 'assetId'> & { firearmId: string }>
+  returnedToHeadquartersIds?: string[]
 }
 
 interface VehicleMaintenanceRecord {
@@ -42,6 +44,7 @@ interface MaintenanceAsset {
   id: string
   label: string
   status: string
+  returnedToHeadquarters?: boolean
 }
 
 interface MaintenanceData {
@@ -86,35 +89,6 @@ async function loadVehicleMaintenance(headers: HeadersInit, signal?: AbortSignal
       status: car.status,
     })),
     records,
-  }
-}
-
-interface Firearm {
-  id: string
-  serialNumber: string
-  model: string
-  status: string
-}
-
-interface FirearmPage {
-  total?: number
-  firearms?: Firearm[]
-}
-
-async function loadFirearmInventory(headers: HeadersInit, signal?: AbortSignal): Promise<Firearm[]> {
-  const firearms: Firearm[] = []
-
-  for (let page = 1; ; page += 1) {
-    const params = new URLSearchParams({ page: String(page), page_size: '200' })
-    const response = await fetchJsonOrThrow<Firearm[] | FirearmPage>(
-      `${API_BASE_URL}/api/firearms?${params}`,
-      { headers, signal },
-      'Unable to load firearm inventory',
-    )
-    const batch = Array.isArray(response) ? response : response.firearms ?? []
-    firearms.push(...batch)
-    if (Array.isArray(response) || response.total === undefined || firearms.length >= response.total) return firearms
-    if (batch.length === 0) throw new Error('Firearm inventory changed while loading. Refresh and try again.')
   }
 }
 
@@ -262,9 +236,15 @@ function MaintenanceRecords({ user, showVehicles }: { user: Props['user']; showV
           fetchJsonOrThrow<MaintenanceResponse>(endpoint, { headers, signal }, 'Unable to load firearm maintenance records'),
           loadFirearmInventory(headers, signal),
         ])
+        const headquartersIds = new Set(maintenanceResponse.returnedToHeadquartersIds ?? [])
         data = {
           records: (maintenanceResponse.maintenances ?? []).map(({ firearmId, ...record }) => ({ ...record, assetId: firearmId })),
-          assets: firearmResponse.map(({ id, serialNumber, model, status }) => ({ id, label: `${serialNumber} - ${model}`, status })),
+          assets: firearmResponse.map(({ id, serialNumber, model, status }) => ({
+            id,
+            label: `${serialNumber} - ${model}`,
+            status,
+            returnedToHeadquarters: headquartersIds.has(id),
+          })),
         }
       }
       if (signal?.aborted) return
@@ -300,7 +280,9 @@ function MaintenanceRecords({ user, showVehicles }: { user: Props['user']; showV
   }, [maintenances])
   const inventoryInMaintenance = assets.filter(({ status }) => status.trim().toLowerCase() === 'maintenance')
   const openJobAssetIds = new Set(maintenances.filter(({ status }) => canCompleteRecord(status)).map(({ assetId }) => assetId))
-  const maintenanceWithoutOpenJob = inventoryInMaintenance.filter(({ id }) => !openJobAssetIds.has(id)).length
+  const inventoryWithoutOpenJob = inventoryInMaintenance.filter(({ id }) => !openJobAssetIds.has(id))
+  const headquartersReturns = inventoryWithoutOpenJob.filter(({ returnedToHeadquarters }) => returnedToHeadquarters)
+  const maintenanceWithoutOpenJob = inventoryWithoutOpenJob.length - headquartersReturns.length
   const openJobCount = maintenanceSummary.pending + maintenanceSummary.inProgress
 
   const assetLabel = (assetId: string) => assets.find(({ id }) => id === assetId)?.label ?? assetId
@@ -461,6 +443,18 @@ function MaintenanceRecords({ user, showVehicles }: { user: Props['user']; showV
         <p className="rounded border border-warning-border bg-warning-bg p-3 text-sm text-warning-text" role="status">
           {maintenanceWithoutOpenJob} {maintenanceWithoutOpenJob === 1 ? `${assetName} is` : `${assetName}s are`} marked Maintenance in Inventory without an open maintenance record.
         </p>
+      ) : null}
+
+      {dataAvailable && headquartersReturns.length > 0 ? (
+        <details className="rounded border border-border-subtle bg-surface p-4 text-sm">
+          <summary className="cursor-pointer font-semibold text-text-primary">
+            {headquartersReturns.length} {headquartersReturns.length === 1 ? 'firearm' : 'firearms'} returned to headquarters
+          </summary>
+          <p className="mt-3 text-text-secondary">The imported inventory lists these firearms as unavailable. The source records document a return to headquarters. The service register shows recorded maintenance jobs.</p>
+          <ul className="mt-3 grid gap-2 text-text-secondary sm:grid-cols-2 lg:grid-cols-3">
+            {headquartersReturns.map(({ id, label }) => <li key={id}>{label}</li>)}
+          </ul>
+        </details>
       ) : null}
 
       {showScheduleForm ? (

@@ -190,15 +190,17 @@ describe('operational resource hierarchy', () => {
     expect(screen.getByRole('heading', { name: 'Schedule firearm maintenance' })).toBeInTheDocument()
   })
 
-  it('counts inventory beyond the first page and identifies maintenance statuses without open jobs', async () => {
+  it('counts inventory beyond the first page and identifies headquarters returns and unexplained holds', async () => {
     const statuses = [
       ...Array(17).fill('available'), ...Array(33).fill('allocated'),
       ...Array(41).fill('Available '), ...Array(8).fill('maintenance'), ...Array(11).fill('allocated'),
     ]
-    const inventory = statuses.map((status, index) => ({ id: `fixture-${index}`, status }))
+    const inventory = statuses.map((status, index) => ({ id: `fixture-${index}`, serialNumber: `SN-${index}`, model: 'Fixture record', status }))
     fetchJsonOrThrowMock.mockImplementation(async (input) => {
       const url = new URL(String(input))
-      if (url.pathname === '/api/firearm-maintenance') return { total: 0, maintenances: [] } as never
+      if (url.pathname === '/api/firearm-maintenance') {
+        return { total: 0, maintenances: [], returnedToHeadquartersIds: inventory.slice(91, 98).map(({ id }) => id) } as never
+      }
       if (url.pathname === '/api/firearms') {
         const offset = (Number(url.searchParams.get('page')) - 1) * 50
         return { total: inventory.length, firearms: inventory.slice(offset, offset + 50) } as never
@@ -211,7 +213,8 @@ describe('operational resource hierarchy', () => {
     const available = await screen.findByText('Available firearms')
     expect(available.nextElementSibling).toHaveTextContent(/^58$/)
     expect(screen.getByText('No open maintenance records')).toBeInTheDocument()
-    expect(screen.getByText('8 firearms are marked Maintenance in Inventory without an open maintenance record.')).toBeInTheDocument()
+    expect(screen.getByText('1 firearm is marked Maintenance in Inventory without an open maintenance record.')).toBeInTheDocument()
+    expect(screen.getByText('7 firearms returned to headquarters')).toBeInTheDocument()
   })
 
   it('separates firearm allocation status from the allocation work area', async () => {

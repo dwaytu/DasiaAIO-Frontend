@@ -24,14 +24,15 @@ jest.mock('../../utils/api', () => ({
 const user = { id: 'admin-1', username: 'admin', email: 'admin@example.test', role: 'admin' as const }
 
 const rankings = [
-  { rank: 1, guardId: 'guard-1', guardName: 'Guard One', overallScore: 91.5, meritRank: 'Gold', onTimePercentage: 96, clientRating: 90, evaluationCount: 2 },
-  { rank: 2, guardId: 'guard-2', guardName: 'Guard Two', overallScore: 100, meritRank: 'Excellent', onTimePercentage: 100, clientRating: 0, evaluationCount: 0 },
+  { rank: 1, guardId: 'guard-1', guardName: 'Guard One', overallScore: 91.5, meritRank: 'Gold', onTimePercentage: 96, clientRating: 90, evaluationCount: 2, scoreBasis: 'weighted_merit' },
+  { rank: 2, guardId: 'guard-2', guardName: 'Guard Two', overallScore: 100, meritRank: 'Excellent', onTimePercentage: 100, clientRating: 0, evaluationCount: 0, scoreBasis: 'attendance_punctuality' },
 ]
 
 const scorecard = {
   guardId: 'guard-1',
   guardName: 'Guard One',
   overallScore: 91.5,
+  scoreBasis: 'weighted_merit',
   rank: 'Gold',
   attendanceScore: 95,
   punctualityScore: 90,
@@ -44,7 +45,9 @@ const evaluations = [
   { id: 'eval-2', guardId: 'guard-1', rating: 5, comment: 'Excellent', evaluatorName: 'Capstone presentation evaluation', evaluatorRole: 'presentation scenario', createdAt: '2026-09-10T08:00:00.000Z' },
 ]
 
-function mockMeritFetch({ rankingStatus = 200, rankingItems = rankings }: { rankingStatus?: number; rankingItems?: typeof rankings } = {}) {
+type TestRanking = Omit<(typeof rankings)[number], 'scoreBasis'> & { scoreBasis?: string }
+
+function mockMeritFetch({ rankingStatus = 200, rankingItems = rankings }: { rankingStatus?: number; rankingItems?: TestRanking[] } = {}) {
   return jest.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
     const url = String(input)
     if (url.endsWith('/api/merit/rankings/all')) {
@@ -76,6 +79,10 @@ describe('MeritScoreDashboard', () => {
     expect(screen.getByText('Evaluated').parentElement).toHaveTextContent('1')
     expect(screen.getByText('Awaiting evaluation').parentElement).toHaveTextContent('1')
     expect(screen.getByText('No evaluations')).toBeInTheDocument()
+    expect(screen.getByText('Saved scores use different formulas.', { exact: false })).toBeInTheDocument()
+    const attendanceRow = screen.getByRole('row', { name: /Guard Two/ })
+    expect(within(attendanceRow).getByText('100.0')).toBeInTheDocument()
+    expect(within(attendanceRow).getByText('Attendance and punctuality')).toBeInTheDocument()
     expect(screen.queryByText(/Capstone snapshot/i)).not.toBeInTheDocument()
   })
 
@@ -128,6 +135,7 @@ describe('MeritScoreDashboard', () => {
 
     expect(await screen.findByRole('heading', { name: 'Guard One' })).toBeInTheDocument()
     expect(screen.getByText('Overall score').parentElement).toHaveTextContent('91.5')
+    expect(screen.getByText('30% attendance · 35% punctuality · 35% evaluator rating')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Performance activity' })).toBeInTheDocument()
     expect(screen.getByRole('img', { name: /Score trend from/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Add evaluation' })).toBeInTheDocument()

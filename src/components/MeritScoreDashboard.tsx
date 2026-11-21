@@ -20,11 +20,25 @@ interface Props {
   activeView?: string
 }
 
+type ScoreBasis = 'attendance_punctuality' | 'weighted_merit' | 'saved' | 'not_scored'
+
+const SCORE_BASIS = {
+  attendance_punctuality: {
+    label: 'Attendance and punctuality',
+    weights: '65% attendance · 35% punctuality',
+  },
+  weighted_merit: {
+    label: 'Weighted merit',
+    weights: '30% attendance · 35% punctuality · 35% evaluator rating',
+  },
+}
+
 interface RankedGuard {
   rank: number
   guardId: string
   guardName: string
   overallScore: number
+  scoreBasis?: ScoreBasis
   meritRank: string
   onTimePercentage: number
   clientRating: number
@@ -35,6 +49,7 @@ interface MeritScore {
   guardId: string
   guardName: string
   overallScore: number
+  scoreBasis?: ScoreBasis
   rank: string
   attendanceScore: number
   punctualityScore: number
@@ -287,6 +302,8 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
   const visibleRankings = filteredRankings.slice((rankingPage - 1) * RANKINGS_PAGE_SIZE, rankingPage * RANKINGS_PAGE_SIZE)
   const coverageAvailable = rankings.every((guard) => guard.evaluationCount !== undefined)
   const evaluatedCount = rankings.filter((guard) => (guard.evaluationCount ?? 0) > 0).length
+  const hasMixedScoreFormulas = rankings.some((guard) => guard.scoreBasis === 'attendance_punctuality')
+    && rankings.some((guard) => guard.scoreBasis === 'weighted_merit')
   const scoredRankings = rankings.filter((guard) => guard.meritRank.toLowerCase() !== 'not evaluated')
   const averageScore = scoredRankings.length > 0
     ? scoredRankings.reduce((total, guard) => total + guard.overallScore, 0) / scoredRankings.length
@@ -387,7 +404,16 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
                   <div className="px-5 pb-5 md:px-6">
                     <OperationalSummaryBand
                       items={[
-                        { label: 'Overall score', value: selectedGuard.overallScore.toFixed(1), detail: 'Saved merit score', tone: getScoreTone(selectedGuard.overallScore), icon: Award, onSelect: () => setHistoryCategory('concerns') },
+                        {
+                          label: 'Overall score',
+                          value: selectedGuard.scoreBasis === 'not_scored' ? 'No score' : selectedGuard.overallScore.toFixed(1),
+                          detail: selectedGuard.scoreBasis === 'attendance_punctuality' || selectedGuard.scoreBasis === 'weighted_merit'
+                            ? SCORE_BASIS[selectedGuard.scoreBasis].weights
+                            : selectedGuard.scoreBasis === 'not_scored' ? undefined : 'Saved merit score',
+                          tone: selectedGuard.scoreBasis === 'not_scored' ? 'neutral' : getScoreTone(selectedGuard.overallScore),
+                          icon: Award,
+                          onSelect: () => setHistoryCategory('concerns'),
+                        },
                         { label: 'Attendance', value: selectedGuard.attendanceScore.toFixed(1), detail: 'Attendance contribution', tone: 'success', icon: CalendarCheck2, onSelect: () => setHistoryCategory('shifts') },
                         { label: 'Punctuality', value: selectedGuard.punctualityScore.toFixed(1), detail: 'Timekeeping contribution', tone: 'info', icon: Clock3, onSelect: () => setHistoryCategory('punctuality') },
                         { label: 'Evaluator rating', value: selectedGuard.stats.evaluations > 0 ? `${selectedGuard.stats.averageRating.toFixed(1)} / 5` : 'No evaluations', detail: 'Average submitted rating', tone: 'warning', icon: Star, onSelect: () => setHistoryCategory('evaluations') },
@@ -494,6 +520,9 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
                     <p className="soc-kicker">Guard register</p>
                     <h2 className="mt-1 text-lg font-bold text-text-primary">Evaluation register</h2>
                     <p className="mt-1 text-sm text-text-secondary">Search by guard name or Guard ID. Open a scorecard to review the recorded factors behind each merit score.</p>
+                    {hasMixedScoreFormulas && (
+                      <p className="mt-1 text-sm text-text-secondary">Saved scores use different formulas. Check the label below each score before comparing.</p>
+                    )}
                     <label className="mt-4 block max-w-md text-sm font-semibold text-text-secondary" htmlFor="guard-evaluations-search">
                       Find a guard
                       <input
@@ -548,9 +577,18 @@ const MeritScoreDashboard: FC<Props> = ({ user, onLogout, onViewChange, activeVi
                             </td>
                             <td className="px-4 py-3.5 align-middle text-sm font-medium text-text-primary">{guard.guardName}</td>
                             <td className="px-4 py-3.5 align-middle text-sm text-text-primary">
-                              <span className={`font-bold text-lg ${getScoreColor(guard.overallScore)}`}>
-                                {guard.overallScore.toFixed(1)}
-                              </span>
+                              {guard.scoreBasis === 'not_scored' ? (
+                                <span className="text-text-secondary">No score</span>
+                              ) : (
+                                <>
+                                  <span className={`font-bold text-lg ${getScoreColor(guard.overallScore)}`}>
+                                    {guard.overallScore.toFixed(1)}
+                                  </span>
+                                  {(guard.scoreBasis === 'attendance_punctuality' || guard.scoreBasis === 'weighted_merit') && (
+                                    <span className="mt-0.5 block text-xs text-text-secondary">{SCORE_BASIS[guard.scoreBasis].label}</span>
+                                  )}
+                                </>
+                              )}
                             </td>
                             <td className="px-4 py-3.5 align-middle text-sm text-text-primary">
                               <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getMeritRankColor(guard.meritRank)}`}>

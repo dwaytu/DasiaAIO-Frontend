@@ -2,6 +2,13 @@ import { useState, useEffect, useCallback, FC } from 'react'
 import { API_BASE_URL } from '../config'
 import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
 import { isTripInProgress, saveTripStatus } from '../utils/tripManagement'
+import { MANILA_TIME_ZONE } from '../utils/scheduleDateTime'
+
+function formatTripDateTime(value?: string) {
+  return value ? new Date(value).toLocaleString('en-PH', {
+    dateStyle: 'medium', timeStyle: 'short', timeZone: MANILA_TIME_ZONE,
+  }) : 'N/A'
+}
 
 interface Trip {
   id: string
@@ -163,7 +170,7 @@ const TripManagement: FC = () => {
                   <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Destination</th>
                   <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Vehicle</th>
                   <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Driver</th>
-                  <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Start Time</th>
+                  <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Start Time (Manila)</th>
                   <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Status</th>
                   <th className="px-4 py-3 text-left font-semibold text-text-primary border-b-2 border-border text-sm uppercase tracking-wider">Actions</th>
                 </tr>
@@ -181,7 +188,7 @@ const TripManagement: FC = () => {
                       <div className="text-xs text-text-tertiary">{trip.driver_phone}</div>
                     </td>
                     <td className="px-4 py-3 text-text-primary">
-                      {trip.start_time ? new Date(trip.start_time).toLocaleString() : 'N/A'}
+                      {formatTripDateTime(trip.start_time)}
                     </td>
                     <td className="px-4 py-3">
                       <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(trip.status)}`}>
@@ -253,15 +260,15 @@ const TripManagement: FC = () => {
                     </span>
                   </div>
                   <div>
-                    <p className="text-text-secondary">Start Time:</p>
+                    <p className="text-text-secondary">Start Time (Manila)</p>
                     <p className="font-medium text-text-primary">
-                      {selectedTrip.start_time ? new Date(selectedTrip.start_time).toLocaleString() : 'N/A'}
+                      {formatTripDateTime(selectedTrip.start_time)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-text-secondary">End Time:</p>
+                    <p className="text-text-secondary">End Time (Manila)</p>
                     <p className="font-medium text-text-primary">
-                      {selectedTrip.end_time ? new Date(selectedTrip.end_time).toLocaleString() : 'N/A'}
+                      {formatTripDateTime(selectedTrip.end_time)}
                     </p>
                   </div>
                   <div>
@@ -279,7 +286,7 @@ const TripManagement: FC = () => {
 
               {/* Assigned Guards */}
               <div>
-                <h3 className="font-bold text-text-primary mb-3">Assigned Guards ({selectedTrip.guard_count})</h3>
+                <h3 className="font-bold text-text-primary mb-3">Recorded guard assignments{selectedTrip.guard_count ? ` (${selectedTrip.guard_count})` : ''}</h3>
                 {selectedTrip.guards.length > 0 ? (
                   <div className="space-y-2">
                     {selectedTrip.guards.map((guard) => (
@@ -292,13 +299,13 @@ const TripManagement: FC = () => {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-text-secondary text-sm">No guards assigned</p>
+                  <p className="text-text-secondary text-sm">No trip-specific guard assignments on record.</p>
                 )}
               </div>
 
               {/* Allocated Firearms */}
               <div>
-                <h3 className="font-bold text-text-primary mb-3">Allocated Firearms ({selectedTrip.firearm_count})</h3>
+                <h3 className="font-bold text-text-primary mb-3">Recorded firearm allocations{selectedTrip.firearm_count ? ` (${selectedTrip.firearm_count})` : ''}</h3>
                 {selectedTrip.firearms.length > 0 ? (
                   <div className="space-y-2">
                     {selectedTrip.firearms.map((firearm) => (
@@ -311,7 +318,7 @@ const TripManagement: FC = () => {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-text-secondary text-sm">No firearms allocated</p>
+                  <p className="text-text-secondary text-sm">No trip-specific firearm allocations on record.</p>
                 )}
               </div>
 

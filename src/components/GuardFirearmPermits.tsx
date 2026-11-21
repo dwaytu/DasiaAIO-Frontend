@@ -4,16 +4,16 @@ import { logError } from '../utils/logger'
 import { fetchJsonOrThrow, getAuthHeaders } from '../utils/api'
 import OperationalShell from './layout/OperationalShell'
 import { getSidebarNav } from '../config/navigation'
+import { MANILA_TIME_ZONE } from '../utils/scheduleDateTime'
 
 interface Permit {
   id: string
   guardId: string
-  firearmId: string
+  firearmId: string | null
   permitType: string
   issuedDate: string
   expiryDate: string
   status: string
-  [key: string]: any
 }
 
 interface Props {
@@ -28,33 +28,41 @@ const GuardFirearmPermits: FC<Props> = ({ user, onLogout, onViewChange, activeVi
   const [loading, setLoading] = useState<boolean>(true)
   const [readWarning, setReadWarning] = useState<string>('')
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false)
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
 
   useEffect(() => {
-    fetchPermits()
-  }, [])
-
-  const fetchPermits = async () => {
-    try {
-      setLoading(true)
-      const permitsPath = user.role === 'guard'
-        ? `/api/guard-firearm-permits/${encodeURIComponent(user.id)}`
-        : '/api/guard-firearm-permits'
-      const data = await fetchJsonOrThrow<any>(`${API_BASE_URL}${permitsPath}`, {
-        headers: getAuthHeaders()
-      }, 'Unable to load permit list')
-      setPermits(data.permits || [])
-      setReadWarning('')
-    } catch (err) {
+    const controller = new AbortController()
+    setLoading(true)
+    setReadWarning('')
+    setPermits([])
+    const permitsPath = user.role === 'guard'
+      ? `/api/guard-firearm-permits/${encodeURIComponent(user.id)}`
+      : '/api/guard-firearm-permits'
+    void fetchJsonOrThrow<{ permits: Permit[] }>(`${API_BASE_URL}${permitsPath}`, {
+      headers: getAuthHeaders(), signal: controller.signal,
+    }, 'Unable to load permit list').then((data) => {
+      if (!controller.signal.aborted) setPermits(data.permits || [])
+    }).catch((err) => {
+      if (controller.signal.aborted) return
       logError('Error fetching permits:', err)
-      setReadWarning('Permit records are temporarily unavailable. Read state is degraded; permit writes remain blocked by backend validation when required.')
-    } finally {
-      setLoading(false)
-    }
-  }
+      setReadWarning('Permit records are temporarily unavailable.')
+    }).finally(() => {
+      if (!controller.signal.aborted) setLoading(false)
+    })
+    return () => controller.abort()
+  }, [user.id, user.role])
 
-  const isExpired = (expiryDate: string) => {
-    return new Date(expiryDate) < new Date()
-  }
+  const searchTerm = search.trim().toLowerCase()
+  const now = Date.now()
+  const matchingPermits = permits.map((permit) => {
+    const status = permit.status.trim().toLowerCase()
+    const expired = status === 'active' && Date.parse(permit.expiryDate) <= now
+    return { ...permit, status: expired ? 'expired' : status }
+  }).filter((permit) => (
+    (!statusFilter || permit.status === statusFilter) &&
+    [permit.guardId, permit.firearmId, permit.permitType].some((value) => value?.toLowerCase().includes(searchTerm))
+  ))
 
   const getStatusBadgeColor = (status: string) => {
     switch (status?.toLowerCase()) {
@@ -86,15 +94,34 @@ const GuardFirearmPermits: FC<Props> = ({ user, onLogout, onViewChange, activeVi
         ) : (
           <div className="flex-1 flex flex-col p-4 md:p-8 overflow-hidden w-full animate-fade-in">
             {readWarning ? (
-              <div className="mb-4 rounded border border-warning-border bg-warning-bg p-3 text-sm text-warning-text">
+              <div role="alert" className="mb-4 rounded border border-warning-border bg-warning-bg p-3 text-sm text-warning-text">
                 {readWarning}
               </div>
             ) : null}
             <section className="flex flex-col flex-1 min-h-0 rounded overflow-hidden table-glass">
               <div className="shrink-0 px-6 py-5 border-b border-border-subtle">
-                <h2 className="text-xl font-bold text-text-primary">Permit records ({permits.length})</h2>
+                <h2 className="text-xl font-bold text-text-primary">Permit records</h2>
+                <p className="mt-1 text-sm text-text-secondary">Look up recorded permits and check their status and expiry dates.</p>
+                {!readWarning && permits.length > 0 && (
+                  <div className="mt-4 flex flex-wrap gap-3">
+                    <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm text-text-primary">
+                      Search permits
+                      <input type="search" className="soc-form-control min-h-11" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Guard ID, firearm ID, or permit type" />
+                    </label>
+                    <label className="flex flex-col gap-1 text-sm text-text-primary">
+                      Status
+                      <select className="soc-form-control min-h-11" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+                        <option value="">All statuses</option>
+                        <option value="active">Active</option>
+                        <option value="expired">Expired</option>
+                        <option value="pending">Pending</option>
+                        <option value="revoked">Revoked</option>
+                      </select>
+                    </label>
+                  </div>
+                )}
               </div>
-              {permits.length > 0 ? (
+              {readWarning ? null : matchingPermits.length > 0 ? (
                 <div className="soc-scroll-area flex-1 min-h-0 overflow-auto">
                   <table className="w-full border-collapse">
                     <thead className="thead-glass">
@@ -108,14 +135,14 @@ const GuardFirearmPermits: FC<Props> = ({ user, onLogout, onViewChange, activeVi
                       </tr>
                     </thead>
                     <tbody>
-                      {permits.map((p) => (
-                        <tr key={p.id} className={`border-b border-border hover:bg-surface-hover ${isExpired(p.expiryDate) ? 'bg-danger-bg' : ''}`}>
+                      {matchingPermits.map((p) => (
+                        <tr key={p.id} className="border-b border-border hover:bg-surface-hover">
                           <td className="px-4 py-3 text-text-primary">{p.guardId}</td>
-                          <td className="px-4 py-3 text-text-primary">{p.firearmId}</td>
+                          <td className="px-4 py-3 text-text-primary">{p.firearmId || '—'}</td>
                           <td className="px-4 py-3 text-text-primary">{p.permitType}</td>
-                          <td className="px-4 py-3 text-text-primary">{new Date(p.issuedDate).toLocaleDateString()}</td>
-                          <td className={`px-4 py-3 ${isExpired(p.expiryDate) ? 'text-danger-text font-semibold' : 'text-text-primary'}`}>
-                            {new Date(p.expiryDate).toLocaleDateString()}
+                          <td className="px-4 py-3 text-text-primary">{new Date(p.issuedDate).toLocaleDateString('en-PH', { timeZone: MANILA_TIME_ZONE })}</td>
+                          <td className={`px-4 py-3 ${p.status === 'expired' ? 'text-danger-text font-semibold' : 'text-text-primary'}`}>
+                            {new Date(p.expiryDate).toLocaleDateString('en-PH', { timeZone: MANILA_TIME_ZONE })}
                           </td>
                           <td className="px-4 py-3">
                             <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${getStatusBadgeColor(p.status)}`}>
@@ -128,7 +155,7 @@ const GuardFirearmPermits: FC<Props> = ({ user, onLogout, onViewChange, activeVi
                   </table>
                 </div>
               ) : (
-                <p className="text-center text-text-secondary py-8 italic">No permits found</p>
+                <p className="text-center text-text-secondary py-8 italic">{permits.length ? 'No permits match these filters.' : 'No permits found.'}</p>
               )}
             </section>
           </div>

@@ -1,3 +1,5 @@
+export const MANILA_TIME_ZONE = 'Asia/Manila'
+
 export interface UtcScheduleRange {
   startTime: string
   endTime: string

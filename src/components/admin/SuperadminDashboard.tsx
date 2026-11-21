@@ -39,7 +39,7 @@ import { SuperadminInboxPanel } from '../inbox/SuperadminInboxPanel'
 import { useOperationalMapData } from '../../hooks/useOperationalMapData'
 import CreateGuardAccountModal from './CreateGuardAccountModal'
 import GuardPasswordModal from './GuardPasswordModal'
-import { localScheduleToUtc } from '../../utils/scheduleDateTime'
+import { localScheduleToUtc, MANILA_TIME_ZONE } from '../../utils/scheduleDateTime'
 import OperationalRequestsPanel from '../requests/OperationalRequestsPanel'
 import GuardSearchSelect from '../shared/GuardSearchSelect'
 import SearchableSelect from '../shared/SearchableSelect'
@@ -1790,6 +1790,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                 </div>
               )}
               <form onSubmit={handleMissionSubmit} className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                <p id="mission-time-zone" className="text-sm text-text-secondary md:col-span-2">Enter the mission date and times in Philippine time (UTC+8).</p>
                 <div className="md:col-span-2">
                   <label className="soc-form-label" htmlFor="mission-name">Mission Name</label>
                   <input
@@ -1862,6 +1863,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                   <input
                     id="mission-start-time"
                     type="time"
+                    aria-describedby="mission-time-zone"
                     required
                     value={missionFormData.start_time}
                     onChange={(e) => setMissionFormData({...missionFormData, start_time: e.target.value})}
@@ -1874,6 +1876,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                   <input
                     id="mission-end-time"
                     type="time"
+                    aria-describedby="mission-time-zone"
                     required
                     value={missionFormData.end_time}
                     onChange={(e) => setMissionFormData({...missionFormData, end_time: e.target.value})}
@@ -1946,7 +1949,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                     <thead className="h-11 border-b border-border-subtle bg-surface-elevated/50 text-xs font-semibold uppercase tracking-wider text-text-tertiary">
                       <tr>
                         <th className="px-4 py-3.5 text-left">Date</th>
-                        <th className="px-4 py-3.5 text-left">Time</th>
+                        <th className="px-4 py-3.5 text-left">Time (Manila)</th>
                         <th className="px-4 py-3.5 text-left">Vehicle</th>
                         <th className="px-4 py-3.5 text-left">Driver</th>
                         <th className="px-4 py-3.5 text-left">Status</th>
@@ -1956,10 +1959,10 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onV
                     <tbody>
                       {missions.map((mission: any) => (
                         <tr key={mission.id} className="border-b border-border-subtle/80 transition-colors hover:bg-surface-hover/50">
-                          <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{mission.start_time ? new Date(mission.start_time).toLocaleDateString() : 'N/A'}</td>
+                          <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{mission.start_time ? new Date(mission.start_time).toLocaleDateString('en-PH', { timeZone: MANILA_TIME_ZONE }) : 'N/A'}</td>
                           <td className="px-4 py-3.5 align-middle text-sm text-text-primary">
                             {mission.start_time && mission.end_time 
-                              ? `${new Date(mission.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${new Date(mission.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` 
+                              ? `${new Date(mission.start_time).toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', timeZone: MANILA_TIME_ZONE })} - ${new Date(mission.end_time).toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', timeZone: MANILA_TIME_ZONE })}`
                               : 'N/A'}
                           </td>
                           <td className="px-4 py-3.5 align-middle text-sm text-text-primary">

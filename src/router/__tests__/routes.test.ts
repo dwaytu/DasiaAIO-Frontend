@@ -77,6 +77,7 @@ describe('ELEVATED_URL_ONLY_ROUTES', () => {
       ROUTES.PROFILE,
       ROUTES.SHIFT_SWAPS,
       ROUTES.NOTIFICATIONS,
+      ROUTES.PERMITS,
     ])
   })
 })

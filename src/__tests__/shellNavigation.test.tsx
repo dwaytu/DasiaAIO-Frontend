@@ -67,8 +67,9 @@ describe('shell navigation chrome', () => {
     const labels = getSidebarNav(role).map((item) => item.label)
 
     expect(labels).toEqual(expect.arrayContaining([
-      'Analytics', 'Guard Performance', 'Firearms', 'Armored Cars', 'Guard Permits', 'Support Tickets',
+      'Analytics', 'Guard Performance', 'Firearms', 'Armored Cars', 'Support Tickets',
     ]))
+    expect(labels).not.toContain('Guard Permits')
   })
 
   it('removes approval from elevated mobile navigation when unavailable', () => {

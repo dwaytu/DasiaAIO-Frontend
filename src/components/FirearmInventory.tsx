@@ -23,6 +23,7 @@ interface Firearm {
   lastMaintenance?: string
   activeCustody?: boolean
   custodyReview?: boolean
+  returnedToHeadquarters?: boolean
   custodyReviewApprovedAt?: string | null
   updatedAt?: string
   mdrBatchId?: string | null
@@ -120,6 +121,7 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
   const statusLabel = (firearm: Firearm) => {
     if (firearm.custodyReview) return 'Custody review'
     if (firearm.activeCustody) return 'Active custody'
+    if (firearm.returnedToHeadquarters) return 'Returned to HQ'
     if (firearm.status === 'available') return 'Available'
     return firearm.status
   }
@@ -266,7 +268,8 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange, activeView 
                                   }} />
                                 </div>
                               </div>
-                            ) : f.activeCustody ? 'Verified active custody' : 'No active custody'}
+                            ) : f.activeCustody ? 'Verified active custody'
+                              : f.returnedToHeadquarters ? 'MDR return · Inventory hold' : 'No active custody'}
                           </td>
                           <td className="px-4 py-3.5 align-middle text-sm text-text-primary">{f.lastMaintenance ? new Date(f.lastMaintenance).toLocaleDateString() : 'N/A'}</td>
                         </tr>

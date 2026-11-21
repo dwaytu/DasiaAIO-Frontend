@@ -33,7 +33,10 @@ describe('CreateGuardAccountModal', () => {
       />,
     )
 
-    await user.type(screen.getByLabelText('Full Name'), 'Juan Dela Cruz')
+    await user.type(screen.getByLabelText('First Name'), 'Juan')
+    await user.type(screen.getByLabelText('Middle Initial (optional)'), 'p.')
+    await user.type(screen.getByLabelText('Last Name'), 'Dela Cruz')
+    expect(screen.getByText('Roster display: Dela Cruz, Juan P.')).toBeInTheDocument()
     const username = screen.getByLabelText('Username')
     const email = screen.getByLabelText('Email')
     await user.clear(username)
@@ -48,11 +51,14 @@ describe('CreateGuardAccountModal', () => {
     await user.click(screen.getByRole('button', { name: 'Create Guard Account' }))
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toMatchObject({
+      fullName: 'Dela Cruz, Juan P.',
+    })
     expect(screen.getByText('Guard account created successfully.')).toBeInTheDocument()
     expect(screen.getByText('Guard ID: G-0181')).toBeInTheDocument()
     expect(onCreated).toHaveBeenCalledWith({
       guardCode: 'G-0181',
-      fullName: 'Juan Dela Cruz',
+      fullName: 'Dela Cruz, Juan P.',
       requiresApproval: false,
     })
   })

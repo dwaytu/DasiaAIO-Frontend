@@ -34,6 +34,7 @@ interface Firearm {
   caliber: string
   status: string
   custodyReview?: boolean
+  returnedToHeadquarters?: boolean
   custodyReviewApprovedAt?: string | null
   updatedAt?: string
   activeCustody?: boolean
@@ -1224,7 +1225,7 @@ const FirearmsTab: FC = () => {
                       f.status === 'maintenance' ? 'bg-warning-bg text-warning-text ring-1 ring-warning-border' :
                       'soc-status-neutral'
                     }`}>
-                      {f.custodyReview ? 'Custody review' : f.activeCustody ? 'Active custody' : f.status === 'available' ? 'Available' : f.status}
+                      {f.custodyReview ? 'Custody review' : f.activeCustody ? 'Active custody' : f.returnedToHeadquarters ? 'Returned to HQ' : f.status === 'available' ? 'Available' : f.status}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right">

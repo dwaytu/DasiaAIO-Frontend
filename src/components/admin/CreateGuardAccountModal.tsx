@@ -18,7 +18,9 @@ interface CreatedGuardAccount {
 }
 
 type FormState = {
-  fullName: string
+  firstName: string
+  middleInitial: string
+  lastName: string
   guardNumber: string
   username: string
   email: string
@@ -42,7 +44,9 @@ const VIEWER_CAN_CREATE_GUARD: Record<Role, boolean> = {
 const initialState = (): FormState => {
   const today = new Date().toISOString().slice(0, 10)
   return {
-    fullName: '',
+    firstName: '',
+    middleInitial: '',
+    lastName: '',
     guardNumber: '',
     username: '',
     email: '',
@@ -84,14 +88,19 @@ const CreateGuardAccountModal: FC<CreateGuardAccountModalProps> = ({
   const [createdGuard, setCreatedGuard] = useState<CreatedGuardAccount | null>(null)
   const [usernameCustomized, setUsernameCustomized] = useState(false)
   const [emailCustomized, setEmailCustomized] = useState(false)
-  const fullNameRef = useRef<HTMLInputElement>(null)
+  const firstNameRef = useRef<HTMLInputElement>(null)
+  const firstName = form.firstName.trim().replace(/\s+/g, ' ')
+  const lastName = form.lastName.trim().replace(/\s+/g, ' ')
+  const middleInitial = form.middleInitial.trim().replace(/\.$/, '').toUpperCase()
+  const fullName = `${lastName}, ${firstName}${middleInitial ? ` ${middleInitial}.` : ''}`
+  const loginName = [firstName, middleInitial, lastName].filter(Boolean).join(' ')
 
   const modalDescription = useMemo(() => {
     if (viewerRole === 'supervisor') {
       return 'Use MDR roster details to submit a guard account for admin or superadmin approval. The account becomes available after approval.'
     }
 
-    return 'Use MDR roster details to create an active guard account (full name, guard number, phone, and license data).'
+    return 'Use the guard’s name, guard number, contact details, and license information from the MDR roster.'
   }, [viewerRole])
 
   useEffect(() => {
@@ -102,14 +111,15 @@ const CreateGuardAccountModal: FC<CreateGuardAccountModalProps> = ({
     setCreatedGuard(null)
     setUsernameCustomized(false)
     setEmailCustomized(false)
-    window.setTimeout(() => fullNameRef.current?.focus(), 0)
+    const focusTimer = window.setTimeout(() => firstNameRef.current?.focus(), 0)
+    return () => window.clearTimeout(focusTimer)
   }, [isOpen])
 
   useEffect(() => {
     if (!isOpen || usernameCustomized) return
-    const suggested = buildSuggestedUsername(form.fullName, form.guardNumber)
+    const suggested = buildSuggestedUsername(loginName, form.guardNumber)
     setForm((prev) => ({ ...prev, username: suggested }))
-  }, [form.fullName, form.guardNumber, isOpen, usernameCustomized])
+  }, [loginName, form.guardNumber, isOpen, usernameCustomized])
 
   useEffect(() => {
     if (!isOpen || emailCustomized) return
@@ -130,7 +140,11 @@ const CreateGuardAccountModal: FC<CreateGuardAccountModalProps> = ({
   const validate = () => {
     const nextErrors: FormErrors = {}
 
-    if (!form.fullName.trim()) nextErrors.fullName = 'Full name is required.'
+    if (!firstName) nextErrors.firstName = 'First name is required.'
+    if (!lastName) nextErrors.lastName = 'Last name is required.'
+    if (form.middleInitial.trim() && !/^\p{L}\.?$/u.test(form.middleInitial.trim())) {
+      nextErrors.middleInitial = 'Enter one letter for the middle initial.'
+    }
     if (!form.username.trim()) nextErrors.username = 'Username is required.'
     if (!/^[A-Za-z0-9_]{3,}$/.test(form.username.trim())) {
       nextErrors.username = 'Username must be at least 3 chars and use letters, numbers, underscores.'
@@ -178,7 +192,7 @@ const CreateGuardAccountModal: FC<CreateGuardAccountModalProps> = ({
           method: 'POST',
           headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
           body: JSON.stringify({
-            fullName: form.fullName.trim(),
+            fullName,
             guardNumber: form.guardNumber.trim() ? Number.parseInt(form.guardNumber.trim(), 10) : null,
             username: form.username.trim(),
             email: form.email.trim(),
@@ -196,7 +210,7 @@ const CreateGuardAccountModal: FC<CreateGuardAccountModalProps> = ({
 
       const createdGuard = {
         guardCode: created.guardCode,
-        fullName: form.fullName.trim(),
+        fullName,
         requiresApproval: Boolean(created.requiresApproval),
       }
       setCreatedGuard(createdGuard)
@@ -247,18 +261,27 @@ const CreateGuardAccountModal: FC<CreateGuardAccountModalProps> = ({
         ) : null}
 
         <div className="grid gap-4 md:grid-cols-2">
-          <label className="space-y-1">
-            <span className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">Full Name</span>
-            <input
-              ref={fullNameRef}
-              type="text"
-              value={form.fullName}
-              onChange={(e) => setField('fullName', e.target.value)}
-              className="soc-field"
-              disabled={submitting}
-            />
-            {errors.fullName ? <span className="text-xs text-danger-text">{errors.fullName}</span> : null}
-          </label>
+          <div className="grid gap-4 sm:grid-cols-[2fr_1fr_2fr] md:col-span-2">
+            <label className="space-y-1">
+              <span className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">First Name</span>
+              <input ref={firstNameRef} type="text" value={form.firstName} onChange={(e) => setField('firstName', e.target.value)}
+                aria-required="true" aria-invalid={Boolean(errors.firstName)} autoComplete="given-name" className="soc-field" disabled={submitting} />
+              {errors.firstName ? <span className="text-xs text-danger-text">{errors.firstName}</span> : null}
+            </label>
+            <label className="space-y-1">
+              <span className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">Middle Initial (optional)</span>
+              <input type="text" value={form.middleInitial} onChange={(e) => setField('middleInitial', e.target.value)}
+                aria-invalid={Boolean(errors.middleInitial)} className="soc-field" disabled={submitting} />
+              {errors.middleInitial ? <span className="text-xs text-danger-text">{errors.middleInitial}</span> : null}
+            </label>
+            <label className="space-y-1">
+              <span className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">Last Name</span>
+              <input type="text" value={form.lastName} onChange={(e) => setField('lastName', e.target.value)}
+                aria-required="true" aria-invalid={Boolean(errors.lastName)} autoComplete="family-name" className="soc-field" disabled={submitting} />
+              {errors.lastName ? <span className="text-xs text-danger-text">{errors.lastName}</span> : null}
+            </label>
+          </div>
+          {firstName && lastName ? <p className="text-xs text-text-secondary md:col-span-2">Roster display: {fullName}</p> : null}
 
           <label className="space-y-1">
             <span className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">Guard Number (MDR)</span>

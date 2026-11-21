@@ -288,7 +288,7 @@ describe('operational resource hierarchy', () => {
     expect(screen.queryByRole('dialog', { name: 'Return firearm' })).not.toBeInTheDocument()
   })
 
-  it('keeps imported custody-review records distinct from verified active custody', async () => {
+  it('keeps imported custody reviews, headquarters returns, and verified active custody distinct', async () => {
     const operator = userEvent.setup()
     fetchJsonOrThrowMock.mockImplementation(async (input) => {
       const url = String(input)
@@ -320,6 +320,15 @@ describe('operational resource hierarchy', () => {
           mdrRowRef: 'MDR row 14',
           sourceGuardText: 'Guard One',
           directGuardMatch: false,
+        }, {
+          id: 'f-return-1',
+          serialNumber: 'MDR-002',
+          model: 'Fixture return',
+          caliber: 'Unknown',
+          status: 'maintenance',
+          returnedToHeadquarters: true,
+          custodyReview: false,
+          activeCustody: false,
         }],
       } as never
     })
@@ -332,6 +341,10 @@ describe('operational resource hierarchy', () => {
     expect(screen.getAllByText(/No verified active custody record/i)).not.toHaveLength(0)
     expect(screen.getByText(/MDR source: MDR row 14; source guard: Guard One/i)).toBeInTheDocument()
     expect(screen.queryByText('Verified active custody')).not.toBeInTheDocument()
+    const returnedRow = screen.getByRole('row', { name: /MDR-002/ })
+    expect(within(returnedRow).getByText('Returned to HQ')).toBeInTheDocument()
+    expect(within(returnedRow).getByText('MDR return · Inventory hold')).toBeInTheDocument()
+    expect(within(returnedRow).queryByRole('button')).not.toBeInTheDocument()
 
     await operator.selectOptions(screen.getByRole('combobox', { name: 'Filter firearm inventory state' }), 'custody_review')
     await waitFor(() => expect(fetchJsonOrThrowMock).toHaveBeenCalledWith(

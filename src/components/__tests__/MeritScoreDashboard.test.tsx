@@ -25,7 +25,7 @@ const user = { id: 'admin-1', username: 'admin', email: 'admin@example.test', ro
 
 const rankings = [
   { rank: 1, guardId: 'guard-1', guardName: 'Guard One', overallScore: 91.5, meritRank: 'Gold', onTimePercentage: 96, clientRating: 90, evaluationCount: 2, scoreBasis: 'weighted_merit' },
-  { rank: 2, guardId: 'guard-2', guardName: 'Guard Two', overallScore: 100, meritRank: 'Excellent', onTimePercentage: 100, clientRating: 0, evaluationCount: 0, scoreBasis: 'attendance_punctuality' },
+  { rank: 0, guardId: 'guard-2', guardName: 'Guard Two', overallScore: 100, meritRank: 'Excellent', onTimePercentage: 100, clientRating: 0, evaluationCount: 0, scoreBasis: 'attendance_punctuality' },
 ]
 
 const scorecard = {
@@ -45,7 +45,7 @@ const evaluations = [
   { id: 'eval-2', guardId: 'guard-1', rating: 5, comment: 'Excellent', evaluatorName: 'Capstone presentation evaluation', evaluatorRole: 'presentation scenario', createdAt: '2026-09-10T08:00:00.000Z' },
 ]
 
-type TestRanking = Omit<(typeof rankings)[number], 'scoreBasis'> & { scoreBasis?: string }
+type TestRanking = Omit<(typeof rankings)[number], 'scoreBasis'> & { scoreBasis?: string; attendancePercentage?: number }
 
 function mockMeritFetch({ rankingStatus = 200, rankingItems = rankings }: { rankingStatus?: number; rankingItems?: TestRanking[] } = {}) {
   return jest.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
@@ -70,7 +70,7 @@ describe('MeritScoreDashboard', () => {
   })
 
   it('summarizes evaluation coverage before the ranking register', async () => {
-    mockMeritFetch()
+    mockMeritFetch({ rankingItems: [rankings[0], { ...rankings[1], attendancePercentage: 92 }] })
 
     render(<MeritScoreDashboard user={user} onLogout={jest.fn()} />)
 
@@ -79,10 +79,13 @@ describe('MeritScoreDashboard', () => {
     expect(screen.getByText('Evaluated').parentElement).toHaveTextContent('1')
     expect(screen.getByText('Awaiting evaluation').parentElement).toHaveTextContent('1')
     expect(screen.getByText('No evaluations')).toBeInTheDocument()
-    expect(screen.getByText('Saved scores use different formulas.', { exact: false })).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Attendance' })).toBeInTheDocument()
     const attendanceRow = screen.getByRole('row', { name: /Guard Two/ })
-    expect(within(attendanceRow).getByText('100.0')).toBeInTheDocument()
-    expect(within(attendanceRow).getByText('Attendance and punctuality')).toBeInTheDocument()
+    expect(within(attendanceRow).getByText('Needs evaluation')).toBeInTheDocument()
+    expect(within(attendanceRow).getByText('92%')).toBeInTheDocument()
+    expect(within(attendanceRow).getByText('100%')).toBeInTheDocument()
+    expect(within(attendanceRow).queryByText('100.0')).not.toBeInTheDocument()
+    expect(within(attendanceRow).getByText('Unranked')).toBeInTheDocument()
     expect(screen.queryByText(/Capstone snapshot/i)).not.toBeInTheDocument()
   })
 

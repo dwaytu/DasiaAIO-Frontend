@@ -3,7 +3,7 @@ import L from 'leaflet'
 import { Activity, CalendarClock, Car, ChevronLeft, ChevronRight, MapPin, Pencil, Plus, Shield, Trash2, X } from 'lucide-react'
 import { Circle, CircleMarker, MapContainer, Marker, Polygon, Polyline, Popup, TileLayer, useMap, useMapEvents } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
-import { type ActiveGuard, type ClientSiteInput, type ClientSiteSetupInput, type GeofenceZoneInput, type MapTrackingPoint, useOperationalMapData } from '../../hooks/useOperationalMapData'
+import { type ActiveGuard, type ClientSiteInput, type ClientSiteSetupInput, type GeofenceZoneInput, type GuardMovementTrail, type MapTrackingPoint, useOperationalMapData } from '../../hooks/useOperationalMapData'
 import { getPersonRecencyMinutes, getTrackingAccuracyMode, getVehicleRecencyMinutes } from '../../utils/trackingPolicy'
 import { useTheme } from '../../context/ThemeProvider'
 import { useOperationalEvent } from '../../context/OperationalEventContext'
@@ -315,10 +315,13 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ recentVehicleReport
   const [mapZoom, setMapZoom] = useState<number>(12)
   const [focusCenter, setFocusCenter] = useState<[number, number] | null>(null)
   const [selectedGuardId, setSelectedGuardId] = useState<string>('')
-  const [selectedGuardPath, setSelectedGuardPath] = useState<Array<{ latitude: number; longitude: number; recordedAt: string; movementStatus?: string }>>([])
+  const [loadedTrail, setLoadedTrail] = useState<(GuardMovementTrail & { guardId: string }) | null>(null)
+  const [trailErrorGuardId, setTrailErrorGuardId] = useState('')
+  const selectedTrail = loadedTrail?.guardId === selectedGuardId ? loadedTrail : null
+  const selectedGuardPath = selectedTrail?.points ?? []
   const [activeGuardsIntel, setActiveGuardsIntel] = useState<ActiveGuard[]>([])
   const [playbackEnabled, setPlaybackEnabled] = useState<boolean>(false)
-  const [playbackIndex, setPlaybackIndex] = useState<number>(0)
+  const [playbackIndex, setPlaybackIndex] = useState<number | null>(null)
   const [followSelectedGuard, setFollowSelectedGuard] = useState<boolean>(true)
   const [layerVisibility, setLayerVisibility] = useState<LayerVisibility>({
     guards: true,
@@ -730,34 +733,34 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ recentVehicleReport
   }, [fetchActiveGuards])
 
   useEffect(() => {
+    setPlaybackEnabled(false)
+    setPlaybackIndex(null)
+    setTrailErrorGuardId('')
+  }, [selectedGuardId])
+
+  const selectedGuardReadingAt = trackingPoints.find((point) =>
+    point.entityType === 'guard' && point.entityId === selectedGuardId,
+  )?.recordedAt
+
+  useEffect(() => {
     if (!selectedGuardId) {
-      setSelectedGuardPath([])
-      setPlaybackEnabled(false)
-      setPlaybackIndex(0)
+      setLoadedTrail(null)
       return
     }
 
-    let disposed = false
-
+    const controller = new AbortController()
     const loadSelectedGuardPath = async () => {
       try {
-        const coordinates = await fetchGuardPath(selectedGuardId, 1200)
-        if (disposed) return
+        const trail = await fetchGuardPath(selectedGuardId, 1200, controller.signal)
+        if (controller.signal.aborted) return
 
-        const safePath = coordinates
-          .filter((point) => Number.isFinite(point.latitude) && Number.isFinite(point.longitude))
-          .map((point) => ({
-            latitude: point.latitude,
-            longitude: point.longitude,
-            recordedAt: point.recordedAt,
-            movementStatus: point.movementStatus,
-          }))
-
-        setSelectedGuardPath(safePath)
-        setPlaybackIndex(Math.max(0, safePath.length - 1))
+        const points = trail.points.filter((point) => Number.isFinite(point.latitude) && Number.isFinite(point.longitude))
+        setLoadedTrail({ ...trail, guardId: selectedGuardId, points })
+        setTrailErrorGuardId('')
       } catch {
-        if (!disposed) {
-          setSelectedGuardPath([])
+        if (!controller.signal.aborted) {
+          setLoadedTrail(null)
+          setTrailErrorGuardId(selectedGuardId)
         }
       }
     }
@@ -765,16 +768,16 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ recentVehicleReport
     void loadSelectedGuardPath()
 
     return () => {
-      disposed = true
+      controller.abort()
     }
-  }, [fetchGuardPath, selectedGuardId])
+  }, [fetchGuardPath, selectedGuardId, selectedGuardReadingAt])
 
   useEffect(() => {
     if (!playbackEnabled || selectedGuardPath.length < 2) return
 
     const intervalId = window.setInterval(() => {
       setPlaybackIndex((previous) => {
-        if (previous >= selectedGuardPath.length - 1) {
+        if (previous === null || previous >= selectedGuardPath.length - 1) {
           return 0
         }
         return previous + 1
@@ -822,18 +825,11 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ recentVehicleReport
     return Array.from(buckets.values())
   }, [mapZoom, visibleTelemetry])
 
-  const selectedGuardPolyline = useMemo(() => {
-    if (selectedGuardPath.length < 2) return []
-
-    const maxIndex = playbackEnabled ? Math.max(1, playbackIndex + 1) : selectedGuardPath.length
-    return selectedGuardPath.slice(0, maxIndex).map((point) => [point.latitude, point.longitude] as [number, number])
-  }, [playbackEnabled, playbackIndex, selectedGuardPath])
-
-  const playbackPoint = useMemo(() => {
-    if (!selectedGuardPath.length) return null
-    const index = playbackEnabled ? playbackIndex : selectedGuardPath.length - 1
-    return selectedGuardPath[Math.max(0, Math.min(index, selectedGuardPath.length - 1))]
-  }, [playbackEnabled, playbackIndex, selectedGuardPath])
+  const lastTrailIndex = Math.max(0, selectedGuardPath.length - 1)
+  const visibleTrailIndex = Math.min(playbackIndex ?? lastTrailIndex, lastTrailIndex)
+  const playbackPoint = selectedGuardPath[visibleTrailIndex]
+  const roadSegments = selectedTrail?.roadSegments ?? []
+  const hasRoadMatch = roadSegments.length > 0
 
   const geofenceFeed = useMemo(() => geofenceAlerts.slice(0, 6), [geofenceAlerts])
   const showNoTrackingAccessOverlay = !loading && !hasTrackingAccess
@@ -1216,12 +1212,28 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ recentVehicleReport
               ))
             : null}
 
-          {selectedGuardPolyline.length > 1 ? (
+          {hasRoadMatch ? (
             <Polyline
-              positions={selectedGuardPolyline}
-              pathOptions={{ color: '#22c55e', weight: 3, opacity: 0.85 }}
+              positions={roadSegments}
+              smoothFactor={0.5}
+              pathOptions={{ color: 'var(--color-success-text)', weight: 4, opacity: 0.9, className: 'guard-road-trail' }}
             />
           ) : null}
+
+          {!hasRoadMatch && selectedGuardPath.slice(-80).map((point) => (
+            <CircleMarker
+              key={point.id ?? point.recordedAt}
+              center={[point.latitude, point.longitude]}
+              radius={3}
+              pathOptions={{ color: 'var(--color-success-text)', fillOpacity: 0.7, weight: 1 }}
+            >
+              <Popup>
+                <strong>Recorded location</strong>
+                <div>{new Date(point.recordedAt).toLocaleString()}</div>
+                {point.accuracyMeters != null ? <div>Accuracy {Math.round(point.accuracyMeters)} m</div> : null}
+              </Popup>
+            </CircleMarker>
+          ))}
 
           {selectedEvent?.type === 'guard' && selectedGuardEventMatch ? (
             <CircleMarker
@@ -1244,8 +1256,9 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ recentVehicleReport
               pathOptions={{ color: '#22c55e', fillColor: '#22c55e', fillOpacity: 0.35, weight: 2 }}
             >
               <Popup>
-                <strong>Playback Position</strong>
+                <strong>Recorded location</strong>
                 <div>{new Date(playbackPoint.recordedAt).toLocaleString()}</div>
+                {playbackPoint.accuracyMeters != null ? <div>Accuracy {Math.round(playbackPoint.accuracyMeters)} m</div> : null}
               </Popup>
             </CircleMarker>
           ) : null}
@@ -1651,7 +1664,10 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ recentVehicleReport
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              onClick={() => setPlaybackEnabled((previous) => !previous)}
+              onClick={() => {
+                if (!playbackEnabled && visibleTrailIndex >= lastTrailIndex) setPlaybackIndex(0)
+                setPlaybackEnabled(!playbackEnabled)
+              }}
               disabled={selectedGuardPath.length < 2}
               className="min-h-11 rounded-md border border-border-subtle bg-background px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-text-secondary disabled:opacity-50"
             >
@@ -1663,8 +1679,8 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ recentVehicleReport
                 id="trail-frame-index"
                 type="range"
                 min={0}
-                max={Math.max(0, selectedGuardPath.length - 1)}
-                value={Math.min(playbackIndex, Math.max(0, selectedGuardPath.length - 1))}
+                max={lastTrailIndex}
+                value={visibleTrailIndex}
                 onChange={(event) => {
                   setPlaybackEnabled(false)
                   setPlaybackIndex(Number(event.target.value))
@@ -1674,10 +1690,23 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ recentVehicleReport
             </label>
             <span className="text-xs text-text-tertiary">
               {selectedGuardPath.length > 0
-                ? `Samples: ${selectedGuardPath.length}`
-                : 'Select a guard to load movement trail'}
+                ? `${selectedGuardPath.length} recorded points`
+                : selectedGuardId
+                  ? trailErrorGuardId === selectedGuardId
+                    ? 'Movement trail could not be loaded'
+                    : selectedTrail ? 'No recorded locations' : 'Loading movement trail…'
+                  : 'Select a guard to load movement trail'}
             </span>
           </div>
+          {selectedGuardPath.length > 0 ? (
+            <p className="text-xs text-text-secondary" role="status">
+              {hasRoadMatch
+                ? 'Green line shows an estimated path along roads. Use Trail Frame to inspect recorded locations.'
+                : selectedTrail?.roadSegments === null
+                  ? 'Road matching is unavailable. Showing recorded locations.'
+                  : 'No reliable road match. Showing recorded locations.'}
+            </p>
+          ) : null}
         </section>
 
         <section className="rounded-md border border-border-subtle bg-surface-elevated p-3" aria-label="Geofence transition feed">

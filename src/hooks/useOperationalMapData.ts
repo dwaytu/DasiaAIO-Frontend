@@ -79,8 +79,14 @@ export interface GuardHistoryPoint {
   recordedAt: string
   movementStatus?: string
   speedKph?: number
+  accuracyMeters?: number | null
   status?: string
   label?: string
+}
+
+export interface GuardMovementTrail {
+  points: GuardHistoryPoint[]
+  roadSegments: Array<Array<[number, number]>> | null
 }
 
 export interface ActiveGuard {
@@ -117,6 +123,7 @@ interface MapDataResponse {
 
 interface GuardHistoryResponse {
   points?: GuardHistoryPoint[]
+  roadSegments?: GuardMovementTrail['roadSegments']
 }
 
 interface ActiveGuardsResponse {
@@ -187,7 +194,7 @@ interface UseOperationalMapDataResult {
   deleteGeofenceZone: (zoneId: string) => Promise<void>
   sendGuardHeartbeat: (input: GuardHeartbeatInput) => Promise<void>
   fetchGuardHistory: (guardId: string, limit?: number) => Promise<GuardHistoryPoint[]>
-  fetchGuardPath: (guardId: string, limit?: number) => Promise<GuardHistoryPoint[]>
+  fetchGuardPath: (guardId: string, limit?: number, signal?: AbortSignal) => Promise<GuardMovementTrail>
   fetchActiveGuards: (windowMinutes?: number) => Promise<ActiveGuard[]>
   isElevatedUser: boolean
 }
@@ -450,10 +457,25 @@ export function useOperationalMapData(): UseOperationalMapDataResult {
     return Array.isArray(data.points) ? withoutSampleCheckpoints(data.points) : []
   }, [hasTrackingAccess])
 
-  const fetchGuardPath = useCallback(async (guardId: string, limit = 1000) => {
-    // History includes each point's status, which is needed to exclude sample checkpoints.
-    return fetchGuardHistory(guardId, Math.max(30, limit))
-  }, [fetchGuardHistory])
+  const fetchGuardPath = useCallback(async (guardId: string, limit = 1000, signal?: AbortSignal): Promise<GuardMovementTrail> => {
+    if (!hasTrackingAccess) return { points: [], roadSegments: null }
+
+    const url = `${API_BASE_URL}/api/tracking/guard-history/${encodeURIComponent(guardId)}?limit=${Math.max(30, Math.min(limit, 1500))}`
+    const options = { headers: getAuthHeaders(), signal }
+    const failureMessage = 'Failed to load guard movement history'
+    let data: GuardHistoryResponse
+    try {
+      data = await fetchJsonOrThrow<GuardHistoryResponse>(`${url}&roadMatch=true`, options, failureMessage)
+    } catch (error) {
+      if (signal?.aborted) throw error
+      // Older servers do not accept the roadMatch query parameter.
+      data = await fetchJsonOrThrow<GuardHistoryResponse>(url, options, failureMessage)
+    }
+    return {
+      points: Array.isArray(data.points) ? withoutSampleCheckpoints(data.points) : [],
+      roadSegments: data.roadSegments ?? null,
+    }
+  }, [hasTrackingAccess])
 
   const fetchActiveGuards = useCallback(async (windowMinutes = 15) => {
     if (!hasTrackingAccess) return []

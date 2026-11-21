@@ -122,7 +122,7 @@ describe('OperationalMapPanel tactical layers and asset inspector', () => {
       deleteClientSite: jest.fn(),
       createGeofenceZone: jest.fn(),
       updateGeofenceZone: jest.fn(),
-      fetchGuardPath: jest.fn().mockResolvedValue([]),
+      fetchGuardPath: jest.fn().mockResolvedValue({ points: [], roadSegments: null }),
       fetchActiveGuards: jest.fn(() => new Promise(() => undefined)),
       isElevatedUser: true,
       hasTrackingAccess: true,

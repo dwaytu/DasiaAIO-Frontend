@@ -20,11 +20,11 @@ import {
   PackageCheck,
   Route,
   Settings,
-  Shield,
   Target,
   TrendingUp,
   UsersRound,
   Wrench,
+  createLucideIcon,
   type LucideIcon,
 } from 'lucide-react'
 import SidebarBrand from './SidebarBrand'
@@ -48,6 +48,11 @@ interface SidebarProps {
   onToggle?: () => void
 }
 
+const FirearmIcon = createLucideIcon('Firearm', [
+  ['path', { d: 'M3 5h18v5h-9l-3 8H4l3-8H3z', key: 'outline' }],
+  ['path', { d: 'M15 10v2a2 2 0 0 1-2 2h-2', key: 'guard' }],
+])
+
 const navIcons: Record<string, LucideIcon> = {
   dashboard: LayoutDashboard,
   overview: LayoutDashboard,
@@ -65,7 +70,7 @@ const navIcons: Record<string, LucideIcon> = {
   merit: Award,
   manage: UsersRound,
   'operations-map': Map,
-  firearms: Shield,
+  firearms: FirearmIcon,
   documents: BadgeCheck,
   allocation: PackageCheck,
   permits: KeyRound,

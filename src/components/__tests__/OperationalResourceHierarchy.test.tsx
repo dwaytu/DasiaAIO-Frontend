@@ -1,5 +1,6 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router'
 import FirearmAllocation from '../FirearmAllocation'
 import FirearmInventory from '../FirearmInventory'
 import FirearmMaintenance from '../FirearmMaintenance'
@@ -26,7 +27,7 @@ jest.mock('../../utils/api', () => ({
 }))
 
 const fetchJsonOrThrowMock = fetchJsonOrThrow as jest.MockedFunction<typeof fetchJsonOrThrow>
-const user = { id: 'admin-1', username: 'admin', role: 'admin' }
+const user = { id: 'admin-1', username: 'admin', email: 'admin@example.test', role: 'admin' as const }
 
 describe('operational resource hierarchy', () => {
   afterEach(() => {
@@ -177,7 +178,7 @@ describe('operational resource hierarchy', () => {
       ] as never
     })
 
-    render(<FirearmMaintenance user={user} onLogout={jest.fn()} />)
+    render(<MemoryRouter><FirearmMaintenance user={user} onLogout={jest.fn()} /></MemoryRouter>)
 
     expect(await screen.findByRole('heading', { name: 'Maintenance controls' })).toBeInTheDocument()
     expect(screen.getByText('Pending').parentElement).toHaveTextContent('1')
@@ -205,7 +206,7 @@ describe('operational resource hierarchy', () => {
       throw new Error(`Unexpected request: ${url}`)
     })
 
-    render(<FirearmMaintenance user={user} onLogout={jest.fn()} />)
+    render(<MemoryRouter><FirearmMaintenance user={user} onLogout={jest.fn()} /></MemoryRouter>)
 
     const available = await screen.findByText('Available firearms')
     expect(available.nextElementSibling).toHaveTextContent(/^58$/)

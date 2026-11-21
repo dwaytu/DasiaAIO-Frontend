@@ -106,6 +106,7 @@ describe('OperationalMapPanel tactical layers and asset inspector', () => {
           scheduleStartTime: '06:00',
           scheduleEndTime: '18:00',
           speedKph: 18.5,
+          ageSeconds: 54_522,
           source: 'vehicle-telemetry',
           recordedAt: new Date().toISOString(),
         },
@@ -169,6 +170,7 @@ describe('OperationalMapPanel tactical layers and asset inspector', () => {
 
     expect(screen.getByRole('heading', { name: 'Vehicle: Unit V-8' })).toBeInTheDocument()
     const inspector = screen.getByRole('complementary', { name: 'Vehicle: Unit V-8' })
+    expect(within(inspector).getByText(/15h 8m ago/)).toBeInTheDocument()
     expect(within(inspector).getByText('North Post')).toBeInTheDocument()
     expect(within(inspector).getByText('±12 m')).toBeInTheDocument()
 

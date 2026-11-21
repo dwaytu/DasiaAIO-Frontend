@@ -35,6 +35,7 @@ export const ROUTES = {
 } as const
 
 export const FIREARM_DOCUMENTS_URL = `${ROUTES.DOCUMENTS}?report=firearms`
+export const VEHICLE_MAINTENANCE_URL = `${ROUTES.MAINTENANCE}?asset=armored-cars`
 
 export type RoutePath = (typeof ROUTES)[keyof typeof ROUTES]
 

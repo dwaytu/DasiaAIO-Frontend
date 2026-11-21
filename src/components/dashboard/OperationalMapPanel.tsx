@@ -234,6 +234,13 @@ const clientSiteDraftPin = L.divIcon({
   popupAnchor: [0, -30],
 })
 
+function formatReadingAge(ageSeconds: number): string {
+  const minutes = Math.floor(ageSeconds / 60)
+  const hours = Math.floor(minutes / 60)
+  if (minutes < 1) return 'less than 1m ago'
+  return hours > 0 ? `${hours}h ${minutes % 60}m ago` : `${minutes}m ago`
+}
+
 function resolvePointAgeSeconds(point: Pick<MapTrackingPoint, 'ageSeconds' | 'recordedAt'>): number {
   if (typeof point.ageSeconds === 'number' && Number.isFinite(point.ageSeconds)) {
     return Math.max(0, Math.round(point.ageSeconds))
@@ -1310,7 +1317,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ recentVehicleReport
                           <div>Schedule: {scheduleLabel}</div>
                           <div>Source: {sourceLabel}</div>
                           {point.accuracyMeters != null ? <div>Accuracy: {Math.round(point.accuracyMeters)} m</div> : null}
-                          <div>Updated: {entry.ageSeconds}s ago</div>
+                          <div>Updated: {formatReadingAge(entry.ageSeconds)}</div>
                           <div>{new Date(point.recordedAt).toLocaleString()}</div>
                         </Popup>
                       </Marker>
@@ -1350,7 +1357,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ recentVehicleReport
                         <div>Source: {sourceLabel}{point.approximate ? ' (approximate)' : ''}</div>
                         {point.speedKph != null ? <div>Speed: {point.speedKph.toFixed(1)} km/h</div> : null}
                         {point.accuracyMeters != null ? <div>Accuracy: {Math.round(point.accuracyMeters)} m</div> : null}
-                        <div>Updated: {entry.ageSeconds}s ago</div>
+                        <div>Updated: {formatReadingAge(entry.ageSeconds)}</div>
                         <div>{new Date(point.recordedAt).toLocaleString()}</div>
                       </Popup>
                     </CircleMarker>
@@ -1531,7 +1538,7 @@ const OperationalMapPanel: FC<OperationalMapPanelProps> = ({ recentVehicleReport
                     {selectedTelemetry.point.entityType === 'vehicle' ? 'Vehicle' : 'Guard'}: {selectedAssetName}
                   </h4>
                   <p className={`mt-1 text-xs font-semibold ${selectedTelemetry.heartbeatState === 'active' ? 'text-success-text' : selectedTelemetry.heartbeatState === 'stale' ? 'text-warning-text' : 'text-danger-text'}`}>
-                    {selectedTelemetry.heartbeatState === 'active' ? 'Live' : selectedTelemetry.heartbeatState === 'stale' ? 'Stale' : 'Offline'} • {selectedTelemetry.ageSeconds}s ago
+                    {selectedTelemetry.heartbeatState === 'active' ? 'Live' : selectedTelemetry.heartbeatState === 'stale' ? 'Stale' : 'Offline'} • {formatReadingAge(selectedTelemetry.ageSeconds)}
                   </p>
                 </div>
               </div>
